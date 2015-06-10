@@ -1,6 +1,6 @@
 #-------------------------------------------------
 #
-# Project created by QtCreator 2015-06-08T20:21:15
+# Project created by QtCreator 2015-06-09T10:40:21
 #
 #-------------------------------------------------
 
@@ -8,12 +8,14 @@ QT       += core gui
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
-TARGET = osfoffline
+TARGET = qt_creator_resource
 TEMPLATE = app
 
 
-SOURCES +=
+SOURCES += main.cpp\
+        mainwindow.cpp
 
-HEADERS  +=
+HEADERS  += mainwindow.h
 
-FORMS    += mainwindow.ui
+FORMS    += \
+    dialog.ui
