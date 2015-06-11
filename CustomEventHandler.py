@@ -10,7 +10,14 @@ class CustomEventHandler(FileSystemEventHandler):
     def __init__(self, sync_folder):
         super(CustomEventHandler, self).__init__()
         self.data = {
-            'sync_folder':sync_folder
+            'sync_folder':sync_folder,
+            # create root dir item
+            'data':Item(
+                    kind=Item.FOLDER,
+                    name=self._extract_name(sync_folder),
+                    guid=1,
+                    version=0
+                )
         }
 
     def _deserialize_item(self, item):
@@ -143,14 +150,6 @@ class CustomEventHandler(FileSystemEventHandler):
         else:
             kind = Item.FILE
 
-        #root dir item may not have been created yet.
-        if 'data' not in self.data:
-             self.data['data'] = Item(
-                kind=Item.FOLDER,
-                name=self._extract_name(self.data['sync_folder']),
-                guid=1,
-                version=0
-            )
 
         new_item = Item(
                 kind=kind,

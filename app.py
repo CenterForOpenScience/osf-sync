@@ -6,8 +6,8 @@ from PyQt5.QtGui import QIcon
 from PyQt5.QtWidgets import (QAction, QApplication, QCheckBox, QComboBox,
         QDialog, QGridLayout, QGroupBox, QHBoxLayout, QLabel, QLineEdit,
         QMessageBox, QMenu, QPushButton, QSpinBox, QStyle, QSystemTrayIcon,
-        QTextEdit, QVBoxLayout, QFileDialog, QMainWindow)
-
+        QTextEdit, QVBoxLayout, QFileDialog, QMainWindow, QTreeWidgetItem)
+from PyQt5.QtCore import QCoreApplication, Qt
 from appdirs import *
 import logging
 from watchdog.observers import Observer
@@ -20,6 +20,9 @@ import rsc.systray_rc # REQUIRED FOR GUI
 from rsc.preferences_rc import Ui_Preferences # REQUIRED FOR GUI
 import subprocess
 import webbrowser
+import Item
+from Preferences import Preferences
+
 
 
 
@@ -31,6 +34,8 @@ class OSFController(QDialog):
         self.appname = "OSF Offline"
         self.appauthor = "COS"
 
+
+        self._translate = QCoreApplication.translate
         self.createActions()
         self.createTrayIcon()
         self.createConfig()
@@ -41,6 +46,7 @@ class OSFController(QDialog):
         self.startObservingContainingFolder()
         self.startLogging()
 
+        self.preferences = Preferences(self.containingFolder, self.event_handler.data['data'])
 
 
 
@@ -76,27 +82,22 @@ class OSFController(QDialog):
         # add the handler to the root logger
         logging.getLogger('').addHandler(console)
 
-    def containingFolderIsSet(self):
-        try:
-            os.path.isdir(self.containingFolder)
-            return True
-        except AttributeError: # self.containingFolder doesn't exist
-            return False
+
 
     def startObservingContainingFolder(self):
         #if something inside the folder changes, log it to config dir
         #if something inside the folder changes, show it on console.
         path = self.containingFolder #set this to whatever appdirs says - data_dir
         print(path)
-        event_handler = CustomEventHandler(path) #create event handler
+        self.event_handler = CustomEventHandler(path) #create event handler
         #if config actually has legitimate data. use it.
         if self.config != {}:
-            event_handler.import_from_db(items_dict=self.config, user='himanshu', password='pass', name='himanshu', fav_movie='matrix', fav_show='simpsons')
+            self.event_handler.import_from_db(items_dict=self.config, user='himanshu', password='pass', name='himanshu', fav_movie='matrix', fav_show='simpsons')
 
         #start
         self.observer = Observer() #create observer. watched for events on files.
         #attach event handler to observed events. make observer recursive
-        self.observer.schedule(event_handler, path, recursive=True)
+        self.observer.schedule(self.event_handler, path, recursive=True)
         self.observer.start() #start
 
     def stopObservingContainingFolder(self):
@@ -105,10 +106,10 @@ class OSFController(QDialog):
 
     def closeEvent(self, event):
         if self.trayIcon.isVisible():
-            QMessageBox.information(self, "Systray",
-                    "The program will keep running in the system tray. To "
-                    "terminate the program, choose <b>Quit</b> in the "
-                    "context menu of the system tray entry.")
+            # QMessageBox.information(self, "Systray",
+            #         "The program will keep running in the system tray. To "
+            #         "terminate the program, choose <b>Quit</b> in the "
+            #         "context menu of the system tray entry.")
             self.hide()
             event.ignore()
 
@@ -137,16 +138,28 @@ class OSFController(QDialog):
 
 
     def createActions(self):
+        #menu items
         self.openProjectFolderAction = QAction("Open Project Folder", self, triggered=self.openProjectFolder)
         self.launchOSFAction = QAction("Launch OSF", self, triggered=self.startOSF)
-        self.currentlySynchingAction = QAction("Up to date", self, triggered=self.currentlySynching)
+
+
+        # hover version (doesnt fully work)
+        # self.currentlySynchingAction = QAction("Up to date", self)
+        # self.currentlySynchingAction.hovered.connect(self.currentlySynching)
         #todo: figure out how to triger currentlySynching
-        # self.currentlySynchingAction.hover()
         # self.currentlySynchingAction.setDisabled(True)
-        self.preferencesAction = QAction("Preferences", self, triggered=self.openPreferencesAction)
+        # self.currentlySynchingAction.hover() to activate
+
+        # triggered manually
+        self.currentlySynchingAction = QAction("Up to date", self, triggered=self.currentlySynching)
+        self.currentlySynchingAction.setDisabled(True)
+
+        self.priorityAction = QAction("Priority Synching", self, triggered=self.openPriorityScreen)
+        self.preferencesAction = QAction("Preferences", self, triggered=self.openPreferences)
         self.aboutAction = QAction("&About", self, triggered=self.startAboutScreen)
         self.quitAction = QAction("&Quit", self,
                 triggered=self.teardown)
+
 
 
     def openProjectFolder(self):
@@ -163,7 +176,14 @@ class OSFController(QDialog):
                     # xdg-open *should* be supported by recent Gnome, KDE, Xfce
                     pass #todo: what to do in this case?
         else:
-            self.setCcontainingFolder()
+            self.setContainingFolder()
+
+    def containingFolderIsSet(self):
+        try:
+            return os.path.isdir(self.containingFolder)
+        except ValueError:
+            return False
+
 
     def setContainingFolder(self):
         self.containingFolder = QFileDialog.getExistingDirectory(self, "Choose folder")
@@ -173,11 +193,34 @@ class OSFController(QDialog):
         url = "http://osf.io/{}/".format(pid)
         webbrowser.open_new_tab(url)
 
-    def startPriorityScreen(self):
-        pass
+
+    def createPreferencesWindow(self):
+        self.preferences.openWindow()
+        #
+        # self.preferencesWindow = Ui_Preferences()
+        # self.preferencesWindow.setupUi(self)
+        # self.preferencesWindow.containingFolderTextEdit.setText(self._translate("Preferences", self.containingFolder))
+        # self.preferencesWindow.changeFolderButton.clicked.connect(self.setContainingFolder)
+        # # self.preferencesWindow.containingFolderTextEdit.
+        # #     .changeEvent(QAction("", self, triggered=lambda :print(1)))
+
+    def openPriorityScreen(self):
+        self.preferences.openWindow(Preferences.PRIORITY)
+
+        # if self.isVisible():
+        #     self.preferencesWindow.tabWidget.setCurrentIndex(3)
+        # else:
+        #     self.createPreferencesWindow()
+        #     self.preferencesWindow.tabWidget.setCurrentIndex(3)
+        #     self.show()
+        # projectItem = self.event_handler.data['data']
+        # self.buildPriorityTree(projectItem)
+        # self.show()
+
+
+
 
     def currentlySynching(self):
-        print(1)
         #todo: can use this sudo code to make proper
         # if syncQueue.empty():
         #     text = "Up to date"
@@ -185,15 +228,16 @@ class OSFController(QDialog):
         #     text = "currently {}".format(syncQueue.top().name())
         import datetime
         text = "Up to date ({})".format(str(datetime.datetime.now()))
-        self.currentlySynchingAction.setText(text)
+        self.currentlySynchingAction.setText(0,text)
 
-    def openPreferencesAction(self):
-        preferencesWindow = Ui_Preferences()
-        preferencesWindow.setupUi(self)
-        self.show()
+    def openPreferences(self):
+        self.preferences.openWindow(Preferences.GENERAL)
+
 
     def startAboutScreen(self):
-        pass
+        self.preferences.openWindow(Preferences.ABOUT)
+
+
 
 
     def teardown(self):
@@ -213,8 +257,8 @@ class OSFController(QDialog):
         self.trayIconMenu.addAction(self.launchOSFAction)
         self.trayIconMenu.addSeparator()
         self.trayIconMenu.addAction(self.currentlySynchingAction)
-        #todo: figure out how to trigger currentlySynchingAction
         self.trayIconMenu.addSeparator()
+        self.trayIconMenu.addAction(self.priorityAction)
         self.trayIconMenu.addAction(self.preferencesAction)
         self.trayIconMenu.addAction(self.aboutAction)
         self.trayIconMenu.addSeparator()
