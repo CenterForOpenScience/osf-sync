@@ -26,7 +26,7 @@
     <item>
      <widget class="QTabWidget" name="tabWidget">
       <property name="currentIndex">
-       <number>0</number>
+       <number>4</number>
       </property>
       <widget class="QWidget" name="tab">
        <attribute name="title">
@@ -415,17 +415,6 @@ p, li { white-space: pre-wrap; }
 &lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
 p, li { white-space: pre-wrap; }
 &lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:'Ubuntu'; font-size:11pt; font-weight:400; font-style:normal;&quot;&gt;
-&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. &lt;/p&gt;
-&lt;p style=&quot;-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;br /&gt;&lt;/p&gt;
-&lt;p align=&quot;center&quot; style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;© Center for Open Science&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-        </property>
-       </widget>
-      </widget>
-     </widget>
-    </item>
-   </layout>
-  </widget>
- </widget>
- <resources/>
- <connections/>
-</ui>
+&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; background-color:#ffffff;&quot;&gt;&lt;span style=&quot; font-family:'monospace,serif'; font-size:13px; color:#000000; background-color:#ffffff;&quot;&gt;THE BEER-WARE LICENSE:&lt;/span&gt;&lt;/p&gt;
+&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; background-color:#ffffff;&quot;&gt;&lt;span style=&quot; font-family:'monospace,serif'; font-size:13px; color:#000000; background-color:#ffffff;&quot;&gt; The Center for Open Science (COS) wrote this software. As long as you retain this notice you can do whatever you want with this stuff. If you meet a COS employee some day, and you think this stuff is worth it, you can buy him/her a beer in return.&lt;/span&gt;&lt;/p&gt;
+&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;

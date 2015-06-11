@@ -7,7 +7,7 @@ from PyQt5.QtWidgets import (QAction, QApplication, QCheckBox, QComboBox,
         QDialog, QGridLayout, QGroupBox, QHBoxLayout, QLabel, QLineEdit,
         QMessageBox, QMenu, QPushButton, QSpinBox, QStyle, QSystemTrayIcon,
         QTextEdit, QVBoxLayout, QFileDialog, QMainWindow, QTreeWidgetItem)
-from PyQt5.QtCore import QCoreApplication, Qt
+from PyQt5.QtCore import QCoreApplication, Qt, pyqtSignal
 from appdirs import *
 import logging
 from watchdog.observers import Observer
@@ -25,6 +25,35 @@ from Preferences import Preferences
 
 
 
+class OSFApp(QDialog):
+    def __init__(self):
+        super().__init__()
+        self.controller = OSFController()
+        self.view = View2()
+        self.setupConnections()
+
+    def setupConnections(self):
+        self.connectSignalSlot(self.controller.trigger1, self.view.my_slot)
+        self.connectSignalSlot(signal = self.view.preferencesWindow.changeFolderButton.clicked,
+                               slot = self.view.folderChangeDialog
+                               )
+        self.connectSignalSlot(signal=self.view.folderChanged,
+                               slot =  self.view.updateFolder
+                               )
+        self.connectSignalSlot(signal=self.view.folderChanged,
+                               slot =  self.controller.updateFolder
+                               )
+
+
+
+
+
+
+    def connectSignalSlot(self, signal, slot):
+        signal.connect(slot)
+
+
+
 
 
 
@@ -35,6 +64,7 @@ class OSFController(QDialog):
         self.appauthor = "COS"
 
 
+
         self._translate = QCoreApplication.translate
         self.createActions()
         self.createTrayIcon()
@@ -42,16 +72,11 @@ class OSFController(QDialog):
         self.containingFolder = "/home/himanshu/OSF-Offline/dumbdir" #todo: remove. only for dev.
         # self.projectFolder = os.path.join(self.containingFolder, self.projectName)
         if not self.containingFolderIsSet():
-            self.setContainingFolder()
+            self.setContainingFolderByDialog()
         self.startObservingContainingFolder()
         self.startLogging()
 
         self.preferences = Preferences(self.containingFolder, self.event_handler.data['data'])
-
-
-
-
-
 
     def startLogging(self):
         #make sure logging directory exists
@@ -142,6 +167,10 @@ class OSFController(QDialog):
         self.openProjectFolderAction = QAction("Open Project Folder", self, triggered=self.openProjectFolder)
         self.launchOSFAction = QAction("Launch OSF", self, triggered=self.startOSF)
 
+        self.containingFolderChanged = pyqtSignal(str, name='containingFolderChanged')
+        self.containingFolderChanged.connect(self.setContainingFolder)
+        # self.updateContainingFolderAction = QAction("containingFolderChanged",self, triggered= )
+
 
         # hover version (doesnt fully work)
         # self.currentlySynchingAction = QAction("Up to date", self)
@@ -176,7 +205,7 @@ class OSFController(QDialog):
                     # xdg-open *should* be supported by recent Gnome, KDE, Xfce
                     pass #todo: what to do in this case?
         else:
-            self.setContainingFolder()
+            self.setContainingFolderByDialog()
 
     def containingFolderIsSet(self):
         try:
@@ -185,8 +214,11 @@ class OSFController(QDialog):
             return False
 
 
-    def setContainingFolder(self):
+    def setContainingFolderByDialog(self):
         self.containingFolder = QFileDialog.getExistingDirectory(self, "Choose folder")
+
+    def setContainingFolder(self, newContainingFolder):
+        self.containingFolder = newContainingFolder
 
     def startOSF(self):
         pid = 'dk6as'

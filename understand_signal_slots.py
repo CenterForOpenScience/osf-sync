@@ -42,10 +42,15 @@ class View(QObject):
 
     def connect_and_emit_trigger(self):
         # Connect the trigger signal to a slot.
-        self.trigger.connect(self.handle_trigger)
+        # self.trigger.connect(self.handle_trigger)
 
         # Emit the signal.
-        self.trigger.emit()
+        # self.trigger.emit()
+
+        self.containingFolderChanged = pyqtSignal(str, name='containingFolderChanged')
+        self.containingFolderChanged.connect(self)
+        # self.containingFolderChanged.emit(self.)
+
 
     @pyqtSlot(name='bar')
     def handle_trigger(self):
@@ -75,11 +80,89 @@ class Bar(QComboBox):
         print("activated signal passed QString", text)
 
 
+
+
+class Controller2(QDialog):
+
+    trigger1 = pyqtSignal()
+
+    def __init__(self):
+        super().__init__()
+
+
+    def stuff_happened(self):
+        self.trigger1.emit()
+
+    def updateFolder(self, newfolder):
+        print("controller changed folder as well. new folder is {}".format(newfolder))
+
+class View2(QDialog):
+
+    folderChanged = pyqtSignal(str)
+
+    def __init__(self):
+        super().__init__()
+        self.preferencesWindow = Ui_Preferences()
+        self.preferencesWindow.setupUi(self)
+        self.show()
+
+    def my_slot(self):
+        print('haha my slot called.')
+
+    def folderChangeDialog(self):
+        newfolder = QFileDialog.getExistingDirectory(self, "Choose folder")
+        self.folderChanged.emit(newfolder)
+
+
+
+    def changeEditTextValue(self, newText):
+        self.preferencesWindow.containingFolderTextEdit.setText(self._translate("Preferences", self.containingFolder))
+
+    def updateFolder(self, newFolder):
+        print("folder can be updated in view now. new folder will be {}".format(newFolder))
+
+
+class App2(QDialog):
+    def __init__(self):
+        super().__init__()
+        self.controller = Controller2()
+        self.view = View2()
+        self.setupConnections()
+
+    def setupConnections(self):
+        self.connectSignalSlot(self.controller.trigger1, self.view.my_slot)
+        self.connectSignalSlot(signal = self.view.preferencesWindow.changeFolderButton.clicked,
+                               slot = self.view.folderChangeDialog
+                               )
+        self.connectSignalSlot(signal=self.view.folderChanged,
+                               slot =  self.view.updateFolder
+                               )
+        self.connectSignalSlot(signal=self.view.folderChanged,
+                               slot =  self.controller.updateFolder
+                               )
+
+
+
+
+
+
+    def connectSignalSlot(self, signal, slot):
+        signal.connect(slot)
+
+
+
+
 if __name__=="__main__":
     app = QApplication(sys.argv)
-    foo = Controller()
-    foo.connect_and_emit_trigger()
-    # view = View()
+    # foo = Controller()
+    # foo.connect_and_emit_trigger()
+
+    osf = App2()
+
+
+
+
+    view = View()
     app.exec_()
     foo = Controller()
 
