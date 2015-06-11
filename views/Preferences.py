@@ -1,12 +1,7 @@
-from PyQt5.QtGui import QIcon
-from PyQt5.QtWidgets import (QAction, QApplication, QCheckBox, QComboBox,
-        QDialog, QGridLayout, QGroupBox, QHBoxLayout, QLabel, QLineEdit,
-        QMessageBox, QMenu, QPushButton, QSpinBox, QStyle, QSystemTrayIcon,
-        QTextEdit, QVBoxLayout, QFileDialog, QMainWindow, QTreeWidgetItem)
+from PyQt5.QtWidgets import (QAction, QDialog, QFileDialog, QTreeWidgetItem)
 from PyQt5.QtCore import QCoreApplication, Qt
-from rsc.preferences_rc import Ui_Preferences # REQUIRED FOR GUI
-import sys
-import Item
+
+from views.rsc.preferences_rc import Ui_Preferences # REQUIRED FOR GUI
 
 __author__ = 'himanshu'
 
@@ -90,48 +85,3 @@ class Preferences(QDialog):
             self.buildPriorityTree(self.treeData)
 
 
-
-    # def closeEvent(self, event):
-    #     self.hide()
-    #     event.ignore()
-    #     self.close()
-
-# if __name__=="__main__":
-#     app = QApplication(sys.argv)
-#     # QApplication.setQuitOnLastWindowClosed(False)
-#     osf = Preferences("/home/himanshu/OSF-Offline/dumbdir")
-#     osf.show()
-#     app.exec_()
-
-
-
-
-# for i in range(30):
-#     # item = QTreeWidgetItem(self.preferencesWindow.treeWidget)  #top level item
-#     new_item = QTreeWidgetItem(self.preferencesWindow.treeWidget.topLevelItem(0))
-#     new_item.setText(0, _translate("Preferences", "{} stuff stuff".format(i)))
-    # self.preferencesWindow.treeWidget.topLevelItem(0).child(i).setText(0, _translate("Preferences", "{} stuff stuff".format(i)))
-
-
-# item_0 = QtWidgets.QTreeWidgetItem(self.treeWidget)
-# item_1 = QtWidgets.QTreeWidgetItem(item_0)
-# item_1.setCheckState(1, QtCore.Qt.Unchecked)
-# item_2 = QtWidgets.QTreeWidgetItem(item_1)
-# item_2.setCheckState(1, QtCore.Qt.Unchecked)
-# item_3 = QtWidgets.QTreeWidgetItem(item_2)
-# item_3.setCheckState(1, QtCore.Qt.Unchecked)
-# item_3 = QtWidgets.QTreeWidgetItem(item_2)
-# item_3.setCheckState(1, QtCore.Qt.Unchecked)
-
-# self.preferencesWindow.treeWidget.topLevelItem(0).setText(0, _translate("Preferences", "1My Project"))
-# self.preferencesWindow.treeWidget.topLevelItem(0).child(0).setText(0, _translate("Preferences", "2My other Component"))
-# self.preferencesWindow.treeWidget.topLevelItem(0).child(0).child(0).setText(0, _translate("Preferences", "3folder a"))
-# self.preferencesWindow.treeWidget.topLevelItem(0).child(0).child(0).child(0).setText(0, _translate("Preferences", "4New Item"))
-# self.preferencesWindow.treeWidget.topLevelItem(0).child(0).child(0).child(1).setText(0, _translate("Preferences", "4folder b"))
-# self.preferencesWindow.treeWidget.topLevelItem(0).child(0).child(0).child(1).child(0).setText(0, _translate("Preferences", "5some file"))
-# self.preferencesWindow.treeWidget.topLevelItem(0).child(1).setText(0, _translate("Preferences", "2My Component"))
-# self.preferencesWindow.treeWidget.topLevelItem(0).child(2).setText(0, _translate("Preferences", "2C component"))
-# self.preferencesWindow.treeWidget.topLevelItem(0).child(2).child(0).setText(0, _translate("Preferences", "3wiki"))
-# self.preferencesWindow.treeWidget.topLevelItem(0).child(2).child(1).setText(0, _translate("Preferences", "3folder"))
-# self.preferencesWindow.treeWidget.topLevelItem(0).child(2).child(2).setText(0, _translate("Preferences", "3eraser"))
-# self.preferencesWindow.treeWidget.topLevelItem(0).child(2).child(2).setText(0, _translate("Preferences", "hahaha it changed!"))

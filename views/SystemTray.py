@@ -1,4 +1,21 @@
 __author__ = 'himanshu'
+import logging
+import os
+import json
+import os.path
+import sys
+import subprocess
+import webbrowser
+from PyQt5.Qt import QIcon
+from PyQt5.QtWidgets import (QApplication, QDialog, QMessageBox, QSystemTrayIcon,
+                             QFileDialog, QAction,QMenu)
+from PyQt5.QtCore import QCoreApplication
+from appdirs import *
+from watchdog.observers import Observer
+
+from CustomEventHandler import CustomEventHandler
+from views import Preferences
+
 class SystemTray(QDialog):
     def __init__(self):
         super().__init__()

@@ -1,10 +1,10 @@
-from PyQt5.QtCore import QObject, pyqtSignal,pyqtSlot
-from PyQt5.QtWidgets import (QAction, QApplication, QCheckBox, QComboBox,
-        QDialog, QGridLayout, QGroupBox, QHBoxLayout, QLabel, QLineEdit,
-        QMessageBox, QMenu, QPushButton, QSpinBox, QStyle, QSystemTrayIcon,
-        QTextEdit, QVBoxLayout, QFileDialog, QMainWindow)
-from rsc.preferences_rc import Ui_Preferences
 import sys
+
+from PyQt5.QtCore import QObject, pyqtSignal,pyqtSlot
+from PyQt5.QtWidgets import (QAction, QApplication, QDialog, QFileDialog)
+
+from views.rsc.preferences_rc import Ui_Preferences
+
 
 class Controller(QDialog):
     trigger = pyqtSignal()

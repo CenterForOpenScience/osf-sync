@@ -1,6 +1,6 @@
 #-------------------------------------------------
 #
-# Project created by QtCreator 2015-06-09T10:40:21
+# Project created by QtCreator 2015-06-11T16:16:07
 #
 #-------------------------------------------------
 
@@ -8,14 +8,13 @@ QT       += core gui
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
-TARGET = qt_creator_resource
+TARGET = preferences
 TEMPLATE = app
 
 
 SOURCES += main.cpp\
-        mainwindow.cpp
+        preferences.cpp
 
-HEADERS  += mainwindow.h
+HEADERS  += preferences.h
 
-FORMS    += \
-    dialog.ui
+FORMS    += preferences.ui
