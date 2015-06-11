@@ -142,10 +142,6 @@ class App2(QDialog):
                                )
 
 
-
-
-
-
     def connectSignalSlot(self, signal, slot):
         signal.connect(slot)
 
