@@ -55,6 +55,9 @@ class OSFApp(QDialog):
             (self.tray.preferencesAction.triggered, self.openPreferences),
             (self.tray.aboutAction.triggered, self.startAboutScreen),
             (self.tray.quitAction.triggered, self.controller.teardown),
+
+            #preferences
+            (self.preferences.preferencesWindow.changeFolderButton.clicked, self.preferences.openContainingFolderPicker)
         ]
         for signal, slot in signal_slot_pairs:
             signal.connect(slot)

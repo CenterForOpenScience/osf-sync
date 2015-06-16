@@ -38,9 +38,12 @@ class Preferences(QDialog):
         self.setContainingFolderAction =  QAction("Set where Project will be stored", self, triggered=self.setContainingFolder)
         self.tabSelectedAction = QAction("Build Priority Tree", self, triggered=self.selector)
 
-    def setContainingFolder(self):
+    def openContainingFolderPicker(self):
         self.containingFolder = QFileDialog.getExistingDirectory(self, "Choose folder")
-        #todo: this is a hack. should make a new event.
+
+
+    def setContainingFolder(self, newContainingFolder):
+        self.containingFolder = newContainingFolder
         self.preferencesWindow.containingFolderTextEdit.setText(self._translate("Preferences", self.containingFolder))
 
 
@@ -62,15 +65,17 @@ class Preferences(QDialog):
         baseTree.setText(0,self._translate("Preferences", projectItem.name))
         self._createTreeFromProjectItem(baseTree, projectItem.items)
 
+
     def openWindow(self, tab = GENERAL):
         if self.isVisible():
             self.preferencesWindow.tabWidget.setCurrentIndex(tab)
+            self.selector(tab)
         else:
             self.preferencesWindow = Ui_Preferences()
             self.preferencesWindow.setupUi(self)
             self.preferencesWindow.tabWidget.setCurrentIndex(tab)
             self.setupActions()
-            self.setupSlots()
+            # self.setupSlots()
             self.selector(tab)
             self.show()
 

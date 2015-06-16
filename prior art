@@ -1,0 +1,31 @@
+Prior Art
+
+Why is a Dropbox for the OSF needed? It's not. 
+
+This project aims to fix the issues raised by people that the COS Community team has talked to. A key issue is that there is a large scientific community out there that is being under served by us. Why? Because they have serious internet connectivity issues in their region. They bring up, on their own, that if the OSF had offline features, then it would be more useful to them.
+
+In addition, we are currently, as an organization, trying to improve relations with African Scientific Communities. One of the main things that they have told us they wanted is offline access to the OSF. To show them that we do in fact value our relationship with them, we need to show them that we are listening. And more importantly, responding.
+
+Thus to judge prior art, we have to make sure we think in this context.
+
+Dropbox and Google Drive. Both wonderful services. Both have desktop file syncing figured out. We cannot start creating projects and components from them though. We have connected both to the OSF already, but they only hold files and folders. Thus, their extent to OSF integration is what it already is. Both these projects are not open source, thus we cannot manipulate them to directly work with OSF Projects and Components. Nor can we add additional functionality that is specific for low internet connectivity regions such as priority synching and prepackaged syncing.
+
+With all that said, it does not mean we cannot use open source software to make our life easier. We can customize the open source software to work with OSF projects and components.  
+
+OwnCloud is the premier open source file syncing option. It was evaluated. It has tons of super wonderful features that come out of the box - mobile and desktop syncing, ability to add external storage to your syncing, encryption, versioning and undelete, galleries, collaborative editing, calendars, contacts, activity feed, and previewing, among a ton of others. Looking into it though, it would be difficult to work with. OwnCloud requires a WebDAV (http for desktop) interface to connect with. There are in fact a few open source python web servers that we can use that work with WebDAV. Flask is not one of them. Plus you would have to mock the fact that OwnCloud requires sharing an entire file structure, using their complex techniques (there are in fact python modules that do this). The original plan was to actually use OwnCloud. We dropped it because of it was too complex.
+
+Another useful open source service is Git-Annex. It is simpler. It is a way to share files the way we want between clients. We can easily change the code to work with 
+
+ This can be changed up to 
+The way it does this though  
+
+few of the services mentioned were Dropbox, Google Drive, Git-Annex, SparkleShare, and OwnCloud, among others. 
+
+
+
+Dropbox: cannot use because i
+
+
+
+
+Dropbox and Google Drive. We have 

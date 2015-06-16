@@ -15,6 +15,7 @@ from watchdog.observers import Observer
 
 from CustomEventHandler import CustomEventHandler
 from views import Preferences
+import views.rsc.resources
 
 class SystemTray(QDialog):
     def __init__(self):
@@ -50,6 +51,6 @@ class SystemTray(QDialog):
 
 
         #todo: hate this icon. make better.
-        icon = QIcon(':/images/cos_logo.png')
+        icon = QIcon(':/cos_logo.png')
         self.trayIcon.setIcon(icon)
         self.trayIcon.show()

@@ -45,22 +45,21 @@
     # keep calling get components for a specific project
     # when a component is created or deleted, send alert. in this case, send just print to screen
 
+#note, this is polling. NOT long-polling
 
 import asyncio
 import requests
 from pprint import pprint
 
 
-
 old_projects = []
 old_components = []
 
+@asyncio.coroutine
+def handle_project_changes(user):
 
-# @asyncio.coroutine
-def check_projects(user):
-
-    url = 'https://staging2.osf.io/api/v2/users/{}/nodes'.format(user['id'])
-#     print(url)
+    url = user['links']['nodes']['relation']
+    print(url)
     
     resp = requests.get(url)
     if resp.status_code == 200:
@@ -72,48 +71,59 @@ def check_projects(user):
             print("projects changed.")
         else:
             print("projects are same.")
-        old_projects = projects 
+        old_projects.clear()
+        old_projects.extend(projects)
+
+
+        for project in projects:
+            yield from check_components(user, project)
+
     else:
         yield from four_hundred(resp)
 
-# @asyncio.coroutine
-def get_components(user):
 
-    url = 'https://staging2.osf.io/api/v2/users/{}/nodes'.format(user['id'])
+@asyncio.coroutine
+def check_changes(component):
+    #todo: check current component details with what is on FileStructure
+
+    #check children
+    url = 'https://staging2.osf.io/api/v2/nodes/{}/children'.format(user['id'])
 #     print(url)
-
     resp = requests.get(url)
     if resp.status_code == 200:
-        components = resp.json()['data']
+        children = resp.json()['data']
+
         pprint(resp.json()['data'])
 #         pprint(projects)
 #         pprint(old_projects)
         if changed(components, old_components):
-            print("projects changed.")
+            print("components changed.")
         else:
-            print("projects are same.")
-        old_components = components
+            print("components are same.")
+        old_components.clear()
+        old_components.extend(components)
     else:
         yield from four_hundred(resp)
+
+
 
 def changed(new_list, old_list):
     print(len(new_list), len(old_list))
     return not len(new_list) == len(old_list)
 
 
-# @asyncio.coroutine
+@asyncio.coroutine
 def four_hundred(resp):
     print('---------response is 400---------')
     print(resp.text)
 
 
 
-# @asyncio.coroutine
+@asyncio.coroutine
 def main_loop(user):
     while True: #why long time versus just True?
         # repeatedly get projects
-        projects_changed =  yield from check_projects(user)
-
+        yield from handle_project_changes(user)
 
 
         # repeatedly get components of selected project.
