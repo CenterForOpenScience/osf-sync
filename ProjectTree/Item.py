@@ -1,6 +1,7 @@
 import json
 import logging
 import os
+import hashlib
 from decorators import can_put_stuff_in
 
 class Item(object):
@@ -8,23 +9,13 @@ class Item(object):
     FILE = 1
     PROJECT = 2
     COMPONENT = 3
-    def __init__(self, kind, name, guid, version=0):
+    def __init__(self, kind, name, guid, path, version):
         self.kind=kind
         self.name=name
         self.guid=guid
         self.version=version
         self.items=[]
-        self.hash=''
-
-    def update_hash(self):
-        #todo: open file and get its hash. set hash value
-        pass
-
-    def get_hash(self):
-        #todo: get hash
-        pass
-
-
+        self.path = path
 
     def increment_version(self):
         self.version = self.version+1
@@ -67,25 +58,56 @@ class Item(object):
         if self==other:
             return True
 
-    def _serialize(self):
-        self_part = {
-            'kind':'FOLDER' if self.kind==self.FOLDER else 'FILE',
-            'name':self.name,
-            'version':self.version,
-            'guid':self.guid,
-            'num_items':len(self.items),
-            'items': [ i._serialize() for i in self.items ]
-        }
+    def _serialize(self, detail=True):
+
+
+
+        if self.kind == self.FILE:
+            kind = "FILE"
+        elif self.kind == self.COMPONENT:
+            kind = "COMPONENT"
+        elif self.kind == self.FOLDER:
+            kind = "FOLDER"
+        elif self.kind==self.PROJECT:
+            kind= "PROJECT"
+        else:
+            kind="UNKNOWN"
+
+        if detail:
+            self_part = {
+                'kind':kind,
+                'name':self.name,
+                'version':self.version,
+                'guid':self.guid,
+                'num_items':len(self.items),
+                'path':self.path,
+                'items': [ i._serialize(detail) for i in self.items ]
+            }
+        else:
+            self_part = {
+                'kind':kind,
+                'name':self.name,
+                'items': [ i._serialize(detail) for i in self.items ]
+            }
+
 
         return self_part
 
     def json(self):
         return json.dumps(self._serialize())
 
-    # def can_put_stuff_in(self,func):
-    #     if self.kind is not self.FOLDER:
-    #         raise TypeError
-    #     return func()
+    def deserialize_item(self, item):
+
+        return Item(
+                kind=item['kind'],
+                name=item['name'],
+                guid=item['guid'],
+                version=item['version'],
+                path = item['path'],
+                items=[ self._deserialize_item(i) for i in item['items']  ]
+            )
+
+
 
 
 
