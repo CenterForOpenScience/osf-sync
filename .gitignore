@@ -57,3 +57,5 @@ docs/_build/
 target/
 
 schedule
+contains_bad_permissions_file/
+tests/test_projects/contains_bad_permissions_file/copy1

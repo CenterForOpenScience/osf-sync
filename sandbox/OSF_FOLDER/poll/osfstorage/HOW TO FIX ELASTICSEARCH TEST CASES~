@@ -1,0 +1,33 @@
+ideas:
+1)make stuff out of context - dont allow userfactory to save to website
+	not good i think because it would mean making my own user class which basically does same thing as UserFactory except for save step. 
+2)find elasticsearch update node code
+	coupled with Model for Node. Not sure how to minimize changes in model to allow for testing to not be affected. 
+	possible idea is to call the search.save_user method in the tests directly after creating the user. 
+
+
+
+
+
+
+IDEA::::::: MAKE USERFACTORY SAVE TO FAKE DATABASE!!!!!!!!!!!!!!!!! 
+	CURRENT CODE IS IN MODEL AND SAVES TO REAL ELASTICSEARCH DB. WE NEED TO UPDATE FACTORY FOR FAKE MODEL TO SAVE INTO FAKE ELASTICSEARCH DB. CURRENT FACTORY CODE DOES THIS FOR MONGODB. WE SHOULD ALSO BE DOING IT FOR ELASTICSEARCHDB.
+
+AHHHHHH, THIS IS SOOOOOOOO COOOOLLLLLLL!!!!!!!!!!!!!!1 THIS IS GOING TO BE SOOO LEGIT!!!!!!!!!
+
+
+
+
+
+calm down.....
+
+
+ideas:
+	can't just update factory. why not? test factory can certainly have updated code.
+ 	best to perhaps just create parallel process? 
+	then not testing if user is properly updated from other code.
+	truly what you want is to specify to the model that hey, i want to use my test index. how is this done for the mongo????
+
+	
+	
+

@@ -16,7 +16,7 @@ from PyQt5.QtCore import QCoreApplication
 from appdirs import *
 from watchdog.observers import Observer
 
-from CustomEventHandler import CustomEventHandler
+# from CustomEventHandler import CustomEventHandler
 from views.Preferences import Preferences
 from views.SystemTray import SystemTray
 from controller import OSFController
@@ -57,7 +57,7 @@ class OSFApp(QDialog):
             (self.tray.quitAction.triggered, self.controller.teardown),
 
             #preferences
-            (self.preferences.preferencesWindow.changeFolderButton.clicked, self.preferences.openContainingFolderPicker)
+            # (self.preferences.preferencesWindow.changeFolderButton.clicked, self.preferences.openContainingFolderPicker)
         ]
         for signal, slot in signal_slot_pairs:
             signal.connect(slot)

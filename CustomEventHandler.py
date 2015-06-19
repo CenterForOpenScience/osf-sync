@@ -1,8 +1,12 @@
-from watchdog.events import LoggingEventHandler, FileSystemEventHandler
 import os
 import json
 import logging
-from Item import Item
+
+from watchdog.events import FileSystemEventHandler
+
+from ProjectTree.ProjectTree import ProjectTree
+
+
 class CustomEventHandler(FileSystemEventHandler):
     """
     Base file system event handler that you can override methods from.

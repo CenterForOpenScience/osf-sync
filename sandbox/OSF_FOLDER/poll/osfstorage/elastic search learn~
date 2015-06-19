@@ -1,0 +1,50 @@
+elastic search:
+
+index is like a database. Index's have a type. You can customize type. Each document within an index is of that type. A document contains multiple properties, which i assume are defined by the type.
+
+An Elasticsearch cluster can contain multiple Indices (databases), which in turn contain multiple Types (tables). These types hold multiple Documents (rows), and each document has Properties(columns).
+
+MySQL => Databases => Tables => Columns/Rows
+Elasticsearch => Indices => Types => Documents with Properties
+
+it is normal to do something like create an index for each date in a logging application.
+	new database for each date.
+	indexes are very lightweight so this is very feasible and good.
+
+
+For social media application, can have indexes for each individual person. 
+Zach’s Index
+	Hobbies Type
+	Friends Type
+	Pictures Type
+Fred’s Index
+	Hobbies Type
+	Friends Type
+	Pictures Type
+
+Elasticsearch allows you to thus easily group data for easy lookup. Where is data stored?
+	stored into Primary or Replica shards of the actual database.
+
+
+You can create an index using the index api. you have to define the type when you do so. they are of course numerous other optional things to consider.
+ 
+
+You can get data using the get api. you 
+curl -XGET 'http://localhost:9200/twitter/tweet/1'
+which will call the twitter index, look at tweet type and give you the document where id=1
+	you can optionally not look for a specific type and just say look at all documents in the index that have the input id
+	OR you could just go look up everything in given index.
+
+
+OSF:
+
+the indexes we have are website. thats it.
+we have aliases to "doc_types" which are just types inside website index. I think.
+
+
+
+ISSUE: tests for elastic search create a search index named website and then delete it once done with all the testing and recreate the same index. You need to recreate it because it is being used by the rest of the code for the actual website.
+
+FIX:What we want is that we instead of using the website index, use a test index. test index would look the same as website index, but you would not have to recreate the test index once done testing.  
+
+
