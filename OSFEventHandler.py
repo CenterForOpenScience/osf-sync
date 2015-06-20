@@ -4,35 +4,32 @@ import logging
 
 from watchdog.events import FileSystemEventHandler
 
-from ProjectTree.ProjectTree import ProjectTree
+from models import User,Node,File
 
 
-class CustomEventHandler(FileSystemEventHandler):
+class OSFEventHandler(FileSystemEventHandler):
     """
     Base file system event handler that you can override methods from.
     """
-    def __init__(self, sync_folder):
-        super(CustomEventHandler, self).__init__()
+    def __init__(self, OSFFolder):
+        super(OSFEventHandler, self).__init__()
+        self.OSFFolder = OSFFolder
+        self.
         self.data = {
-            'sync_folder':sync_folder,
+            'osf_folder':osf_folder,
             # create root dir item
-            'data':Item(
-                    kind=Item.FOLDER,
-                    name=self._extract_name(sync_folder),
-                    guid=1,
-                    version=0
-                )
+            'project':
         }
 
-    def _deserialize_item(self, item):
-
-        return Item(
-                kind=item['kind'],
-                name=item['name'],
-                guid=item['guid'],
-                version=item['version'],
-                items=[ self._deserialize_item(i) for i in item['items']  ]
-            )
+    # def _deserialize_item(self, item):
+    #
+    #     return Item(
+    #             kind=item['kind'],
+    #             name=item['name'],
+    #             guid=item['guid'],
+    #             version=item['version'],
+    #             items=[ self._deserialize_item(i) for i in item['items']  ]
+    #         )
 
     # def _deserialize(self, json_string):
     #     #todo: add other config items to deserialized content
