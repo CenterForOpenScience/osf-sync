@@ -16,7 +16,7 @@ from PyQt5.QtCore import QCoreApplication
 from appdirs import *
 from watchdog.observers import Observer
 
-# from CustomEventHandler import CustomEventHandler
+
 from views.Preferences import Preferences
 from views.SystemTray import SystemTray
 from controller import OSFController
@@ -37,7 +37,8 @@ class OSFApp(QDialog):
 
         #views
         self.tray = SystemTray()
-        self.preferences = Preferences(self.controller.containingFolder, self.controller.event_handler.data['data'])
+        #todo: remove priority abilities
+        self.preferences = Preferences(self.controller.containingFolder, None)
 
         #connect all signal-slot pairs
         self.setupConnections()
@@ -82,7 +83,7 @@ if __name__ == '__main__':
 
     if not QSystemTrayIcon.isSystemTrayAvailable():
         QMessageBox.critical(None, "Systray",
-                "I couldn't detect any system tray on this system.")
+                "Could not detect a system tray on this system")
         sys.exit(1)
 
     QApplication.setQuitOnLastWindowClosed(False)

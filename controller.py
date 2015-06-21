@@ -5,20 +5,20 @@ import os.path
 import sys
 import subprocess
 import webbrowser
-
+import models
 from PyQt5.QtWidgets import (QApplication, QDialog, QMessageBox, QSystemTrayIcon,
                              QFileDialog)
-from PyQt5.QtCore import QCoreApplication
+from PyQt5.QtCore import QCoreApplication, QFileSystemWatcher
 from appdirs import *
 from watchdog.observers import Observer
-
-from CustomEventHandler import CustomEventHandler
+import Polling
+from OSFEventHandler import OSFEventHandler
 from views import Preferences
 
 __author__ = 'himanshu'
 class OSFController(QDialog):
 
-    def __init__(self, appname, appauthor):
+    def __init__(self, appname, appauthor, ):
         super().__init__()
         self.appname=appname
         self.appauthor=appauthor
@@ -28,15 +28,43 @@ class OSFController(QDialog):
         self._translate = QCoreApplication.translate
         # self.createActions()
 
+
+        self.user = self.getCurrentUser()
+
+
         self.containingFolder = "/home/himanshu/OSF-Offline/dumbdir" # todo: remove. only for dev.
-        # self.projectFolder = os.path.join(self.containingFolder, self.projectName)
         if not self.containingFolderIsSet():
             self.setContainingFolder()
-        self.startObservingContainingFolder()
+        #todo: handle if OSF folder does not exist. OR if user wants custom OSF folder
+        self.OSFFolder = os.path.join(self.containingFolder, "OSF") #todo: store osf folder
+        self.startObservingOSFFolder()
+        self.startPollingServer()
         self.startLogging()
+        print('I SHOULD HAVE HAVE ALL FOLDERS NOW!!!!!!!!!!')
+
 
         # self.preferences = Preferences(self.containingFolder, self.event_handler.data['data'])
 
+    def startPollingServer(self):
+        remote_user = Polling.get_remote_user(self.user)
+        Polling.check_osf(remote_user, self.OSFFolder)
+
+    def getCurrentUser(self):
+        session = models.create_session(self.config['dbdir'])
+
+        user = session.query(models.User).filter(models.User.fullname == "Himanshu Ojha").first()
+        if not user:
+            user = models.User(fullname="Himanshu Ojha")
+            session.add(user)
+            try:
+                session.commit()
+            except:
+                session.rollback()
+                raise
+        # local_user = None
+        # local_user.fullname = user.fullname
+        # session.close()
+        return user
 
 
     def startLogging(self):
@@ -69,16 +97,20 @@ class OSFController(QDialog):
         logging.getLogger('').addHandler(console)
 
 
+        # logging.getLogger('sqlalchemy.engine').addHandler()
 
-    def startObservingContainingFolder(self):
+
+
+    def startObservingOSFFolder(self):
+
+
         #if something inside the folder changes, log it to config dir
         #if something inside the folder changes, show it on console.
-        path = self.containingFolder #set this to whatever appdirs says - data_dir
-        print(path)
-        self.event_handler = CustomEventHandler(path) #create event handler
+        path = self.OSFFolder #set this to whatever appdirs says - data_dir
+        self.event_handler = OSFEventHandler(path, self.config['dbdir'],self.user ) #create event handler
         #if config actually has legitimate data. use it.
-        if self.config != {}:
-            self.event_handler.import_from_db(items_dict=self.config, user='himanshu', password='pass', name='himanshu', fav_movie='matrix', fav_show='simpsons')
+        # if self.config != {}:
+        #     self.event_handler.import_from_db(items_dict=self.config, user='himanshu', password='pass', name='himanshu', fav_movie='matrix', fav_show='simpsons')
 
         #start
         self.observer = Observer() #create observer. watched for events on files.
@@ -86,16 +118,12 @@ class OSFController(QDialog):
         self.observer.schedule(self.event_handler, path, recursive=True)
         self.observer.start() #start
 
-    def stopObservingContainingFolder(self):
+    def stopObservingOSFFolder(self):
         self.observer.stop()
 
 
     def closeEvent(self, event):
         if self.trayIcon.isVisible():
-            # QMessageBox.information(self, "Systray",
-            #         "The program will keep running in the system tray. To "
-            #         "terminate the program, choose <b>Quit</b> in the "
-            #         "context menu of the system tray entry.")
             self.hide()
             event.ignore()
 
@@ -153,8 +181,7 @@ class OSFController(QDialog):
 
 
     def startOSF(self):
-        pid = 'dk6as'
-        url = "http://osf.io/{}/".format(pid)
+        url = "http://osf.io/"
         webbrowser.open_new_tab(url)
 
 
@@ -185,6 +212,7 @@ class OSFController(QDialog):
 
 
     def createConfig(self):
+        #todo: create helper function to check if config/data/OSF/... dirs' exist, and create them if they dont' exist.
 
         #check if dir has config file already in it, if so use it. if not create it.
         dir = user_config_dir(self.appname, self.appauthor)
@@ -192,6 +220,13 @@ class OSFController(QDialog):
         #ensure directory exists
         if not os.path.exists(dir):
             os.makedirs(dir)
+
+        #ensure data dir exists
+        data_dir = user_data_dir(self.appname, self.appauthor)
+
+        if not os.path.exists(data_dir):
+            os.makedirs(data_dir)
+        models.create_models(dir= data_dir)
 
         #new file if file doesnt exist.
         try:
@@ -204,5 +239,9 @@ class OSFController(QDialog):
             self.config = json.loads(file_content)
         except ValueError:
             print('config file is corrupted. Creating new config file')
-            self.config ={}
+            #todo: figure out where this should actually be
+            self.config={}
+            self.config['appname'] = self.appname
+            self.config['appauthor'] = self.appauthor
+            self.config['dbdir'] = user_data_dir(self.appname, self.appauthor)
         print(self.config)

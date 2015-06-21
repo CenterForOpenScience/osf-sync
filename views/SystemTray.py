@@ -13,7 +13,7 @@ from PyQt5.QtCore import QCoreApplication
 from appdirs import *
 from watchdog.observers import Observer
 
-from CustomEventHandler import CustomEventHandler
+from OSFEventHandler import OSFEventHandler
 from views import Preferences
 import views.rsc.resources
 

@@ -109,25 +109,33 @@ Session.configure(bind=engine)
 session = Session()
 
 
-user = User(name="Himanshu")
+# user = User(name="Himanshu")
+#
+# project = Node(category="project", name="test project 1")
+# user.projects.append(project)
+#
+# project = Node(category="project", name="test project 2")
+# component1 = Node(category="component", name="component 1", parent_id=project.id)
+# project.components.append(component1)
+#
+#
+# user.projects.append(project)
+#
+# session.add(user)
+# session.commit()
+#
+# for instance in session.query(User):
+#     print(instance)
+# for instance in session.query(Node).filter():
+#     print(instance)
+#
 
-project = Node(category="project", name="test project 1")
-user.projects.append(project)
-
-project = Node(category="project", name="test project 2")
-component1 = Node(category="component", name="component 1", parent_id=project.id)
-project.components.append(component1)
-
-
-user.projects.append(project)
-
-session.add(user)
+user =session.query(User).filter(User.name == "Himanshu").all()[0]
+user.osf_path="/this/is/a/path"
 session.commit()
+himanshu = session.query(User).filter(User.name == "Himanshu").all()
+print(himanshu)
 
-for instance in session.query(User):
-    print(instance)
-for instance in session.query(Node).filter():
-    print(instance)
 
 ############################################
 # association_table = Table('association', Base.metadata,
