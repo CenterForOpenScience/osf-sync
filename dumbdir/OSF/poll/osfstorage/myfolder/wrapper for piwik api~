@@ -1,0 +1,32 @@
+HOW TO CREATE wrapper for PIWIK API:
+
+firstly, Users are within OSF itself. We are creating PIWIK user based off of OSF user.
+
+
+create_user
+	uses osf userid for login to piwik user
+	pw is randomly generated (i think)
+	token auth and piwik url stored in settings
+	all data for user either generated or attained from OSF user object
+	use REQUEST module to actually make post requests
+	
+	if the response is an error then raise PiwikException
+	
+	OSF user gets a new field - piwik_token - and this is saved.
+
+update_node
+	node - seems like a "website page"has things like user is_folder,isdashboard,registereddate,isfork,description,commentline,piwiksiteid,creator,tags,logs,
+	point of this method is to update the piwik site id of the node.
+	if the contributers of the node have changed then update the node with the appropriate changes <-determine changes using sets. cool.
+
+_users_with_view_access
+	given node, call piwik and return set of users with view access.
+_change_view_access
+	again, done using piwik api.
+
+
+
+the cool part is the way they have the api calling formatted so easily.
+	_ methods for all internal operations. outside person just calls some 
+
+

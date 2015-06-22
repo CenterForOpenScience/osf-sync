@@ -10,7 +10,7 @@ import aiohttp
 from queue import Queue, Empty
 from datetime import datetime
 from threading import Thread
-from models import create_session, User
+from models import create_session, User, Node, File
 
 class Poll(Thread):
     def __init__(self, db_url, user):
@@ -62,14 +62,23 @@ class Poll(Thread):
         return requests.get('https://staging2.osf.io:443/api/v2/users/?filter[fullname]={}'.format(self.user.fullname)).json()['data'][0]
 
     @asyncio.coroutine
-    def check_osf(self,user, local_folder, recheck_time=None):
-
+    def check_osf(self,user, recheck_time=None):
+        user_id = user['id']
         while self._keep_running:
-            user_id = user['id']
-            projects = requests.get('https://staging2.osf.io:443/api/v2/users/{}/nodes/?filter[category]=project'.format(user_id))
+            remote_projects = requests.get('https://staging2.osf.io:443/api/v2/users/{}/nodes/?filter[category]=project'.format(user_id))
             projects = projects.json()['data']
             for project in projects:
-                yield from self.check_project(project,local_folder)
+                local_project = self.session.query(Node).filter(Node.guid == project['guid']).find()
+                if not local_project:
+                    new_project = Node(name=project['name'], guid=project['guid'], category='project')
+                    self.session.add(new_project)
+                    self.save()
+                yield from self.check_component(project)
+
+            #todo: handle projects in local that are not in server. the above for loop does not look at those.
+            for project in self._created_projects(projects):
+                 print('new project created on server:{}'.format(project.name))
+
             print('---------SHOULD HAVE ALL OPEN OSF FILES---------')
 
             if recheck_time:
@@ -77,7 +86,19 @@ class Poll(Thread):
                 yield from asyncio.sleep(recheck_time)
 
 
+    #fixme: logic for check_osf -> check_project -> check_component -> check_file_folders is off
 
+
+
+
+    def _created_projects(self, server_projects):
+        local_projects = self.user.projects
+        server_project_guids = (project['guid'] for project in server_projects)
+        for local in local_projects:
+            if local.guid not in server_project_guids: #todo: figure out if I should use guid or nid
+                yield local
+
+    #todo: if nothing to do here, then refactor this method out. go directly to check_component
     @asyncio.coroutine
     def check_project(self,project,local_folder):
         # if not os.path.exists(os.path.join(local_folder,project['name'])):
@@ -113,14 +134,21 @@ class Poll(Thread):
                     for chunk in r.iter_content(2048): #todo: which is better? 1024 or 2048? Apparently, not much difference.
                         fd.write(chunk)
                     print('file SHOULD now be on local storage.')
+
     @asyncio.coroutine
     def check_component(self,component, local_folder):
+
         new_local_folder = os.path.join(local_folder, component['title'])
+
+
         if not os.path.exists(new_local_folder):
                 os.makedirs(new_local_folder)
         files_folders = requests.get(component['links']['files']['related']).json()['data']
         for file_folder in files_folders:
             yield from self.check_file_folder(file_folder,new_local_folder)
+        #todo: handle file_folders in local that are not in server. the above for loop does not look at those.
+            # for file_folder in local but not in server:
+            #     print('new file_folder created on server!')
 
         child_components = []
         child_components_resp = requests.get(component['links']['children']['related']).json()
@@ -131,6 +159,37 @@ class Poll(Thread):
         for child_component in child_components:
             yield from self.check_component(child_component, new_local_folder)
 
+
+        for created_component in self._created_components(component, child_components):
+            print('new component created on server:{}'.format(created_component.name))
+
+
+
+    def _created_components(self, parent_component, server_components):
+        local_parent_component = self.session.query(Node).filter(Node.guid == parent_component['guid']).first() #todo: nid or guid????
+        local_components = local_parent_component.components
+        server_component_guids = [component['guid'] for component in server_components]
+        for local in local_components:
+            if local.guid not in server_component_guids: #todo: figure out if I should use guid or nid
+                yield local
+
+    # def _created_file_folders(self, component=None, parent_folder=None):
+    #
+    #     if parent_folder:
+    #         local_parent_component = self.session.query(Node).filter(Node.guid == component['guid']).first()
+    #         local_file_folders = local_parent_component.files
+    #         server_file_folder
+    #     elif component:
+    #         pass
+    #     else:
+    #         raise ValueError
+
+        local_parent_component = self.session.query(Node).filter(Node.guid == parent_component['guid']).first() #todo: nid or guid????
+        local_components = local_parent_component.components
+        server_component_guids = [component['guid'] for component in server_components]
+        for local in local_components:
+            if local.guid not in server_component_guids: #todo: figure out if I should use guid or nid
+                yield local
 
 
 

@@ -159,5 +159,5 @@ def create_session(dir):
     Session.configure(bind=engine)
     return Session()
 
-
+#todo: probably okay to have a method that finds a component by guid.
 

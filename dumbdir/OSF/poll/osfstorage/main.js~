@@ -1,0 +1,3 @@
+if (/^win/.test(process.platform)){
+	console.log("hi");
+}

@@ -30,13 +30,14 @@ class OSFController(QDialog):
 
 
         self.user = self.getCurrentUser()
+        self.poller = Polling.Poll(self.config['dbdir'], self.user)
 
 
         self.containingFolder = "/home/himanshu/OSF-Offline/dumbdir" # todo: remove. only for dev.
         if not self.containingFolderIsSet():
             self.setContainingFolder()
         #todo: handle if OSF folder does not exist. OR if user wants custom OSF folder
-        self.OSFFolder = os.path.join(self.containingFolder, "OSF") #todo: store osf folder
+        self.OSFFolder = os.path.join(self.containingFolder, "OSF") # todo: store osf folder
         self.startObservingOSFFolder()
         self.startPollingServer()
         self.startLogging()
@@ -46,8 +47,13 @@ class OSFController(QDialog):
         # self.preferences = Preferences(self.containingFolder, self.event_handler.data['data'])
 
     def startPollingServer(self):
-        remote_user = Polling.get_remote_user(self.user)
-        Polling.check_osf(remote_user, self.OSFFolder)
+        # self.poller = Polling.Poll(self.config['dbdir'], self.user)
+        self.poller.start()
+
+    def stopPollingServer(self):
+        self.poller.stop()
+        self.poller.join()
+
 
     def getCurrentUser(self):
         session = models.create_session(self.config['dbdir'])
@@ -201,6 +207,8 @@ class OSFController(QDialog):
 
 
     def teardown(self):
+
+        # store current configs in config file
         dir = user_config_dir(self.appname, self.appauthor)
         rel_osf_config = os.path.join(dir,'config.osf')
         file = open(rel_osf_config,'w+')
@@ -208,6 +216,13 @@ class OSFController(QDialog):
         file.write(json.dumps(self.config))
         file.close()
 
+        # stop polling the server
+        self.stopPollingServer()
+
+        # stop observing OSF folder
+        self.stopObservingOSFFolder()
+
+        #quit the application
         QApplication.instance().quit()
 
 
