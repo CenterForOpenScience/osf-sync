@@ -1,7 +1,7 @@
 __author__ = 'himanshu'
 import requests
 import os
-import asyncio
+
 __author__ = 'himanshu'
 import requests
 import os
@@ -10,312 +10,277 @@ import aiohttp
 from queue import Queue, Empty
 from datetime import datetime
 from threading import Thread
-from models import create_session, User, Node, File
+from models import User, Node, File, create_engine, sessionmaker, get_session
+from sqlalchemy.orm import scoped_session
+from sqlalchemy.pool import SingletonThreadPool
 
 class Poll(Thread):
-    def __init__(self, db_url, user):
+    def __init__(self, db_url, user_osf_id, session):
         super().__init__()
         self._keep_running = True
-        self.session = create_session(db_url)
-        self.user = user
-        # self.remote_user = self.get_remote_user()
-        # self._waiting_coros = Queue()
-        # self._tasks = []
-        self._loop = None                           # Loop must be initialized in child thread.
-        # self.limit_simultaneous_processes = None    # Semaphore must be initialized after the loop is set.
+        self.db_url = db_url
+        self.user_osf_id = user_osf_id
+        self._loop = None
+        db_file_path = os.path.join(self.db_url, 'osf.db')
+        url = 'sqlite:///{}'.format(db_file_path)
+        #todo: figure out if this is safe or not. If not, how to make it safe?????
+        # engine = create_engine(url, echo=False, connect_args={'check_same_thread':False})
+        engine = create_engine(url, echo=False, poolclass=SingletonThreadPool)
+        session_factory = sessionmaker(bind=engine)
+        global Session
+        Session = scoped_session(session_factory)
+        self.session = Session()
 
     def stop(self):
         self._keep_running = False
+        # self._loop.close()
 
     def run(self):
+
         self._loop = asyncio.new_event_loop()       # Implicit creation of the loop only happens in the main thread.
+
+
         asyncio.set_event_loop(self._loop)          # Since this is a child thread, we need to do it manually.
-        # self.limit_simultaneous_processes = asyncio.Semaphore(2)
         remote_user = self.get_remote_user()
-        print(remote_user)
 
 
 
-        self._loop.run_until_complete(self.check_osf(remote_user, '/home/himanshu/OSF-Offline/dumbdir/OSF', 5))
+        self._loop.run_until_complete(self.check_osf(remote_user,self.db_url,5))
 
-        # # future = asyncio.Future()
-        # asyncio.ensure_future(self.check_osf(remote_user, '/home/himanshu/OSF-Offline/dumbdir/OSF'))
-        # # future.add_done_callback(got_result)
-        # try:
-        #     self._loop.run_forever()
-        # finally:
-        #     self._loop.close()
-
-    # def submit_coro(self, coro, callback=None):
-    #     self._waiting_coros.put((coro, callback))
 
 
     def get_remote_user(self):
-        # # print('getting remote user')
-        # url = 'https://staging2.osf.io:443/api/v2/users/?filter[fullname]={}'.format(self.user.fullname)
-        # # print(url)
-        # response = yield from aiohttp.request('GET', url)
-        # # print('got response')
-        # content = yield from response.json()
-        # print(content['data'][0])
-        # yield content['data'][0]
-        return requests.get('https://staging2.osf.io:443/api/v2/users/?filter[fullname]={}'.format(self.user.fullname)).json()['data'][0]
+        print(self.user_osf_id)
+        return requests.get('https://staging2.osf.io:443/api/v2/users/{}/'.format(self.user_osf_id)).json()['data']
+
+
+    def get_id(self,item):
+        """
+
+        :param item: node or fileF
+        :return: guid of item
+        """
+
+        # if node/file is remote
+        if isinstance(item, dict):
+            if item['type'] == 'nodes':
+                return item['id']
+            else: #assumption: item['type'] == 'files'
+                #!!!!!!!!fixme: this is a cheatcode!!!! for here, we are using path+name+item_type for here only for identifying purposes
+                return str(hash(item['path']+item['name']+item['item_type']))
+        else: # node/file is local
+
+
+            return item.osf_id
+
+
+    #assumption: this method works.
+    def make_local_remote_tuple_list(self, local_list, remote_list):
+        import threading; print('-inside make local remote tuple list-{}---'.format(threading.current_thread()))
+        combined_list = local_list + remote_list
+        sorted_combined_list = sorted(combined_list, key=self.get_id)
+
+        local_remote_tuple_list = []
+        i = 0
+        while i < len(sorted_combined_list):
+            if i+1 < len(sorted_combined_list) and \
+                            self.get_id(sorted_combined_list[i]) \
+                            == \
+                            self.get_id(sorted_combined_list[i+1]):
+                # (local, remote)
+                if isinstance(sorted_combined_list[i], dict): # remote
+                    new_tuple = (sorted_combined_list[i+1],sorted_combined_list[i])
+                else:#assumption: sorted_combined_list[i] is a local object
+                    new_tuple = (sorted_combined_list[i],sorted_combined_list[i+1])
+                i += 1 #add an extra 1 because both values should be added to tuple list
+            elif isinstance(sorted_combined_list[i], dict):
+                new_tuple = (None,sorted_combined_list[i])
+            else:
+                new_tuple = (sorted_combined_list[i], None)
+            local_remote_tuple_list.append( new_tuple )
+            i += 1
+        return local_remote_tuple_list
+
+
 
     @asyncio.coroutine
-    def check_osf(self,user, recheck_time=None):
-        user_id = user['id']
+    def check_osf(self,remote_user,db_url, recheck_time=None):
+        import threading;print("------{}------".format(threading.current_thread()))
+
+
+        # Session.configure(bind=engine)
+        print("!!!!!!!!!!!!!check osf!!!!!!!!!!!!!!!!!{}!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!".format(threading.current_thread()))
+
+        print('error here?')
+        remote_user_id = remote_user['id']
+        print('error here??')
+        self.user = self.session.query(User).filter(User.osf_id == remote_user_id).first()
+        print('error here???')
+        projects_for_user_url = 'https://staging2.osf.io:443/api/v2/users/{}/nodes/?filter[category]=project'.format(remote_user_id)
+
         while self._keep_running:
-            remote_projects = requests.get('https://staging2.osf.io:443/api/v2/users/{}/nodes/?filter[category]=project'.format(user_id))
-            projects = projects.json()['data']
-            for project in projects:
-                local_project = self.session.query(Node).filter(Node.guid == project['guid']).find()
-                if not local_project:
-                    new_project = Node(name=project['name'], guid=project['guid'], category='project')
-                    self.session.add(new_project)
-                    self.save()
-                yield from self.check_component(project)
+            #get remote projects
+            resp = requests.get(projects_for_user_url)
+            remote_projects = resp.json()['data']
+            # remote_project_guids = [remote_project['guid'] for remote_project in remote_projects ]
 
-            #todo: handle projects in local that are not in server. the above for loop does not look at those.
-            for project in self._created_projects(projects):
-                 print('new project created on server:{}'.format(project.name))
+            #get local projects
+            local_projects = self.user.projects
+            # local_project_guids = [local_project.guid for local_project in local_projects ]
 
-            print('---------SHOULD HAVE ALL OPEN OSF FILES---------')
+
+            local_remote_projects = self.make_local_remote_tuple_list(local_projects, remote_projects)
+
+            for local, remote in local_remote_projects:
+                self.check_node(local, remote, parent=None)
+
+
+            print('---------SHOULD HAVE ALL OSF FILES---------')
 
             if recheck_time:
-                print('SLEEPING.................................................................................')
+                #todo: figure out how we can prematuraly stop the sleep when user ends the application while sleeping
+                print('SLEEPING FOR {} seconds...'.format(recheck_time))
                 yield from asyncio.sleep(recheck_time)
 
 
-    #fixme: logic for check_osf -> check_project -> check_component -> check_file_folders is off
+
+    def check_node(self,local_node, remote_node, parent):
+        """
+        Responsible for checking whether local node values are same as remote node.
+        Values to be checked include: files and folders, name, metadata, child nodes
+        """
+        print('checking node')
+
+        #get local or remote, whichever is None
+        #todo: add date_modified checks to this
+        if local_node is None:
+            local_node = self.download_node(remote_node, parent)
+        elif remote_node is None:
+            remote_node = self.upload_node(local_node, parent)
+        #handle file_folders for node
+        self.check_file_folder(local_node, remote_node)
+
+        #todo: handle updates to current node
+
+        #recursively handle node's children
+        remote_children = []
+        resp = requests.get(remote_node['links']['children']['related']).json()
+
+        remote_children.extend(resp['data'])
+        while resp['links']['next'] != None:
+            resp = requests.get(resp['links']['next']).json()
+            remote_children.extend(resp['data'])
+        local_remote_nodes = self.make_local_remote_tuple_list(local_node.components, remote_children)
+
+        for local, remote in local_remote_nodes:
+            self.check_node(local, remote, parent=local_node)
 
 
 
+    def download_node(self, remote_node, parent):
+        print('downloading node')
+        category = Node.PROJECT if remote_node['category']=='project' else Node.COMPONENT
+        if parent:
+            new_node_path = os.path.join(parent.path, remote_node['title'])
+        else:
+            new_node_path = os.path.join(self.user.osf_path,remote_node['title'])
+        new_node = Node(title=remote_node['title'], category=category, osf_id=remote_node['id'], path=new_node_path, user=self.user)
+        self.session.add(new_node)
+        self.save()
 
-    def _created_projects(self, server_projects):
-        local_projects = self.user.projects
-        server_project_guids = (project['guid'] for project in server_projects)
-        for local in local_projects:
-            if local.guid not in server_project_guids: #todo: figure out if I should use guid or nid
-                yield local
+        #also create local folder for node
+        if not os.path.exists(new_node_path):
+            os.makedirs(new_node_path)
 
-    #todo: if nothing to do here, then refactor this method out. go directly to check_component
-    @asyncio.coroutine
-    def check_project(self,project,local_folder):
-        # if not os.path.exists(os.path.join(local_folder,project['name'])):
-        #     os.makedirs(os.path.join(local_folder, project['name']))
-        # todo: stuff to do here before checking project
-        # if project['title'] == 'poll':
-        #     pt = projectpoll
-        # else:
-        #     pt = projectinverse
-        yield from self.check_component(project, local_folder)
+        return new_node
 
-    @asyncio.coroutine
-    def check_file_folder(self,file_folder,local_folder):
-        if file_folder['item_type']=='folder':
-            print('folder!')
-            new_local_folder = os.path.join(local_folder, file_folder['name'])
+    def upload_node(self, local_node, is_project):
+        # requests.put('https://staging2.osf.io:443/api/v2/nodes/{}/'.format())
+        print('uploaded node!')
+        return None
+
+
+    def check_file_folder(self, local_node, remote_node):
+
+        print('checking file_folder')
+        #todo: determine if we just want osfstorage or also other things
+        resp = requests.get(remote_node['links']['files']['related'])
+        remote_node_files = resp.json()['data']
+        print('DEBUG:local_node.files:{}'.format(local_node.files))
+        print('DEBUG:remote_node_files:{}'.format(remote_node_files))
+        local_remote_files = self.make_local_remote_tuple_list(local_node.files, remote_node_files)
+
+        for local, remote in local_remote_files:
+            self._check_file_folder(local, remote, parent=local_node)
+
+
+    def _check_file_folder(self,local_file_folder,remote_file_folder, parent):
+        print('checking file_folder internal')
+
+        if local_file_folder is None:
+            local_file_folder = self.create_local_file_folder(remote_file_folder, parent)
+        elif remote_file_folder is None:
+            remote_file_folder = self.create_remote_file_folder(local_file_folder, parent)
+
+
+        #todo: handle file/folder name, content changes.
+
+        if local_file_folder.type is File.FILE:
+            #todo: check if local version of file is different than online version
+            pass
+        else: #assumption: local_file_folder.type is File.Folder
+            #recursively handle folder's children
+            remote_children = []
+
             try:
-                folder = requests.get(file_folder['links']['related']).json()['data']
-                if not os.path.exists(new_local_folder):
-                    os.makedirs(new_local_folder)
-                for inner in folder:
-                    yield from self.check_file_folder(inner,new_local_folder)
-            except TypeError:
-                print('request for check_file_folder failed because folder is not accessible to us.')
-                print('can debug if you want using the link: {}'.format(file_folder['links']['related']))
+                resp = requests.get(remote_file_folder['links']['related'])
+                remote_children.extend(resp.json()['data'])
+                while resp.json()['links']['next'] != None:#fixme: don't know actual response. figure it out.
+                    resp = requests.get(resp['links']['next']).json()
+                    remote_children.extend(resp['data'])
 
-        elif file_folder['item_type']=='file':
-            print('file!')
-            new_local_file_path = os.path.join(local_folder,file_folder['name'])
-            if not os.path.exists(new_local_file_path):
-                r = requests.get(file_folder['links']['self'])
-                with open(new_local_file_path, 'wb') as fd:
-                    for chunk in r.iter_content(2048): #todo: which is better? 1024 or 2048? Apparently, not much difference.
+                local_remote_file_folders = self.make_local_remote_tuple_list(local_file_folder.files, remote_children)
+                for local, remote in local_remote_file_folders:
+                    self._check_file_folder(local, remote, parent=local_file_folder)
+            except:
+
+                print('couldnt get subfolder and subfiles. no permission. todo: make seperate helper functions to get these values.')
+
+
+
+    def create_local_file_folder(self, remote_file_folder, parent):
+        import threading; print('------------------------inside create_local_file_folder---{}----'.format(threading.current_thread()))
+        type = File.FILE if remote_file_folder['item_type']=='file' else File.FOLDER
+        # handles case where parent is node and when parent is folder
+        new_file_folder_path = os.path.join(parent.path, remote_file_folder['name'])
+        parent_folder = parent if isinstance(parent, File) else None
+        #The json response contains path. assumption: this path variable is uniquily identifying to a folder/file
+
+        #note the hack: osf_id = self.get_id(remote) is a made up osf_id
+        new_file_folder = File(name=remote_file_folder['name'], type=type, osf_id=self.get_id(remote_file_folder), path=new_file_folder_path, user=self.user, parent=parent_folder)
+        self.session.add(new_file_folder)
+        self.save()
+        print('DEBUG:new_file_folder.osf_id:{}'.format(new_file_folder.osf_id))
+
+        #also create local file/folder
+        if not os.path.exists(new_file_folder_path):
+            if type is File.FILE:
+                resp = requests.get(remote_file_folder['links']['self'])
+                with open(new_file_folder_path, 'wb') as fd:
+                    for chunk in resp.iter_content(2048): #todo: which is better? 1024 or 2048? Apparently, not much difference.
                         fd.write(chunk)
-                    print('file SHOULD now be on local storage.')
+            else:#assumption: type is File.Folder
+                    os.makedirs(new_file_folder_path)
 
-    @asyncio.coroutine
-    def check_component(self,component, local_folder):
+        return new_file_folder
 
-        new_local_folder = os.path.join(local_folder, component['title'])
+    def create_remote_file_folder(self, local_file_folder, parent):
+        print('uploaded file/folder to server!')
+        return None
 
-
-        if not os.path.exists(new_local_folder):
-                os.makedirs(new_local_folder)
-        files_folders = requests.get(component['links']['files']['related']).json()['data']
-        for file_folder in files_folders:
-            yield from self.check_file_folder(file_folder,new_local_folder)
-        #todo: handle file_folders in local that are not in server. the above for loop does not look at those.
-            # for file_folder in local but not in server:
-            #     print('new file_folder created on server!')
-
-        child_components = []
-        child_components_resp = requests.get(component['links']['children']['related']).json()
-        child_components.extend(child_components_resp['data'])
-        while child_components_resp['links']['next'] != None:
-            child_components_resp = requests.get(component['links']['next']).json()
-            child_components.extend(child_components_resp['data'])
-        for child_component in child_components:
-            yield from self.check_component(child_component, new_local_folder)
-
-
-        for created_component in self._created_components(component, child_components):
-            print('new component created on server:{}'.format(created_component.name))
-
-
-
-    def _created_components(self, parent_component, server_components):
-        local_parent_component = self.session.query(Node).filter(Node.guid == parent_component['guid']).first() #todo: nid or guid????
-        local_components = local_parent_component.components
-        server_component_guids = [component['guid'] for component in server_components]
-        for local in local_components:
-            if local.guid not in server_component_guids: #todo: figure out if I should use guid or nid
-                yield local
-
-    # def _created_file_folders(self, component=None, parent_folder=None):
-    #
-    #     if parent_folder:
-    #         local_parent_component = self.session.query(Node).filter(Node.guid == component['guid']).first()
-    #         local_file_folders = local_parent_component.files
-    #         server_file_folder
-    #     elif component:
-    #         pass
-    #     else:
-    #         raise ValueError
-
-        local_parent_component = self.session.query(Node).filter(Node.guid == parent_component['guid']).first() #todo: nid or guid????
-        local_components = local_parent_component.components
-        server_component_guids = [component['guid'] for component in server_components]
-        for local in local_components:
-            if local.guid not in server_component_guids: #todo: figure out if I should use guid or nid
-                yield local
-
-
-
-
-
-
-    # @asyncio.coroutine
-    # def process_coros(self):
-    #     while self._keep_running:
-    #         try:
-    #             while True:
-    #                 coro, callback = self._waiting_coros.get_nowait()
-    #                 task = asyncio.async(coro())
-    #                 if callback:
-    #                     task.add_done_callback(callback)
-    #                 self._tasks.append(task)
-    #         except Empty as e:
-    #             pass
-    #         yield from asyncio.sleep(3)     # sleep so the other tasks can run
-
-
-poller = Poll('///temp.db', User(fullname='Himanshu Ojha'))
-
-
-# class Job(object):
-#     def __init__(self, idx):
-#         super().__init__()
-#         self._idx = idx
-#
-#     def process(self):
-#         background_worker.submit_coro(self._process, self._process_callback)
-#
-#     @asyncio.coroutine
-#     def _process(self):
-#         with (yield from background_worker.limit_simultaneous_processes):
-#             print("received processing slot %d" % self._idx)
-#             start = datetime.now()
-#             yield from asyncio.sleep(2)
-#             print("processing %d took %s" % (self._idx, str(datetime.now() - start)))
-#
-#     def _process_callback(self, future):
-#         print("callback %d triggered" % self._idx)
-
-
-def main():
-    print("starting worker...")
-    poller.start()  #started background thread. background_worker.run() must be called internally.
-
-
-    command = None
-    while command != "quit":
-        import time
-        time.sleep(1)
-        print('1')
-        # command = input("enter 'quit' to stop the program: \n")
-
-    print("stopping...")
-    poller.stop()
-    poller.join()
-
-if __name__=="__main__":
-    main()
-
-
-
-"""
-def check_osf(user, local_folder):
-    user_id = user['id']
-    projects = requests.get('https://staging2.osf.io:443/api/v2/users/{}/nodes/?filter[category]=project'.format(user_id))
-    projects = projects.json()['data']
-    for project in projects:
-        check_project(project,local_folder)
-    print('---------SHOULD HAVE ALL OPEN OSF FILES---------')
-
-def check_project(project,local_folder):
-    # if not os.path.exists(os.path.join(local_folder,project['name'])):
-    #     os.makedirs(os.path.join(local_folder, project['name']))
-    # todo: stuff to do here before checking project
-    # if project['title'] == 'poll':
-    #     pt = projectpoll
-    # else:
-    #     pt = projectinverse
-    check_component(project, local_folder)
-
-def check_file_folder(file_folder,local_folder):
-    if file_folder['item_type']=='folder':
-        print('folder!')
-        new_local_folder = os.path.join(local_folder, file_folder['name'])
+    def save(self):
         try:
-            folder = requests.get(file_folder['links']['related']).json()['data']
-            if not os.path.exists(new_local_folder):
-                os.makedirs(new_local_folder)
-            for inner in folder:
-                check_file_folder(inner,new_local_folder)
-        except TypeError:
-            print('request for check_file_folder failed because folder is not accessible to us.')
-            print('can debug if you want using the link: {}'.format(file_folder['links']['related']))
-
-    elif file_folder['item_type']=='file':
-        print('file!')
-        new_local_file_path = os.path.join(local_folder,file_folder['name'])
-        if not os.path.exists(new_local_file_path):
-            r = requests.get(file_folder['links']['self'])
-            with open(new_local_file_path, 'wb') as fd:
-                for chunk in r.iter_content(2048): #todo: which is better? 1024 or 2048? Apparently, not much difference.
-                    fd.write(chunk)
-                print('file SHOULD now be on local storage.')
-
-def check_component(component, local_folder):
-    new_local_folder = os.path.join(local_folder, component['title'])
-    if not os.path.exists(new_local_folder):
-            os.makedirs(new_local_folder)
-    files_folders = requests.get(component['links']['files']['related']).json()['data']
-    for file_folder in files_folders:
-        check_file_folder(file_folder,new_local_folder)
-
-    child_components = []
-    child_components_resp = requests.get(component['links']['children']['related']).json()
-    child_components.extend(child_components_resp['data'])
-    while child_components_resp['links']['next'] != None:
-        child_components_resp = requests.get(component['links']['next']).json()
-        child_components.extend(child_components_resp['data'])
-    for child_component in child_components:
-        check_component(child_component, new_local_folder)
-
-
-def get_remote_user(user):
-    return requests.get('https://staging2.osf.io:443/api/v2/users/?filter[fullname]={}'.format(user.fullname)).json()['data'][0]
-"""
+            self.session.commit()
+        except:
+            self.session.rollback()
+            raise

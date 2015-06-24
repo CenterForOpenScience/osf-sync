@@ -6,10 +6,11 @@ storing the data into the db, and then sending a request to the remote server.
 import os
 import json
 import logging
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import sessionmaker, scoped_session
+from sqlalchemy.pool import SingletonThreadPool
 from watchdog.events import FileSystemEventHandler
 from sqlalchemy import create_engine
-from models import User,Node,File, create_session
+from models import User,Node,File, get_session
 import requests
 
 class OSFEventHandler(FileSystemEventHandler):
@@ -20,8 +21,15 @@ class OSFEventHandler(FileSystemEventHandler):
         super(OSFEventHandler, self).__init__()
         self.OSFFolder = OSFFolder
 
-
-        self.session = create_session(db_url)
+        db_file_path = os.path.join(db_url, 'osf.db')
+        url = 'sqlite:///{}'.format(db_file_path)
+        #todo: figure out if this is safe or not. If not, how to make it safe?????
+        # engine = create_engine(url, echo=False, connect_args={'check_same_thread':False})
+        engine = create_engine(url, echo=False, poolclass=SingletonThreadPool)
+        session_factory = sessionmaker(bind=engine)
+        global Session
+        Session = scoped_session(session_factory)
+        self.session = Session()
         self.user = user
 
 
@@ -86,35 +94,43 @@ class OSFEventHandler(FileSystemEventHandler):
 
         # create new model
 
-        #if folder and in top level OSF FOlder, then project
-        if os.path.dirname(event.src_path)==self.OSFFolder:
-            if event.is_directory:
-                project = Node(path=event.src_path, name=name, category=Node.PROJECT)
-                self.session.add(project)
-            else:
-                print("CREATED FILE IN PROJECT AREA. ")
-                raise NotADirectoryError
-        #if folder, then assume Folder
-        elif event.is_directory:
-            folder = File(path=event.src_path, name=name, type=File.FOLDER)
-            containing_item = self._get_parent_item_from_path(event.src_path)
-            containing_item.files.append(folder)
-        else: # if file, then file.
-            file = File(path=event.src_path, name=name,type=File.FILE)
-            containing_item = self._get_parent_item_from_path(event.src_path)
-            containing_item.files.append(file)
+        if not self.already_exists(event.src_path):
+
+            #if folder and in top level OSF FOlder, then project
+            if os.path.dirname(event.src_path)==self.OSFFolder:
+                if event.is_directory:
+                    project = Node(path=event.src_path, title=name, category=Node.PROJECT)
+                    self.session.add(project)
+                else:
+                    print("CREATED FILE IN PROJECT AREA. ")
+                    raise NotADirectoryError
+            #if folder, then assume Folder
+            elif event.is_directory:
+                folder = File(path=event.src_path, name=name, type=File.FOLDER)
+                containing_item = self._get_parent_item_from_path(event.src_path)
+                containing_item.files.append(folder)
+            else: # if file, then file.
+                file = File(path=event.src_path, name=name,type=File.FILE)
+                containing_item = self._get_parent_item_from_path(event.src_path)
+                containing_item.files.append(file)
 
 
-        #log
-        #todo: log
-
-        #send to server
-        #todo: send to server
+            #log
+            #todo: log
 
 
-        #save
-        self.save()
 
+            #save
+            self.save()
+
+    def already_exists(self, path):
+        data1 = self.session.query(Node).filter(Node.path==path).first()
+        if data1:
+            return True
+        data2 = self.session.query(File).filter(File.path == path).first()
+        if data2:
+            return True
+        return False
 
     def on_modified(self, event):
         """Called when a file or directory is modified.

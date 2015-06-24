@@ -24,24 +24,24 @@ class OSFController(QDialog):
         self.appauthor=appauthor
 
         self.createConfig()
-
-        self._translate = QCoreApplication.translate
-        # self.createActions()
+        import threading; print('---inside osfcontroller init-----{}----'.format(threading.current_thread()))
 
 
-        self.user = self.getCurrentUser()
-        self.poller = Polling.Poll(self.config['dbdir'], self.user)
+        self.session = models.get_session()
+        self.user = self.getCurrentUser() #creates session
+        import threading; print('---inside osfcontroller init2-----{}----'.format(threading.current_thread()))
+        self.poller = Polling.Poll(self.config['dbdir'], self.user.osf_id, self.session)
 
 
         self.containingFolder = "/home/himanshu/OSF-Offline/dumbdir" # todo: remove. only for dev.
         if not self.containingFolderIsSet():
             self.setContainingFolder()
         #todo: handle if OSF folder does not exist. OR if user wants custom OSF folder
-        self.OSFFolder = os.path.join(self.containingFolder, "OSF") # todo: store osf folder
+        self.OSFFolder = self.user.osf_path #os.path.join(self.containingFolder, "OSF") # todo: store osf folder
         self.startObservingOSFFolder()
         self.startPollingServer()
         self.startLogging()
-        print('I SHOULD HAVE HAVE ALL FOLDERS NOW!!!!!!!!!!')
+
 
 
         # self.preferences = Preferences(self.containingFolder, self.event_handler.data['data'])
@@ -49,6 +49,7 @@ class OSFController(QDialog):
     def startPollingServer(self):
         # self.poller = Polling.Poll(self.config['dbdir'], self.user)
         self.poller.start()
+        # self.poller.run()
 
     def stopPollingServer(self):
         self.poller.stop()
@@ -56,16 +57,16 @@ class OSFController(QDialog):
 
 
     def getCurrentUser(self):
-        session = models.create_session(self.config['dbdir'])
 
-        user = session.query(models.User).filter(models.User.fullname == "Himanshu Ojha").first()
+        import threading; print('---inside getcurrentuser-----{}----'.format(threading.current_thread()))
+        user = self.session.query(models.User).filter(models.User.fullname == "Himanshu Ojha").first()
         if not user:
-            user = models.User(fullname="Himanshu Ojha")
-            session.add(user)
+            user = models.User(fullname="Himanshu Ojha", osf_id='gpr3h', osf_login='ho2es@virginia.edu', osf_path='/home/himanshu/OSF-Offline/dumbdir/OSF', oauth_token='FAKE', osf_password='fake password')
+            self.session.add(user)
             try:
-                session.commit()
+                self.session.commit()
             except:
-                session.rollback()
+                self.session.rollback()
                 raise
         # local_user = None
         # local_user.fullname = user.fullname
@@ -241,7 +242,8 @@ class OSFController(QDialog):
 
         if not os.path.exists(data_dir):
             os.makedirs(data_dir)
-        models.create_models(dir= data_dir)
+        models.setup_db(data_dir)
+        # models.create_models(dir= data_dir)
 
         #new file if file doesnt exist.
         try:
