@@ -3,10 +3,7 @@
   <component name="ChangeListManager">
     <list default="true" id="0e2bdd4f-2cdd-4323-95b6-dbc89496e673" name="Default" comment="">
       <change type="DELETED" beforePath="$PROJECT_DIR$/dumbdir/OSF/Inverse optimal moderator/osfstorage/black_bear.stl" afterPath="" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/.idea/OSF-Offline.iml" afterPath="$PROJECT_DIR$/.idea/OSF-Offline.iml" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/Polling.py" afterPath="$PROJECT_DIR$/Polling.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/.idea/misc.xml" afterPath="$PROJECT_DIR$/.idea/misc.xml" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/.idea/workspace.xml" afterPath="$PROJECT_DIR$/.idea/workspace.xml" />
     </list>
     <ignored path="OSF-Offline.iws" />
     <ignored path=".idea/workspace.xml" />
@@ -31,7 +28,7 @@
       <file leaf-file-name="models.py" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/models.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state vertical-scroll-proportion="-4.142857">
+            <state vertical-scroll-proportion="13.857142">
               <caret line="58" column="12" selection-start-line="58" selection-start-column="4" selection-end-line="58" selection-end-column="12" />
               <folding>
                 <element signature="e#26#43#0" expanded="true" />
@@ -43,8 +40,8 @@
       <file leaf-file-name="Polling.py" pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/Polling.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state vertical-scroll-proportion="0.021052632">
-              <caret line="161" column="35" selection-start-line="161" selection-start-column="35" selection-end-line="161" selection-end-column="35" />
+            <state vertical-scroll-proportion="0.5263158">
+              <caret line="308" column="40" selection-start-line="308" selection-start-column="36" selection-end-line="308" selection-end-column="40" />
               <folding>
                 <element signature="e#24#39#0" expanded="true" />
               </folding>
@@ -984,7 +981,7 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/models.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="-4.142857">
+        <state vertical-scroll-proportion="13.857142">
           <caret line="58" column="12" selection-start-line="58" selection-start-column="4" selection-end-line="58" selection-end-column="12" />
           <folding>
             <element signature="e#26#43#0" expanded="true" />
@@ -994,8 +991,8 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/Polling.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.021052632">
-          <caret line="161" column="35" selection-start-line="161" selection-start-column="35" selection-end-line="161" selection-end-column="35" />
+        <state vertical-scroll-proportion="0.5263158">
+          <caret line="308" column="40" selection-start-line="308" selection-start-column="36" selection-end-line="308" selection-end-column="40" />
           <folding>
             <element signature="e#24#39#0" expanded="true" />
           </folding>

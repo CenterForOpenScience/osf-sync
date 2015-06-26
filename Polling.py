@@ -276,19 +276,50 @@ class Poll(Thread):
             remote_children = []
 
             try:
+                #todo: make helper function to get all children at once.
                 resp = requests.get(self.fix_request_issue(remote_file_folder['links']['related']))
                 remote_children.extend(resp.json()['data'])
                 while resp.json()['links']['next'] != None:#fixme: don't know actual response. figure it out.
                     resp = requests.get(self.fix_request_issueresp['links']['next']).json()
                     remote_children.extend(resp['data'])
 
-                local_remote_file_folders = self.make_local_remote_tuple_list(local_file_folder.files, remote_children)
-                for local, remote in local_remote_file_folders:
+                local_remote_folders = self.make_local_remote_tuple_list(local_file_folder.files, remote_children)
+
+                for local, remote in local_remote_folders:
+
+                    if local.name != remote.name:
+                        if local.date_modified > self.remote_to_local_datetime(remote['date_modified']):
+                            self.modify_local_folder(local)
+                        else:
+                            self.modify_remote_folder(remote)
+
+
                     self._check_file_folder(local, remote, parent=local_file_folder)
             except:
+                print('couldnt get subfolder and subfiles. no permission. todo: make seperate helper functions to get these values. ???what are <these> referring to?...')
 
-                print('couldnt get subfolder and subfiles. no permission. todo: make seperate helper functions to get these values.')
+    def modify_local_folder(self, local_folder):
+        print('modifying local folder')
 
+        old_path = local_folder.path
+
+
+
+        local_folder.title = local_folder['title']
+        local_folder.path = os.path.join(os.path.basename(local_folder.path), local_folder['title'])
+        # todo: handle other fields such as category, hash, ...
+        self.save()
+
+        #if a folder changes, the paths of ALL children also change
+        self.update_childrens_path(local_folder)
+
+        # save
+        self.session.add(local_folder)
+        self.save()
+
+
+        #also actually modify local folder
+        os.renames(old_path, local_folder.path)
 
 
     def create_local_file_folder(self, remote_file_folder, parent):
