@@ -6,13 +6,17 @@ __author__ = 'himanshu'
 import requests
 import os
 import asyncio
-import aiohttp
+
 from queue import Queue, Empty
 from datetime import datetime
 from threading import Thread
 from models import User, Node, File, create_engine, sessionmaker, get_session
 from sqlalchemy.orm import scoped_session
 from sqlalchemy.pool import SingletonThreadPool
+import iso8601
+import requests
+
+
 
 class Poll(Thread):
     def __init__(self, db_url, user_osf_id, session):
@@ -67,6 +71,7 @@ class Poll(Thread):
                 return item['id']
             else: #assumption: item['type'] == 'files'
                 #!!!!!!!!fixme: this is a cheatcode!!!! for here, we are using path+name+item_type for here only for identifying purposes
+                # fixme: name doesnt work with modified names for folders.
                 return str(hash(item['path']+item['name']+item['item_type']))
         else: # node/file is local
 
@@ -76,7 +81,6 @@ class Poll(Thread):
 
     #assumption: this method works.
     def make_local_remote_tuple_list(self, local_list, remote_list):
-        import threading; print('-inside make local remote tuple list-{}---'.format(threading.current_thread()))
         combined_list = local_list + remote_list
         sorted_combined_list = sorted(combined_list, key=self.get_id)
 
@@ -105,11 +109,8 @@ class Poll(Thread):
 
     @asyncio.coroutine
     def check_osf(self,remote_user,db_url, recheck_time=None):
-        import threading;print("------{}------".format(threading.current_thread()))
-
 
         # Session.configure(bind=engine)
-        print("!!!!!!!!!!!!!check osf!!!!!!!!!!!!!!!!!{}!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!".format(threading.current_thread()))
 
         print('error here?')
         remote_user_id = remote_user['id']
@@ -132,6 +133,8 @@ class Poll(Thread):
             local_remote_projects = self.make_local_remote_tuple_list(local_projects, remote_projects)
 
             for local, remote in local_remote_projects:
+                # optimization: could check date modified of top level
+                # and if not modified then don't worry about children
                 self.check_node(local, remote, parent=None)
 
 
@@ -160,15 +163,21 @@ class Poll(Thread):
         #handle file_folders for node
         self.check_file_folder(local_node, remote_node)
 
-        #todo: handle updates to current node
+        #handle updates to current node
+        if local_node.title != remote_node['title']:
+            if local_node.date_modified > self.remote_to_local_datetime(remote_node['date_modified']):
+                self.modify_remote_node(local_node, remote_node)
+            else:
+                self.modify_local_node(local_node, remote_node)
+
 
         #recursively handle node's children
         remote_children = []
-        resp = requests.get(remote_node['links']['children']['related']).json()
+        resp = requests.get(self.fix_request_issue(remote_node['links']['children']['related'])).json()
 
         remote_children.extend(resp['data'])
         while resp['links']['next'] != None:
-            resp = requests.get(resp['links']['next']).json()
+            resp = requests.get(self.fix_request_issue(resp['links']['next'])).json()
             remote_children.extend(resp['data'])
         local_remote_nodes = self.make_local_remote_tuple_list(local_node.components, remote_children)
 
@@ -194,9 +203,43 @@ class Poll(Thread):
 
         return new_node
 
-    def upload_node(self, local_node, is_project):
+    def modify_remote_node(self, local_node, remote_node):
+        print('modifying remote node!')
+        pass
+
+    def modify_local_node(self, local_node, remote_node):
+        print('modifying local node')
+
+        old_path = local_node.path
+
+
+
+        local_node.title = remote_node['title']
+        local_node.path = os.path.join(os.path.basename(local_node.path), remote_node['title'])
+        # todo: handle other fields such as category, hash, ...
+        self.save()
+
+        #if a folder changes, the paths of ALL children also change
+        self.update_childrens_path(local_node)
+
+        # save
+        self.session.add(local_node)
+        self.save()
+
+
+        #also actually modify local node
+        os.renames(old_path, local_node.path)
+
+    def update_childrens_path(self, local_node):
+        for child in local_node.components:
+            child.path = os.path.join(local_node.path,child.title)
+            self.update_childrens_path(child)
+
+
+
+    def upload_node(self, local_node, parent):
         # requests.put('https://staging2.osf.io:443/api/v2/nodes/{}/'.format())
-        print('uploaded node!')
+        print('uploading node!')
         return None
 
 
@@ -204,7 +247,7 @@ class Poll(Thread):
 
         print('checking file_folder')
         #todo: determine if we just want osfstorage or also other things
-        resp = requests.get(remote_node['links']['files']['related'])
+        resp = requests.get(self.fix_request_issue(remote_node['links']['files']['related']))
         remote_node_files = resp.json()['data']
         print('DEBUG:local_node.files:{}'.format(local_node.files))
         print('DEBUG:remote_node_files:{}'.format(remote_node_files))
@@ -233,10 +276,10 @@ class Poll(Thread):
             remote_children = []
 
             try:
-                resp = requests.get(remote_file_folder['links']['related'])
+                resp = requests.get(self.fix_request_issue(remote_file_folder['links']['related']))
                 remote_children.extend(resp.json()['data'])
                 while resp.json()['links']['next'] != None:#fixme: don't know actual response. figure it out.
-                    resp = requests.get(resp['links']['next']).json()
+                    resp = requests.get(self.fix_request_issueresp['links']['next']).json()
                     remote_children.extend(resp['data'])
 
                 local_remote_file_folders = self.make_local_remote_tuple_list(local_file_folder.files, remote_children)
@@ -265,7 +308,7 @@ class Poll(Thread):
         #also create local file/folder
         if not os.path.exists(new_file_folder_path):
             if type is File.FILE:
-                resp = requests.get(remote_file_folder['links']['self'])
+                resp = requests.get(self.fix_request_issueremote_file_folder['links']['self'])
                 with open(new_file_folder_path, 'wb') as fd:
                     for chunk in resp.iter_content(2048): #todo: which is better? 1024 or 2048? Apparently, not much difference.
                         fd.write(chunk)
@@ -284,3 +327,13 @@ class Poll(Thread):
         except:
             self.session.rollback()
             raise
+
+
+    def remote_to_local_datetime(self,remote_utc_time_string ):
+        return iso8601.parse_date(remote_utc_time_string)
+
+    def fix_request_issue(self, url):
+        if '/api/api/' in url:
+            i_api = url.index('/api/api/')
+            return url[:i_api]+url[i_api+4:]
+        return url
