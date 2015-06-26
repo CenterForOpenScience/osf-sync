@@ -10,7 +10,7 @@ from sqlalchemy.orm import sessionmaker, scoped_session
 from sqlalchemy.pool import SingletonThreadPool
 from watchdog.events import FileSystemEventHandler
 from sqlalchemy import create_engine
-from models import User,Node,File, get_session
+from models import User,Folder,File, get_session
 import requests
 
 class OSFEventHandler(FileSystemEventHandler):
@@ -62,13 +62,16 @@ class OSFEventHandler(FileSystemEventHandler):
         #todo: handle renamed!!!!!!!!!
 
         # determine and get what moved
-        item = self.session.query(Node).filter(Node.path == event.src_path).first()
+        item = self.session.query(Folder).filter(Folder.path == event.src_path).first()
         if not item:
             item = self.session.query(File).filter(File.path == event.src_path).first()
             if not item:
                 raise FileNotFoundError
+
         #update path
         item.path = event.dest_path
+
+
         #todo: log
         # logging.info(item.)
 
@@ -96,23 +99,25 @@ class OSFEventHandler(FileSystemEventHandler):
 
         if not self.already_exists(event.src_path):
 
-            #if folder and in top level OSF FOlder, then project
+            # if folder and in top level OSF FOlder, then project
             if os.path.dirname(event.src_path)==self.OSFFolder:
                 if event.is_directory:
-                    project = Node(path=event.src_path, title=name, category=Node.PROJECT)
+                    project = Folder(path=event.src_path, name=name, category=Folder.PROJECT)
                     self.session.add(project)
                 else:
                     print("CREATED FILE IN PROJECT AREA. ")
                     raise NotADirectoryError
             #if folder, then assume Folder
             elif event.is_directory:
-                folder = File(path=event.src_path, name=name, type=File.FOLDER)
+                folder = Folder(path=event.src_path, name=name, category=Folder.FOLDER)
                 containing_item = self._get_parent_item_from_path(event.src_path)
-                containing_item.files.append(folder)
+                containing_item.folders.append(folder)
+                self.session.add(containing_item)
             else: # if file, then file.
-                file = File(path=event.src_path, name=name,type=File.FILE)
+                file = File(path=event.src_path, name=name)
                 containing_item = self._get_parent_item_from_path(event.src_path)
                 containing_item.files.append(file)
+                self.session.add(containing_item)
 
 
             #log
@@ -124,7 +129,7 @@ class OSFEventHandler(FileSystemEventHandler):
             self.save()
 
     def already_exists(self, path):
-        data1 = self.session.query(Node).filter(Node.path==path).first()
+        data1 = self.session.query(Folder).filter(Folder.path==path).first()
         if data1:
             return True
         data2 = self.session.query(File).filter(File.path == path).first()
@@ -152,12 +157,14 @@ class OSFEventHandler(FileSystemEventHandler):
             # note: if the OSF folder name is changed, that is NOT modified, but rather move.
             # note: when folder recursively delete, the top folder is modified then removed.
             #       os.path.samefile() tries to open the deleted file and fails. fix is to not open file.
+            #       THEREFORE, we do not recursively handle anything here. We just let the alerts call this
+            #       code and recursively delete.
 
 
         # update model
 
         # get item
-        item = self.session.query(Node).filter(Node.path == event.src_path).first()
+        item = self.session.query(Folder).filter(Folder.path == event.src_path).first()
         if not item:
             item = self.session.query(File).filter(File.path == event.src_path).first()
             if not item:
@@ -174,6 +181,7 @@ class OSFEventHandler(FileSystemEventHandler):
         #todo: log
 
         #save
+        self.session.add(item)
         self.save()
 
 
@@ -194,11 +202,14 @@ class OSFEventHandler(FileSystemEventHandler):
 
 
         # get item
-        item = self.session.query(Node).filter(Node.path == event.src_path).first()
+        item = self.session.query(Folder).filter(Folder.path == event.src_path).first()
         if not item:
             item = self.session.query(File).filter(File.path == event.src_path).first()
             if not item:
                 raise FileNotFoundError
+
+        # mark as deleted
+        item.deleted = True
 
         #send to server
         #todo: send to server
@@ -206,11 +217,8 @@ class OSFEventHandler(FileSystemEventHandler):
         #log
         #todo: log
 
-        # remove model
-        self.session.delete(item)
-
-
         #save
+        self.session.add(item)
         self.save()
 
 
@@ -224,11 +232,7 @@ class OSFEventHandler(FileSystemEventHandler):
             if folder:
                 return folder
             else:
-                component = self.session.query(Node).filter(Node.path == containing_folder).first()
-                if component:
-                    return component
-                else:
-                    containing_folder = os.path.dirname(containing_folder)
+                containing_folder = os.path.dirname(containing_folder)
 
 
 
