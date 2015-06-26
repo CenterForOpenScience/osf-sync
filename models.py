@@ -10,7 +10,7 @@ from sqlalchemy import Column, Integer, Boolean, String, DateTime
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.pool import SingletonThreadPool
 # from sqlalchemy_mptt.mixins import BaseNestedSets
-from sqlalchemy.ext.hybrid import hybrid_property
+
 import os
 
 
@@ -51,57 +51,27 @@ class Folder(Base):
 
     PROJECT='project'
     COMPONENT='component'
-    FOLDER='folder'
-
 
     id = Column(Integer, primary_key=True)
-    name = Column(String)
+    title = Column(String)
     path = Column(String)
     hash = Column(String)
-    category = Column(Enum(PROJECT, COMPONENT, FOLDER))
+    category = Column(Enum(PROJECT, COMPONENT))
     date_modified = Column(DateTime)
     osf_id = Column(String)
 
-    deleted = Column(Boolean)
-
     user_id = Column(Integer, ForeignKey('user.id'))
     parent_id = Column(Integer, ForeignKey('node.id'))
-    folders = relationship(
-        "Folder",
+    components = relationship(
+        "Node",
         backref=backref('parent', remote_side=[id]),
         # cascade="all, delete-orphan" #todo: watchdog crawls up so cascade makes things fail on recursive delete. may want to have delete just ignore fails.
     )
-
     files = relationship(
         "File",
-        backref=backref('folder', remote_side=[id]),
-        # cascade="all, delete-orphan" #todo: watchdog crawls up so cascade makes things fail on recursive delete. may want to have delete just ignore fails.
+        backref=backref('node', remote_side=[id])
     )
 
-    @hybrid_property
-    def projects(self):
-        projects = []
-        for folder in self.folders:
-            if folder.category == Folder.PROJECT:
-                projects.append(folder)
-        return projects
-
-    @hybrid_property
-    def nodes(self):
-        nodes = []
-        for folder in self.folders:
-            if folder.category == Folder.PROJECT or folder.category == Folder.COMPONENT:
-                nodes.append(folder)
-        return nodes
-
-
-    @hybrid_property
-    def osf_folders(self):
-        osf_folders = []
-        for folder in self.folders:
-            if folder.category == Folder.FOLDER :
-                osf_folders.append(folder)
-        return osf_folders
 
 
     def update_hash(self, blocksize=2**20):
@@ -115,7 +85,7 @@ class Folder(Base):
             self.date_modified = datetime.now()
 
     def __repr__(self):
-        return "<Folder ({}), category={}, title={}, path={}, parent_id={}>".format(
+        return "<Node ({}), category={}, title={}, path={}, parent_id={}>".format(
             self.id, self.category, self.title, self.path, self.parent_id
         )
 
@@ -125,29 +95,40 @@ class Folder(Base):
 class File(Base):
     __tablename__ = "file"
 
+    FOLDER ='folder'
+    FILE='file'
 
     id = Column(Integer, primary_key=True)
     name = Column(String)
     path = Column(String)
     # guid = Column(String)
     hash = Column(String)
+    type = Column(Enum(FOLDER,FILE))
     date_modified = Column(DateTime)
     osf_id = Column(String)
 
-    deleted = Column(Boolean)
-
     user_id = Column(Integer, ForeignKey('user.id'))
-
-    folder_id = Column(Integer, ForeignKey('folder.id'))
+    node_id = Column(Integer, ForeignKey('node.id'))
+    parent_id = Column(Integer, ForeignKey('file.id'))
+    files = relationship(
+        "File",
+        backref=backref('parent', remote_side=[id]),
+        # cascade="all, delete-orphan",  #todo: watchdog crawls up so cascade makes things fail on recursive delete. may want to have delete just ignore fails.
+    )
 
     def update_hash(self, blocksize=2**20):
         m = hashlib.md5()
-        with open(self.path,"rb") as f:
-            while True:
-                buf = f.read(blocksize)
-                if not buf:
-                    break
-                m.update(buf)
+        if self.type == File.FILE:
+            with open(self.path,"rb") as f:
+                while True:
+                    buf = f.read(blocksize)
+                    if not buf:
+                        break
+                    m.update(buf)
+        else:
+            pass
+            #todo: what to do in this case?
+            # m.update()
         self.hash = m.hexdigest()
 
     def update_time(self, dt=None):
@@ -157,8 +138,8 @@ class File(Base):
             self.date_modified = datetime.now()
 
     def __repr__(self):
-        return "<File ({}), name={}, path={}, folder_id={}>".format(
-            self.id, self.name, self.path, self.folder
+        return "<File ({}), type={}, name={}, path={}, parent_id={}>".format(
+            self.id, self.type, self.name, self.path, self.parent
         )
 
 db_dir = ''

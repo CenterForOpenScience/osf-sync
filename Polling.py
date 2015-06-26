@@ -10,7 +10,7 @@ import asyncio
 from queue import Queue, Empty
 from datetime import datetime
 from threading import Thread
-from models import User, Folder, File, create_engine, sessionmaker, get_session, Base
+from models import User, Node, File, create_engine, sessionmaker, get_session
 from sqlalchemy.orm import scoped_session
 from sqlalchemy.pool import SingletonThreadPool
 import iso8601
@@ -69,15 +69,10 @@ class Poll(Thread):
         if isinstance(item, dict):
             if item['type'] == 'nodes':
                 return item['id']
-            else:
-                assert item['type'] == 'files'
+            else: #assumption: item['type'] == 'files'
                 #!!!!!!!!fixme: this is a cheatcode!!!! for here, we are using path+name+item_type for here only for identifying purposes
                 # fixme: name doesnt work with modified names for folders.
-                generated_id = str(hash(item['path']+item['name']+item['item_type']))
-                assert len( self.session.query(Folder).filter(Folder.osf_id == generated_id).all()
-                            +
-                            self.session.query(File).filter(File.osf_id == generated_id).all() ) <= 1
-                return generated_id
+                return str(hash(item['path']+item['name']+item['item_type']))
         else: # node/file is local
 
 
@@ -99,8 +94,7 @@ class Poll(Thread):
                 # (local, remote)
                 if isinstance(sorted_combined_list[i], dict): # remote
                     new_tuple = (sorted_combined_list[i+1],sorted_combined_list[i])
-                else:
-                    assert sorted_combined_list[i] is
+                else:#assumption: sorted_combined_list[i] is a local object
                     new_tuple = (sorted_combined_list[i],sorted_combined_list[i+1])
                 i += 1 #add an extra 1 because both values should be added to tuple list
             elif isinstance(sorted_combined_list[i], dict):
@@ -109,13 +103,6 @@ class Poll(Thread):
                 new_tuple = (sorted_combined_list[i], None)
             local_remote_tuple_list.append( new_tuple )
             i += 1
-
-        for local, remote in local_remote_tuple_list:
-            assert isinstance(local, dict) or None
-            assert isinstance(remote, Base) or None
-            if isinstance(local, dict) and isinstance(remote, Base):
-                assert self.get_id(local) == remote.osf_id
-
         return local_remote_tuple_list
 
 
@@ -148,7 +135,7 @@ class Poll(Thread):
             for local, remote in local_remote_projects:
                 # optimization: could check date modified of top level
                 # and if not modified then don't worry about children
-                self.check_folder(local, remote, parent=None)
+                self.check_node(local, remote, parent=None)
 
 
             print('---------SHOULD HAVE ALL OSF FILES---------')
@@ -160,20 +147,19 @@ class Poll(Thread):
 
 
 
-    def check_folder(self,local_folder, remote_folder, parent):
+    def check_node(self,local_node, remote_node, parent):
         """
         Responsible for checking whether local node values are same as remote node.
         Values to be checked include: files and folders, name, metadata, child nodes
         """
-        print('checking folder')
+        print('checking node')
 
         #get local or remote, whichever is None
         #todo: add date_modified checks to this
-        if local_folder is None:
-            local_node = self.download_folder(local_folder, parent)
-        elif remote_folder is None:
-            remote_node = self.upload_upload(local_folder, parent)
-
+        if local_node is None:
+            local_node = self.download_node(remote_node, parent)
+        elif remote_node is None:
+            remote_node = self.upload_node(local_node, parent)
         #handle file_folders for node
         self.check_file_folder(local_node, remote_node)
 
@@ -200,12 +186,11 @@ class Poll(Thread):
 
 
 
-    def download_folder(self, remote, parent):
-        print('downloading folder')
-
-        category = self.remote_to_local_category(remote)
+    def download_node(self, remote_node, parent):
+        print('downloading node')
+        category = Node.PROJECT if remote_node['category']=='project' else Node.COMPONENT
         if parent:
-            new_node_path = os.path.join(parent.path, remote['title'])
+            new_node_path = os.path.join(parent.path, remote_node['title'])
         else:
             new_node_path = os.path.join(self.user.osf_path,remote_node['title'])
         new_node = Node(title=remote_node['title'], category=category, osf_id=remote_node['id'], path=new_node_path, user=self.user)
@@ -286,8 +271,7 @@ class Poll(Thread):
         if local_file_folder.type is File.FILE:
             #todo: check if local version of file is different than online version
             pass
-        else:
-            assert local_file_folder.type is File.Folder
+        else: #assumption: local_file_folder.type is File.Folder
             #recursively handle folder's children
             remote_children = []
 
@@ -344,10 +328,7 @@ class Poll(Thread):
         # handles case where parent is node and when parent is folder
         new_file_folder_path = os.path.join(parent.path, remote_file_folder['name'])
         parent_folder = parent if isinstance(parent, File) else None
-        #The json response contains path.
-        assert len(self.session.query(Folder).filter(Folder.path == new_file_folder_path ).all()) is 0
-        assert len(self.session.query(File).filter(File.path == new_file_folder_path ).all()) is 0
-
+        #The json response contains path. assumption: this path variable is uniquily identifying to a folder/file
 
         #note the hack: osf_id = self.get_id(remote) is a made up osf_id
         new_file_folder = File(name=remote_file_folder['name'], type=type, osf_id=self.get_id(remote_file_folder), path=new_file_folder_path, user=self.user, parent=parent_folder)
@@ -362,9 +343,8 @@ class Poll(Thread):
                 with open(new_file_folder_path, 'wb') as fd:
                     for chunk in resp.iter_content(2048): #todo: which is better? 1024 or 2048? Apparently, not much difference.
                         fd.write(chunk)
-            else:
-                #assumption: type is File.Folder
-                os.makedirs(new_file_folder_path)
+            else:#assumption: type is File.Folder
+                    os.makedirs(new_file_folder_path)
 
         return new_file_folder
 
@@ -382,19 +362,6 @@ class Poll(Thread):
 
     def remote_to_local_datetime(self,remote_utc_time_string ):
         return iso8601.parse_date(remote_utc_time_string)
-
-    def remote_to_local_category(self, remote):
-        #get category of local folder from remote node or file_folder
-        if remote['type'] == 'nodes':
-            category = remote['category']
-        else: #type = files
-            category = remote['item_type']
-        remote_to_local = {
-            'project' : Folder.PROJECT,
-            'folder' : Folder.FOLDER,
-            'component': Folder.COMPONENT
-        }
-        return remote_to_local[category]
 
     def fix_request_issue(self, url):
         if '/api/api/' in url:
