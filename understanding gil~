@@ -25,3 +25,6 @@ After every 100 ticks, you 'check'. A check does 2 things:
 		signal handlers only run in mainthread
 	2) release and reacquire GIL.
 This second bullet point explains how you get multiple threads running at 'once'. What you actually have is that at each tick, you release the GIL and thus allow other threads to run.
+
+ticks are approximate 1 cpu usage
+

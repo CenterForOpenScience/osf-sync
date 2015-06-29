@@ -26,5 +26,6 @@ After every 100 ticks, you 'check'. A check does 2 things:
 	2) release and reacquire GIL.
 This second bullet point explains how you get multiple threads running at 'once'. What you actually have is that at each tick, you release the GIL and thus allow other threads to run.
 
-ticks are approximate 1 cpu usage
+ticks are approximate 1 os instruction
 
+when switching from a thread to another, a thread signals the OS which then signals the other thread. However, the OS thus controls how much time it takes to switch threads.
