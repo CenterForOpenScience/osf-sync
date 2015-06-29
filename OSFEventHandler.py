@@ -12,6 +12,7 @@ from watchdog.events import FileSystemEventHandler
 from sqlalchemy import create_engine
 from models import User,Node,File, get_session
 import requests
+import queue
 
 class OSFEventHandler(FileSystemEventHandler):
     """
@@ -30,21 +31,42 @@ class OSFEventHandler(FileSystemEventHandler):
         global Session
         Session = scoped_session(session_factory)
         self.session = Session()
-        self.user = user
+        self.user = self.session.query(User).first() #assume only one user for now!!!!!
+        # self.queue = queue()
+        # self._running = True
+
+
+    # def pause(self):
+    #     self._running = False
+    # def unpause(self):
+    #     while not self.queue.empty():
+    #         event = self.queue.get()
+    #         self.dispatch(event)
+    #     self._running = True
+
+    # def check_pause(self,func, event):
+    #     if self._running:
+    #         return func(event)
+    #     else:
+    #         self.queue.put(event)
 
 
 
-    def save(self):
+
+    def save(self, item):
+        if item:
+            self.session.add(item)
         try:
             self.session.commit()
         except:
-            self.session.rollback()
+
             raise
 
 
     def close(self):
         self.save()
         self.session.close()
+
 
     def on_moved(self, event):
         """Called when a file or a directory is moved or renamed.
@@ -54,6 +76,7 @@ class OSFEventHandler(FileSystemEventHandler):
         :type event:
             :class:`DirMovedEvent` or :class:`FileMovedEvent`
         """
+
         what = 'directory' if event.is_directory else 'file'
         logging.info("Moved %s: from %s to %s", what, event.src_path,
                      event.dest_path)
@@ -62,18 +85,19 @@ class OSFEventHandler(FileSystemEventHandler):
         #todo: handle renamed!!!!!!!!!
 
         # determine and get what moved
-        item = self.session.query(Node).filter(Node.path == event.src_path).first()
-        if not item:
-            item = self.session.query(File).filter(File.path == event.src_path).first()
-            if not item:
-                raise FileNotFoundError
-        #update path
-        item.path = event.dest_path
+        item = self.get_item_by_path(event.src_path)
+
+        # update item's position
+        try:
+            item.parent = self._get_parent_item_from_path(event.dest_path)
+        except FileNotFoundError:
+            item.parent = None
+
         #todo: log
         # logging.info(item.)
 
         #save
-        self.save()
+        self.save(item)
 
         #todo: send data to server
 
@@ -95,24 +119,26 @@ class OSFEventHandler(FileSystemEventHandler):
         # create new model
 
         if not self.already_exists(event.src_path):
-
             #if folder and in top level OSF FOlder, then project
             if os.path.dirname(event.src_path)==self.OSFFolder:
                 if event.is_directory:
-                    project = Node(path=event.src_path, title=name, category=Node.PROJECT)
-                    self.session.add(project)
+                    project = Node( title=name, category=Node.PROJECT, user=self.user, created=True)
+                    #save
+                    self.save(project)
                 else:
                     print("CREATED FILE IN PROJECT AREA. ")
                     raise NotADirectoryError
             #if folder, then assume Folder
             elif event.is_directory:
-                folder = File(path=event.src_path, name=name, type=File.FOLDER)
+                folder = File(name=name, type=File.FOLDER, user=self.user, created=True)
                 containing_item = self._get_parent_item_from_path(event.src_path)
                 containing_item.files.append(folder)
+                self.save(folder)
             else: # if file, then file.
-                file = File(path=event.src_path, name=name,type=File.FILE)
+                file = File(name=name,type=File.FILE, user=self.user, created=True)
                 containing_item = self._get_parent_item_from_path(event.src_path)
                 containing_item.files.append(file)
+                self.save(file)
 
 
             #log
@@ -120,17 +146,14 @@ class OSFEventHandler(FileSystemEventHandler):
 
 
 
-            #save
-            self.save()
+
 
     def already_exists(self, path):
-        data1 = self.session.query(Node).filter(Node.path==path).first()
-        if data1:
+        try:
+            self.get_item_by_path(path)
+            return False
+        except FileNotFoundError:
             return True
-        data2 = self.session.query(File).filter(File.path == path).first()
-        if data2:
-            return True
-        return False
 
     def on_modified(self, event):
         """Called when a file or directory is modified.
@@ -157,11 +180,7 @@ class OSFEventHandler(FileSystemEventHandler):
         # update model
 
         # get item
-        item = self.session.query(Node).filter(Node.path == event.src_path).first()
-        if not item:
-            item = self.session.query(File).filter(File.path == event.src_path).first()
-            if not item:
-                raise FileNotFoundError
+        item = self.get_item_by_path(event.src_path)
 
         # update hash, date_modified
         item.update_hash()
@@ -174,7 +193,7 @@ class OSFEventHandler(FileSystemEventHandler):
         #todo: log
 
         #save
-        self.save()
+        self.save(item)
 
 
 
@@ -190,45 +209,43 @@ class OSFEventHandler(FileSystemEventHandler):
         what = 'directory' if event.is_directory else 'file'
         logging.info("Deleted %s: %s", what, event.src_path)
 
-        # import pdb;pdb.set_trace()
 
 
         # get item
-        item = self.session.query(Node).filter(Node.path == event.src_path).first()
-        if not item:
-            item = self.session.query(File).filter(File.path == event.src_path).first()
-            if not item:
-                raise FileNotFoundError
+        item = self.get_item_by_path(event.src_path)
 
-        #send to server
-        #todo: send to server
+        # put item in delete state
+        item.deleted = True
 
         #log
         #todo: log
 
-        # remove model
-        self.session.delete(item)
-
 
         #save
-        self.save()
+        self.save(item)
 
 
+    #todo: simplify this. perhaps can use rstrip(seperator) but unclear if this leads to issues???
     def _get_parent_item_from_path(self, path):
-        containing_folder = os.path.dirname(path)
+        containing_folder_path = os.path.dirname(path)
 
-        while True:
-            if containing_folder == self.OSFFolder:
-                raise FileNotFoundError
-            folder = self.session.query(File).filter(File.path == containing_folder).first()
-            if folder:
-                return folder
-            else:
-                component = self.session.query(Node).filter(Node.path == containing_folder).first()
-                if component:
-                    return component
-                else:
-                    containing_folder = os.path.dirname(containing_folder)
+        if containing_folder_path == self.OSFFolder:
+            raise FileNotFoundError
+
+        #what can happen is that the rightmost
+        try:
+            return self.get_item_by_path(containing_folder_path)
+        except FileNotFoundError:
+            containing_folder_path = os.path.dirname(containing_folder_path)
+            return self.get_item_by_path(containing_folder_path)
 
 
-
+    #todo: figure out how you can improve this
+    def get_item_by_path(self,path):
+        for node in self.session.query(Node):
+            if node.path == path:
+                return node
+        for file_folder in self.session.query(File):
+            if file_folder.path == path:
+                return file_folder
+        raise FileNotFoundError

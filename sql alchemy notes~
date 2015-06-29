@@ -1,0 +1,15 @@
+sql alchemy notes
+
+sqlalchemy sql expression language is different from sqlalchemy ORM
+lazy connecting - db engine doesnt actually connect to db until the first query is made.
+Declarative - create classes that have directives that describe database tables
+	there is a base class which has a catalog of classes and tables relative to it. this is declarative_base() class. Base = declarative_base()
+	NEED __tablename__ and atleast 1 column
+	when class is constructed, Declarative replaces all Column objects with special Python accessors known as descriptors. 
+
+Table object represents specific information about a db table 
+	Declarative makes the Table object for us. User.__table__
+
+When you declare a table, Declarative uses a python metaclass to do a bunch of stuff for you:
+	create Table as per our specifications
+	created Mapper object - 

@@ -59,9 +59,10 @@ class OSFController(QDialog):
     def getCurrentUser(self):
 
         import threading; print('---inside getcurrentuser-----{}----'.format(threading.current_thread()))
-        user = self.session.query(models.User).filter(models.User.fullname == "Himanshu Ojha").first()
+        user = self.session.query(models.User).filter(models.User.fullname == "Jack Frost").first()
+
         if not user:
-            user = models.User(fullname="Himanshu Ojha", osf_id='gpr3h', osf_login='ho2es@virginia.edu', osf_path='/home/himanshu/OSF-Offline/dumbdir/OSF', oauth_token='FAKE', osf_password='fake password')
+            user = models.User(fullname="Jack Frost", osf_id='xc3u4', osf_login='Tinticulge1932@armyspy.com', osf_path='/home/himanshu/OSF-Offline/dumbdir/OSF', oauth_token='FAKE', osf_password='password')
             self.session.add(user)
             try:
                 self.session.commit()

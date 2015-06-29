@@ -10,7 +10,7 @@ import asyncio
 from queue import Queue, Empty
 from datetime import datetime
 from threading import Thread
-from models import User, Node, File, create_engine, sessionmaker, get_session
+from models import User, Node, File, create_engine, sessionmaker, get_session, Base
 from sqlalchemy.orm import scoped_session
 from sqlalchemy.pool import SingletonThreadPool
 import iso8601
@@ -34,6 +34,19 @@ class Poll(Thread):
         global Session
         Session = scoped_session(session_factory)
         self.session = Session()
+        self.headers = headers = {
+            'Host': 'staging2.osf.io',
+            'User-Agent': 'Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:38.0) Gecko/20100101 Firefox/38.0',
+            'Accept': 'application/json',
+            'Accept-Language': 'en-US,en;q=0.5',
+            'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+            'Referer': 'https://staging2.osf.io/api/v2/docs/',
+            'X-CSRFToken': 'qnlWxEzFMyJ5GH7tWv842vdocXPcwZfK',
+            #this last one is key!
+            'Cookie':'_pk_id.1.2840=5d8268ce2f65679d.1435256429.10.1435463079.1435461548.; csrftoken=qnlWxEzFMyJ5GH7tWv842vdocXPcwZfK; osf_staging2=558d8c5b404f77530a4c67a4.GguB2lGzRjyHlo68CgM_8mzQoEk; _pk_id.1.0e8b=3e752283c198c4ce.1435342348.1.1435342354.1435342348.; _pk_ref.1.0e8b=%5B%22%22%2C%22%22%2C1435342348%2C%22https%3A%2F%2Fstaging2.osf.io%2F2r67q%2F%22%5D',
+            #this one is key for files
+            'Authorization' : 'Bearer eyJhbGciOiJIUzUxMiJ9.ZXlKaGJHY2lPaUprYVhJaUxDSmxibU1pT2lKQk1USTRRMEpETFVoVE1qVTJJbjAuLkluTmc3bm00MS1pVGJtb3lZTFRGdlEuSUkwRmNQdWlWNEJyT3lXWEMzN2NRdzlQcXJCaUdHMjFZQU5WWXpNR21oSWtMMm0zMVlQUXV6U1F1WXdPOS1UTmViT01LbC1taDdpWjVZcGZBd3ZIN092ZWNEcjhRaXZScGRZaHpBbDR5QlZJYTZxZ0JKLVVhMXNUYWJ4YkoyRnVkOU1KYTIxNXJ3cHlwVVJYbjJheXRyaDRndmFMN1R1bXdsVmtEMG9ucmJCazc3djdJX3NjbFFzM1VxRXJUd0tBLlBGVGtveEdNTkNRUnZDWjVaMTI0cFE.VTDpLASAddpoknjQdd1x1EN3O8A3VJzPktfsj3_zNlDbHyGJHFhP8J-f5TR5CNqziBVr7dVnpCyie3T_oSwACA'
+        }
 
     def stop(self):
         self._keep_running = False
@@ -42,8 +55,6 @@ class Poll(Thread):
     def run(self):
 
         self._loop = asyncio.new_event_loop()       # Implicit creation of the loop only happens in the main thread.
-
-
         asyncio.set_event_loop(self._loop)          # Since this is a child thread, we need to do it manually.
         remote_user = self.get_remote_user()
 
@@ -55,10 +66,15 @@ class Poll(Thread):
 
     def get_remote_user(self):
         print(self.user_osf_id)
-        return requests.get('https://staging2.osf.io:443/api/v2/users/{}/'.format(self.user_osf_id)).json()['data']
+        resp = requests.get('https://staging2.osf.io:443/api/v2/users/{}/'.format(self.user_osf_id), headers=self.headers)
 
 
-    def get_id(self,item):
+        if resp.ok:
+            return resp.json()['data']
+        raise ValueError
+
+
+    def get_id(self, item):
         """
 
         :param item: node or fileF
@@ -69,17 +85,20 @@ class Poll(Thread):
         if isinstance(item, dict):
             if item['type'] == 'nodes':
                 return item['id']
-            else: #assumption: item['type'] == 'files'
+            elif item['type'] == 'files':
                 #!!!!!!!!fixme: this is a cheatcode!!!! for here, we are using path+name+item_type for here only for identifying purposes
                 # fixme: name doesnt work with modified names for folders.
-                return str(hash(item['path']+item['name']+item['item_type']))
-        else: # node/file is local
-
-
+                #fixme: doesn't work for when name/type/path is modified
+                return str(hash(item['path'] + item['name'] + item['item_type']))
+            else:
+                raise ValueError(item['type'] +'is not handled')
+        elif isinstance(item, Base):
             return item.osf_id
+        else:
+            raise ValueError('What the fudge did you pass in?')
 
 
-    #assumption: this method works.
+    # assumption: this method works.
     def make_local_remote_tuple_list(self, local_list, remote_list):
         combined_list = local_list + remote_list
         sorted_combined_list = sorted(combined_list, key=self.get_id)
@@ -94,8 +113,10 @@ class Poll(Thread):
                 # (local, remote)
                 if isinstance(sorted_combined_list[i], dict): # remote
                     new_tuple = (sorted_combined_list[i+1],sorted_combined_list[i])
-                else:#assumption: sorted_combined_list[i] is a local object
+                elif isinstance(sorted_combined_list[i], Base): # local
                     new_tuple = (sorted_combined_list[i],sorted_combined_list[i+1])
+                else:
+                    raise TypeError('what the fudge did you pass in')
                 i += 1 #add an extra 1 because both values should be added to tuple list
             elif isinstance(sorted_combined_list[i], dict):
                 new_tuple = (None,sorted_combined_list[i])
@@ -103,6 +124,12 @@ class Poll(Thread):
                 new_tuple = (sorted_combined_list[i], None)
             local_remote_tuple_list.append( new_tuple )
             i += 1
+        for local, remote in local_remote_tuple_list:
+            assert isinstance(local, Base) or local is None
+            assert isinstance(remote, dict) or remote is None
+            if isinstance(local, Base) and isinstance(remote, dict):
+                assert local.osf_id == self.get_id(remote)
+
         return local_remote_tuple_list
 
 
@@ -117,20 +144,25 @@ class Poll(Thread):
         print('error here??')
         self.user = self.session.query(User).filter(User.osf_id == remote_user_id).first()
         print('error here???')
-        projects_for_user_url = 'https://staging2.osf.io:443/api/v2/users/{}/nodes/?filter[category]=project'.format(remote_user_id)
+        projects_for_user_url = 'https://staging2.osf.io:443/api/v2/users/{}/nodes/'.format(remote_user_id)
 
         while self._keep_running:
             #get remote projects
-            resp = requests.get(projects_for_user_url)
+            resp = requests.get(projects_for_user_url, headers=self.headers)
             remote_projects = resp.json()['data']
-            # remote_project_guids = [remote_project['guid'] for remote_project in remote_projects ]
+
+            #todo: figure out how to actually get top level nodes. FOR NOW, I am just filtering by category = projects in response.
+            temp = []
+            for remote in remote_projects:
+                if remote['category'] == 'project':
+                    temp.append(remote)
+            remote_projects = temp
 
             #get local projects
             local_projects = self.user.projects
-            # local_project_guids = [local_project.guid for local_project in local_projects ]
-
 
             local_remote_projects = self.make_local_remote_tuple_list(local_projects, remote_projects)
+            print("DEBUG: check_osf: local_remote_projects:{}".format(local_remote_projects))
 
             for local, remote in local_remote_projects:
                 # optimization: could check date modified of top level
@@ -153,59 +185,80 @@ class Poll(Thread):
         Values to be checked include: files and folders, name, metadata, child nodes
         """
         print('checking node')
+        assert (local_node is not None) or (remote_node is not None) # both shouldnt be none.
+        # todo: add date_modified checks to this
 
-        #get local or remote, whichever is None
-        #todo: add date_modified checks to this
-        if local_node is None:
-            local_node = self.download_node(remote_node, parent)
+        # NOTE: must delete all lower level nodes before can delete top level node.
+        if local_node is not None and local_node.deleted:
+            self.delete_remote_node(local_node, remote_node)
+            assert local_node is None #not sure if local node is reloaded in this case. assert might fail.
         elif remote_node is None:
+            assert local_node is not None
             remote_node = self.upload_node(local_node, parent)
+        elif local_node is None:
+            local_node = self.download_node(remote_node, parent)
+        else:
+
+
+            #handle updates to current node
+            if local_node.title != remote_node['title']:
+                if local_node.date_modified > self.remote_to_local_datetime(remote_node['date_modified']):
+                    self.modify_remote_node(local_node, remote_node)
+                else:
+                    self.modify_local_node(local_node, remote_node)
+
         #handle file_folders for node
         self.check_file_folder(local_node, remote_node)
-
-        #handle updates to current node
-        if local_node.title != remote_node['title']:
-            if local_node.date_modified > self.remote_to_local_datetime(remote_node['date_modified']):
-                self.modify_remote_node(local_node, remote_node)
-            else:
-                self.modify_local_node(local_node, remote_node)
 
 
         #recursively handle node's children
         remote_children = []
-        resp = requests.get(self.fix_request_issue(remote_node['links']['children']['related'])).json()
+        resp = requests.get(self.fix_request_issue(remote_node['links']['children']['related']), headers=self.headers).json()
 
         remote_children.extend(resp['data'])
         while resp['links']['next'] != None:
-            resp = requests.get(self.fix_request_issue(resp['links']['next'])).json()
+            resp = requests.get(self.fix_request_issue(resp['links']['next']), headers=self.headers).json()
             remote_children.extend(resp['data'])
         local_remote_nodes = self.make_local_remote_tuple_list(local_node.components, remote_children)
 
         for local, remote in local_remote_nodes:
             self.check_node(local, remote, parent=local_node)
 
+    def delete_remote_node(self,local_node, remote_node):
+        assert local_node.deleted
+
+        #delete children
+        for child in local_node.components:
+            self.delete_remote_node(child)
+
+        resp = requests.delete(remote_node['links']['self'], headers=self.headers)
+        if resp.ok:#todo: what is this ok field?
+            self.session.delete(local_node)
+
+
 
 
     def download_node(self, remote_node, parent):
         print('downloading node')
         category = Node.PROJECT if remote_node['category']=='project' else Node.COMPONENT
-        if parent:
-            new_node_path = os.path.join(parent.path, remote_node['title'])
-        else:
-            new_node_path = os.path.join(self.user.osf_path,remote_node['title'])
-        new_node = Node(title=remote_node['title'], category=category, osf_id=remote_node['id'], path=new_node_path, user=self.user)
-        self.session.add(new_node)
-        self.save()
+
+        new_node = Node(title=remote_node['title'], category=category, osf_id=remote_node['id'], user=self.user, parent=parent)
+        self.save(new_node)
 
         #also create local folder for node
-        if not os.path.exists(new_node_path):
-            os.makedirs(new_node_path)
+        if not os.path.exists(new_node.path):
+            os.makedirs(new_node.path)
 
         return new_node
 
     def modify_remote_node(self, local_node, remote_node):
         print('modifying remote node!')
-        pass
+        #add other fields here.
+        data = {
+            'title': local_node.title
+        }
+        requests.patch(remote_node['links']['self'],data=data, headers=self.headers )
+
 
     def modify_local_node(self, local_node, remote_node):
         print('modifying local node')
@@ -215,31 +268,33 @@ class Poll(Thread):
 
 
         local_node.title = remote_node['title']
-        local_node.path = os.path.join(os.path.basename(local_node.path), remote_node['title'])
         # todo: handle other fields such as category, hash, ...
-        self.save()
 
-        #if a folder changes, the paths of ALL children also change
-        self.update_childrens_path(local_node)
+
+
 
         # save
-        self.session.add(local_node)
-        self.save()
+        self.save(local_node)
 
-
-        #also actually modify local node
+        # also actually modify local node
         os.renames(old_path, local_node.path)
 
-    def update_childrens_path(self, local_node):
-        for child in local_node.components:
-            child.path = os.path.join(local_node.path,child.title)
-            self.update_childrens_path(child)
 
 
 
     def upload_node(self, local_node, parent):
         # requests.put('https://staging2.osf.io:443/api/v2/nodes/{}/'.format())
         print('uploading node!')
+        data={
+            'title': local_node.title
+        }
+        resp = requests.put(parent['links']['self'], data=data, headers=self.headers)
+        if resp.ok:
+            remote_node = resp.json()['data']
+            local_node.created = False
+            local_node.osf_id = remote_node['id']
+            self.save(local_node)
+            return remote_node
         return None
 
 
@@ -247,71 +302,107 @@ class Poll(Thread):
 
         print('checking file_folder')
         #todo: determine if we just want osfstorage or also other things
-        resp = requests.get(self.fix_request_issue(remote_node['links']['files']['related']))
+        resp = requests.get(self.fix_request_issue(remote_node['links']['files']['related']), headers=self.headers)
+
+        #todo: top level more than 10 files not handled yet
+
         remote_node_files = resp.json()['data']
-        print('DEBUG:local_node.files:{}'.format(local_node.files))
-        print('DEBUG:remote_node_files:{}'.format(remote_node_files))
         local_remote_files = self.make_local_remote_tuple_list(local_node.files, remote_node_files)
 
         for local, remote in local_remote_files:
-            self._check_file_folder(local, remote, parent=local_node)
+            self._check_file_folder(local, remote, local_parent=None,node=local_node)
 
-
-    def _check_file_folder(self,local_file_folder,remote_file_folder, parent):
+    #todo: split this giant function up.
+    def _check_file_folder(self,local_file_folder,remote_file_folder, local_parent, node):
         print('checking file_folder internal')
 
-        if local_file_folder is None:
-            local_file_folder = self.create_local_file_folder(remote_file_folder, parent)
+        if local_file_folder is not None and local_file_folder.deleted:
+            self.delete_remote_file_folder(local_file_folder, remote_file_folder)
         elif remote_file_folder is None:
-            remote_file_folder = self.create_remote_file_folder(local_file_folder, parent)
+            assert local_file_folder is not None
+            self.create_remote_file_folder(local_file_folder, local_parent)
+        elif local_file_folder is None:
+            assert remote_file_folder is not None
+            self.create_local_file_folder(remote_file_folder, local_parent, node=node)
+        # if local_file_folder is None:
+        #     local_file_folder = self.create_local_file_folder(remote_file_folder, parent)
+        # elif remote_file_folder is None:
+        #     remote_file_folder = self.create_remote_file_folder(local_file_folder, parent)
 
 
         #todo: handle file/folder name, content changes.
 
         if local_file_folder.type is File.FILE:
+
             #todo: check if local version of file is different than online version
-            pass
+            #todo: HASH on remote server needed!!!!!!!
+            if local_file_folder.date_modified > self.remote_to_local_datetime(remote_file_folder['date_modified']):
+                #modify remote file folder
+                print('re - uploading remote file')
+                remote_file_folder = self.create_remote_file_folder(local_file_folder, local_parent)
+
+            elif local_file_folder.date_modified < self.remote_to_local_datetime(remote_file_folder['date_modified']):
+
+                # update model to reflect new date_modified and HASH
+                local_file_folder.date_modified = self.remote_to_local_datetime(remote_file_folder['date_modified'])
+                self.save(local_file_folder)
+
+                # redownload file
+                resp = requests.get(self.fix_request_issue(remote_file_folder['links']['self']), headers=self.headers)
+                with open(local_file_folder.path, 'wb') as fd:
+                    for chunk in resp.iter_content(2048): #todo: which is better? 1024 or 2048? Apparently, not much difference.
+                        fd.write(chunk)
         else: #assumption: local_file_folder.type is File.Folder
+
+            if local_file_folder.name != remote_file_folder['name']:
+                if local_file_folder.date_modified > self.remote_to_local_datetime(remote_file_folder['date_modified']):
+                    self.modify_local_folder(local_file_folder, remote_file_folder)
+                else:
+                    self.modify_remote_folder(local_file_folder, local_parent)
+
+
             #recursively handle folder's children
             remote_children = []
 
             try:
                 #todo: make helper function to get all children at once.
-                resp = requests.get(self.fix_request_issue(remote_file_folder['links']['related']))
+                resp = requests.get(self.fix_request_issue(remote_file_folder['links']['related']), headers=self.headers)
                 remote_children.extend(resp.json()['data'])
                 while resp.json()['links']['next'] != None:#fixme: don't know actual response. figure it out.
-                    resp = requests.get(self.fix_request_issueresp['links']['next']).json()
+                    resp = requests.get(self.fix_request_issue(resp['links']['next']), headers=self.headers).json()
                     remote_children.extend(resp['data'])
 
-                local_remote_folders = self.make_local_remote_tuple_list(local_file_folder.files, remote_children)
+                local_remote_file_folders = self.make_local_remote_tuple_list(local_file_folder.files, remote_children)
 
-                for local, remote in local_remote_folders:
-
-                    if local.name != remote.name:
-                        if local.date_modified > self.remote_to_local_datetime(remote['date_modified']):
-                            self.modify_local_folder(local)
-                        else:
-                            self.modify_remote_folder(remote)
-
-
-                    self._check_file_folder(local, remote, parent=local_file_folder)
+                for local, remote in local_remote_file_folders:
+                    self._check_file_folder(local, remote, local_parent=local_file_folder, node=node)
             except:
                 print('couldnt get subfolder and subfiles. no permission. todo: make seperate helper functions to get these values. ???what are <these> referring to?...')
 
-    def modify_local_folder(self, local_folder):
+    def modify_remote_folder(self, local_file_folder, parent):
+        print('modifying remote file folder')
+        assert local_file_folder is not None
+        # assert remote_file_folder is not None
+        # assert remote_file_folder['']
+        # assert local_file_folder.name != remote_file_folder['name']
+
+        # data = {
+        #     'name':local_file_folder.name
+        # }
+        # requests.patch(remote_file_folder['links']['self'],data=data, header=self.headers)
+        self.create_remote_file_folder(local_file_folder, parent)
+
+    def modify_local_folder(self, local_folder, remote_folder):
         print('modifying local folder')
 
         old_path = local_folder.path
 
 
 
-        local_folder.title = local_folder['title']
-        local_folder.path = os.path.join(os.path.basename(local_folder.path), local_folder['title'])
+        local_folder.title = remote_folder['title']
         # todo: handle other fields such as category, hash, ...
         self.save()
 
-        #if a folder changes, the paths of ALL children also change
-        self.update_childrens_path(local_folder)
 
         # save
         self.session.add(local_folder)
@@ -322,37 +413,99 @@ class Poll(Thread):
         os.renames(old_path, local_folder.path)
 
 
-    def create_local_file_folder(self, remote_file_folder, parent):
-        import threading; print('------------------------inside create_local_file_folder---{}----'.format(threading.current_thread()))
+    def create_local_file_folder(self, remote_file_folder, parent, node):
+        assert remote_file_folder is not None
+        assert isinstance(parent, File) or parent is None
+        assert isinstance(node, Node)
         type = File.FILE if remote_file_folder['item_type']=='file' else File.FOLDER
         # handles case where parent is node and when parent is folder
-        new_file_folder_path = os.path.join(parent.path, remote_file_folder['name'])
+
         parent_folder = parent if isinstance(parent, File) else None
         #The json response contains path. assumption: this path variable is uniquily identifying to a folder/file
 
+
         #note the hack: osf_id = self.get_id(remote) is a made up osf_id
-        new_file_folder = File(name=remote_file_folder['name'], type=type, osf_id=self.get_id(remote_file_folder), path=new_file_folder_path, user=self.user, parent=parent_folder)
+        new_file_folder = File(name=remote_file_folder['name'], type=type, osf_id=self.get_id(remote_file_folder), user=self.user, parent=parent_folder, node=node)
         self.session.add(new_file_folder)
         self.save()
         print('DEBUG:new_file_folder.osf_id:{}'.format(new_file_folder.osf_id))
 
         #also create local file/folder
-        if not os.path.exists(new_file_folder_path):
+        if not os.path.exists(new_file_folder.path):
             if type is File.FILE:
-                resp = requests.get(self.fix_request_issueremote_file_folder['links']['self'])
-                with open(new_file_folder_path, 'wb') as fd:
+                resp = requests.get(self.fix_request_issue(remote_file_folder['links']['self']), header=self.headers)
+                with open(new_file_folder.path, 'wb') as fd:
                     for chunk in resp.iter_content(2048): #todo: which is better? 1024 or 2048? Apparently, not much difference.
                         fd.write(chunk)
             else:#assumption: type is File.Folder
-                    os.makedirs(new_file_folder_path)
+                    os.makedirs(new_file_folder.path)
 
         return new_file_folder
 
+    def modify_remote_file_folder(self, local_file_folder, parent):
+        assert local_file_folder is not None
+        assert parent is not None
+        assert local_file_folder in parent.files
+        print('re uploading file/folder to server!')
+        return self.create_remote_file_folder(local_file_folder, parent)
+
+
     def create_remote_file_folder(self, local_file_folder, parent):
+        assert local_file_folder is not None
+        assert parent is not None
+        assert local_file_folder in parent.components
+
         print('uploaded file/folder to server!')
+        if local_file_folder.type == File.FOLDER:
+            print('DEBUG:create_remote_file_folder:local_file_folder.path.split(/osfstorage/)[1]:{}',local_file_folder.path.split('/osfstorage/')[1])
+            params = {
+            'path':local_file_folder.path.split('/osfstorage/')[1],# os.uncommon dir name (provider path, local_file_folder.path)
+            'provider':'osfstorage',
+             'nid': parent.node_id#'8c6mu'# node.osf_id
+            }
+            params_string = '&'.join([k+'='+v for k,v in params.items()])
+            file_url = parent['links']['self'].split('?')[0] + '?' + params_string
+
+            resp = requests.post(file_url, headers=self.headers )
+            # resp = requests.put(parent['links']['self'], data=data, header=self.headers)
+            if resp.ok:
+                remote_file_folder = resp.json()['data']
+                local_file_folder.osf_id = remote_file_folder['id']
+                self.save(local_file_folder)
+                return remote_file_folder
+        elif local_file_folder.type == File.FILE:
+            print('DEBUG:create_remote_file_folder:local_file_folder.path.split(/osfstorage/)[1]:{}',local_file_folder.path.split('/osfstorage/')[1])
+            params = {
+            'path':local_file_folder.path.split('/osfstorage/')[1],# os.uncommon dir name (provider path, local_file_folder.path)
+            'provider':'osfstorage',
+             'nid': parent.node_id#'8c6mu'# node.osf_id
+            }
+            params_string = '&'.join([k+'='+v for k,v in params.items()])
+            file_url = parent['links']['self'].split('?')[0] + '?' + params_string
+
+            files = {'file':open(local_file_folder.path)}
+            resp = requests.put(file_url, headers=self.headers, files=files)
+            if resp.ok:
+                remote_file_folder = resp.json()['data']
+                local_file_folder.osf_id = remote_file_folder['id']
+                self.save(local_file_folder)
+                return remote_file_folder
         return None
 
-    def save(self):
+    def delete_remote_file_folder(self, local_file_folder, remote_file_folder):
+        assert local_file_folder is not None
+        assert remote_file_folder is not None
+        assert local_file_folder.osf_id == remote_file_folder['id']
+
+        resp = requests.delete(remote_file_folder['links']['self'], headers=self.headers)
+        if resp.ok:
+            local_file_folder.deleted = False
+            self.session.delete(local_file_folder)
+            self.save()
+
+    def save(self, item=None):
+        if item:
+            self.session.add(item)
         try:
             self.session.commit()
         except:

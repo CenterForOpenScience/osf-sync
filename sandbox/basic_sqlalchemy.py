@@ -7,8 +7,6 @@ from sqlalchemy import Column, Integer, Boolean, String, DateTime
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.pool import SingletonThreadPool
 from sqlalchemy.ext.hybrid import hybrid_property
-import os
-Base = declarative_base()
 # from sqlalchemy_mptt.mixins import BaseNestedSets
 
 import os
@@ -53,6 +51,7 @@ class User(Base):
                              self.fullname, self.osf_password, self.osf_path)
 
 #todo: can have it so that all nodes and subnodes know that they are part of the same user.
+#todo: http://docs.sqlalchemy.org/en/rel_1_0/orm/self_referential.html#composite-adjacency-lists
 class Node(Base):
     __tablename__ = "node"
 
@@ -67,8 +66,7 @@ class Node(Base):
     date_modified = Column(DateTime)
     osf_id = Column(String)
 
-    created = Column(Boolean, default= False)
-    deleted = Column(Boolean, default=False)
+    deleted = Column(Boolean)
 
     user_id = Column(Integer, ForeignKey('user.id'))
     parent_id = Column(Integer, ForeignKey('node.id'))
@@ -88,9 +86,9 @@ class Node(Base):
         """
         # +os.path.sep+ instead of os.path.join: http://stackoverflow.com/a/14504695
         if self.parent:
-            return os.path.join(self.parent.path, self.title)
+            return self.parent.path + os.path.sep + self.title
         else:
-            return os.path.join(self.user.osf_path , self.title)
+            return self.user.osf_path + os.path.sep + self.title
 
 
     def update_hash(self, blocksize=2**20):
@@ -108,7 +106,9 @@ class Node(Base):
             self.id, self.category, self.title, self.path, self.parent_id
         )
 
+
 #todo: can have it so that all files and folders know that they are part of the same component.
+#todo: http://docs.sqlalchemy.org/en/rel_1_0/orm/self_referential.html#composite-adjacency-lists
 class File(Base):
     __tablename__ = "file"
 
@@ -124,8 +124,7 @@ class File(Base):
     date_modified = Column(DateTime)
     osf_id = Column(String)
 
-    created = Column(Boolean, default= False)
-    deleted = Column(Boolean, default= False)
+    deleted = Column(Boolean)
 
     user_id = Column(Integer, ForeignKey('user.id'))
     node_id = Column(Integer, ForeignKey('node.id'))
@@ -142,9 +141,9 @@ class File(Base):
         """
         # +os.path.sep+ instead of os.path.join: http://stackoverflow.com/a/14504695
         if self.parent:
-            return os.path.join(self.parent.path, self.name)
+            return self.parent.path + os.path.sep + self.name
         else:
-            return os.path.join(self.node.path ,self.name)
+            return self.node.path + os.path.sep + self.name
 
     def update_hash(self, blocksize=2**20):
         m = hashlib.md5()
@@ -172,51 +171,9 @@ class File(Base):
             self.id, self.type, self.name, self.path, self.parent
         )
 
-db_dir = ''
-Session = None
-def setup_db(dir):
-    global db_dir
-    db_dir = dir
-    create_models()
-    create_session()
-
-def get_session():
-    return Session()
-
-def create_models():
-    """
-    #TODO: handle different file systems.
-    # sqlite://<nohostname>/<path>
-    # where <path> is relative:
-    engine = create_engine('sqlite:///foo.db')
-    And for an absolute file path, the three slashes are followed by the absolute path:
-
-    #Unix/Mac - 4 initial slashes in total
-    engine = create_engine('sqlite:////absolute/path/to/foo.db')
-    #Windows
-    engine = create_engine('sqlite:///C:\\path\\to\\foo.db')
-    #Windows alternative using raw string
-    engine = create_engine(r'sqlite:///C:\path\to\foo.db')
-    """
-    db_file_path = os.path.join(db_dir, 'osf.db')
-    url = 'sqlite:///{}'.format(db_file_path)
-
-    engine = create_engine(url, echo=False)
-    Base.metadata.create_all(engine)
-
-def create_session():
-    db_file_path = os.path.join(db_dir, 'osf.db')
-    url = 'sqlite:///{}'.format(db_file_path)
-    #todo: figure out if this is safe or not. If not, how to make it safe?????
-    # engine = create_engine(url, echo=False, connect_args={'check_same_thread':False})
-    engine = create_engine(url, echo=False, poolclass=SingletonThreadPool)
-    session_factory = sessionmaker(bind=engine)
-    global Session
-    Session = scoped_session(session_factory)
-    #todo: figure out a safer way to do this
-    # global session
 
 
-#todo: probably okay to have a method that finds a component by guid.
-
-
+engine = create_engine('sqlite:///:memory:', echo=False)
+Base.metadata.create_all(engine)
+session_factory = sessionmaker(bind=engine)
+Session = scoped_session(session_factory)
