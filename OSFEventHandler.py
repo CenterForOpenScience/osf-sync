@@ -22,15 +22,15 @@ class OSFEventHandler(FileSystemEventHandler):
         super(OSFEventHandler, self).__init__()
         self.OSFFolder = OSFFolder
 
-        db_file_path = os.path.join(db_url, 'osf.db')
-        url = 'sqlite:///{}'.format(db_file_path)
-        #todo: figure out if this is safe or not. If not, how to make it safe?????
-        # engine = create_engine(url, echo=False, connect_args={'check_same_thread':False})
-        engine = create_engine(url, echo=False, poolclass=SingletonThreadPool)
-        session_factory = sessionmaker(bind=engine)
-        global Session
-        Session = scoped_session(session_factory)
-        self.session = Session()
+        # db_file_path = os.path.join(db_url, 'osf.db')
+        # url = 'sqlite:///{}'.format(db_file_path)
+        # #todo: figure out if this is safe or not. If not, how to make it safe?????
+        # # engine = create_engine(url, echo=False, connect_args={'check_same_thread':False})
+        # engine = create_engine(url, echo=False, poolclass=SingletonThreadPool)
+        # session_factory = sessionmaker(bind=engine)
+        # global Session
+        # Session = scoped_session(session_factory)
+        self.session = get_session()
         self.user = self.session.query(User).first() #assume only one user for now!!!!!
         # self.queue = queue()
         # self._running = True

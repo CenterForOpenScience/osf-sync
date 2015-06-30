@@ -5,10 +5,8 @@
       <change type="DELETED" beforePath="$PROJECT_DIR$/dumbdir/OSF/Inverse optimal moderator/osfstorage/black_bear.stl" afterPath="" />
       <change type="DELETED" beforePath="$PROJECT_DIR$/sandbox/concurrent.py" afterPath="" />
       <change type="DELETED" beforePath="$PROJECT_DIR$/sandbox/example.db" afterPath="" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/sandbox/concurrent.db" afterPath="$PROJECT_DIR$/sandbox/concurrent.db" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/OSFEventHandler.py" afterPath="$PROJECT_DIR$/OSFEventHandler.py" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/sandbox/build_async.py" afterPath="$PROJECT_DIR$/sandbox/build_async.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/understanding gil" afterPath="$PROJECT_DIR$/understanding gil" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/.idea/workspace.xml" afterPath="$PROJECT_DIR$/.idea/workspace.xml" />
     </list>
     <ignored path="OSF-Offline.iws" />
     <ignored path=".idea/workspace.xml" />
@@ -30,11 +28,11 @@
   </component>
   <component name="FileEditorManager">
     <leaf>
-      <file leaf-file-name="models.py" pinned="false" current-in-tab="false">
+      <file leaf-file-name="models.py" pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/models.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state vertical-scroll-proportion="0.0">
-              <caret line="204" column="4" selection-start-line="204" selection-start-column="4" selection-end-line="204" selection-end-column="36" />
+            <state vertical-scroll-proportion="0.44516128">
+              <caret line="125" column="0" selection-start-line="125" selection-start-column="0" selection-end-line="125" selection-end-column="0" />
               <folding>
                 <element signature="e#24#38#0" expanded="true" />
               </folding>
@@ -46,7 +44,7 @@
         <entry file="file://$PROJECT_DIR$/OSFEventHandler.py">
           <provider selected="true" editor-type-id="text-editor">
             <state vertical-scroll-proportion="0.0">
-              <caret line="244" column="32" selection-start-line="244" selection-start-column="25" selection-end-line="244" selection-end-column="32" />
+              <caret line="52" column="0" selection-start-line="37" selection-start-column="0" selection-end-line="52" selection-end-column="0" />
               <folding>
                 <element signature="e#191#200#0" expanded="true" />
               </folding>
@@ -54,24 +52,15 @@
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="Polling.py" pinned="false" current-in-tab="true">
+      <file leaf-file-name="Polling.py" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/Polling.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state vertical-scroll-proportion="0.13548388">
-              <caret line="75" column="0" selection-start-line="75" selection-start-column="0" selection-end-line="75" selection-end-column="0" />
+            <state vertical-scroll-proportion="0.0">
+              <caret line="523" column="0" selection-start-line="64" selection-start-column="0" selection-end-line="523" selection-end-column="0" />
               <folding>
                 <element signature="e#24#39#0" expanded="true" />
+                <element signature="e#3404#3485#1" expanded="false" />
               </folding>
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="concurrent_learn.py" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/sandbox/concurrent_learn.py">
-          <provider selected="true" editor-type-id="text-editor">
-            <state vertical-scroll-proportion="0.0">
-              <caret line="18" column="0" selection-start-line="18" selection-start-column="0" selection-end-line="26" selection-end-column="43" />
-              <folding />
             </state>
           </provider>
         </entry>
@@ -79,45 +68,12 @@
       <file leaf-file-name="build_async.py" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/sandbox/build_async.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state vertical-scroll-proportion="-13.857142">
-              <caret line="151" column="20" selection-start-line="151" selection-start-column="20" selection-end-line="151" selection-end-column="20" />
+            <state vertical-scroll-proportion="-23.714285">
+              <caret line="610" column="0" selection-start-line="610" selection-start-column="0" selection-end-line="610" selection-end-column="0" />
               <folding>
                 <element signature="e#0#14#0" expanded="true" />
+                <element signature="e#3910#3991#1" expanded="false" />
               </folding>
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="download_in_background.py" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/sandbox/download_in_background.py">
-          <provider selected="true" editor-type-id="text-editor">
-            <state vertical-scroll-proportion="0.0">
-              <caret line="15" column="19" selection-start-line="15" selection-start-column="13" selection-end-line="15" selection-end-column="19" />
-              <folding>
-                <element signature="e#24#39#0" expanded="true" />
-              </folding>
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="check_api_request.py" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/sandbox/check_api_request.py">
-          <provider selected="true" editor-type-id="text-editor">
-            <state vertical-scroll-proportion="0.0">
-              <caret line="63" column="26" selection-start-line="63" selection-start-column="14" selection-end-line="63" selection-end-column="26" />
-              <folding>
-                <element signature="e#24#39#0" expanded="true" />
-              </folding>
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="date_modified.py" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/sandbox/date_modified.py">
-          <provider selected="true" editor-type-id="text-editor">
-            <state vertical-scroll-proportion="0.0">
-              <caret line="3" column="0" selection-start-line="3" selection-start-column="0" selection-end-line="10" selection-end-column="31" />
-              <folding />
             </state>
           </provider>
         </entry>
@@ -204,11 +160,11 @@
         <option value="$PROJECT_DIR$/models.py" />
         <option value="$PROJECT_DIR$/sandbox/check_api_request.py" />
         <option value="$PROJECT_DIR$/controller.py" />
-        <option value="$PROJECT_DIR$/OSFEventHandler.py" />
         <option value="$PROJECT_DIR$/Polling.py" />
         <option value="$PROJECT_DIR$/understanding gil" />
         <option value="$PROJECT_DIR$/sandbox/concurrent.py" />
         <option value="$PROJECT_DIR$/sandbox/concurrent_learn.py" />
+        <option value="$PROJECT_DIR$/OSFEventHandler.py" />
         <option value="$PROJECT_DIR$/sandbox/build_async.py" />
       </list>
     </option>
@@ -296,35 +252,7 @@
               <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
             </PATH_ELEMENT>
             <PATH_ELEMENT>
-              <option name="myItemId" value="sandbox" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-            </PATH_ELEMENT>
-          </PATH>
-          <PATH>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="OSF-Offline" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.ProjectViewProjectNode" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="OSF-Offline" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT>
               <option name="myItemId" value="dumbdir" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-            </PATH_ELEMENT>
-          </PATH>
-          <PATH>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="OSF-Offline" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.ProjectViewProjectNode" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="OSF-Offline" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="ProjectTree" />
               <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
             </PATH_ELEMENT>
           </PATH>
@@ -882,24 +810,6 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/sandbox/check_api_request.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.0">
-          <caret line="63" column="26" selection-start-line="63" selection-start-column="14" selection-end-line="63" selection-end-column="26" />
-          <folding>
-            <element signature="e#24#39#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/exceptions.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.0">
-          <caret line="0" column="0" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
-          <folding />
-        </state>
-      </provider>
-    </entry>
     <entry file="file:///usr/lib/python3.4/threading.py">
       <provider selected="true" editor-type-id="text-editor">
         <state vertical-scroll-proportion="0.33290324">
@@ -912,16 +822,6 @@
       <provider selected="true" editor-type-id="text-editor">
         <state vertical-scroll-proportion="0.33243242">
           <caret line="216" column="17" selection-start-line="216" selection-start-column="14" selection-end-line="216" selection-end-column="17" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.0">
-          <caret line="52" column="31" selection-start-line="52" selection-start-column="29" selection-end-line="52" selection-end-column="31" />
-          <folding>
-            <element signature="e#25#39#0" expanded="true" />
-          </folding>
         </state>
       </provider>
     </entry>
@@ -940,60 +840,90 @@
         </state>
       </provider>
     </entry>
+    <entry file="file://$PROJECT_DIR$/sandbox/download_in_background.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.0">
+          <caret line="15" column="19" selection-start-line="15" selection-start-column="13" selection-end-line="15" selection-end-column="19" />
+          <folding>
+            <element signature="e#24#39#0" expanded="false" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
     <entry file="file://$PROJECT_DIR$/OSFEventHandler.py">
       <provider selected="true" editor-type-id="text-editor">
         <state vertical-scroll-proportion="0.0">
-          <caret line="244" column="32" selection-start-line="244" selection-start-column="25" selection-end-line="244" selection-end-column="32" />
+          <caret line="52" column="0" selection-start-line="37" selection-start-column="0" selection-end-line="52" selection-end-column="0" />
           <folding>
             <element signature="e#191#200#0" expanded="true" />
           </folding>
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/models.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.0">
-          <caret line="204" column="4" selection-start-line="204" selection-start-column="4" selection-end-line="204" selection-end-column="36" />
-          <folding>
-            <element signature="e#24#38#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/sandbox/download_in_background.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.0">
-          <caret line="15" column="19" selection-start-line="15" selection-start-column="13" selection-end-line="15" selection-end-column="19" />
-          <folding>
-            <element signature="e#24#39#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/sandbox/concurrent_learn.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.0">
+        <state vertical-scroll-proportion="0.3483871">
           <caret line="18" column="0" selection-start-line="18" selection-start-column="0" selection-end-line="26" selection-end-column="43" />
           <folding />
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/sandbox/build_async.py">
+    <entry file="file://$PROJECT_DIR$/Polling.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="-13.857142">
-          <caret line="151" column="20" selection-start-line="151" selection-start-column="20" selection-end-line="151" selection-end-column="20" />
+        <state vertical-scroll-proportion="0.0">
+          <caret line="523" column="0" selection-start-line="64" selection-start-column="0" selection-end-line="523" selection-end-column="0" />
           <folding>
-            <element signature="e#0#14#0" expanded="true" />
+            <element signature="e#24#39#0" expanded="true" />
+            <element signature="e#3404#3485#1" expanded="false" />
           </folding>
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/Polling.py">
+    <entry file="file://$PROJECT_DIR$/sandbox/check_api_request.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.13548388">
-          <caret line="75" column="0" selection-start-line="75" selection-start-column="0" selection-end-line="75" selection-end-column="0" />
+        <state vertical-scroll-proportion="0.3419355">
+          <caret line="63" column="26" selection-start-line="63" selection-start-column="14" selection-end-line="63" selection-end-column="26" />
           <folding>
             <element signature="e#24#39#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/sandbox/build_async.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="-23.714285">
+          <caret line="610" column="0" selection-start-line="610" selection-start-column="0" selection-end-line="610" selection-end-column="0" />
+          <folding>
+            <element signature="e#0#14#0" expanded="true" />
+            <element signature="e#3910#3991#1" expanded="false" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/exceptions.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.0">
+          <caret line="0" column="0" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.0">
+          <caret line="52" column="31" selection-start-line="52" selection-start-column="29" selection-end-line="52" selection-end-column="31" />
+          <folding>
+            <element signature="e#25#39#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/models.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.44516128">
+          <caret line="125" column="0" selection-start-line="125" selection-start-column="0" selection-end-line="125" selection-end-column="0" />
+          <folding>
+            <element signature="e#24#38#0" expanded="true" />
           </folding>
         </state>
       </provider>
