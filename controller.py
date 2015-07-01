@@ -14,12 +14,14 @@ from watchdog.observers import Observer
 import Polling
 from OSFEventHandler import OSFEventHandler
 from views import Preferences
-
+import asyncio
 __author__ = 'himanshu'
+
 class OSFController(QDialog):
 
     def __init__(self, appname, appauthor, ):
         super().__init__()
+        # logging.basicConfig(level=logging.DEBUG)
         self.appname=appname
         self.appauthor=appauthor
 
@@ -28,9 +30,12 @@ class OSFController(QDialog):
 
 
         self.session = models.get_session()
-        self.user = self.getCurrentUser() #creates session
+        self.user = self.getCurrentUser()
         import threading; print('---inside osfcontroller init2-----{}----'.format(threading.current_thread()))
-        self.poller = Polling.Poll(self.config['dbdir'], self.user.osf_id, self.session)
+        self.loop = asyncio.get_event_loop()
+
+
+        self.poller = Polling.Poll(self.user.osf_id, self.loop)
 
 
         self.containingFolder = "/home/himanshu/OSF-Offline/dumbdir" # todo: remove. only for dev.
@@ -42,14 +47,15 @@ class OSFController(QDialog):
         self.startPollingServer()
         self.startLogging()
 
+        self.loop.run_forever()
+
 
 
         # self.preferences = Preferences(self.containingFolder, self.event_handler.data['data'])
 
     def startPollingServer(self):
-        # self.poller = Polling.Poll(self.config['dbdir'], self.user)
         self.poller.start()
-        # self.poller.run()
+
 
     def stopPollingServer(self):
         self.poller.stop()
@@ -62,7 +68,7 @@ class OSFController(QDialog):
         user = self.session.query(models.User).filter(models.User.fullname == "Jack Frost").first()
 
         if not user:
-            user = models.User(fullname="Jack Frost", osf_id='xc3u4', osf_login='Tinticulge1932@armyspy.com', osf_path='/home/himanshu/OSF-Offline/dumbdir/OSF', oauth_token='FAKE', osf_password='password')
+            user = models.User(fullname="Johnny Appleseed", osf_id='qv5th', osf_login='Poins1978@gustr.com', osf_path='/home/himanshu/OSF-Offline/dumbdir/OSF', oauth_token='FAKE', osf_password='password')
             self.session.add(user)
             try:
                 self.session.commit()
@@ -115,7 +121,7 @@ class OSFController(QDialog):
         #if something inside the folder changes, log it to config dir
         #if something inside the folder changes, show it on console.
         path = self.OSFFolder #set this to whatever appdirs says - data_dir
-        self.event_handler = OSFEventHandler(path, self.config['dbdir'],self.user ) #create event handler
+        self.event_handler = OSFEventHandler(path, self.config['dbdir'],self.user, loop=self.loop ) #create event handler
         #if config actually has legitimate data. use it.
         # if self.config != {}:
         #     self.event_handler.import_from_db(items_dict=self.config, user='himanshu', password='pass', name='himanshu', fav_movie='matrix', fav_show='simpsons')
@@ -128,6 +134,7 @@ class OSFController(QDialog):
 
     def stopObservingOSFFolder(self):
         self.observer.stop()
+        self.observer.join()
 
 
     def closeEvent(self, event):

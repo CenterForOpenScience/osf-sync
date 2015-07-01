@@ -1,7 +1,7 @@
 __author__ = 'himanshu'
 import hashlib
 from sqlalchemy import create_engine, Table, ForeignKey, Enum
-from datetime import date, datetime
+import datetime
 from sqlalchemy.orm import sessionmaker, relationship, backref, scoped_session
 from sqlalchemy import Column, Integer, Boolean, String, DateTime
 from sqlalchemy.ext.declarative import declarative_base
@@ -61,14 +61,14 @@ class Node(Base):
 
     id = Column(Integer, primary_key=True)
     title = Column(String)
-    path = Column(String)
+    # path = Column(String)
     hash = Column(String)
     category = Column(Enum(PROJECT, COMPONENT))
-    date_modified = Column(DateTime)
+    date_modified = Column(DateTime, onupdate=datetime.datetime.now)
     osf_id = Column(String)
 
-    created = Column(Boolean, default= False)
-    deleted = Column(Boolean, default=False)
+    locally_created = Column(Boolean, default= False)
+    locally_deleted = Column(Boolean, default=False)
 
     user_id = Column(Integer, ForeignKey('user.id'))
     parent_id = Column(Integer, ForeignKey('node.id'))
@@ -92,16 +92,18 @@ class Node(Base):
         else:
             return os.path.join(self.user.osf_path , self.title)
 
+    @hybrid_property
+    def top_level_file_folders(self):
+        file_folders =[]
+        for file_folder in self.files:
+            if file_folder.parent is None:
+                file_folders.append(file_folder)
+        return file_folders
+
 
     def update_hash(self, blocksize=2**20):
         pass
         #todo: what to do in this case?
-
-    def update_time(self, dt=None):
-        if dt:
-            self.date_modified = dt
-        else:
-            self.date_modified = datetime.now()
 
     def __repr__(self):
         return "<Node ({}), category={}, title={}, path={}, parent_id={}>".format(
@@ -117,15 +119,16 @@ class File(Base):
 
     id = Column(Integer, primary_key=True)
     name = Column(String)
-    path = Column(String)
+    # path = Column(String)
     # guid = Column(String)
     hash = Column(String)
     type = Column(Enum(FOLDER,FILE))
-    date_modified = Column(DateTime)
+    date_modified = Column(DateTime, onupdate=datetime.datetime.now)
     osf_id = Column(String)
+    provider = Column(String)
 
-    created = Column(Boolean, default= False)
-    deleted = Column(Boolean, default= False)
+    locally_created = Column(Boolean, default= False)
+    locally_deleted = Column(Boolean, default= False)
 
     user_id = Column(Integer, ForeignKey('user.id'))
     node_id = Column(Integer, ForeignKey('node.id'))
@@ -161,11 +164,6 @@ class File(Base):
             # m.update()
         self.hash = m.hexdigest()
 
-    def update_time(self, dt=None):
-        if dt:
-            self.date_modified = dt
-        else:
-            self.date_modified = datetime.now()
 
     def __repr__(self):
         return "<File ({}), type={}, name={}, path={}, parent_id={}>".format(
