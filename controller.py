@@ -15,6 +15,9 @@ import Polling
 from OSFEventHandler import OSFEventHandler
 from views import Preferences
 import asyncio
+from sqlalchemy.orm.exc import MultipleResultsFound
+from sqlalchemy.orm.exc import NoResultFound
+
 __author__ = 'himanshu'
 
 class OSFController(QDialog):
@@ -25,7 +28,7 @@ class OSFController(QDialog):
         self.appname=appname
         self.appauthor=appauthor
 
-        self.createConfig()
+        self.createConfigs()
         import threading; print('---inside osfcontroller init-----{}----'.format(threading.current_thread()))
 
 
@@ -61,23 +64,36 @@ class OSFController(QDialog):
         self.poller.stop()
         self.poller.join()
 
-
+    #todo: when log in is working, you need to make this work with log in screen.
     def getCurrentUser(self):
-
         import threading; print('---inside getcurrentuser-----{}----'.format(threading.current_thread()))
-        user = self.session.query(models.User).filter(models.User.fullname == "Jack Frost").first()
-
-        if not user:
-            user = models.User(fullname="Johnny Appleseed", osf_id='qv5th', osf_login='Poins1978@gustr.com', osf_path='/home/himanshu/OSF-Offline/dumbdir/OSF', oauth_token='FAKE', osf_password='password')
-            self.session.add(user)
-            try:
-                self.session.commit()
-            except:
-                self.session.rollback()
-                raise
-        # local_user = None
-        # local_user.fullname = user.fullname
-        # session.close()
+        try:
+            user = self.session.query(models.User).filter(models.User.logged_in == True).one()
+        except MultipleResultsFound:
+            print('multiple users are logged in currently. We want only one use to be logged in.')
+            print('for now, we will just choose the first user in the db to be the logged in user')
+            print('also, we will log out all other users.')
+            for user in self.session.query(models.User):
+                user.logged_in = False
+                self.save(user)
+            user = self.session.query(models.User).first()
+            user.logged_in = True
+            self.save(user)
+        except NoResultFound:
+            print('no users are logged in currently. Logging in first user in db.')
+            user = self.session.query(models.User).first()
+            if not user:
+                print('no users at all in the db. creating one and logging him in')
+                user = models.User(
+                    fullname="Johnny Appleseed",
+                    osf_id='qv5th',
+                    osf_login='Poins1978@gustr.com',
+                    osf_path='/home/himanshu/OSF-Offline/dumbdir/OSF',
+                    oauth_token='FAKE',
+                    osf_password='password'
+                )
+            user.logged_in = True
+            self.save(user)
         return user
 
 
@@ -217,13 +233,7 @@ class OSFController(QDialog):
 
     def teardown(self):
 
-        # store current configs in config file
-        dir = user_config_dir(self.appname, self.appauthor)
-        rel_osf_config = os.path.join(dir,'config.osf')
-        file = open(rel_osf_config,'w+')
-        file.truncate(0)
-        file.write(json.dumps(self.config))
-        file.close()
+        self.storeConfigs()
 
         # stop polling the server
         self.stopPollingServer()
@@ -234,8 +244,16 @@ class OSFController(QDialog):
         #quit the application
         QApplication.instance().quit()
 
+    def storeConfigs(self):
+        # store current configs in config file
+        dir = user_config_dir(self.appname, self.appauthor)
+        rel_osf_config = os.path.join(dir,'config.osf')
+        file = open(rel_osf_config,'w+')
+        file.truncate(0)
+        file.write(json.dumps(self.config))
+        file.close()
 
-    def createConfig(self):
+    def createConfigs(self):
         #todo: create helper function to check if config/data/OSF/... dirs' exist, and create them if they dont' exist.
 
         #check if dir has config file already in it, if so use it. if not create it.
@@ -251,7 +269,6 @@ class OSFController(QDialog):
         if not os.path.exists(data_dir):
             os.makedirs(data_dir)
         models.setup_db(data_dir)
-        # models.create_models(dir= data_dir)
 
         #new file if file doesnt exist.
         try:
@@ -269,4 +286,16 @@ class OSFController(QDialog):
             self.config['appname'] = self.appname
             self.config['appauthor'] = self.appauthor
             self.config['dbdir'] = user_data_dir(self.appname, self.appauthor)
+            self.storeConfigs()
+
         print(self.config)
+
+
+    def save(self, item=None):
+        if item:
+            self.session.add(item)
+        try:
+            self.session.commit()
+        except:
+            self.session.rollback()
+            raise

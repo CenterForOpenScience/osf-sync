@@ -7,6 +7,7 @@ from sqlalchemy import Column, Integer, Boolean, String, DateTime
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.pool import SingletonThreadPool
 from sqlalchemy.ext.hybrid import hybrid_property
+import pytz
 import os
 Base = declarative_base()
 # from sqlalchemy_mptt.mixins import BaseNestedSets
@@ -26,6 +27,8 @@ class User(Base):
      osf_path = Column(String)
      oauth_token = Column(String)
      osf_id = Column(String)
+
+     logged_in = Column(Boolean, default=False)
 
      #todo: enforce category = PROJECT condition for projects
      nodes = relationship(
@@ -64,7 +67,7 @@ class Node(Base):
     # path = Column(String)
     hash = Column(String)
     category = Column(Enum(PROJECT, COMPONENT))
-    date_modified = Column(DateTime, onupdate=datetime.datetime.now)
+    date_modified = Column(DateTime, default=datetime.datetime.utcnow,onupdate=datetime.datetime.utcnow)
     osf_id = Column(String)
 
     locally_created = Column(Boolean, default= False)
@@ -75,11 +78,12 @@ class Node(Base):
     components = relationship(
         "Node",
         backref=backref('parent', remote_side=[id]),
-        # cascade="all, delete-orphan" #todo: watchdog crawls up so cascade makes things fail on recursive delete. may want to have delete just ignore fails.
+        cascade="all, delete-orphan" #todo: watchdog crawls up so cascade makes things fail on recursive delete. may want to have delete just ignore fails.
     )
     files = relationship(
         "File",
-        backref=backref('node')
+        backref=backref('node'),
+        cascade="all, delete-orphan",
     )
 
     @hybrid_property
@@ -117,15 +121,19 @@ class File(Base):
     FOLDER ='folder'
     FILE='file'
 
+    DEFAULT_PROVIDER = 'osfstorage'
+
     id = Column(Integer, primary_key=True)
     name = Column(String)
     # path = Column(String)
     # guid = Column(String)
     hash = Column(String)
     type = Column(Enum(FOLDER,FILE))
-    date_modified = Column(DateTime, onupdate=datetime.datetime.now)
+    date_modified = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
     osf_id = Column(String)
-    provider = Column(String)
+    provider = Column(String, default=DEFAULT_PROVIDER)
+    #NOTE: this is called path. It is not any type of file/folder path. Think of it just as an id.
+    osf_path = Column(String)
 
     locally_created = Column(Boolean, default= False)
     locally_deleted = Column(Boolean, default= False)
@@ -136,7 +144,7 @@ class File(Base):
     files = relationship(
         "File",
         backref=backref('parent', remote_side=[id]),
-        # cascade="all, delete-orphan",  #todo: watchdog crawls up so cascade makes things fail on recursive delete. may want to have delete just ignore fails.
+        cascade="all, delete-orphan",  #todo: watchdog crawls up so cascade makes things fail on recursive delete. may want to have delete just ignore fails.
     )
 
     @hybrid_property

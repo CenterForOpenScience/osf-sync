@@ -84,14 +84,14 @@ class OSFEventHandler(FileSystemEventHandler):
         :type event:
             :class:`DirMovedEvent` or :class:`FileMovedEvent`
         """
+
+        what = 'directory' if event.is_directory else 'file'
+        # logging.info("Moved %s: from %s to %s", what, event.src_path,
+        #              event.dest_path)
+
+
+        #todo: handle renamed!!!!!!!!!
         try:
-            what = 'directory' if event.is_directory else 'file'
-            # logging.info("Moved %s: from %s to %s", what, event.src_path,
-            #              event.dest_path)
-
-
-            #todo: handle renamed!!!!!!!!!
-
             # determine and get what moved
             item = self.get_item_by_path(event.src_path)
 
@@ -106,14 +106,14 @@ class OSFEventHandler(FileSystemEventHandler):
 
             #save
             self.save(item)
+        except FileNotFoundError:
+            print('tried to move {} but it doesnt exist in db'.format(event.src_path))
+            pass
 
-            #todo: send data to server
+        #allow for this method to be a coroutine
+        # print('DONE with on moved')
+        # yield '1'
 
-            #allow for this method to be a coroutine
-            # print('DONE with on moved')
-            # yield '1'
-        except:
-            raise Exception('something wrong in on_moved')
 
     @asyncio.coroutine
     def on_created(self,event):
@@ -143,12 +143,12 @@ class OSFEventHandler(FileSystemEventHandler):
                         raise NotADirectoryError
                 #if folder, then assume Folder
                 elif event.is_directory:
-                    folder = File(name=name, type=File.FOLDER, user=self.user, locally_created=True)
+                    folder = File(name=name, type=File.FOLDER, user=self.user, locally_created=True, provider=File.DEFAULT_PROVIDER)
                     containing_item = self._get_parent_item_from_path(event.src_path)
                     containing_item.files.append(folder)
                     self.save(folder)
                 else: # if file, then file.
-                    file = File(name=name,type=File.FILE, user=self.user, locally_created=True)
+                    file = File(name=name,type=File.FILE, user=self.user, locally_created=True, provider=File.DEFAULT_PROVIDER)
                     containing_item = self._get_parent_item_from_path(event.src_path)
                     containing_item.files.append(file)
                     self.save(file)
@@ -160,7 +160,7 @@ class OSFEventHandler(FileSystemEventHandler):
 
             #allow for this method to be a coroutine
             # print('DONE with on created')
-            yield from asyncio.sleep(1)
+            # yield from asyncio.sleep(1)
         except:
             raise Exception('something wrong in oncreate')
 
@@ -181,20 +181,20 @@ class OSFEventHandler(FileSystemEventHandler):
         :type event:
             :class:`DirModifiedEvent` or :class:`FileModifiedEvent`
         """
+
+        what = 'directory' if event.is_directory else 'file'
+        # logging.info("Modified %s: %s", what, event.src_path)
+
+        #todo: change all path comparisons to os.path.samefile
+        # whenever anything gets modified, watchdog crawls up the folder tree all the way up to the osf folder
+        # handle osf folder changing or not changing
+        if os.path.exists(event.src_path) and os.path.exists(self.OSFFolder) and os.path.samefile(event.src_path, self.OSFFolder):
+            return # ignore
+            # note: if the OSF folder name is changed, that is NOT modified, but rather move.
+            # note: when folder recursively delete, the top folder is modified then removed.
+            #       os.path.samefile() tries to open the deleted file and fails. fix is to not open file.
+
         try:
-            what = 'directory' if event.is_directory else 'file'
-            # logging.info("Modified %s: %s", what, event.src_path)
-
-            #todo: change all path comparisons to os.path.samefile
-            # whenever anything gets modified, watchdog crawls up the folder tree all the way up to the osf folder
-            # handle osf folder changing or not changing
-            if os.path.exists(event.src_path) and os.path.exists(self.OSFFolder) and os.path.samefile(event.src_path, self.OSFFolder):
-                return # ignore
-                # note: if the OSF folder name is changed, that is NOT modified, but rather move.
-                # note: when folder recursively delete, the top folder is modified then removed.
-                #       os.path.samefile() tries to open the deleted file and fails. fix is to not open file.
-
-
             # update model
 
             # get item
@@ -212,13 +212,14 @@ class OSFEventHandler(FileSystemEventHandler):
 
             #save
             self.save(item)
+        except FileNotFoundError:
+            print('tried to modify {} but it doesnt exist in db'.format(event.src_path))
+            pass
+        #allow for this method to be a coroutine
+        # yield from asyncio.sleep(1)
+        # print('DONE with on modified')
+        # yield '1'
 
-            #allow for this method to be a coroutine
-            yield from asyncio.sleep(1)
-            # print('DONE with on modified')
-            # yield '1'
-        except:
-            raise Exception('something wrong with on modified')
 
     @asyncio.coroutine
     def on_deleted(self, event):
@@ -229,11 +230,12 @@ class OSFEventHandler(FileSystemEventHandler):
         :type event:
             :class:`DirDeletedEvent` or :class:`FileDeletedEvent`
         """
+
+        what = 'directory' if event.is_directory else 'file'
+        logging.info("Deleted %s: %s", what, event.src_path)
+
+
         try:
-            what = 'directory' if event.is_directory else 'file'
-            logging.info("Deleted %s: %s", what, event.src_path)
-
-
 
             # get item
             item = self.get_item_by_path(event.src_path)
@@ -247,13 +249,14 @@ class OSFEventHandler(FileSystemEventHandler):
 
             #save
             self.save(item)
+        except FileNotFoundError:
+            # if file does not exist in db, then do nothing.
+            print('tried to delete file {} but was not in db'.format(event.src_path))
+            pass
+        #allow for this method to be a coroutine
+        print('DONE with on delete')
+        # yield '1'
 
-            #allow for this method to be a coroutine
-            print('DONE with on delete')
-            # yield '1'
-
-        except:
-            raise Exception('something wrong with on deleted')
 
     #todo: simplify this. perhaps can use rstrip(seperator) but unclear if this leads to issues???
     def _get_parent_item_from_path(self, path):
@@ -261,8 +264,7 @@ class OSFEventHandler(FileSystemEventHandler):
 
         if containing_folder_path == self.OSFFolder:
             raise FileNotFoundError
-
-        #what can happen is that the rightmost
+        # what can happen is that the rightmost
         try:
             return self.get_item_by_path(containing_folder_path)
         except FileNotFoundError:
