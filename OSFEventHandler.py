@@ -101,6 +101,14 @@ class OSFEventHandler(FileSystemEventHandler):
             except FileNotFoundError:
                 item.parent = None
 
+            # rename folder
+            if isinstance(item, Node) and item.title != os.path.basename(event.dest_path):
+                item.title = os.path.basename(event.dest_path)
+            elif isinstance(item, File) and item.name != os.path.basename(event.dest_path):
+                item.name = os.path.basename(event.dest_path)
+            else:
+                raise ValueError('some messed up thing was moved')
+
             #todo: log
             # logging.info(item.)
 
@@ -172,6 +180,7 @@ class OSFEventHandler(FileSystemEventHandler):
         except FileNotFoundError:
             return False
 
+    #todo: Evaluate whether I can just ignore DirModifiedEvent's
     @asyncio.coroutine
     def on_modified(self, event):
         """Called when a file or directory is modified.

@@ -8,6 +8,7 @@
 7) delete folder online for osfstorage for project                                                                      GOOD
 8) delete file online for osfstorage for project                                                                        GOOD
 
+for 9) perhaps can use parent.put(new_node)
 9) create project local                                                                                                 API GIVING SERVER ERROR.
 10) create folder local for osfstorage for project                                                                      GOOD
 12) create file local for osfstorage for project                                                                        GOOD
@@ -20,8 +21,11 @@
 
 17) modify remote project                                                                                               GOOD
 18) modify remote component                                                                                             GOOD
-19) modify remote folder for project
-20) modify remote file
+19) modify remote folder for project                                                                                    GOOD
+20) modify remote file                                                                                                  GOODish
 
-
+21) modify local project
+22) modify local component
+23) modify local folder
+24) modify local file
 

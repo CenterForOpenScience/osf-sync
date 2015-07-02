@@ -13,6 +13,7 @@ import pytz
 import shutil
 import logging
 
+
 # this code is for ssl errors that occur due to requests module:
 # http://stackoverflow.com/questions/14102416/python-requests-requests-exceptions-sslerror-errno-8-ssl-c504-eof-occurred
 import ssl
@@ -76,7 +77,7 @@ class Poll(object):
             if item['type'] == 'nodes':
                 return item['id']
             elif item['type'] == 'files':
-                #!!!!!!!!fixme: this is a cheatcode!!!! for here, we are using path+name+item_type for here only for identifying purposes
+                # !!!!!fixme: this is a cheatcode!!!! for here, we are using path+name+item_type for here only for identifying purposes
                 # fixme: name doesnt work with modified names for folders.
                 # fixme: doesn't work for when name/type/path is modified
                 return str(hash(item['path'] + item['name'] + item['item_type']))
@@ -214,9 +215,9 @@ class Poll(object):
             return
         elif local_node is not None and remote_node is not None:
             # todo: handle other updates to  node
-
+            import pdb; pdb.set_trace()
             if local_node.title != remote_node['title']:
-                if local_node.date_modified.replace(tzinfo=pytz.utc) > self.remote_to_local_datetime(remote_node['date_modified']):
+                if self.should_update_remote(local_node, remote_node):
                     self.modify_remote_node(local_node, remote_node)
                 else:
                     self.modify_local_node(local_node, remote_node)
@@ -276,7 +277,6 @@ class Poll(object):
         elif local_file_folder is not None and remote_file_folder is not None:
             # todo: this is broken for now as well. Need additional functionalities on server for this.
             # todo: diff way to do this is also good.
-            import pdb;pdb.set_trace()
             self.modify_file_folder_logic(local_file_folder, remote_file_folder)
             pass
         else:
@@ -490,30 +490,31 @@ class Poll(object):
 
     # todo: handle other updates to file_folder
     def modify_file_folder_logic(self, local_file_folder, remote_file_folder):
+
         if local_file_folder.type == File.FILE:
-                # todo: check if local version of file is different than online version
-                # todo: HASH on remote server needed!!!!!!!
-                if local_file_folder.date_modified.replace(tzinfo=pytz.utc) > self.remote_to_local_datetime(remote_file_folder['date_modified']):
-                    pass #todo: broken
-                        # remote_file_folder = self.modify_remote_file_folder(local_file_folder, remote_file_folder, remote_parent_folder_or_node)
-                elif local_file_folder.date_modified.replace(tzinfo=pytz.utc) < self.remote_to_local_datetime(remote_file_folder['date_modified']):
-                    self.modify_local_file_folder(local_file_folder, remote_file_folder)
+
+            # todo: check if local version of file is different than online version
+            # todo: HASH on remote server needed!!!!!!!
+            if self.should_update_remote(local_file_folder, remote_file_folder):
+                pass #todo: broken
+                    # remote_file_folder = self.modify_remote_file_folder(local_file_folder, remote_file_folder, remote_parent_folder_or_node)
+            elif self.should_update_local(local_file_folder, remote_file_folder):
+                self.modify_local_file_folder(local_file_folder, remote_file_folder)
         elif local_file_folder.type == File.FOLDER:
             if local_file_folder.name != remote_file_folder['name']:
-                if local_file_folder.date_modified.replace(tzinfo=pytz.utc) > self.remote_to_local_datetime(remote_file_folder['date_modified']):
+                if self.should_update_remote(local_file_folder, remote_file_folder):
                     pass #todo: broken
                     # remote_file_folder = self.modify_remote_file_folder(local_file_folder, remote_file_folder, remote_parent_folder_or_node)
-                elif local_file_folder.date_modified.replace(tzinfo=pytz.utc) < self.remote_to_local_datetime(remote_file_folder['date_modified']):
+                elif self.should_update_local(local_file_folder, remote_file_folder):
                     self.modify_local_file_folder(local_file_folder, remote_file_folder)
-            else:
-                raise ValueError('some weird type. fixit')
+
 
     def modify_local_file_folder(self, local_file_folder, remote_file_folder):
         print('modify_local_file_folder')
         assert isinstance(local_file_folder, File)
         assert isinstance(remote_file_folder, dict)
         assert remote_file_folder['type']=='files'
-        assert remote_file_folder['id'] == local_file_folder.osf_id
+        assert remote_file_folder['path'] == local_file_folder.osf_path
 
         if local_file_folder.type == File.FOLDER:
             old_path = local_file_folder.path
@@ -628,6 +629,38 @@ class Poll(object):
             self.session.rollback()
             raise
 
+    # todo: determine proper logic for when to update local/remote. (specifically for files based on datetime for now.)
+    def _get_local_remote_times(self, local, remote):
+        assert local is not None
+        assert remote is not None
+        assert isinstance(local, Base)
+        assert isinstance(remote, dict)
+
+        local_time = local.date_modified.replace(tzinfo=pytz.utc)
+        if remote['type'] == 'files' and remote['item_type'] == 'file':
+            try:
+                remote_time = self.remote_to_local_datetime(remote['metadata']['modified'])
+            except iso8601.ParseError:
+                remote_time = None
+        else:
+            remote_time = self.remote_to_local_datetime(remote['date_modified'])
+        return (local_time, remote_time)
+
+    def should_update_remote(self, local, remote):
+        local_time, remote_time = self._get_local_remote_times(local, remote)
+        # fixme: what should remote_time is None do???
+        #for now, I just made it so that it automatically updates local if remote is None.
+        if remote_time is None:
+            return False
+        return local_time > remote_time
+
+    def should_update_local(self, local, remote):
+        local_time, remote_time = self._get_local_remote_times(local, remote)
+        # fixme: what should remote_time is None do???
+        #for now, I just made it so that it automatically updates local if remote is None.
+        if remote_time is None:
+            return True
+        return local_time < remote_time
 
     def remote_to_local_datetime(self,remote_utc_time_string ):
         return iso8601.parse_date(remote_utc_time_string)
