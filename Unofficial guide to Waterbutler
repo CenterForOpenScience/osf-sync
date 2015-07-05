@@ -1,0 +1,79 @@
+The Unofficial Guide to Waterbutler
+
+Waterbutler is a standalone service that allows programmers to create a simple single REST API to manage files on AND BETWEEN multiple file storage services (Dropbox, Google Drive, etc...). It just so happens that one of the storage services used is OSF Storage thus Waterbutler works very well for COS.
+
+Overview:
+
+There are 5 main parts of waterbutler - auth, core, providers, server, and tasks.
+Core - The Core of waterbutler contains files to handle metadata attained for files from various services.
+Providers - Code specific to each file storage service
+Auth - this handles authentication of a use with all providers
+Server - Handles the REST API
+Tasks - libraries to help with parts of waterbutler
+
+
+How it works:
+
+Waterbutler has a BaseProvider class in waterbutler/core/provider.py. This class is like an abstract class. We must
+define a new subclass of BaseProvider for each service that we want to use. Thus you end up with various Provider
+classes such as BoxProvider in waterbutler/providers/box/provider.py.
+
+The key fields that BaseProvider has that each provider must implement are auth, credentials, and settings. The key
+methods that each provider must implement specific to itself are validate_path, upload, delete, metadata, and download.
+Implementing these methods allows the BaseProvider to perform its tasks of downloading, uploading, moving, among others.
+
+A key idea here is intra_copy versus copy. Intra_copy is making a copy of a file within its own provider. So, I have a
+file in Dropbox and I want to make another copy of the file and store it in dropbox. Some services allow you to do this
+thus it is an optimization to implement intra_copy for these services. By default, however, a copy is downloaded from a
+serice via the normal download method and then uploaded to the desired service using the services upload method.
+
+Another key idea is Streams. The functions above (upload, download, ...) can be done by streaming the files
+asynchronously. This allows for transferring file data to be processed as it arrives rather than waiting for it to all
+arrive at once. Thus performing these file operations won't block your code.
+
+Another key idea is metadata. Each provider must implement a metadata function. The metadata for a file is a dictionary
+of the "useful" fields of that file for that specific provider. The metadata function creates this dictionary for use
+across the numerous file operation functions for the provider. Though the specifics for the metadata can be different
+for each provider, some generally used (perhaps required?) fields are name, provider, materialized_path, size, modified,
+content_type, extra, and etag.
+
+A very key idea to understand is path. path, as it relates to waterbutler, is made up of numerous smaller paths.
+A useful idea to know is the difference between path and etag as they relate to waterbutler. "path" is NOT a path to a
+file. It is more like an id for a given file. I can say I want a file that has path "/my_path_aka_id". This will refer
+to a specific file. The reason it gets confusing is that there is a / at the start of it. This is NOT because you can do
+stuff like /folder/folder/file. It is for working with the API's of various services (don't worry about it). An etag is
+seperate. An etag is an id for a specific version of a file. Awesomely, an etag has a proper name.
+
+
+
+Usage:
+
+from waterbutler.providers.googledrive import GoogleDriveProvider
+
+//specific to the provider
+auth = {
+	'name':'me'
+	'email':'me@me.me'
+}
+//specific to provider
+credentials = {
+	'token': 'user token after oauth'
+}
+//specific to provider
+settings = {
+	'folder': {
+		'id': 'someid',
+		'name': '/somefolder/somename'
+	}
+}
+
+//general
+gdrive_provider = GoogleDriveProvider(
+	auth=auth,
+	credentials=credentials,
+	settings=settings
+)
+path =
+file = yield from gdrive_provider.download(path)
+
+
