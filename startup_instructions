@@ -1,0 +1,12 @@
+waterbuter:
+invoke server
+
+OSF:
+invoke mongo (may have to actually go to error file and write in 'never' manually)
+inv assets -dw
+invoke server
+
+cas:
+docker-compose up (inside docker-library/cas)
+
+
