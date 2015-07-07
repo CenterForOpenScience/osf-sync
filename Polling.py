@@ -12,7 +12,9 @@ import iso8601
 import pytz
 import shutil
 import logging
-
+from waterbutler.core.utils import make_provider
+from waterbutler.core.streams import ResponseStreamReader
+import aiohttp
 
 # this code is for ssl errors that occur due to requests module:
 # http://stackoverflow.com/questions/14102416/python-requests-requests-exceptions-sslerror-errno-8-ssl-c504-eof-occurred
@@ -28,7 +30,7 @@ def sslwrap(func):
 ssl.wrap_socket = sslwrap(ssl.wrap_socket)
 
 
-RECHECK_TIME = 5
+RECHECK_TIME = 5 # in seconds
 
 class Poll(object):
     def __init__(self, user_osf_id, loop):
@@ -36,6 +38,8 @@ class Poll(object):
         self._keep_running = True
         self.user_osf_id = user_osf_id
         self.session = get_session()
+        #todo: make headers be from a remote desktop client
+        #todo: make a method make_request that handles putting in header. puts in Auth. streams. async.
         self.headers =  {
             'Host': 'staging2.osf.io',
             'User-Agent': 'Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:38.0) Gecko/20100101 Firefox/38.0',
@@ -45,10 +49,11 @@ class Poll(object):
             'Referer': 'https://staging2.osf.io/api/v2/docs/',
             'X-CSRFToken': 'qnlWxEzFMyJ5GH7tWv842vdocXPcwZfK',
             #this last one is key!
-            # 'Cookie':'_pk_id.1.2840=5d8268ce2f65679d.1435256429.15.1435688575.1435688083.; csrftoken=qnlWxEzFMyJ5GH7tWv842vdocXPcwZfK; _pk_id.1.0e8b=3e752283c198c4ce.1435342348.1.1435342354.1435342348.; _pk_ref.1.0e8b=%5B%22%22%2C%22%22%2C1435342348%2C%22https%3A%2F%2Fstaging2.osf.io%2F2r67q%2F%22%5D; _pk_ses.1.2840=*; osf_staging2=5592dcf7404f776a0257c302.7F4S2OqxsOcaHceTbpeTFUkXHX0',
+            'Cookie':'_ga=GA1.2.1042569900.1436205463; osf_staging2=559bc632404f776a0057c57b.j3auJChcqkDnRTAOP1Z7xHwb3Ak; _pk_id.1.2840=841d2b69a87afbce.1436271936.1.1436273177.1436271936.; _pk_ses.1.2840=*; csrftoken=zulBIXQzKzqfHjGepa8yeEevNLeydd3S',
             #this one is key for files
-            'Authorization' : 'Bearer eyJhbGciOiJIUzUxMiJ9.ZXlKaGJHY2lPaUprYVhJaUxDSmxibU1pT2lKQk1USTRRMEpETFVoVE1qVTJJbjAuLlktRFZrazctVi05RUZQVHJSRFN6dFEuN3hYUUthNkl5dXFKQ2o4bW5NQWY0dGhYTmw2SFdCdEJMdmZEazY4ZnBpYzZ3d3F5NnJqcjA0V1JxQ2E4VVBWYUNzMm01a0hMemNYVzh0ZFl6VjB1UUlrSnpyenVkTVRxODF0TVJoOWJILVJwRGxWSENzbF9tY2VqT1RRb1Vxdko5SHdpV20tWUp0N2dOR2wyR1pUdW9FelFiT21UbkJITXFET0ZqTUVOMXBqdTVNdE1sbEI4OW55NlliUlh4ZG1BLlNmME9SNGJCa05CZmx2M3VLcUlhQXc.5yAy1dMOi_vJbIxv5zdor8jcFgW2Y9E_7Py-uQYZ3ZAILZaWf-k2igGL5ZPRFXZT5kTNTSdzNLjABDF3CN2viA'
+            'Authorization' : 'Bearer eyJhbGciOiJIUzUxMiJ9.ZXlKaGJHY2lPaUprYVhJaUxDSmxibU1pT2lKQk1USTRRMEpETFVoVE1qVTJJbjAuLkJiQkg0TzhIYXMzU0dzQlNPQ29MYUEuSTRlRG4zcmZkNV92b1hJdkRvTmhodjhmV3M1Ql8tYUV1ZmJIR3ZZbkF0X1lPVDJRTFhVc05rdjJKZUhlUFhfUnpvZW1ucW9aN0ZlY0FidGpZcmxRR2hHem5IenRWREVQYWpXSmNnVVhtQWVYLUxSV25ENzBqYk9YczFDVHJKMG9BV29Fd3ZMSkpGSjdnZ29QVVBlLTJsX2NLcGY4UzZtaDRPMEtGX3lBRUlLTjhwMEdXZ3lVNWJ3b0lhZU1FSTVELllDYTBaTm5lSVFkSzBRbDNmY2pkZGc.dO-5NcN9X6ss7PeDt5fWRpFtMomgOBjPPv8Qehn34fJXJH2bCu9FIxo4Lxhja9dYGmCNAtc8jn05FjerjarQgQ'
         }
+        self.token = 'eyJhbGciOiJIUzUxMiJ9.ZXlKaGJHY2lPaUprYVhJaUxDSmxibU1pT2lKQk1USTRRMEpETFVoVE1qVTJJbjAuLlZERkg3blRmN1JwS3otWHl5V2NyYncuMFhiOFZuRzFMODVyMzE4WERzc2VPWFI5X3lLOUtlR1otcEYtdXRSRWwzWTl6bUFNU0hSTmhXQ1pNazRjOWpxYXpsU2w1QWp3THBqdzA2cjAxaFBlOHZHdUdnZHpmLTgzUW80WUVhQjJ5d2o4U2RQLVljZUlLS3VraEZjUk5LZWNrai1Td3YzdmxmTTYzSTBITEQxUnNyYzB0bm1qTGpoV0V0NDZrT1pNZFN3LnZfOU9CV285ZDJLU21fOWd2ZWs1bWc._mPnS2zb6Cm-f-uSjzI3OVvUz7IfsxL3IPB_IShRHwQNyNw-zZM1_RrMMHSzmq9s0VS8bAdAg4JfDmMB438uIg'
         self._loop = loop or asyncio.get_event_loop()
         self.user = self.session.query(User).filter(User.osf_id == user_osf_id).one() # todo: does passing in user directly break things?
 
@@ -215,7 +220,7 @@ class Poll(object):
             return
         elif local_node is not None and remote_node is not None:
             # todo: handle other updates to  node
-            import pdb; pdb.set_trace()
+
             if local_node.title != remote_node['title']:
                 if self.should_update_remote(local_node, remote_node):
                     self.modify_remote_node(local_node, remote_node)
@@ -403,6 +408,58 @@ class Poll(object):
             else:
                 raise ValueError('file type is unknown')
         return new_file_folder
+    # @asyncio.coroutine
+    # def create_local_file_folder(self, remote_file_folder, local_parent_folder, local_node):
+    #         print('creating local file folder')
+    #         assert remote_file_folder is not None
+    #         assert remote_file_folder['type'] == 'files'
+    #         assert isinstance(local_parent_folder, File) or local_parent_folder is None
+    #         assert local_parent_folder is None or (local_parent_folder.type == File.FOLDER)
+    #         assert isinstance(local_node, Node)
+    #
+    #
+    #         #create local file folder in db
+    #         type = File.FILE if remote_file_folder['item_type']=='file' else File.FOLDER
+    #         new_file_folder = File(
+    #             name=remote_file_folder['name'],
+    #             type=type,
+    #             osf_id=self.get_id(remote_file_folder),
+    #             provider=remote_file_folder['provider'],
+    #             osf_path=remote_file_folder['path'],
+    #             user=self.user,
+    #             parent=local_parent_folder,
+    #             node=local_node)
+    #         self.save(new_file_folder)
+    #
+    #         #create local file/folder on actual system
+    #         local_filesystem_provider = make_provider(
+    #             name='filesystem',
+    #             auth={},
+    #             credentials={},
+    #             settings={'folder': new_file_folder.path} # determines where the file is downloaded to
+    #         )
+    #         #validates and returns a WaterButlerPath object
+    #         path = yield from local_filesystem_provider.validate_path(remote_file_folder['name'])
+    #         #wait until response is attained from given url.
+    #         response = yield from self.make_request(url=remote_file_folder['links']['self'])
+    #         if response.ok:
+    #             # stream the file response to where it belongs on local file system
+    #             yield from local_filesystem_provider.upload(
+    #                 ResponseStreamReader(response, unsizable=True),
+    #                 path,
+    #             )
+    #
+    #         # if not os.path.exists(new_file_folder.path):
+    #         #     if type == File.FILE:
+    #         #         resp = requests.get(remote_file_folder['links']['self'], headers=self.headers)
+    #         #         with open(new_file_folder.path, 'wb') as fd:
+    #         #             for chunk in resp.iter_content(2048): #todo: which is better? 1024 or 2048? Apparently, not much difference.
+    #         #                 fd.write(chunk)
+    #         #     elif type == File.FOLDER:
+    #         #         os.makedirs(new_file_folder.path)
+    #         #     else:
+    #         #         raise ValueError('file type is unknown')
+    #         return new_file_folder
 
     def create_remote_file_folder(self, local_file_folder, local_node):
         print('create_remote_file_folder')
@@ -664,4 +721,13 @@ class Poll(object):
 
     def remote_to_local_datetime(self,remote_utc_time_string ):
         return iso8601.parse_date(remote_utc_time_string)
+
+    @asyncio.coroutine
+    def make_request(self,url,method='GET'):
+
+        yield aiohttp.request(
+            method,
+            url,
+            headers={'Authorization': 'Bearer {}'.format(self.token)}
+        )
 

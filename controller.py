@@ -28,41 +28,42 @@ class OSFController(QDialog):
         self.appname=appname
         self.appauthor=appauthor
 
+        self.containingFolder = ''
+
+
+
+    def start(self,loop):
         self.createConfigs()
-        import threading; print('---inside osfcontroller init-----{}----'.format(threading.current_thread()))
-
-
         self.session = models.get_session()
         self.user = self.getCurrentUser()
-        import threading; print('---inside osfcontroller init2-----{}----'.format(threading.current_thread()))
-        self.loop = asyncio.get_event_loop()
-
-
-        self.poller = Polling.Poll(self.user.osf_id, self.loop)
-
-
-        self.containingFolder = "/home/himanshu/OSF-Offline/dumbdir" # todo: remove. only for dev.
+        self.containingFolder = os.path.dirname(self.user.osf_path)
         if not self.containingFolderIsSet():
             self.setContainingFolder()
-        #todo: handle if OSF folder does not exist. OR if user wants custom OSF folder
-        self.OSFFolder = self.user.osf_path #os.path.join(self.containingFolder, "OSF") # todo: store osf folder
-        self.startObservingOSFFolder()
-        self.startPollingServer()
-        self.startLogging()
 
+
+
+        self.loop = loop
+
+        #todo: handle if OSF folder does not exist. OR if user wants custom OSF folder
+        if not os.path.isdir(self.user.osf_path):
+            os.makedirs(self.user.osf_path)
+        self.startLogging()
+        self.OSFFolder = self.user.osf_path
+        self.startObservingOSFFolder()
+        # self.preferences = Preferences(self.containingFolder, self.event_handler.data['data'])
+        self.startPollingServer()
         self.loop.run_forever()
 
 
 
-        # self.preferences = Preferences(self.containingFolder, self.event_handler.data['data'])
-
     def startPollingServer(self):
+        self.poller = Polling.Poll(self.user.osf_id, self.loop)
         self.poller.start()
 
 
     def stopPollingServer(self):
         self.poller.stop()
-        self.poller.join()
+        # self.poller.join()
 
     #todo: when log in is working, you need to make this work with log in screen.
     def getCurrentUser(self):
@@ -70,6 +71,7 @@ class OSFController(QDialog):
         try:
             user = self.session.query(models.User).filter(models.User.logged_in == True).one()
         except MultipleResultsFound:
+            # todo: multiple user screen allows you to choose which user is logged in
             print('multiple users are logged in currently. We want only one use to be logged in.')
             print('for now, we will just choose the first user in the db to be the logged in user')
             print('also, we will log out all other users.')
@@ -80,16 +82,17 @@ class OSFController(QDialog):
             user.logged_in = True
             self.save(user)
         except NoResultFound:
+            # todo: allows you to log in (creates an account in db and logs it in)
             print('no users are logged in currently. Logging in first user in db.')
             user = self.session.query(models.User).first()
             if not user:
                 print('no users at all in the db. creating one and logging him in')
                 user = models.User(
                     fullname="Johnny Appleseed",
-                    osf_id='qv5th',
-                    osf_login='Poins1978@gustr.com',
+                    osf_id='p42te',
+                    osf_login='Reit1971@jourrapide.com',
                     osf_path='/home/himanshu/OSF-Offline/dumbdir/OSF',
-                    oauth_token='FAKE',
+                    oauth_token='eyJhbGciOiJIUzUxMiJ9.ZXlKaGJHY2lPaUprYVhJaUxDSmxibU1pT2lKQk1USTRRMEpETFVoVE1qVTJJbjAuLkJiQkg0TzhIYXMzU0dzQlNPQ29MYUEuSTRlRG4zcmZkNV92b1hJdkRvTmhodjhmV3M1Ql8tYUV1ZmJIR3ZZbkF0X1lPVDJRTFhVc05rdjJKZUhlUFhfUnpvZW1ucW9aN0ZlY0FidGpZcmxRR2hHem5IenRWREVQYWpXSmNnVVhtQWVYLUxSV25ENzBqYk9YczFDVHJKMG9BV29Fd3ZMSkpGSjdnZ29QVVBlLTJsX2NLcGY4UzZtaDRPMEtGX3lBRUlLTjhwMEdXZ3lVNWJ3b0lhZU1FSTVELllDYTBaTm5lSVFkSzBRbDNmY2pkZGc.dO-5NcN9X6ss7PeDt5fWRpFtMomgOBjPPv8Qehn34fJXJH2bCu9FIxo4Lxhja9dYGmCNAtc8jn05FjerjarQgQ',
                     osf_password='password'
                 )
             user.logged_in = True
@@ -136,8 +139,8 @@ class OSFController(QDialog):
 
         #if something inside the folder changes, log it to config dir
         #if something inside the folder changes, show it on console.
-        path = self.OSFFolder #set this to whatever appdirs says - data_dir
-        self.event_handler = OSFEventHandler(path, self.config['dbdir'],self.user, loop=self.loop ) #create event handler
+
+        self.event_handler = OSFEventHandler(self.OSFFolder, self.config['dbdir'],self.user, loop=self.loop ) #create event handler
         #if config actually has legitimate data. use it.
         # if self.config != {}:
         #     self.event_handler.import_from_db(items_dict=self.config, user='himanshu', password='pass', name='himanshu', fav_movie='matrix', fav_show='simpsons')
@@ -145,7 +148,7 @@ class OSFController(QDialog):
         #start
         self.observer = Observer() #create observer. watched for events on files.
         #attach event handler to observed events. make observer recursive
-        self.observer.schedule(self.event_handler, path, recursive=True)
+        self.observer.schedule(self.event_handler, self.OSFFolder, recursive=True)
         self.observer.start() #start
 
     def stopObservingOSFFolder(self):
@@ -209,10 +212,12 @@ class OSFController(QDialog):
             self.containingFolder = QFileDialog.getExistingDirectory(self, "Choose folder")
         else:
             self.containingFolder = newContainingFolder
+        self.user.osf_path = os.path.join(self.containingFolder,"OSF")
+        self.save(self.user)
 
 
     def startOSF(self):
-        url = "http://osf.io/"
+        url = "http://osf.io/dashboard"
         webbrowser.open_new_tab(url)
 
 
@@ -232,15 +237,16 @@ class OSFController(QDialog):
 
 
     def teardown(self):
+        try:
+            self.storeConfigs()
 
-        self.storeConfigs()
+            # stop polling the server
+            self.stopPollingServer()
 
-        # stop polling the server
-        self.stopPollingServer()
-
-        # stop observing OSF folder
-        self.stopObservingOSFFolder()
-
+            # stop observing OSF folder
+            self.stopObservingOSFFolder()
+        except:
+            print('error in teardown. Still going to quit app though.')
         #quit the application
         QApplication.instance().quit()
 
