@@ -15,8 +15,8 @@ for 9) perhaps can use parent.put(new_node)
 
 13) delete project local                                                                                                API ISSUE????
 14) delete component local                                                                                              API ISSUE????
-15) delete folder local for osfstorage for project                                                                      GOOD
-16) delete file local for osfstorage for project                                                                        GOOD
+15) delete folder local for osfstorage for project                                                                      GOOD??newly broken??
+16) delete file local for osfstorage for project                                                                        GOOD??newly broken??
 
 
 17) modify remote project                                                                                               GOOD
@@ -24,8 +24,8 @@ for 9) perhaps can use parent.put(new_node)
 19) modify remote folder for project                                                                                    GOOD
 20) modify remote file                                                                                                  GOODish
 
-21) modify local project
-22) modify local component
+21) modify local project                                                                                                GOOD (but fails when file is being  modified in older name folder)
+22) modify local component                                                                                              GOOD (but fails when file is being  modified in older name folder)
 23) modify local folder
 24) modify local file
 

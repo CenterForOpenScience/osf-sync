@@ -111,12 +111,19 @@ class Window(QDialog):
             self.showMessage()
 
     def showMessage(self):
+
         icon = QSystemTrayIcon.MessageIcon(
                 self.typeComboBox.itemData(self.typeComboBox.currentIndex()))
+
         self.trayIcon.showMessage(self.titleEdit.text(),
                 self.bodyEdit.toPlainText(), icon,
                 self.durationSpinBox.value() * 1000)
 
+
+
+
+
+        quit()
     def messageClicked(self):
         QMessageBox.information(None, "Systray",
                 "Sorry, I already gave what help I could.\nMaybe you should "

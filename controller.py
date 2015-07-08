@@ -7,7 +7,7 @@ import subprocess
 import webbrowser
 import models
 from PyQt5.QtWidgets import (QApplication, QDialog, QMessageBox, QSystemTrayIcon,
-                             QFileDialog)
+                             QFileDialog, QAction)
 from PyQt5.QtCore import QCoreApplication, QFileSystemWatcher
 from appdirs import *
 from watchdog.observers import Observer
@@ -30,33 +30,36 @@ class OSFController(QDialog):
 
         self.containingFolder = ''
 
+        self.loginAction = QAction("Open Login Screen", self)
+        self.multipleUserAction = QAction("Choose Logged In User", self)
 
 
-    def start(self,loop):
+    def start(self):
+        self.loop = self.ensure_event_loop()
         self.createConfigs()
         self.session = models.get_session()
         self.user = self.getCurrentUser()
-        self.containingFolder = os.path.dirname(self.user.osf_path)
-        if not self.containingFolderIsSet():
-            self.setContainingFolder()
+        if self.user:
+            self.containingFolder = os.path.dirname(self.user.osf_path)
+            if not self.containingFolderIsSet():
+                self.setContainingFolder()
+            self.user.osf_path = os.path.join(self.containingFolder,"OSF")
+            self.save(self.user)
 
-
-
-        self.loop = loop
-
-        #todo: handle if OSF folder does not exist. OR if user wants custom OSF folder
-        if not os.path.isdir(self.user.osf_path):
-            os.makedirs(self.user.osf_path)
-        self.startLogging()
-        self.OSFFolder = self.user.osf_path
-        self.startObservingOSFFolder()
-        # self.preferences = Preferences(self.containingFolder, self.event_handler.data['data'])
-        self.startPollingServer()
-        self.loop.run_forever()
+            #todo: handle if OSF folder does not exist. OR if user wants custom OSF folder
+            if not os.path.isdir(self.user.osf_path):
+                os.makedirs(self.user.osf_path)
+            self.startLogging()
+            self.OSFFolder = self.user.osf_path
+            self.startObservingOSFFolder()
+            # self.preferences = Preferences(self.containingFolder, self.event_handler.data['data'])
+            self.startPollingServer()
+            self.loop.run_forever()
 
 
 
     def startPollingServer(self):
+        #todo: can probably change this to just pass in the self.user
         self.poller = Polling.Poll(self.user.osf_id, self.loop)
         self.poller.start()
 
@@ -67,6 +70,7 @@ class OSFController(QDialog):
 
     #todo: when log in is working, you need to make this work with log in screen.
     def getCurrentUser(self):
+        user = None
         import threading; print('---inside getcurrentuser-----{}----'.format(threading.current_thread()))
         try:
             user = self.session.query(models.User).filter(models.User.logged_in == True).one()
@@ -75,28 +79,30 @@ class OSFController(QDialog):
             print('multiple users are logged in currently. We want only one use to be logged in.')
             print('for now, we will just choose the first user in the db to be the logged in user')
             print('also, we will log out all other users.')
-            for user in self.session.query(models.User):
-                user.logged_in = False
-                self.save(user)
-            user = self.session.query(models.User).first()
-            user.logged_in = True
-            self.save(user)
+            # for user in self.session.query(models.User):
+            #     user.logged_in = False
+            #     self.save(user)
+            # user = self.session.query(models.User).first()
+            # user.logged_in = True
+            # self.save(user)
+            self.multipleUserAction.trigger()
         except NoResultFound:
             # todo: allows you to log in (creates an account in db and logs it in)
+            self.loginAction.trigger()
             print('no users are logged in currently. Logging in first user in db.')
-            user = self.session.query(models.User).first()
-            if not user:
-                print('no users at all in the db. creating one and logging him in')
-                user = models.User(
-                    fullname="Johnny Appleseed",
-                    osf_id='p42te',
-                    osf_login='Reit1971@jourrapide.com',
-                    osf_path='/home/himanshu/OSF-Offline/dumbdir/OSF',
-                    oauth_token='eyJhbGciOiJIUzUxMiJ9.ZXlKaGJHY2lPaUprYVhJaUxDSmxibU1pT2lKQk1USTRRMEpETFVoVE1qVTJJbjAuLkJiQkg0TzhIYXMzU0dzQlNPQ29MYUEuSTRlRG4zcmZkNV92b1hJdkRvTmhodjhmV3M1Ql8tYUV1ZmJIR3ZZbkF0X1lPVDJRTFhVc05rdjJKZUhlUFhfUnpvZW1ucW9aN0ZlY0FidGpZcmxRR2hHem5IenRWREVQYWpXSmNnVVhtQWVYLUxSV25ENzBqYk9YczFDVHJKMG9BV29Fd3ZMSkpGSjdnZ29QVVBlLTJsX2NLcGY4UzZtaDRPMEtGX3lBRUlLTjhwMEdXZ3lVNWJ3b0lhZU1FSTVELllDYTBaTm5lSVFkSzBRbDNmY2pkZGc.dO-5NcN9X6ss7PeDt5fWRpFtMomgOBjPPv8Qehn34fJXJH2bCu9FIxo4Lxhja9dYGmCNAtc8jn05FjerjarQgQ',
-                    osf_password='password'
-                )
-            user.logged_in = True
-            self.save(user)
+            # user = self.session.query(models.User).first()
+            # if not user:
+            #     print('no users at all in the db. creating one and logging him in')
+            #     user = models.User(
+            #         fullname="Johnny Appleseed",
+            #         osf_id='p42te',
+            #         osf_login='rewhe1931@gustr.com',
+            #         osf_path='/home/himanshu/OSF-Offline/dumbdir/OSF',
+            #         oauth_token='eyJhbGciOiJIUzUxMiJ9.ZXlKaGJHY2lPaUprYVhJaUxDSmxibU1pT2lKQk1USTRRMEpETFVoVE1qVTJJbjAuLkJiQkg0TzhIYXMzU0dzQlNPQ29MYUEuSTRlRG4zcmZkNV92b1hJdkRvTmhodjhmV3M1Ql8tYUV1ZmJIR3ZZbkF0X1lPVDJRTFhVc05rdjJKZUhlUFhfUnpvZW1ucW9aN0ZlY0FidGpZcmxRR2hHem5IenRWREVQYWpXSmNnVVhtQWVYLUxSV25ENzBqYk9YczFDVHJKMG9BV29Fd3ZMSkpGSjdnZ29QVVBlLTJsX2NLcGY4UzZtaDRPMEtGX3lBRUlLTjhwMEdXZ3lVNWJ3b0lhZU1FSTVELllDYTBaTm5lSVFkSzBRbDNmY2pkZGc.dO-5NcN9X6ss7PeDt5fWRpFtMomgOBjPPv8Qehn34fJXJH2bCu9FIxo4Lxhja9dYGmCNAtc8jn05FjerjarQgQ',
+            #         osf_password='password'
+            #     )
+            # user.logged_in = True
+            # self.save(user)
         return user
 
 
@@ -212,8 +218,7 @@ class OSFController(QDialog):
             self.containingFolder = QFileDialog.getExistingDirectory(self, "Choose folder")
         else:
             self.containingFolder = newContainingFolder
-        self.user.osf_path = os.path.join(self.containingFolder,"OSF")
-        self.save(self.user)
+
 
 
     def startOSF(self):
@@ -245,8 +250,14 @@ class OSFController(QDialog):
 
             # stop observing OSF folder
             self.stopObservingOSFFolder()
+        except KeyboardInterrupt:
+            print('ctr-c pressed. Still going to quit app though.')
+            QApplication.instance().quit()
+            raise
         except:
-            print('error in teardown. Still going to quit app though.')
+            print('error in tear down. Still going to quit app though.')
+            QApplication.instance().quit()
+            raise
         #quit the application
         QApplication.instance().quit()
 
@@ -281,10 +292,12 @@ class OSFController(QDialog):
             file = open(rel_osf_config,'r+w')
         except:
             file = open(rel_osf_config,'w+')
+
         try:
-            #todo: actually start adding to self.config so that it is not corrupt on startup
+
             file_content = file.read()
             self.config = json.loads(file_content)
+
         except ValueError:
             print('config file is corrupted. Creating new config file')
             #todo: figure out where this should actually be
@@ -293,6 +306,8 @@ class OSFController(QDialog):
             self.config['appauthor'] = self.appauthor
             self.config['dbdir'] = user_data_dir(self.appname, self.appauthor)
             self.storeConfigs()
+        finally:
+            file.close()
 
         print(self.config)
 
@@ -305,3 +320,20 @@ class OSFController(QDialog):
         except:
             self.session.rollback()
             raise
+
+    # courtesy of waterbutler
+    def ensure_event_loop(self):
+        """Ensure the existance of an eventloop
+        Useful for contexts where get_event_loop() may
+        raise an exception.
+        :returns: The new event loop
+        :rtype: BaseEventLoop
+        """
+        try:
+            return asyncio.get_event_loop()
+        except (AssertionError, RuntimeError):
+            asyncio.set_event_loop(asyncio.new_event_loop())
+
+        # Note: No clever tricks are used here to dry up code
+        # This avoids an infinite loop if settings the event loop ever fails
+        return asyncio.get_event_loop()

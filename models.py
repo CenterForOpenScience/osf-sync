@@ -22,7 +22,7 @@ class User(Base):
 
      id = Column(Integer, primary_key=True)
      fullname = Column(String)
-     osf_login = Column(String)
+     osf_login = Column(String, unique=True)
      osf_password = Column(String)
      osf_path = Column(String)
      oauth_token = Column(String)
@@ -65,7 +65,7 @@ class Node(Base):
     id = Column(Integer, primary_key=True)
     title = Column(String)
     # path = Column(String)
-    hash = Column(String)
+    # hash = Column(String)
     category = Column(Enum(PROJECT, COMPONENT))
     date_modified = Column(DateTime, default=datetime.datetime.utcnow,onupdate=datetime.datetime.utcnow)
     osf_id = Column(String)
@@ -105,9 +105,9 @@ class Node(Base):
         return file_folders
 
 
-    def update_hash(self, blocksize=2**20):
-        pass
-        #todo: what to do in this case?
+    # def update_hash(self, blocksize=2**20):
+    #     pass
+    #     todo: what to do in this case?
 
     def __repr__(self):
         return "<Node ({}), category={}, title={}, path={}, parent_id={}>".format(
@@ -127,7 +127,7 @@ class File(Base):
     name = Column(String)
     # path = Column(String)
     # guid = Column(String)
-    hash = Column(String)
+    etag = Column(String)
     type = Column(Enum(FOLDER,FILE))
     date_modified = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
     osf_id = Column(String)
@@ -157,20 +157,23 @@ class File(Base):
         else:
             return os.path.join(self.node.path ,self.name)
 
-    def update_hash(self, blocksize=2**20):
-        m = hashlib.md5()
-        if self.type == File.FILE:
-            with open(self.path,"rb") as f:
-                while True:
-                    buf = f.read(blocksize)
-                    if not buf:
-                        break
-                    m.update(buf)
-        else:
-            pass
-            #todo: what to do in this case?
-            # m.update()
-        self.hash = m.hexdigest()
+    def update_etag(self, blocksize=2**20):
+        """This etag is based on what waterbutler uses.
+        """
+        self.etag = hashlib.sha256('{}::{}'.format(self.provider, self.etag).encode('utf-8')).hexdigest()
+        # m = hashlib.md5()
+        # if self.type == File.FILE:
+        #     with open(self.path,"rb") as f:
+        #         while True:
+        #             buf = f.read(blocksize)
+        #             if not buf:
+        #                 break
+        #             m.update(buf)
+        # else:
+        #     pass
+        #     #todo: what to do in this case?
+        #     # m.update()
+        # self.hash = m.hexdigest()
 
 
     def __repr__(self):
@@ -215,13 +218,24 @@ def create_session():
     url = 'sqlite:///{}'.format(db_file_path)
     #todo: figure out if this is safe or not. If not, how to make it safe?????
     # engine = create_engine(url, echo=False, connect_args={'check_same_thread':False})
-    engine = create_engine(url, echo=False, poolclass=SingletonThreadPool)
+    engine = create_engine(url, echo=False, connect_args={'check_same_thread':False}, poolclass=SingletonThreadPool)
     session_factory = sessionmaker(bind=engine)
     global Session
     Session = scoped_session(session_factory)
     #todo: figure out a safer way to do this
     # global session
 
+# evaluatation of autocommit/autoflush for models was decidedly not a good idea.
+# todo: I think evaluation was WRONG. if does not commit until added to session, then autocommit is GOOD.
+#todo: if you do use save method, then you need to standardize rest of code to use this method
+def save(session, item=None):
+    if item:
+        session.add(item)
+    try:
+        session.commit()
+    except:
+        session.rollback()
+        raise
 
 #todo: probably okay to have a method that finds a component by guid.
 

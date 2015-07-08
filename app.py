@@ -16,60 +16,13 @@ from PyQt5.QtWidgets import (QApplication, QDialog, QMessageBox, QSystemTrayIcon
 from PyQt5.QtCore import QCoreApplication
 from appdirs import *
 from watchdog.observers import Observer
-
+import threading
 
 from views.Preferences import Preferences
 from views.SystemTray import SystemTray
 from controller import OSFController
-
-def ensure_event_loop():
-    """Ensure the existance of an eventloop
-    Useful for contexts where get_event_loop() may
-    raise an exception.
-    :returns: The new event loop
-    :rtype: BaseEventLoop
-    """
-    try:
-        return asyncio.get_event_loop()
-    except (AssertionError, RuntimeError):
-        asyncio.set_event_loop(asyncio.new_event_loop())
-
-    # Note: No clever tricks are used here to dry up code
-    # This avoids an infinite loop if settings the event loop ever fails
-    return asyncio.get_event_loop()
-
-
-def __coroutine_unwrapper(func):
-    @functools.wraps(func)
-    def wrapped(*args, **kwargs):
-        return ensure_event_loop().run_until_complete(func(*args, **kwargs))
-    wrapped.as_async = func
-    return wrapped
-
-
-@asyncio.coroutine
-def backgrounded(func, *args, **kwargs):
-    """Runs the given function with the given arguments in
-    a background thread
-    """
-    loop = asyncio.get_event_loop()
-    if asyncio.iscoroutinefunction(func):
-        func = __coroutine_unwrapper(func)
-
-    return (yield from loop.run_in_executor(
-        None,  # None uses the default executer, ThreadPoolExecuter
-        functools.partial(func, *args, **kwargs)
-    ))
-
-
-def backgroundify(func):
-    @asyncio.coroutine
-    @functools.wraps(func)
-    def wrapped(*args, **kwargs):
-        return (yield from backgrounded(func, *args, **kwargs))
-    return wrapped
-
-
+from views.StartScreen import StartScreen
+import alerts
 
 class OSFApp(QDialog):
     def __init__(self):
@@ -82,23 +35,29 @@ class OSFApp(QDialog):
 
         #controller
         self.controller = OSFController(appname=self.appname, appauthor=self.appauthor)
-        import pdb;pdb.set_trace()
+
         #views
+        self.startScreen = StartScreen()
         self.tray = SystemTray()
         #todo: remove priority abilities
         self.preferences = Preferences(self.controller.containingFolder, None)
+        alerts.setup_alerts(self.tray.trayIcon)
 
         #connect all signal-slot pairs
         self.setupConnections()
 
-        # start all work
-        # backgroundify(self.controller.start(ensure_event_loop()))
 
+    def start(self):
+        # start all work
+        t = threading.Thread(target=self.controller.start)
+        t.start()
+        print('hiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiii')
+        # backgroundify(self.controller.start())
 
     def setupConnections(self):
         # [ (signal, slot) ]
         signal_slot_pairs = [
-            #system tray
+            # system tray
             (self.tray.openProjectFolderAction.triggered, self.controller.openProjectFolder),
             (self.tray.launchOSFAction.triggered, self.controller.startOSF),
             (self.tray.currentlySynchingAction.triggered, self.controller.currentlySynching),
@@ -107,8 +66,14 @@ class OSFApp(QDialog):
             (self.tray.aboutAction.triggered, self.startAboutScreen),
             (self.tray.quitAction.triggered, self.controller.teardown),
 
+            # controller events
+            (self.controller.loginAction.triggered, self.startScreen.openWindow),
+
             #preferences
             # (self.preferences.preferencesWindow.changeFolderButton.clicked, self.preferences.openContainingFolderPicker)
+
+            # start screen
+            (self.startScreen.doneLoggingInAction.triggered, self.controller.start)
         ]
         for signal, slot in signal_slot_pairs:
             signal.connect(slot)
@@ -125,6 +90,9 @@ class OSFApp(QDialog):
     def startAboutScreen(self):
         self.preferences.openWindow(Preferences.ABOUT)
 
+    def openLogInScreen(self):
+        self.preferences.openWindow(Preferences.OSF)
+
 
 
 
@@ -137,11 +105,14 @@ if __name__ == '__main__':
         sys.exit(1)
 
     QApplication.setQuitOnLastWindowClosed(False)
-    app.setStyle('cleanlooks')
+
 
 
 
     osf = OSFApp()
+    osf.start()
+
+
     osf.hide()
     app.exec_()
 

@@ -15,6 +15,7 @@ import logging
 from waterbutler.core.utils import make_provider
 from waterbutler.core.streams import ResponseStreamReader
 import aiohttp
+import alerts
 
 # this code is for ssl errors that occur due to requests module:
 # http://stackoverflow.com/questions/14102416/python-requests-requests-exceptions-sslerror-errno-8-ssl-c504-eof-occurred
@@ -38,27 +39,33 @@ class Poll(object):
         self._keep_running = True
         self.user_osf_id = user_osf_id
         self.session = get_session()
+        self.user = self.session.query(User).filter(User.osf_id == user_osf_id).one() # todo: does passing in user directly break things?
+
         #todo: make headers be from a remote desktop client
         #todo: make a method make_request that handles putting in header. puts in Auth. streams. async.
+
         self.headers =  {
-            'Host': 'staging2.osf.io',
-            'User-Agent': 'Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:38.0) Gecko/20100101 Firefox/38.0',
+            # 'Host': 'staging2.osf.io',
+            # 'User-Agent': 'Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:38.0) Gecko/20100101 Firefox/38.0',
             'Accept': 'application/json',
             'Accept-Language': 'en-US,en;q=0.5',
             'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
-            'Referer': 'https://staging2.osf.io/api/v2/docs/',
-            'X-CSRFToken': 'qnlWxEzFMyJ5GH7tWv842vdocXPcwZfK',
+            # 'Referer': 'https://staging2.osf.io/api/v2/docs/',
+            # 'X-CSRFToken': 'qnlWxEzFMyJ5GH7tWv842vdocXPcwZfK',
             #this last one is key!
-            'Cookie':'_ga=GA1.2.1042569900.1436205463; osf_staging2=559bc632404f776a0057c57b.j3auJChcqkDnRTAOP1Z7xHwb3Ak; _pk_id.1.2840=841d2b69a87afbce.1436271936.1.1436273177.1436271936.; _pk_ses.1.2840=*; csrftoken=zulBIXQzKzqfHjGepa8yeEevNLeydd3S',
+            'Cookie':'_ga=GA1.2.1042569900.1436205463; osf_staging2=559c6834404f7702fafae988.8McbBgBvu98W-KKYfNEBz5FNSSo; csrftoken=zulBIXQzKzqfHjGepa8yeEevNLeydd3S; _pk_id.1.2840=841d2b69a87afbce.1436271936.8.1436340402.1436338347.; _pk_ses.1.2840=*',
             #this one is key for files
-            'Authorization' : 'Bearer eyJhbGciOiJIUzUxMiJ9.ZXlKaGJHY2lPaUprYVhJaUxDSmxibU1pT2lKQk1USTRRMEpETFVoVE1qVTJJbjAuLkJiQkg0TzhIYXMzU0dzQlNPQ29MYUEuSTRlRG4zcmZkNV92b1hJdkRvTmhodjhmV3M1Ql8tYUV1ZmJIR3ZZbkF0X1lPVDJRTFhVc05rdjJKZUhlUFhfUnpvZW1ucW9aN0ZlY0FidGpZcmxRR2hHem5IenRWREVQYWpXSmNnVVhtQWVYLUxSV25ENzBqYk9YczFDVHJKMG9BV29Fd3ZMSkpGSjdnZ29QVVBlLTJsX2NLcGY4UzZtaDRPMEtGX3lBRUlLTjhwMEdXZ3lVNWJ3b0lhZU1FSTVELllDYTBaTm5lSVFkSzBRbDNmY2pkZGc.dO-5NcN9X6ss7PeDt5fWRpFtMomgOBjPPv8Qehn34fJXJH2bCu9FIxo4Lxhja9dYGmCNAtc8jn05FjerjarQgQ'
+            'Authorization' : 'Bearer {}'.format(self.user.oauth_token)
         }
-        self.token = 'eyJhbGciOiJIUzUxMiJ9.ZXlKaGJHY2lPaUprYVhJaUxDSmxibU1pT2lKQk1USTRRMEpETFVoVE1qVTJJbjAuLlZERkg3blRmN1JwS3otWHl5V2NyYncuMFhiOFZuRzFMODVyMzE4WERzc2VPWFI5X3lLOUtlR1otcEYtdXRSRWwzWTl6bUFNU0hSTmhXQ1pNazRjOWpxYXpsU2w1QWp3THBqdzA2cjAxaFBlOHZHdUdnZHpmLTgzUW80WUVhQjJ5d2o4U2RQLVljZUlLS3VraEZjUk5LZWNrai1Td3YzdmxmTTYzSTBITEQxUnNyYzB0bm1qTGpoV0V0NDZrT1pNZFN3LnZfOU9CV285ZDJLU21fOWd2ZWs1bWc._mPnS2zb6Cm-f-uSjzI3OVvUz7IfsxL3IPB_IShRHwQNyNw-zZM1_RrMMHSzmq9s0VS8bAdAg4JfDmMB438uIg'
+
         self._loop = loop or asyncio.get_event_loop()
-        self.user = self.session.query(User).filter(User.osf_id == user_osf_id).one() # todo: does passing in user directly break things?
+
 
     def stop(self):
+        #todo: can I remove _keep_running?????
         self._keep_running = False
+        self._loop.stop()
+        self._loop.close()
         # self._loop.close()
 
     def start(self):
@@ -222,7 +229,7 @@ class Poll(object):
             # todo: handle other updates to  node
 
             if local_node.title != remote_node['title']:
-                if self.should_update_remote(local_node, remote_node):
+                if self.local_is_newer(local_node, remote_node):
                     self.modify_remote_node(local_node, remote_node)
                 else:
                     self.modify_local_node(local_node, remote_node)
@@ -336,6 +343,9 @@ class Poll(object):
         )
         self.save(new_node)
 
+        #alert
+        alerts.info(new_node.title, alerts.DOWNLOAD)
+
         #create local node folder on filesystem
         if not os.path.exists(new_node.path):
             os.makedirs(new_node.path)
@@ -343,12 +353,15 @@ class Poll(object):
         assert local_parent_node is None or (new_node in local_parent_node.components)
         return new_node
 
-
+    # this function is not used.
     def create_remote_node(self, local_node, remote_parent_node):
         print('create_remote_node')
         assert isinstance(local_node, Node)
         assert isinstance(remote_parent_node, dict) or (remote_parent_node is None)
         assert (remote_parent_node is not None) or (local_node.category == Node.PROJECT) # parent_is_none implies new_node_is_project
+
+        # alert
+        alerts.info(local_node.title, alerts.UPLOAD)
 
         data={
             'title': local_node.title,
@@ -395,6 +408,9 @@ class Poll(object):
             parent=local_parent_folder,
             node=local_node)
         self.save(new_file_folder)
+
+        # alert
+        alerts.info(new_file_folder.name, alerts.DOWNLOAD)
 
         #create local file/folder on actual system
         if not os.path.exists(new_file_folder.path):
@@ -471,7 +487,12 @@ class Poll(object):
         # assert remote_parent_folder_or_node is not None
         # assert isinstance(remote_parent_folder_or_node, dict)
 
+        # alert
+        alerts.info(local_file_folder.name, alerts.DOWNLOAD)
+
+
         if local_file_folder.parent:
+            #fixme: only handles 1 level up !!!!!
             path = local_file_folder.parent.osf_path + local_file_folder.name
         else:
             path = '/{}'.format(local_file_folder.name)
@@ -527,6 +548,9 @@ class Poll(object):
         # todo: handle other fields such as category, hash, ...
         self.save(local_node)
 
+        # alert
+        alerts.info(local_node.title, alerts.MODIFYING)
+
         # modify local node on filesystem
         os.renames(old_path, local_node.path)
 
@@ -536,6 +560,10 @@ class Poll(object):
         assert isinstance(remote_node, dict)
         assert remote_node['type']=='nodes'
         assert remote_node['id'] == local_node.osf_id
+
+        # alert
+        alerts.info(local_node.title, alerts.MODIFYING)
+
 
         #todo: add other fields here.
         data = {
@@ -549,20 +577,19 @@ class Poll(object):
     def modify_file_folder_logic(self, local_file_folder, remote_file_folder):
 
         if local_file_folder.type == File.FILE:
+            if self.local_remote_etag_are_diff(local_file_folder, remote_file_folder):
+                if self.local_is_newer(local_file_folder, remote_file_folder):
+                    pass #todo: broken
+                        # remote_file_folder = self.modify_remote_file_folder(local_file_folder, remote_file_folder, remote_parent_folder_or_node)
+                elif self.remote_is_newer(local_file_folder, remote_file_folder):
+                    self.modify_local_file_folder(local_file_folder, remote_file_folder)
 
-            # todo: check if local version of file is different than online version
-            # todo: HASH on remote server needed!!!!!!!
-            if self.should_update_remote(local_file_folder, remote_file_folder):
-                pass #todo: broken
-                    # remote_file_folder = self.modify_remote_file_folder(local_file_folder, remote_file_folder, remote_parent_folder_or_node)
-            elif self.should_update_local(local_file_folder, remote_file_folder):
-                self.modify_local_file_folder(local_file_folder, remote_file_folder)
         elif local_file_folder.type == File.FOLDER:
             if local_file_folder.name != remote_file_folder['name']:
-                if self.should_update_remote(local_file_folder, remote_file_folder):
+                if self.local_is_newer(local_file_folder, remote_file_folder):
                     pass #todo: broken
                     # remote_file_folder = self.modify_remote_file_folder(local_file_folder, remote_file_folder, remote_parent_folder_or_node)
-                elif self.should_update_local(local_file_folder, remote_file_folder):
+                elif self.remote_is_newer(local_file_folder, remote_file_folder):
                     self.modify_local_file_folder(local_file_folder, remote_file_folder)
 
 
@@ -572,6 +599,9 @@ class Poll(object):
         assert isinstance(remote_file_folder, dict)
         assert remote_file_folder['type']=='files'
         assert remote_file_folder['path'] == local_file_folder.osf_path
+
+        # alerts
+        alerts.info(local_file_folder.name, alerts.MODIFYING)
 
         if local_file_folder.type == File.FOLDER:
             old_path = local_file_folder.path
@@ -595,6 +625,10 @@ class Poll(object):
         print('modify_remote_file_folder. NOTE: this calls create_remote_file_folder and delete_file_folder')
         assert isinstance(local_file_folder, File)
 
+        # alerts
+        alerts.info(local_file_folder.name, alerts.MODIFYING)
+
+
         local_node = local_file_folder.node
         #handle modifying remote file folder by deleting then reuploading local file_folder
         self.delete_remote_file_folder(local_file_folder, remote_file_folder)
@@ -612,6 +646,9 @@ class Poll(object):
 
         path = local_node.path
 
+        # alerts
+        alerts.info(local_node.name, alerts.DELETING)
+
         #delete model
         self.session.delete(local_node)
         self.save()
@@ -627,6 +664,9 @@ class Poll(object):
         assert isinstance(remote_node, dict)
         assert local_node.osf_id == remote_node['id']
         assert local_node.locally_deleted == True
+
+        # alerts
+        alerts.info(local_node.title, alerts.DELETING)
 
         # tail recursion to remove child remote nodes before you can remove current top level remote node.
         remote_children = self.get_all_paginated_members(remote_node['links']['children']['related'])
@@ -653,6 +693,10 @@ class Poll(object):
         self.session.delete(local_file_folder)
         self.save()
 
+
+        # alerts
+        alerts.info(local_file_folder.name, alerts.DELETING)
+
         #delete from local
         if file_folder_type == File.FOLDER:
             shutil.rmtree(path)
@@ -667,7 +711,12 @@ class Poll(object):
         assert local_file_folder.osf_id == self.get_id(remote_file_folder)
         assert local_file_folder.locally_deleted == True
 
-        resp = requests.delete(remote_file_folder['links']['self'], headers=self.headers)
+        # alerts
+        alerts.info(local_file_folder.name, alerts.DELETING)
+
+        url = remote_file_folder['links']['self'].split('&cookie=')[0]
+        print("DEBUG: url in delete_remote_file_folder:{}".format(url))
+        resp = requests.delete(url, headers=self.headers)
         if resp.ok:
             local_file_folder.deleted = False
             self.session.delete(local_file_folder)
@@ -703,15 +752,16 @@ class Poll(object):
             remote_time = self.remote_to_local_datetime(remote['date_modified'])
         return (local_time, remote_time)
 
-    def should_update_remote(self, local, remote):
+    def local_is_newer(self, local, remote):
         local_time, remote_time = self._get_local_remote_times(local, remote)
-        # fixme: what should remote_time is None do???
-        #for now, I just made it so that it automatically updates local if remote is None.
+
+        #fixme: for now, if remote is None, then just update local (thus should update remote = False)
         if remote_time is None:
             return False
+
         return local_time > remote_time
 
-    def should_update_local(self, local, remote):
+    def remote_is_newer(self, local, remote):
         local_time, remote_time = self._get_local_remote_times(local, remote)
         # fixme: what should remote_time is None do???
         #for now, I just made it so that it automatically updates local if remote is None.
@@ -728,6 +778,64 @@ class Poll(object):
         yield aiohttp.request(
             method,
             url,
-            headers={'Authorization': 'Bearer {}'.format(self.token)}
+            headers={'Authorization': 'Bearer {}'.format(self.user.oauth_token)}
         )
 
+    def local_remote_etag_are_diff(self, local_file, remote_file):
+        assert local_file is not None
+        assert remote_file is not None
+        assert local_file.osf_path == remote_file['path']
+        assert local_file.type == File.FILE
+        assert remote_file['type']=='files'
+        assert remote_file['item_type'] == 'file'
+
+        wb_data = self.get_wb_data(local_file, remote_file)
+        assert 'etag' in wb_data
+
+        return local_file.etag != wb_data['etag']
+
+    def get_wb_data(self, local_file_folder, remote_file_folder):
+        """
+        This function is meant to be called during modifications, thus can assume both local_file_folder and remote_file_folder exist
+        """
+        assert local_file_folder is not None
+        assert remote_file_folder is not None
+        assert local_file_folder.osf_path == remote_file_folder['path']
+        # if local_file_folder.parent:
+        #     NOTE: only need 1 level up!!!!!! thats how path works in this case.
+            # path = local_file_folder.parent.osf_path + local_file_folder.name
+        # else:
+        #     path = '/{}'.format(local_file_folder.name)
+        path = local_file_folder.osf_path
+        params = {
+            'path':path,
+            'nid':local_file_folder.node.osf_id,
+            'provider':local_file_folder.provider,
+        }
+        params_string = '&'.join([str(k)+'='+str(v) for k,v in params.items()])
+        WB_DATA_URL ='https://staging2-files.osf.io/data'
+        file_url = WB_DATA_URL + '?' + params_string
+        print(file_url)
+        headers =  {
+                'Origin': 'https://staging2.osf.io',
+                'Accept-Encoding': 'gzip, deflate, sdch',
+                'Accept-Language': 'en-US,en;q=0.8',
+                'Authorization' : 'Bearer {}'.format(self.user.oauth_token),
+                'Accept': 'application/json, text/*',
+                'Referer': 'https://staging2.osf.io/{}/'.format(local_file_folder.node_id),
+                'User-Agent': 'Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:38.0) Gecko/20100101 Firefox/38.0',
+
+                # 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+                # 'X-CSRFToken': 'qnlWxEzFMyJ5GH7tWv842vdocXPcwZfK',
+                #this last one is key!
+                # 'Cookie':'_ga=GA1.2.1042569900.1436205463; osf_staging2=559c6834404f7702fafae988.8McbBgBvu98W-KKYfNEBz5FNSSo; csrftoken=zulBIXQzKzqfHjGepa8yeEevNLeydd3S; _pk_id.1.2840=841d2b69a87afbce.1436271936.8.1436340402.1436338347.; _pk_ses.1.2840=*',
+                #this one is key for files
+
+                'Connection':'keep-alive'
+            }
+
+        resp = requests.get(file_url, headers=headers)
+        if resp.ok:
+            return resp.json()['data']
+        else:
+            raise ValueError('waterbutler data for file {} not attained: {}'.format(local_file_folder.name, resp.content))
