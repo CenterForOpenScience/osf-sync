@@ -51,7 +51,6 @@ class OSFApp(QDialog):
         # start all work
         t = threading.Thread(target=self.controller.start)
         t.start()
-        print('hiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiii')
         # backgroundify(self.controller.start())
 
     def setupConnections(self):

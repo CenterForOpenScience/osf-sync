@@ -65,7 +65,7 @@ class Node(Base):
     id = Column(Integer, primary_key=True)
     title = Column(String)
     # path = Column(String)
-    # hash = Column(String)
+    hash = Column(String)
     category = Column(Enum(PROJECT, COMPONENT))
     date_modified = Column(DateTime, default=datetime.datetime.utcnow,onupdate=datetime.datetime.utcnow)
     osf_id = Column(String)
@@ -105,9 +105,9 @@ class Node(Base):
         return file_folders
 
 
-    # def update_hash(self, blocksize=2**20):
-    #     pass
-    #     todo: what to do in this case?
+    def update_hash(self, blocksize=2**20):
+        pass
+        #todo: what to do in this case?
 
     def __repr__(self):
         return "<Node ({}), category={}, title={}, path={}, parent_id={}>".format(
@@ -127,13 +127,14 @@ class File(Base):
     name = Column(String)
     # path = Column(String)
     # guid = Column(String)
-    etag = Column(String)
+    hash = Column(String)
     type = Column(Enum(FOLDER,FILE))
     date_modified = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
     osf_id = Column(String)
     provider = Column(String, default=DEFAULT_PROVIDER)
     #NOTE: this is called path. It is not any type of file/folder path. Think of it just as an id.
     osf_path = Column(String)
+
 
     locally_created = Column(Boolean, default= False)
     locally_deleted = Column(Boolean, default= False)
@@ -157,25 +158,27 @@ class File(Base):
         else:
             return os.path.join(self.node.path ,self.name)
 
-    def update_etag(self, blocksize=2**20):
-        """This etag is based on what waterbutler uses.
-        """
-        self.etag = hashlib.sha256('{}::{}'.format(self.provider, self.etag).encode('utf-8')).hexdigest()
-        # m = hashlib.md5()
-        # if self.type == File.FILE:
-        #     with open(self.path,"rb") as f:
-        #         while True:
-        #             buf = f.read(blocksize)
-        #             if not buf:
-        #                 break
-        #             m.update(buf)
-        # else:
-        #     pass
-        #     #todo: what to do in this case?
-        #     # m.update()
-        # self.hash = m.hexdigest()
+    def update_hash(self, blocksize=2**20):
+        m = hashlib.md5()
+        if self.type == File.FILE:
+            with open(self.path,"rb") as f:
+                while True:
+                    buf = f.read(blocksize)
+                    if not buf:
+                        break
+                    m.update(buf)
+        else:
+            pass
+            #todo: what to do in this case?
+            # m.update()
+        self.hash = m.hexdigest()
 
-
+    @hybrid_property
+    def size(self):
+        try:
+            return os.stat(self.path).st_size
+        except FileNotFoundError: # file was deleted locally
+            return 0
     def __repr__(self):
         return "<File ({}), type={}, name={}, path={}, parent_id={}>".format(
             self.id, self.type, self.name, self.path, self.parent

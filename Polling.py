@@ -1,4 +1,5 @@
 __author__ = 'himanshu'
+import json
 import os
 import asyncio
 import requests
@@ -84,15 +85,26 @@ class Poll(object):
 
 
     def get_id(self, item):
+        """
+        This function determines the rules to get the id for a local or remote representation of nodes/files.
+        The ways to get the id differ based on the input item type:
+            local node -> osf_id ( this is node id (nid) on the OSF )
+            local file -> hash(node.osf_id, provider name, osf path)
+                ( note, osf path is the 'path' variable provided by waterbutler. It is represented as '/<unique waterbutler identifier>'
+            remote node -> id (this is the node if (nid) on the OSF )
+            remote file -> path ( this is the path ( '/<unique waterbutler identifier>' ) on the OSF )
+
+        :param item: local (sql alchemy Base object) or remote (dict) representation of a node or file
+        :return: the input items id
+        """
         # if node/file is remote
         if isinstance(item, dict):
             if item['type'] == 'nodes':
                 return item['id']
             elif item['type'] == 'files':
-                # !!!!!fixme: this is a cheatcode!!!! for here, we are using path+name+item_type for here only for identifying purposes
-                # fixme: name doesnt work with modified names for folders.
-                # fixme: doesn't work for when name/type/path is modified
-                return str(hash(item['path'] + item['name'] + item['item_type']))
+                # !!!!!fixme: this is a cheatcode!!!! for here, we are using path+item_type for here only for identifying purposes
+                # fixme: doesn't work for when type/path is modified
+                return str(hash(item['path'] + item['item_type']))
             else:
                 raise ValueError(item['type'] +'is not handled')
         elif isinstance(item, Base):
@@ -106,6 +118,21 @@ class Poll(object):
 
 
     def make_local_remote_tuple_list(self, local_list, remote_list):
+        """
+        Create a list of tuples where the local and remote representation of the node/file are grouped together.
+        This allows us to determine differences between the local and remote versions and perform appropriate functions
+        on them. This tuple list is the backbone behind the polling scheme in this file.
+
+        Notably, the connection between the local and remote is made in differing manners depending on whether
+        the input is a node or file. Each input is given an id, as determined by the get function above.
+        These id's are then matched to create a tuple. If an id has no match, it is matched with None.
+
+
+        :param local_list: list of local node or file sql alchemy objects
+        :param remote_list: list of dicts from the osf v2 api representing nodes or files
+        :return: list of tuples with the left being the local version of node or file and
+                 the right being the remote version. aka. [ (local, remote),... ]
+        """
         assert None not in local_list
         assert None not in remote_list
 
@@ -289,8 +316,9 @@ class Poll(object):
         elif local_file_folder is not None and remote_file_folder is not None:
             # todo: this is broken for now as well. Need additional functionalities on server for this.
             # todo: diff way to do this is also good.
-            self.modify_file_folder_logic(local_file_folder, remote_file_folder)
-            pass
+            possibly_new_remote_file_folder = self.modify_file_folder_logic(local_file_folder, remote_file_folder)
+            if possibly_new_remote_file_folder:
+                remote_file_folder = possibly_new_remote_file_folder
         else:
             raise ValueError('in some weird state. figure it out.')
 
@@ -511,8 +539,14 @@ class Poll(object):
         if local_file_folder.type == File.FOLDER:
             resp = requests.post(file_url, headers=self.headers )
         elif local_file_folder.type == File.FILE:
-            files = {'file':open(local_file_folder.path)}
-            resp = requests.put(file_url, headers=self.headers, files=files)
+            #https://github.com/kennethreitz/requests/issues/2639 issue when file has non-ascii characters.
+            try:
+                #fixme: UnicodeDecodeError occured once. WHY?????? requests should handle it. idk.
+                files = {'file':open(local_file_folder.path)}
+                resp = requests.put(file_url, headers=self.headers, files=files) # try 1
+            except UnicodeDecodeError:
+                files = {'file':open(local_file_folder.path).read()}
+                resp = requests.put(file_url, headers=self.headers, files=files) # try 2
 
         if resp.ok:
             remote_file_folder = resp.json()
@@ -552,8 +586,10 @@ class Poll(object):
         alerts.info(local_node.title, alerts.MODIFYING)
 
         # modify local node on filesystem
-        os.renames(old_path, local_node.path)
-
+        try:
+            os.renames(old_path, local_node.path)
+        except FileNotFoundError:
+            print('renaming of file failed because file not there.')
     def modify_remote_node(self, local_node, remote_node):
         print('modify_remote_node')
         assert isinstance(local_node, Node)
@@ -575,22 +611,30 @@ class Poll(object):
 
     # todo: handle other updates to file_folder
     def modify_file_folder_logic(self, local_file_folder, remote_file_folder):
-
+        updated_remote_file_folder = None
         if local_file_folder.type == File.FILE:
-            if self.local_remote_etag_are_diff(local_file_folder, remote_file_folder):
-                if self.local_is_newer(local_file_folder, remote_file_folder):
-                    pass #todo: broken
-                        # remote_file_folder = self.modify_remote_file_folder(local_file_folder, remote_file_folder, remote_parent_folder_or_node)
-                elif self.remote_is_newer(local_file_folder, remote_file_folder):
-                    self.modify_local_file_folder(local_file_folder, remote_file_folder)
+            #todo: hash? etag doesnt work. etag = hash(version, path) which is not helpful. already handle path. version does not match with local.
+            # if self.local_remote_etag_are_diff(local_file_folder, remote_file_folder):
+            if self.local_is_newer(local_file_folder, remote_file_folder):
+                pass #todo: broken
+                updated_remote_file_folder = self.modify_remote_file_folder(local_file_folder, remote_file_folder)
+            elif self.remote_is_newer(local_file_folder, remote_file_folder):
+                self.modify_local_file_folder(local_file_folder, remote_file_folder)
 
         elif local_file_folder.type == File.FOLDER:
             if local_file_folder.name != remote_file_folder['name']:
-                if self.local_is_newer(local_file_folder, remote_file_folder):
-                    pass #todo: broken
-                    # remote_file_folder = self.modify_remote_file_folder(local_file_folder, remote_file_folder, remote_parent_folder_or_node)
-                elif self.remote_is_newer(local_file_folder, remote_file_folder):
-                    self.modify_local_file_folder(local_file_folder, remote_file_folder)
+                #fixme: how to determine which is most recent version of folder??? perhaps just take stat? yea.
+                #fixme: we do not have size or date modified of remote folder.
+                #fixme: for now, we just always push to remote
+                # if self.local_is_newer(local_file_folder, remote_file_folder):
+                #     pass #todo: broken
+                print('DEBUG:modify_file_folder_logic:local_file_folder.name:{}'.format(local_file_folder.name))
+                updated_remote_file_folder = self.modify_remote_file_folder(local_file_folder, remote_file_folder)
+                # elif self.remote_is_newer(local_file_folder, remote_file_folder):
+                #     self.modify_local_file_folder(local_file_folder, remote_file_folder)
+
+        # want to have the remote file folder continue to be the most recent version.
+        return updated_remote_file_folder
 
 
     def modify_local_file_folder(self, local_file_folder, remote_file_folder):
@@ -610,16 +654,25 @@ class Poll(object):
             self.save(local_file_folder)
 
             # update local file system
-            os.renames(old_path, local_file_folder.path)
+            try:
+                os.renames(old_path, local_file_folder.path)
+            except FileNotFoundError:
+                print('folder not modified because doesnt exist')
         elif local_file_folder.type == File.FILE:
+            #todo: need the db file to be updated to show that its timestamp is in fact updated.
+            #todo: can read this: http://docs.sqlalchemy.org/en/improve_toc/orm/events.html
             #update model
-            self.save(local_file_folder) # todo: does this actually update the local_file_folder timestamp???
-            #update local file system
-            resp = requests.get(remote_file_folder['links']['self'], headers=self.headers)
-            with open(local_file_folder.path, 'wb') as fd:
-                for chunk in resp.iter_content(2048): #todo: which is better? 1024 or 2048? Apparently, not much difference.
-                    fd.write(chunk)
+            # self.save(local_file_folder) # todo: this does NOT actually update the local_file_folder timestamp
 
+
+            #update local file system
+            try:
+                resp = requests.get(remote_file_folder['links']['self'], headers=self.headers)
+                with open(local_file_folder.path, 'wb') as fd:
+                    for chunk in resp.iter_content(2048): #todo: which is better? 1024 or 2048? Apparently, not much difference.
+                        fd.write(chunk)
+            except FileNotFoundError: #file was deleted locally.
+                print('file not updated locally because it doesnt exist')
 
     def modify_remote_file_folder(self, local_file_folder, remote_file_folder):
         print('modify_remote_file_folder. NOTE: this calls create_remote_file_folder and delete_file_folder')
@@ -628,11 +681,58 @@ class Poll(object):
         # alerts
         alerts.info(local_file_folder.name, alerts.MODIFYING)
 
+        new_remote_file_folder = remote_file_folder
 
-        local_node = local_file_folder.node
-        #handle modifying remote file folder by deleting then reuploading local file_folder
-        self.delete_remote_file_folder(local_file_folder, remote_file_folder)
-        new_remote_file_folder = self.create_remote_file_folder(local_file_folder, local_node)
+        if local_file_folder.type == File.FILE:
+            local_node = local_file_folder.node
+            #handle modifying remote file folder by deleting then reuploading local file_folder
+            # self.delete_remote_file_folder(local_file_folder, remote_file_folder)
+            #fixme: create_remote_file_folder expects the local_file_folder to be .locally_created. thus make it true for now
+            local_file_folder.locally_created= True
+            new_remote_file_folder = self.create_remote_file_folder(local_file_folder, local_node)
+        else:
+            # OSF allows you to manually rename a folder. Use That.
+            url = 'https://staging2-files.osf.io/ops/move'
+            data = {
+               'rename': local_file_folder.name,
+               'conflict':'replace',
+               'source':{
+                   'path':local_file_folder.osf_path,
+                   'provider':local_file_folder.provider,
+                   'nid':local_file_folder.node.osf_id
+               },
+               'destination':{
+                   'path':local_file_folder.parent.osf_path,
+                   'provider':local_file_folder.provider,
+                   'nid':local_file_folder.node.osf_id
+               }
+            }
+
+            resp = requests.post(url, headers=self.headers, data=json.dumps(data))
+            if resp.ok:
+                # get the updated remote folder
+                print('debug: resp.content:{}'.format(resp.content))
+                # inner_response = requests.get(remote_file_folder['links']['self'], headers=self.headers).json()
+                #we know exactly what changed, so its faster to just change the remote dictionary rather than making a new api call.
+                print(new_remote_file_folder)
+                new_remote_file_folder['name'] = data['rename']
+                print(new_remote_file_folder)
+
+            else:
+                raise ValueError('folder not renamed: {}'.format(resp.content))
+            """
+            'https://staging2-files.osf.io/ops/move'
+            -H 'Authorization: Bearer eyJhbGciOiJIUzUxMiJ9.ZXlKaGJHY2lPaUprYVhJaUxDSmxibU1pT2lKQk1USTRRMEpETFVoVE1qVTJJbjAuLmVCS25RaW1FSFUtNHFORnZSLWw5UGcuZU1FZTRlVlNaVXR2dGh1a3V4cUhXVWdsbDY5bTJsTHlUaWM5VHcwZGNvMndFU2xsZzJpR25KUGZOanprbm9mcFc5NjBLQ1JyUVMtSmNjT2JINVpYYlZ5aTdpdTRENDNDZWxhN2tWTXk0dlVtWHByekxIRTlaMHdVUFhPd1RPdEl1b0NqNEQwX0VqMmtQLVpvamF6NVhHNjk1ZVNTMEZYYXBGZGpURFcxX2FYZFdvQlVEUm0zTjJBOGd2SkxTY0ZULk9rQ1Bwd1kzS2NUeDJTaEJkcXJPbFE.FMsFG-z-eiZ0yI_7pYTVBo9DlkfJfdT7Nwocej_0aRZHA-hxjULt-XwFD8w0m5w0JGH2yi6MFlCQDHJxPwvUaQ'
+            -H 'Origin: https://staging2.osf.io'
+            -H 'Accept-Encoding: gzip, deflate'
+            -H 'Accept-Language: en-US,en;q=0.8'
+            -H 'User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/43.0.2357.130 Safari/537.36'
+            -H 'Content-Type: Application/json'
+            -H 'Accept: */*'
+            -H 'Referer: https://staging2.osf.io/mk26q/'
+            -H 'Connection: keep-alive'
+            --data-binary '{"rename":"myfolderrock","conflict":"replace","source":{"path":"/559d6814404f7702f8fae9cf/","provider":"osfstorage","nid":"mk26q"},"destination":{"path":"/","provider":"osfstorage","nid":"mk26q"}}' --compressed
+            """
 
         return new_remote_file_folder
 
@@ -654,7 +754,9 @@ class Poll(object):
         self.save()
 
         #delete from local
-        shutil.rmtree(path)
+        #todo: avoids_symlink_attacks: https://docs.python.org/3.4/library/shutil.html#shutil.rmtree.avoids_symlink_attacks
+        #todo: make better error handling.
+        shutil.rmtree(path, onerror=lambda a,b,c:print('local node not deleted because not exists.'))
 
 
     #todo: delete_remote_node will have to handle making sure all children are deleted.
@@ -699,10 +801,14 @@ class Poll(object):
 
         #delete from local
         if file_folder_type == File.FOLDER:
-            shutil.rmtree(path)
+            #todo: avoids_symlink_attacks: https://docs.python.org/3.4/library/shutil.html#shutil.rmtree.avoids_symlink_attacks
+            #todo: make better error handling.
+            shutil.rmtree(path, onerror=lambda a,b,c:print('delete local folder failed because folder already deleted'))
         else:
-            os.remove(path)
-
+            try:
+                os.remove(path)
+            except FileNotFoundError:
+                print('file not deleted because does not exist on local filesystem')
 
     def delete_remote_file_folder(self, local_file_folder, remote_file_folder):
         print('delete_remote_file_folder')
@@ -746,30 +852,39 @@ class Poll(object):
         if remote['type'] == 'files' and remote['item_type'] == 'file':
             try:
                 remote_time = self.remote_to_local_datetime(remote['metadata']['modified'])
-            except iso8601.ParseError:
+            except iso8601.ParseError: # more general way to handle when remote['metadata']['modified'] is None
                 remote_time = None
+        # elif remote['type']=='files' and remote['item_type'] == 'folder':
+        #     remote_time = None
         else:
+            print('DEBUG: _get_local_remote_times:remote:{}'.format(str(remote)))
             remote_time = self.remote_to_local_datetime(remote['date_modified'])
         return (local_time, remote_time)
 
     def local_is_newer(self, local, remote):
         local_time, remote_time = self._get_local_remote_times(local, remote)
 
-        #fixme: for now, if remote is None, then just update local (thus should update remote = False)
+        # fixme: for now, if remote is None, then most recent is whichever one is bigger.
         if remote_time is None:
-            return False
+            if remote['type'] == 'files' and remote['item_type']=='file':
+                print('DEBUG: local_is_newer: look at this as well: local.size:{}, remote[metadata][size]:{}'.format(local.size, remote['metadata']['size']))
+                return local.size > remote['metadata']['size']
 
         return local_time > remote_time
 
     def remote_is_newer(self, local, remote):
         local_time, remote_time = self._get_local_remote_times(local, remote)
         # fixme: what should remote_time is None do???
-        #for now, I just made it so that it automatically updates local if remote is None.
         if remote_time is None:
-            return True
+            if remote['type'] == 'files' and remote['item_type']=='file':
+                print('DEBUG: remote_is_newer: look at this as well: local.size:{}, remote[metadata][size]:{}'.format(local.size, remote['metadata']['size']))
+                return local.size < remote['metadata']['size']
         return local_time < remote_time
 
     def remote_to_local_datetime(self,remote_utc_time_string ):
+        """convert osf utc time string to a proper datetime (with utc timezone).
+            throws iso8601.ParseError. Handle as needed.
+        """
         return iso8601.parse_date(remote_utc_time_string)
 
     @asyncio.coroutine
