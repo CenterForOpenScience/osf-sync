@@ -56,6 +56,10 @@ docs/_build/
 # PyBuilder
 target/
 
+# Custom
 schedule
 contains_bad_permissions_file/
 tests/test_projects/contains_bad_permissions_file/copy1
+.pynb_checkpoints/
+.idea/
+__pycache__/
