@@ -65,16 +65,17 @@ def determine_new_events(absolute_osf_dir_path):
 
 
 def _determine_new_events(local, db):
-    assert local is not None or db is not None # a and b cannot both be none.
+    assert local or db # a and b cannot both be none.
     if local is not None and db is not None:
-        assert local.path == db.path
+        assert get_path(local) == get_path(db)
         if isinstance(db,File) and db.type == File.FILE and hash(local) != hash(db): # hash!!!!!
-            event =create changed event
-
-    if local is None:
-        event = delete event
-
-    if db is None:
+            event = FileModifiedEvent(local.path) #create changed event
+    elif local is None:
+        if isinstance(db,File) and db.type == File.FILE:
+            event = FileDeletedEvent(get_path(db))  #delete event for file
+        else:
+            event = DirDeletedEvent(get_path(db))
+    else db is None:
         event = create event
 
 

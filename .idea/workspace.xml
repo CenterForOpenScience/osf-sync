@@ -2,22 +2,7 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="0e2bdd4f-2cdd-4323-95b6-dbc89496e673" name="Default" comment="">
-      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/tests/acceptance_tests.py" />
-      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/tests/test_requests.py" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/dumbdir/OSF/hi/osfstorage/hihi2/dependency_links.txt" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/dumbdir/OSF/hi/osfstorage/hihi2/entry_points.txt" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/dumbdir/OSF/hi/osfstorage/hihi2/namespace_packages.txt" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/dumbdir/OSF/hi/osfstorage/hihi2/not-zip-safe" afterPath="" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/ProjectTree/Item.py" afterPath="$PROJECT_DIR$/ProjectTree/Item.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/OSFEventHandler.py" afterPath="$PROJECT_DIR$/OSFEventHandler.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/Polling.py" afterPath="$PROJECT_DIR$/Polling.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/views/StartScreen.py" afterPath="$PROJECT_DIR$/views/StartScreen.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/app.py" afterPath="$PROJECT_DIR$/app.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/controller.py" afterPath="$PROJECT_DIR$/controller.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/models.py" afterPath="$PROJECT_DIR$/models.py" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/sandbox/sync_local_filesytem_and_db.py" afterPath="$PROJECT_DIR$/sandbox/sync_local_filesytem_and_db.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/tests/test cases list" afterPath="$PROJECT_DIR$/tests/test cases list" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/.idea/workspace.xml" afterPath="$PROJECT_DIR$/.idea/workspace.xml" />
     </list>
     <ignored path="OSF-Offline.iws" />
     <ignored path=".idea/workspace.xml" />
@@ -88,11 +73,11 @@
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="sync_local_filesytem_and_db.py" pinned="false" current-in-tab="true">
+      <file leaf-file-name="sync_local_filesytem_and_db.py" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/sandbox/sync_local_filesytem_and_db.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state vertical-scroll-proportion="0.296875" vertical-offset="372" max-vertical-offset="1830">
-              <caret line="40" column="38" selection-start-line="40" selection-start-column="38" selection-end-line="40" selection-end-column="38" />
+            <state vertical-scroll-proportion="0.0" vertical-offset="0" max-vertical-offset="1845">
+              <caret line="48" column="27" selection-start-line="48" selection-start-column="27" selection-end-line="48" selection-end-column="27" />
               <folding>
                 <element signature="e#25#34#0" expanded="true" />
               </folding>
@@ -100,24 +85,34 @@
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="controller.py" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/controller.py">
+      <file leaf-file-name="events.py" pinned="false" current-in-tab="false">
+        <entry file="file://$USER_HOME$/.virtualenvs/osfoffline/lib/python3.4/site-packages/watchdog/events.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state vertical-scroll-proportion="-6.428571" vertical-offset="0" max-vertical-offset="5370">
-              <caret line="12" column="36" selection-start-line="12" selection-start-column="36" selection-end-line="12" selection-end-column="36" />
+            <state vertical-scroll-proportion="0.0" vertical-offset="2530" max-vertical-offset="9225">
+              <caret line="191" column="8" selection-start-line="191" selection-start-column="8" selection-end-line="191" selection-end-column="8" />
               <folding />
             </state>
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="polling.py" pinned="false" current-in-tab="false">
-        <entry file="file://$USER_HOME$/.virtualenvs/osfoffline/lib/python3.4/site-packages/watchdog/observers/polling.py">
+      <file leaf-file-name="controller.py" pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/controller.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state vertical-scroll-proportion="0.0" vertical-offset="762" max-vertical-offset="2175">
-              <caret line="61" column="30" selection-start-line="61" selection-start-column="30" selection-end-line="61" selection-end-column="30" />
+            <state vertical-scroll-proportion="-11.785714" vertical-offset="0" max-vertical-offset="5370">
+              <caret line="22" column="24" selection-start-line="22" selection-start-column="24" selection-end-line="22" selection-end-column="24" />
               <folding>
-                <element signature="e#1001#1038#0" expanded="true" />
+                <element signature="e#0#14#0" expanded="true" />
               </folding>
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="QDialog.py" pinned="false" current-in-tab="true">
+        <entry file="file://$USER_HOME$/.PyCharmEdu10/system/python_stubs/1194143853/PyQt5/QtWidgets/QDialog.py">
+          <provider selected="true" editor-type-id="text-editor">
+            <state vertical-scroll-proportion="0.17285532" vertical-offset="0" max-vertical-offset="1740">
+              <caret line="13" column="18" selection-start-line="13" selection-start-column="18" selection-end-line="13" selection-end-column="18" />
+              <folding />
             </state>
           </provider>
         </entry>
@@ -196,8 +191,8 @@
         <option value="$PROJECT_DIR$/tests/test cases list" />
         <option value="$PROJECT_DIR$/tests/test_requests.py" />
         <option value="$PROJECT_DIR$/Polling.py" />
-        <option value="$PROJECT_DIR$/sandbox/sync_local_filesytem_and_db.py" />
         <option value="$PROJECT_DIR$/models.py" />
+        <option value="$PROJECT_DIR$/sandbox/sync_local_filesytem_and_db.py" />
       </list>
     </option>
   </component>
@@ -552,7 +547,6 @@
     <watches-manager />
   </component>
   <component name="editorHistoryManager">
-    <entry file="file://$PROJECT_DIR$/sandbox/delete_nodes.ipynb" />
     <entry file="file://$PROJECT_DIR$/sandbox/polling_simple.ipynb" />
     <entry file="file://$USER_HOME$/.virtualenvs/osfoffline/lib/python3.4/site-packages/iso8601/__init__.py">
       <provider selected="true" editor-type-id="text-editor">
@@ -695,14 +689,6 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$USER_HOME$/.PyCharmEdu10/system/python_stubs/1194143853/PyQt5/QtWidgets/QWidget.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.33333334" vertical-offset="1649" max-vertical-offset="16605">
-          <caret line="128" column="8" selection-start-line="128" selection-start-column="8" selection-end-line="128" selection-end-column="8" />
-          <folding />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$USER_HOME$/.virtualenvs/osfoffline/lib/python3.4/site-packages/sqlalchemy/orm/scoping.py">
       <provider selected="true" editor-type-id="text-editor">
         <state vertical-scroll-proportion="1.6533865" vertical-offset="0" max-vertical-offset="2700">
@@ -839,16 +825,8 @@
         <state vertical-scroll-proportion="0.0" vertical-offset="794" max-vertical-offset="2235">
           <caret line="94" column="83" selection-start-line="94" selection-start-column="83" selection-end-line="94" selection-end-column="83" />
           <folding>
-            <element signature="e#25#39#0" expanded="true" />
+            <element signature="e#25#39#0" expanded="false" />
           </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/controller.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="-6.428571" vertical-offset="0" max-vertical-offset="5370">
-          <caret line="12" column="36" selection-start-line="12" selection-start-column="36" selection-end-line="12" selection-end-column="36" />
-          <folding />
         </state>
       </provider>
     </entry>
@@ -906,14 +884,6 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$USER_HOME$/.virtualenvs/osfoffline/lib/python3.4/site-packages/watchdog/events.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.019206146" vertical-offset="1545" max-vertical-offset="9225">
-          <caret line="109" column="0" selection-start-line="109" selection-start-column="0" selection-end-line="109" selection-end-column="0" />
-          <folding />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/models.py">
       <provider selected="true" editor-type-id="text-editor">
         <state vertical-scroll-proportion="0.0" vertical-offset="180" max-vertical-offset="3825">
@@ -924,13 +894,47 @@
         </state>
       </provider>
     </entry>
+    <entry file="file://$USER_HOME$/.virtualenvs/osfoffline/lib/python3.4/site-packages/watchdog/events.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.0" vertical-offset="2530" max-vertical-offset="9225">
+          <caret line="191" column="8" selection-start-line="191" selection-start-column="8" selection-end-line="191" selection-end-column="8" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
     <entry file="file://$PROJECT_DIR$/sandbox/sync_local_filesytem_and_db.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.296875" vertical-offset="372" max-vertical-offset="1830">
-          <caret line="40" column="38" selection-start-line="40" selection-start-column="38" selection-end-line="40" selection-end-column="38" />
+        <state vertical-scroll-proportion="0.0" vertical-offset="0" max-vertical-offset="1845">
+          <caret line="48" column="27" selection-start-line="48" selection-start-column="27" selection-end-line="48" selection-end-column="27" />
           <folding>
             <element signature="e#25#34#0" expanded="true" />
           </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/controller.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="-11.785714" vertical-offset="0" max-vertical-offset="5370">
+          <caret line="22" column="24" selection-start-line="22" selection-start-column="24" selection-end-line="22" selection-end-column="24" />
+          <folding>
+            <element signature="e#0#14#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$USER_HOME$/.PyCharmEdu10/system/python_stubs/1194143853/PyQt5/QtWidgets/QWidget.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.51486486" vertical-offset="1059" max-vertical-offset="16605">
+          <caret line="97" column="42" selection-start-line="97" selection-start-column="41" selection-end-line="97" selection-end-column="42" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$USER_HOME$/.PyCharmEdu10/system/python_stubs/1194143853/PyQt5/QtWidgets/QDialog.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.17285532" vertical-offset="0" max-vertical-offset="1740">
+          <caret line="13" column="18" selection-start-line="13" selection-start-column="18" selection-end-line="13" selection-end-column="18" />
+          <folding />
         </state>
       </provider>
     </entry>
