@@ -21,7 +21,8 @@ EVENT_TYPE_MODIFIED = 'modified'
 import asyncio
 import functools
 
-
+def console_log(variable_name, variable_value):
+    print("DEBUG: {}: {}".format(variable_name, variable_value))
 
 
 
@@ -143,18 +144,36 @@ class OSFEventHandler(FileSystemEventHandler):
                 #if folder and in top level OSF FOlder, then project
                 if os.path.dirname(event.src_path)==self.OSFFolder:
                     if event.is_directory:
-                        project = Node( title=name, category=Node.PROJECT, user=self.user, locally_created=True)
+                        project = Node( title=name, category=Node.PROJECT, user=self.user, locally_created=True )
                         #save
                         self.save(project)
                     else:
                         print("CREATED FILE IN PROJECT AREA. ")
                         raise NotADirectoryError
-                #if folder, then assume Folder
+
                 elif event.is_directory:
-                    folder = File(name=name, type=File.FOLDER, user=self.user, locally_created=True, provider=File.DEFAULT_PROVIDER)
-                    containing_item = self._get_parent_item_from_path(event.src_path)
-                    containing_item.files.append(folder)
-                    self.save(folder)
+
+                    if File.DEFAULT_PROVIDER in event.src_path: #folder
+                        folder = File(name=name, type=File.FOLDER, user=self.user, locally_created=True, provider=File.DEFAULT_PROVIDER)
+                        containing_item = self._get_parent_item_from_path(event.src_path)
+                        containing_item.files.append(folder)
+                        self.save(folder)
+                    else: # component
+                        console_log('start','debugging')
+                        new_component = Node(
+                            title=name,
+                            category=Node.COMPONENT,
+                            locally_created=True,
+                            user=self.user
+                            )
+                        console_log('new_component.title',new_component.title)
+                        parent_component = self._get_parent_item_from_path(event.src_path)
+
+                        parent_component.components.append(new_component)
+                        self.save(new_component)
+                        console_log('parent_component.title',parent_component.title)
+                        console_log('parent_component.components',parent_component.components)
+                        console_log('parent_component.files',parent_component.files)
                 else: # if file, then file.
                     file = File(name=name,type=File.FILE, user=self.user, locally_created=True, provider=File.DEFAULT_PROVIDER)
                     containing_item = self._get_parent_item_from_path(event.src_path)

@@ -10,6 +10,7 @@ class Item(object):
     PROJECT = 2
     COMPONENT = 3
     DEFAULT_GUID = 'guid'
+
     def __init__(self, kind, name, guid, path, version):
         self.kind=kind
         self.name=name

@@ -46,12 +46,32 @@ class OSFApp(QDialog):
         #connect all signal-slot pairs
         self.setupConnections()
 
+        # self.thread = threading.Thread(target=self.controller.start)
 
     def start(self):
-        # start all work
         t = threading.Thread(target=self.controller.start)
         t.start()
-        # backgroundify(self.controller.start())
+
+#todo: finish this!!
+    # def start(self):
+    #     # start all work
+    #     import threading; print('starting thread with id:{}'.format(self.thread.name))
+    #     self.thread.start()
+    #     # backgroundify(self.controller.start())
+    #
+    # def startStartScreen(self):
+    #     """
+    #     Issue is that new user goes to login and then
+    #     :return:
+    #     """
+    #     print(1)
+    #     self.thread.join()
+    #     print(2)
+    #     # can't restart threads. Easy way to handle this is to just recreate a thread after stopping previous one.
+    #     self.thread = threading.Thread(target=self.controller.start)
+    #     print(3)
+    #     self.startScreen.openWindow()
+    #     print(4)
 
     def setupConnections(self):
         # [ (signal, slot) ]

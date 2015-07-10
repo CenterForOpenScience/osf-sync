@@ -33,10 +33,12 @@ class OSFController(QDialog):
         self.loginAction = QAction("Open Login Screen", self)
         self.multipleUserAction = QAction("Choose Logged In User", self)
 
+        self.createConfigs()
+
 
     def start(self):
         self.loop = self.ensure_event_loop()
-        self.createConfigs()
+        # self.createConfigs()
         self.session = models.get_session()
         self.user = self.getCurrentUser()
         if self.user:
@@ -50,6 +52,7 @@ class OSFController(QDialog):
             if not os.path.isdir(self.user.osf_path):
                 os.makedirs(self.user.osf_path)
             self.startLogging()
+            #todo: remove self.OSFFolder and replace all usages of it with self.user.osf_path
             self.OSFFolder = self.user.osf_path
             self.startObservingOSFFolder()
             # self.preferences = Preferences(self.containingFolder, self.event_handler.data['data'])
@@ -215,7 +218,7 @@ class OSFController(QDialog):
 
     def setContainingFolder(self, newContainingFolder=None):
         if newContainingFolder is None:
-            self.containingFolder = QFileDialog.getExistingDirectory(self, "Choose folder")
+            self.containingFolder = QFileDialog.getExistingDirectory(self, "Choose folder to place OSF")
         else:
             self.containingFolder = newContainingFolder
 
@@ -337,3 +340,13 @@ class OSFController(QDialog):
         # Note: No clever tricks are used here to dry up code
         # This avoids an infinite loop if settings the event loop ever fails
         return asyncio.get_event_loop()
+
+    #todo: finish this!!!!!!!!!!
+    def can_skip_startup_screen(self):
+        session = models.get_session()
+        try:
+            session.query(models.User).filter(models.User.logged_in == True).one()
+            return True
+        except (NoResultFound,MultipleResultsFound):
+            return False
+

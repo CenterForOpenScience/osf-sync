@@ -85,12 +85,6 @@ class StartScreen(QDialog):
 
 
 
-        """
-        if properly logged in (user created in db. username, token,... all set)
-            then
-                trigger controller.start()
-        """
-
     def setupSlots(self):
         self.startScreen.logInButton.clicked.connect(self.logIn)
 

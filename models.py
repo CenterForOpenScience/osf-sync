@@ -12,6 +12,10 @@ import os
 Base = declarative_base()
 # from sqlalchemy_mptt.mixins import BaseNestedSets
 
+
+
+
+
 import os
 
 
@@ -30,7 +34,7 @@ class User(Base):
 
      logged_in = Column(Boolean, default=False)
 
-     #todo: enforce category = PROJECT condition for projects
+
      nodes = relationship(
          "Node",
          backref =backref('user'),
@@ -197,7 +201,7 @@ def get_session():
 
 def create_models():
     """
-    #TODO: handle different file systems.
+    #This shows how this should be for various file systems. The current way should handle all of them.
     # sqlite://<nohostname>/<path>
     # where <path> is relative:
     engine = create_engine('sqlite:///foo.db')

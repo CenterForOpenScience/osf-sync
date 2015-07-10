@@ -241,6 +241,8 @@ class Poll(object):
             local_node = self.create_local_node(remote_node,local_parent_node)
         elif local_node.locally_created and remote_node is None:
             remote_node = self.create_remote_node(local_node,remote_parent_node)
+            #note: this should NOT return once create_remote_node is fixed.
+            return
         elif local_node.locally_created and remote_node is not None:
             raise ValueError('newly created local node already exists on server! WHY? broken!')
         elif local_node.locally_deleted and remote_node is None:
@@ -264,7 +266,7 @@ class Poll(object):
             raise ValueError('in some weird state. figure it out.')
 
         #handle file_folders for node
-        self.check_file_folder(local_node, remote_node,)
+        self.check_file_folder(local_node, remote_node)
 
         #recursively handle node's children
         remote_children = self.get_all_paginated_members(remote_node['links']['children']['related'])
@@ -303,6 +305,7 @@ class Poll(object):
         elif local_file_folder.locally_created and remote_file_folder is None:
             #todo: this is broken for now. Need to figure out a diff way to do this.
             remote_file_folder = self.create_remote_file_folder(local_file_folder, local_node)
+            return
         elif local_file_folder.locally_created and remote_file_folder is not None:
             raise ValueError('newly created local file_folder was already on server for some reason. why? fixit!')
         elif local_file_folder.locally_deleted and remote_file_folder is None:
@@ -381,7 +384,7 @@ class Poll(object):
         assert local_parent_node is None or (new_node in local_parent_node.components)
         return new_node
 
-    # this function is not used.
+
     def create_remote_node(self, local_node, remote_parent_node):
         print('create_remote_node')
         assert isinstance(local_node, Node)
@@ -400,20 +403,43 @@ class Poll(object):
         if remote_parent_node:
             # component url
             assert local_node.category == Node.COMPONENT
-            url = remote_parent_node['links']['self']
-            resp = requests.put(url, data=data, headers=self.headers)
+            #fixme: THIS IS SOOOOOOOOOO  BROKEN!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+            #todo: make this part A LOT better once api does it.
+            console_log('create remote node','creating component')
+
+            url = 'https://staging2.osf.io/{}/newnode/'.format(remote_parent_node['id'])
+            console_log('url',url)
+            resp = requests.post(url, data=data, headers=self.headers)
+            # console_log('resp.content',resp.content)
+
+            # request does not return json.
+            # request does have location field that does have node id of the new node.
+            if resp.ok:
+                console_log('resp.headers',resp.headers)
+                # location header should have node id: https://staging2.osf.io/yz8eh/
+                # nid = resp.headers['Location'].split('/')[-2]
+
+                # console_log('nid',nid)
+                # remote_node = requests.get('https://staging2.osf.io:443/api/v2/nodes/{}/'.format(nid), headers=self.headers)
+                # console_log('remote_node',remote_node)
+
+                return
+            else:
+                raise ValueError('remote node not created:{}'.format(resp.content))
         else:
             # project url
             assert local_node.category == Node.PROJECT
             url = 'https://staging2.osf.io:443/api/v2/nodes/'
             resp = requests.post(url, data=data, headers=self.headers)
-        if resp.ok:
-            remote_node = resp.json()['data']
-            local_node.osf_id = remote_node['id']
-            self.save(local_node)
-            return remote_node
-        else:
-            raise ValueError('remote node not created:{}'.format(resp.content))
+
+            if resp.ok:
+                remote_node = resp.json()['data']
+                local_node.osf_id = remote_node['id']
+                local_node.locally_created = False
+                self.save(local_node)
+                return remote_node
+            else:
+                raise ValueError('remote node not created:{}'.format(resp.content))
 
     def create_local_file_folder(self, remote_file_folder, local_parent_folder, local_node):
         print('creating local file folder')
@@ -561,8 +587,6 @@ class Poll(object):
             local_file_folder.osf_path = remote_file_folder['path']
             local_file_folder.locally_created = False
             self.save(local_file_folder)
-
-
 
             return remote_file_folder
         else:
@@ -747,7 +771,7 @@ class Poll(object):
         path = local_node.path
 
         # alerts
-        alerts.info(local_node.name, alerts.DELETING)
+        alerts.info(local_node.title, alerts.DELETING)
 
         #delete model
         self.session.delete(local_node)
@@ -954,3 +978,9 @@ class Poll(object):
             return resp.json()['data']
         else:
             raise ValueError('waterbutler data for file {} not attained: {}'.format(local_file_folder.name, resp.content))
+
+
+
+def console_log(variable_name, variable_value):
+    print("DEBUG: {}: {}".format(variable_name, variable_value))
+
