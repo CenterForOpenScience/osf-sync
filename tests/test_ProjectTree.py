@@ -4,8 +4,8 @@ __author__ = 'himanshu'
 import sys
 sys.path.append("..")
 
-from ProjectTree.ProjectTree import ProjectTree
-from ProjectTree.Item import Item
+from osfoffline import ProjectTree
+from osfoffline.ProjectTree import Item
 from unittest import TestCase
 from nose.tools import *
 

@@ -1,9 +1,13 @@
 __author__ = 'himanshu'
 import unittest
 import os
-import ProjectTree
+
 import requests
-from ProjectTree.Item import Item
+
+from osfoffline import ProjectTree
+from osfoffline.ProjectTree.Item import Item
+
+
 class Actions(object):
     """
     Idea is that you pass in a ProjectTree object representing a project and do whatever you need to with it.
