@@ -7,11 +7,11 @@ import threading
 from PyQt5.QtWidgets import (QApplication, QDialog, QMessageBox, QSystemTrayIcon)
 from appdirs import *
 
-from osfoffline.views import Preferences
-from views.SystemTray import SystemTray
+from views.preferences import Preferences
+from views.system_tray import SystemTray
 from controller import OSFController
-from views.StartScreen import StartScreen
-from osfoffline import alerts
+from views.start_screen import StartScreen
+import alerts
 
 
 class OSFApp(QDialog):
@@ -19,22 +19,22 @@ class OSFApp(QDialog):
         super().__init__()
 
         #settings
-        self.appname = "OSF Offline"
-        self.appauthor = "COS"
+        self.app_name = "OSF Offline"
+        self.app_author = "COS"
 
 
         #controller
-        self.controller = OSFController(appname=self.appname, appauthor=self.appauthor)
+        self.controller = OSFController(app_name=self.app_name, app_author=self.app_author)
 
         #views
-        self.startScreen = StartScreen()
+        self.start_screen = StartScreen()
         self.tray = SystemTray()
         #todo: remove priority abilities
-        self.preferences = Preferences(self.controller.containingFolder, None)
-        alerts.setup_alerts(self.tray.trayIcon)
+        self.preferences = Preferences(self.controller.containing_folder)
+        alerts.setup_alerts(self.tray.tray_icon)
 
         #connect all signal-slot pairs
-        self.setupConnections()
+        self.setup_connections()
 
         # self.thread = threading.Thread(target=self.controller.start)
 
@@ -63,26 +63,26 @@ class OSFApp(QDialog):
     #     self.startScreen.openWindow()
     #     print(4)
 
-    def setupConnections(self):
+    def setup_connections(self):
         # [ (signal, slot) ]
         signal_slot_pairs = [
             # system tray
-            (self.tray.openProjectFolderAction.triggered, self.controller.openProjectFolder),
-            (self.tray.launchOSFAction.triggered, self.controller.startOSF),
-            (self.tray.currentlySynchingAction.triggered, self.controller.currentlySynching),
-            (self.tray.priorityAction.triggered, self.openPriorityScreen),
-            (self.tray.preferencesAction.triggered, self.openPreferences),
-            (self.tray.aboutAction.triggered, self.startAboutScreen),
-            (self.tray.quitAction.triggered, self.controller.teardown),
+            (self.tray.open_project_folder_action.triggered, self.controller.open_project_folder),
+            (self.tray.launch_osf_action.triggered, self.controller.start_osf),
+            (self.tray.currently_synching_action.triggered, self.controller.currently_synching),
+            (self.tray.priority_action.triggered, self.open_priority_screen),
+            (self.tray.preferences_action.triggered, self.open_preferences),
+            (self.tray.about_action.triggered, self.start_about_screen),
+            (self.tray.quit_action.triggered, self.controller.teardown),
 
             # controller events
-            (self.controller.loginAction.triggered, self.startScreen.openWindow),
+            (self.controller.login_action.triggered, self.start_screen.open_window),
 
             #preferences
             # (self.preferences.preferencesWindow.changeFolderButton.clicked, self.preferences.openContainingFolderPicker)
 
             # start screen
-            (self.startScreen.doneLoggingInAction.triggered, self.controller.start)
+            (self.start_screen.done_logging_in_action.triggered, self.controller.start)
         ]
         for signal, slot in signal_slot_pairs:
             signal.connect(slot)
@@ -90,17 +90,17 @@ class OSFApp(QDialog):
 
 
 
-    def openPriorityScreen(self):
-        self.preferences.openWindow(Preferences.PRIORITY)
+    def open_priority_screen(self):
+        self.preferences.open_window(Preferences.PRIORITY)
 
-    def openPreferences(self):
-        self.preferences.openWindow(Preferences.GENERAL)
+    def open_preferences(self):
+        self.preferences.open_window(Preferences.GENERAL)
 
-    def startAboutScreen(self):
-        self.preferences.openWindow(Preferences.ABOUT)
+    def start_about_screen(self):
+        self.preferences.open_window(Preferences.ABOUT)
 
-    def openLogInScreen(self):
-        self.preferences.openWindow(Preferences.OSF)
+    def open_log_in_screen(self):
+        self.preferences.open_window(Preferences.OSF)
 
 
 
@@ -124,10 +124,3 @@ if __name__ == '__main__':
 
     osf.hide()
     app.exec_()
-
-
-
-
-    
-
-

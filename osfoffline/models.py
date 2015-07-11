@@ -25,7 +25,7 @@ class User(Base):
      __tablename__ = 'user'
 
      id = Column(Integer, primary_key=True)
-     fullname = Column(String)
+     full_name = Column(String)
      osf_login = Column(String, unique=True)
      osf_password = Column(String)
      osf_path = Column(String)
@@ -57,7 +57,7 @@ class User(Base):
 
      def __repr__(self):
        return "<User(fullname={}, osf_password={}, osf_path={})>".format(
-                             self.fullname, self.osf_password, self.osf_path)
+                             self.full_name, self.osf_password, self.osf_path)
 
 #todo: can have it so that all nodes and subnodes know that they are part of the same user.
 class Node(Base):
@@ -71,7 +71,7 @@ class Node(Base):
     # path = Column(String)
     hash = Column(String)
     category = Column(Enum(PROJECT, COMPONENT))
-    date_modified = Column(DateTime, default=datetime.datetime.utcnow,onupdate=datetime.datetime.utcnow)
+    date_modified = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
     osf_id = Column(String)
 
     locally_created = Column(Boolean, default= False)
@@ -109,7 +109,7 @@ class Node(Base):
         return file_folders
 
 
-    def update_hash(self, blocksize=2**20):
+    def update_hash(self, block_size=2**20):
         pass
         #todo: what to do in this case?
 
@@ -162,12 +162,12 @@ class File(Base):
         else:
             return os.path.join(self.node.path ,self.name)
 
-    def update_hash(self, blocksize=2**20):
+    def update_hash(self, block_size=2**20):
         m = hashlib.md5()
         if self.type == File.FILE:
             with open(self.path,"rb") as f:
                 while True:
-                    buf = f.read(blocksize)
+                    buf = f.read(block_size)
                     if not buf:
                         break
                     m.update(buf)

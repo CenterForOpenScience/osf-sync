@@ -8,7 +8,7 @@ import logging
 
 from watchdog.events import FileSystemEventHandler
 
-from osfoffline.models import User,Node,File, get_session
+from models import User,Node,File, get_session
 
 
 EVENT_TYPE_MOVED = 'moved'
@@ -28,10 +28,10 @@ class OSFEventHandler(FileSystemEventHandler):
     """
     Base file system event handler that you can override methods from.
     """
-    def __init__(self, OSFFolder, db_url, user, loop):
+    def __init__(self, osf_folder, db_url, user, loop):
         super().__init__()
         self._loop = loop or asyncio.get_event_loop()
-        self.OSFFolder = OSFFolder
+        self.osf_folder = osf_folder
 
         self.session = get_session()
         self.user = self.session.query(User).first() #assume only one user for now!!!!!
@@ -139,7 +139,7 @@ class OSFEventHandler(FileSystemEventHandler):
             # create new model
             if not self.already_exists(event.src_path):
                 #if folder and in top level OSF FOlder, then project
-                if os.path.dirname(event.src_path)==self.OSFFolder:
+                if os.path.dirname(event.src_path)==self.osf_folder:
                     if event.is_directory:
                         project = Node( title=name, category=Node.PROJECT, user=self.user, locally_created=True )
                         #save
@@ -213,7 +213,7 @@ class OSFEventHandler(FileSystemEventHandler):
         #todo: change all path comparisons to os.path.samefile
         # whenever anything gets modified, watchdog crawls up the folder tree all the way up to the osf folder
         # handle osf folder changing or not changing
-        if os.path.exists(event.src_path) and os.path.exists(self.OSFFolder) and os.path.samefile(event.src_path, self.OSFFolder):
+        if os.path.exists(event.src_path) and os.path.exists(self.osf_folder) and os.path.samefile(event.src_path, self.osf_folder):
             return # ignore
             # note: if the OSF folder name is changed, that is NOT modified, but rather move.
             # note: when folder recursively delete, the top folder is modified then removed.
@@ -283,11 +283,11 @@ class OSFEventHandler(FileSystemEventHandler):
         # yield '1'
 
 
-    #todo: simplify this. perhaps can use rstrip(seperator) but unclear if this leads to issues???
+    #todo: simplify this. perhaps can use rstrip(os.seperator) but unclear if this leads to issues???
     def _get_parent_item_from_path(self, path):
         containing_folder_path = os.path.dirname(path)
 
-        if containing_folder_path == self.OSFFolder:
+        if containing_folder_path == self.osf_folder:
             raise FileNotFoundError
         # what can happen is that the rightmost
         try:

@@ -11,64 +11,63 @@ from watchdog.observers import Observer
 from sqlalchemy.orm.exc import MultipleResultsFound
 from sqlalchemy.orm.exc import NoResultFound
 
-from osfoffline import OSFEventHandler, Polling, models
-
+import osf_event_handler, polling, models
+import queue
 
 __author__ = 'himanshu'
 
 class OSFController(QDialog):
 
-    def __init__(self, appname, appauthor, ):
+    def __init__(self, app_name, app_author, ):
         super().__init__()
         # logging.basicConfig(level=logging.DEBUG)
-        self.appname=appname
-        self.appauthor=appauthor
+        self.app_name = app_name
+        self.app_author = app_author
 
-        self.containingFolder = ''
+        self.containing_folder = ''
 
-        self.loginAction = QAction("Open Login Screen", self)
-        self.multipleUserAction = QAction("Choose Logged In User", self)
+        self.login_action = QAction("Open Login Screen", self)
+        self.multiple_user_action = QAction("Choose Logged In User", self)
 
-        self.createConfigs()
-
-
+        self.create_configs()
+        
     def start(self):
         self.loop = self.ensure_event_loop()
         # self.createConfigs()
         self.session = models.get_session()
-        self.user = self.getCurrentUser()
+        self.user = self.get_current_user()
         if self.user:
-            self.containingFolder = os.path.dirname(self.user.osf_path)
-            if not self.containingFolderIsSet():
-                self.setContainingFolder()
-            self.user.osf_path = os.path.join(self.containingFolder,"OSF")
+            self.containing_folder = os.path.dirname(self.user.osf_path)
+            if not self.containing_folder_is_set():
+                self.set_containing_folder()
+            self.user.osf_path = os.path.join(self.containing_folder,"OSF")
             self.save(self.user)
 
             #todo: handle if OSF folder does not exist. OR if user wants custom OSF folder
             if not os.path.isdir(self.user.osf_path):
                 os.makedirs(self.user.osf_path)
-            self.startLogging()
+            self.start_logging()
             #todo: remove self.OSFFolder and replace all usages of it with self.user.osf_path
-            self.OSFFolder = self.user.osf_path
-            self.startObservingOSFFolder()
+            self.osf_folder = self.user.osf_path
+            self.start_observing_osf_folder()
             # self.preferences = Preferences(self.containingFolder, self.event_handler.data['data'])
-            self.startPollingServer()
+            self.start_polling_server()
             self.loop.run_forever()
 
 
 
-    def startPollingServer(self):
+    def start_polling_server(self):
         #todo: can probably change this to just pass in the self.user
-        self.poller = Polling.Poll(self.user.osf_id, self.loop)
+        self.poller = polling.Poll(self.user.osf_id, self.loop)
         self.poller.start()
 
 
-    def stopPollingServer(self):
+    def stop_polling_server(self):
         self.poller.stop()
         # self.poller.join()
 
     #todo: when log in is working, you need to make this work with log in screen.
-    def getCurrentUser(self):
+    def get_current_user(self):
         user = None
         import threading; print('---inside getcurrentuser-----{}----'.format(threading.current_thread()))
         try:
@@ -84,10 +83,10 @@ class OSFController(QDialog):
             # user = self.session.query(models.User).first()
             # user.logged_in = True
             # self.save(user)
-            self.multipleUserAction.trigger()
+            self.multiple_user_action.trigger()
         except NoResultFound:
             # todo: allows you to log in (creates an account in db and logs it in)
-            self.loginAction.trigger()
+            self.login_action.trigger()
             print('no users are logged in currently. Logging in first user in db.')
             # user = self.session.query(models.User).first()
             # if not user:
@@ -105,9 +104,9 @@ class OSFController(QDialog):
         return user
 
 
-    def startLogging(self):
+    def start_logging(self):
         #make sure logging directory exists
-        log_dir = user_log_dir(self.appname, self.appauthor)
+        log_dir = user_log_dir(self.app_name, self.app_author)
         if not os.path.exists(log_dir): # ~/.cache/appname
             os.makedirs(log_dir)
         if not os.path.exists(os.path.join(log_dir,'log')): # ~/.cache/appname/log (this is what logging uses)
@@ -139,13 +138,13 @@ class OSFController(QDialog):
 
 
 
-    def startObservingOSFFolder(self):
+    def start_observing_osf_folder(self):
 
 
         #if something inside the folder changes, log it to config dir
         #if something inside the folder changes, show it on console.
 
-        self.event_handler = OSFEventHandler(self.OSFFolder, self.config['dbdir'],self.user, loop=self.loop ) #create event handler
+        self.event_handler = osf_event_handler.OSFEventHandler(self.osf_folder, self.config['db_dir'],self.user, loop=self.loop ) #create event handler
         #if config actually has legitimate data. use it.
         # if self.config != {}:
         #     self.event_handler.import_from_db(items_dict=self.config, user='himanshu', password='pass', name='himanshu', fav_movie='matrix', fav_show='simpsons')
@@ -153,74 +152,52 @@ class OSFController(QDialog):
         #start
         self.observer = Observer() #create observer. watched for events on files.
         #attach event handler to observed events. make observer recursive
-        self.observer.schedule(self.event_handler, self.OSFFolder, recursive=True)
+        self.observer.schedule(self.event_handler, self.osf_folder, recursive=True)
         self.observer.start() #start
 
-    def stopObservingOSFFolder(self):
+    def stop_observing_osf_folder(self):
         self.observer.stop()
         self.observer.join()
 
 
-    def closeEvent(self, event):
-        if self.trayIcon.isVisible():
+    def close_event(self, event):
+        if self.tray_icon.isVisible():
             self.hide()
             event.ignore()
 
 
-
-    def iconActivated(self, reason):
-        if reason in (QSystemTrayIcon.Trigger, QSystemTrayIcon.DoubleClick):
-            self.iconComboBox.setCurrentIndex(
-                    (self.iconComboBox.currentIndex() + 1)
-                    % self.iconComboBox.count())
-        elif reason == QSystemTrayIcon.MiddleClick:
-            self.showMessage()
-
-    def showMessage(self):
-        icon = QSystemTrayIcon.MessageIcon(
-                self.typeComboBox.itemData(self.typeComboBox.currentIndex()))
-        self.trayIcon.showMessage(self.titleEdit.text(),
-                self.bodyEdit.toPlainText(), icon,
-                self.durationSpinBox.value() * 1000)
-
-    def messageClicked(self):
-        QMessageBox.information(None, "Systray",
-                "Sorry, I already gave what help I could.\nMaybe you should "
-                "try asking a human?")
-
-
-    def openProjectFolder(self):
-        if self.containingFolderIsSet():
+    def open_project_folder(self):
+        if self.containing_folder_is_set():
             if sys.platform=='win32':
-                os.startfile(self.containingFolder)
+                os.startfile(self.containing_folder)
             elif sys.platform=='darwin':
-                subprocess.Popen(['open', self.containingFolder])
+                subprocess.Popen(['open', self.containing_folder])
             else:
                 try:
-                    subprocess.Popen(['xdg-open', self.containingFolder])
+                    subprocess.Popen(['xdg-open', self.containing_folder])
                 except OSError:
                     # er, think of something else to try
                     # xdg-open *should* be supported by recent Gnome, KDE, Xfce
                     pass #todo: what to do in this case?
         else:
-            self.setContainingFolder()
+            self.set_containing_folder()
 
-    def containingFolderIsSet(self):
+    def containing_folder_is_set(self):
         try:
-            return os.path.isdir(self.containingFolder)
+            return os.path.isdir(self.containing_folder)
         except ValueError:
             return False
 
 
-    def setContainingFolder(self, newContainingFolder=None):
-        if newContainingFolder is None:
-            self.containingFolder = QFileDialog.getExistingDirectory(self, "Choose folder to place OSF")
+    def set_containing_folder(self, new_containing_folder=None):
+        if new_containing_folder is None:
+            self.containing_folder = QFileDialog.getExistingDirectory(self, "Choose folder to place OSF")
         else:
-            self.containingFolder = newContainingFolder
+            self.containing_folder = new_containing_folder
 
 
 
-    def startOSF(self):
+    def start_osf(self):
         url = "http://osf.io/dashboard"
         webbrowser.open_new_tab(url)
 
@@ -229,7 +206,7 @@ class OSFController(QDialog):
 
 
 
-    def currentlySynching(self):
+    def currently_synching(self):
         #todo: can use this sudo code to make proper
         # if syncQueue.empty():
         #     text = "Up to date"
@@ -237,18 +214,18 @@ class OSFController(QDialog):
         #     text = "currently {}".format(syncQueue.top().name())
         import datetime
         text = "Up to date ({})".format(str(datetime.datetime.now()))
-        self.currentlySynchingAction.setText(0,text)
+        self.currently_synching_action.setText(0,text)
 
 
     def teardown(self):
         try:
-            self.storeConfigs()
+            self.store_configs()
 
             # stop polling the server
-            self.stopPollingServer()
+            self.stop_polling_server()
 
             # stop observing OSF folder
-            self.stopObservingOSFFolder()
+            self.stop_observing_osf_folder()
         except KeyboardInterrupt:
             print('ctr-c pressed. Still going to quit app though.')
             QApplication.instance().quit()
@@ -260,27 +237,27 @@ class OSFController(QDialog):
         #quit the application
         QApplication.instance().quit()
 
-    def storeConfigs(self):
+    def store_configs(self):
         # store current configs in config file
-        dir = user_config_dir(self.appname, self.appauthor)
+        dir = user_config_dir(self.app_name, self.app_author)
         rel_osf_config = os.path.join(dir,'config.osf')
         file = open(rel_osf_config,'w+')
         file.truncate(0)
         file.write(json.dumps(self.config))
         file.close()
 
-    def createConfigs(self):
+    def create_configs(self):
         #todo: create helper function to check if config/data/OSF/... dirs' exist, and create them if they dont' exist.
 
         #check if dir has config file already in it, if so use it. if not create it.
-        dir = user_config_dir(self.appname, self.appauthor)
+        dir = user_config_dir(self.app_name, self.app_author)
         rel_osf_config = os.path.join(dir,'config.osf')
         #ensure directory exists
         if not os.path.exists(dir):
             os.makedirs(dir)
 
         #ensure data dir exists
-        data_dir = user_data_dir(self.appname, self.appauthor)
+        data_dir = user_data_dir(self.app_name, self.app_author)
 
         if not os.path.exists(data_dir):
             os.makedirs(data_dir)
@@ -301,10 +278,10 @@ class OSFController(QDialog):
             print('config file is corrupted. Creating new config file')
             #todo: figure out where this should actually be
             self.config={}
-            self.config['appname'] = self.appname
-            self.config['appauthor'] = self.appauthor
-            self.config['dbdir'] = user_data_dir(self.appname, self.appauthor)
-            self.storeConfigs()
+            self.config['app_name'] = self.app_name
+            self.config['app_author'] = self.app_author
+            self.config['db_dir'] = user_data_dir(self.app_name, self.app_author)
+            self.store_configs()
         finally:
             file.close()
 

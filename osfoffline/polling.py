@@ -9,8 +9,8 @@ import iso8601
 import pytz
 import aiohttp
 
-from osfoffline.models import User, Node, File, get_session, Base
-from osfoffline import alerts
+from models import User, Node, File, get_session, Base
+import alerts
 
 
 
@@ -67,8 +67,10 @@ class Poll(object):
 
     def start(self):
         remote_user = self.get_remote_user()
-        self._loop.call_soon(self.check_osf,remote_user)
-
+        self._loop.call_soon(
+            asyncio.async,
+            self.check_osf(remote_user)
+        )
 
 
     def get_remote_user(self):
@@ -167,6 +169,7 @@ class Poll(object):
 
     #Check
 
+    @asyncio.coroutine
     def check_osf(self,remote_user):
         print('check_osf')
         assert isinstance(remote_user,dict)
@@ -177,7 +180,8 @@ class Poll(object):
         projects_for_user_url = 'https://staging2.osf.io:443/api/v2/users/{}/nodes/'.format(remote_user_id)
 
 
-        if self._keep_running:
+        while self._keep_running:
+            print('keep running bro.')
             #get remote projects
             remote_projects = self.get_all_paginated_members(projects_for_user_url)
 
@@ -206,9 +210,9 @@ class Poll(object):
 
             print('---------SHOULD HAVE ALL OSF FILES---------')
 
-            self._loop.call_later(RECHECK_TIME, self.check_osf, remote_user)
+
+            yield from asyncio.sleep(RECHECK_TIME)
             #todo: figure out how we can prematuraly stop the sleep when user ends the application while sleeping
-            # print('SLEEPING FOR {} seconds...'.format(RECHECK_TIME))
 
 
 
