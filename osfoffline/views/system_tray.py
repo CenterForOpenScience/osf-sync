@@ -1,7 +1,7 @@
 __author__ = 'himanshu'
 from PyQt5.Qt import QIcon
 from PyQt5.QtWidgets import (QDialog, QSystemTrayIcon,
-                             QAction,QMenu)
+                             QAction, QMenu)
 
 
 class SystemTray(QDialog):
@@ -11,7 +11,7 @@ class SystemTray(QDialog):
         self.create_tray_icon()
 
     def create_actions(self):
-        #menu items
+        # menu items
         self.open_project_folder_action = QAction("Open Project Folder", self)
         self.launch_osf_action = QAction("Launch OSF", self)
         self.currently_synching_action = QAction("Up to date", self)
@@ -36,8 +36,7 @@ class SystemTray(QDialog):
         self.tray_icon = QSystemTrayIcon(self)
         self.tray_icon.setContextMenu(self.tray_icon_menu)
 
-
-        #todo: hate this icon. make better.
+        # todo: hate this icon. make better.
         icon = QIcon(':/cos_logo.png')
         self.tray_icon.setIcon(icon)
         self.tray_icon.show()

@@ -8,6 +8,7 @@
 
 from PyQt5 import QtCore, QtGui, QtWidgets
 
+
 class Ui_Preferences(object):
     def setupUi(self, Preferences):
         Preferences.setObjectName("Preferences")
@@ -109,8 +110,8 @@ class Ui_Preferences(object):
         self.treeWidget.setWordWrap(True)
         self.treeWidget.setHeaderHidden(False)
         self.treeWidget.setObjectName("treeWidget")
-        self.treeWidget.headerItem().setTextAlignment(0, QtCore.Qt.AlignJustify|QtCore.Qt.AlignVCenter)
-        self.treeWidget.headerItem().setTextAlignment(1, QtCore.Qt.AlignJustify|QtCore.Qt.AlignVCenter)
+        self.treeWidget.headerItem().setTextAlignment(0, QtCore.Qt.AlignJustify | QtCore.Qt.AlignVCenter)
+        self.treeWidget.headerItem().setTextAlignment(1, QtCore.Qt.AlignJustify | QtCore.Qt.AlignVCenter)
         self.treeWidget.header().setCascadingSectionResizes(True)
         self.treeWidget.header().setDefaultSectionSize(200)
         self.treeWidget.header().setHighlightSections(True)
@@ -138,11 +139,12 @@ class Ui_Preferences(object):
         self.startOnStartup.setText(_translate("Preferences", "Start OSF Offline on Computer Startup"))
         self.groupBox_6.setTitle(_translate("Preferences", "Choose Folder to Place Project in "))
         self.changeFolderButton.setText(_translate("Preferences", "Change"))
-        self.containingFolderTextEdit.setHtml(_translate("Preferences", "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"
-"<html><head><meta name=\"qrichtext\" content=\"1\" /><style type=\"text/css\">\n"
-"p, li { white-space: pre-wrap; }\n"
-"</style></head><body style=\" font-family:\'Ubuntu\'; font-size:11pt; font-weight:400; font-style:normal;\">\n"
-"<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\">/home/himanshu/somefolder/My Project</p></body></html>"))
+        self.containingFolderTextEdit.setHtml(_translate("Preferences",
+                                                         "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"
+                                                         "<html><head><meta name=\"qrichtext\" content=\"1\" /><style type=\"text/css\">\n"
+                                                         "p, li { white-space: pre-wrap; }\n"
+                                                         "</style></head><body style=\" font-family:\'Ubuntu\'; font-size:11pt; font-weight:400; font-style:normal;\">\n"
+                                                         "<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\">/home/himanshu/somefolder/My Project</p></body></html>"))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab), _translate("Preferences", "General"))
         self.groupBox_2.setTitle(_translate("Preferences", "Account"))
         self.groupBox_3.setTitle(_translate("Preferences", "Account"))
@@ -164,12 +166,13 @@ class Ui_Preferences(object):
         self.treeWidget.headerItem().setText(1, _translate("Preferences", "Priority"))
         self.label_2.setText(_translate("Preferences", "Priority Items will be given priority when syncing"))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_4), _translate("Preferences", "Priority Syncing"))
-        self.textEdit_2.setHtml(_translate("Preferences", "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"
-"<html><head><meta name=\"qrichtext\" content=\"1\" /><style type=\"text/css\">\n"
-"p, li { white-space: pre-wrap; }\n"
-"</style></head><body style=\" font-family:\'Ubuntu\'; font-size:11pt; font-weight:400; font-style:normal;\">\n"
-"<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\">This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. </p>\n"
-"<p style=\"-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><br /></p>\n"
-"<p align=\"center\" style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\">© Center for Open Science</p></body></html>"))
+        self.textEdit_2.setHtml(_translate("Preferences",
+                                           "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"
+                                           "<html><head><meta name=\"qrichtext\" content=\"1\" /><style type=\"text/css\">\n"
+                                           "p, li { white-space: pre-wrap; }\n"
+                                           "</style></head><body style=\" font-family:\'Ubuntu\'; font-size:11pt; font-weight:400; font-style:normal;\">\n"
+                                           "<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\">This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. </p>\n"
+                                           "<p style=\"-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><br /></p>\n"
+                                           "<p align=\"center\" style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\">© Center for Open Science</p></body></html>"))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_5), _translate("Preferences", "About"))
 

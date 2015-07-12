@@ -1,39 +1,33 @@
 #!/usr/bin/env python
-
-
-
 import threading
-
 from PyQt5.QtWidgets import (QApplication, QDialog, QMessageBox, QSystemTrayIcon)
-from appdirs import *
-
 from views.preferences import Preferences
 from views.system_tray import SystemTray
 from controller import OSFController
 from views.start_screen import StartScreen
 import alerts
+import sys
 
 
 class OSFApp(QDialog):
     def __init__(self):
         super().__init__()
 
-        #settings
+        # settings
         self.app_name = "OSF Offline"
         self.app_author = "COS"
 
-
-        #controller
+        # controller
         self.controller = OSFController(app_name=self.app_name, app_author=self.app_author)
 
-        #views
+        # views
         self.start_screen = StartScreen()
         self.tray = SystemTray()
-        #todo: remove priority abilities
+        # todo: remove priority abilities
         self.preferences = Preferences(self.controller.containing_folder)
         alerts.setup_alerts(self.tray.tray_icon)
 
-        #connect all signal-slot pairs
+        # connect all signal-slot pairs
         self.setup_connections()
 
         # self.thread = threading.Thread(target=self.controller.start)
@@ -42,7 +36,7 @@ class OSFApp(QDialog):
         t = threading.Thread(target=self.controller.start)
         t.start()
 
-#todo: finish this!!
+    # todo: finish this!!
     # def start(self):
     #     # start all work
     #     import threading; print('starting thread with id:{}'.format(self.thread.name))
@@ -78,7 +72,7 @@ class OSFApp(QDialog):
             # controller events
             (self.controller.login_action.triggered, self.start_screen.open_window),
 
-            #preferences
+            # preferences
             # (self.preferences.preferencesWindow.changeFolderButton.clicked, self.preferences.openContainingFolderPicker)
 
             # start screen
@@ -86,9 +80,6 @@ class OSFApp(QDialog):
         ]
         for signal, slot in signal_slot_pairs:
             signal.connect(slot)
-
-
-
 
     def open_priority_screen(self):
         self.preferences.open_window(Preferences.PRIORITY)
@@ -103,24 +94,18 @@ class OSFApp(QDialog):
         self.preferences.open_window(Preferences.OSF)
 
 
-
-
 if __name__ == '__main__':
     app = QApplication(sys.argv)
 
     if not QSystemTrayIcon.isSystemTrayAvailable():
         QMessageBox.critical(None, "Systray",
-                "Could not detect a system tray on this system")
+                             "Could not detect a system tray on this system")
         sys.exit(1)
 
     QApplication.setQuitOnLastWindowClosed(False)
 
-
-
-
     osf = OSFApp()
     osf.start()
-
 
     osf.hide()
     app.exec_()

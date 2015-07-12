@@ -8,6 +8,7 @@
 
 from PyQt5 import QtCore, QtGui, QtWidgets
 
+
 class Ui_startscreen(object):
     def setupUi(self, startscreen):
         startscreen.setObjectName("startscreen")
