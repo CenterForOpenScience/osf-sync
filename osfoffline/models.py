@@ -36,11 +36,11 @@ class User(Base):
         cascade="all, delete-orphan"
     )
 
-    logs = relationship(
-        'Log',
-        backref=backref('user'),
-        cascade='all, delete-orphan'
-    )
+    # logs = relationship(
+    #     'Log',
+    #     backref=backref('user'),
+    #     cascade='all, delete-orphan'
+    # )
 
     @hybrid_property
     def projects(self):
@@ -55,16 +55,16 @@ class User(Base):
             self.full_name, self.osf_password, self.osf_path)
 
 
-class Log(Base):
-    __tablename__ = 'log'
-
-    id = Column(Integer, primary_key=True)
-
-    PROJECT = 'project'
-    COMPONENT = 'component'
-
-    date = Column(DateTime)
-    action = Enum(PROJECT, COMPONENT)
+# class Log(Base):
+#     __tablename__ = 'log'
+#
+#     id = Column(Integer, primary_key=True)
+#
+#     PROJECT = 'project'
+#     COMPONENT = 'component'
+#
+#     date = Column(DateTime)
+#     action = Enum(PROJECT, COMPONENT)
 
 
 # todo: can have it so that all nodes and subnodes know that they are part of the same user.
@@ -99,12 +99,12 @@ class Node(Base):
         cascade="all, delete-orphan"
     )
 
-    logs = relationship(
-        'Log',
-        backref=backref('project'),
-        cascade='all, delete-orphan',
-        order_by="Log.position"
-    )
+    # logs = relationship(
+    #     'Log',
+    #     backref=backref('project'),
+    #     cascade='all, delete-orphan',
+    #     order_by="Log.position"
+    # )
 
     @hybrid_property
     def path(self):

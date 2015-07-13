@@ -8,7 +8,6 @@ import os
 import logging
 import asyncio
 
-
 EVENT_TYPE_MOVED = 'moved'
 EVENT_TYPE_DELETED = 'deleted'
 EVENT_TYPE_CREATED = 'created'
@@ -120,7 +119,7 @@ class OSFEventHandler(FileSystemEventHandler):
             # create new model
             if not self.already_exists(event.src_path):
                 # if folder and in top level OSF FOlder, then project
-                if os.path.dirname(event.src_path) == self.osf_folder:
+                if os.path.samefile(os.path.dirname(event.src_path), self.osf_folder) :
                     if event.is_directory:
                         project = Node(title=name, category=Node.PROJECT, user=self.user, locally_created=True)
                         # save
@@ -252,7 +251,7 @@ class OSFEventHandler(FileSystemEventHandler):
     def _get_parent_item_from_path(self, path):
         containing_folder_path = os.path.dirname(path)
 
-        if containing_folder_path == self.osf_folder:
+        if os.path.samefile(containing_folder_path, self.osf_folder):
             raise FileNotFoundError
         # what can happen is that the rightmost
         try:
@@ -264,10 +263,10 @@ class OSFEventHandler(FileSystemEventHandler):
     # todo: figure out how you can improve this
     def get_item_by_path(self, path):
         for node in self.session.query(Node):
-            if node.path == path:
+            if os.path.samefile(node.path, path):
                 return node
         for file_folder in self.session.query(File):
-            if file_folder.path == path:
+            if os.path.samefile(file_folder.path, path):
                 return file_folder
         raise FileNotFoundError
 

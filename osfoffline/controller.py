@@ -4,6 +4,7 @@ import os
 from watchdog.observers import Observer
 from sqlalchemy.orm.exc import MultipleResultsFound
 from sqlalchemy.orm.exc import NoResultFound
+from osfoffline.sync_local_filesytem_and_db import determine_new_events
 import logging
 import json
 import subprocess
@@ -13,6 +14,7 @@ import osf_event_handler
 import polling
 import models
 import sys
+
 __author__ = 'himanshu'
 
 
