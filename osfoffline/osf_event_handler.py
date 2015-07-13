@@ -77,12 +77,15 @@ class OSFEventHandler(FileSystemEventHandler):
 
         # todo: handle renamed!!!!!!!!!
         try:
+            console_log('start on moved','')
             # determine and get what moved
             item = self.get_item_by_path(event.src_path)
+            console_log('item',item)
 
             # update item's position
             try:
                 item.parent = self._get_parent_item_from_path(event.dest_path)
+                console_log('item.parent',item.parent)
             except FileNotFoundError:
                 item.parent = None
 
@@ -263,10 +266,10 @@ class OSFEventHandler(FileSystemEventHandler):
     # todo: figure out how you can improve this
     def get_item_by_path(self, path):
         for node in self.session.query(Node):
-            if os.path.samefile(node.path, path):
+            if node.path == path:
                 return node
         for file_folder in self.session.query(File):
-            if os.path.samefile(file_folder.path, path):
+            if file_folder.path == path:
                 return file_folder
         raise FileNotFoundError
 
@@ -284,3 +287,21 @@ class OSFEventHandler(FileSystemEventHandler):
                 asyncio.async,
                 handler(event)
             )
+
+    def normalize_path(self, path, is_dir):
+        normalized_path = path
+        # if path.endswith(os.sep) and is_dir:
+        #     pass
+        # elif path.endswith(os.sep) and not is_dir:
+        #     normalized_path = path[0:-1* len(os.sep)]  # remove seperator
+        # elif not path.endswith(os.sep) and is_dir:
+        #     normalized_path = os.path.join(path, os.sep)  # add seperator
+        # elif not path.endswith(os.sep) and not is_dir:
+        #     pass
+        if path.endswith(os.sep) and not is_dir:
+            normalized_path = path[0:-1* len(os.sep)]  # remove seperator
+        elif not path.endswith(os.sep) and is_dir:
+            normalized_path = os.path.join(path, os.sep)  # add seperator
+
+        return normalized_path
+

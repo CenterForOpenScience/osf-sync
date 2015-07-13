@@ -38,22 +38,16 @@ class StartScreen(QDialog):
 
     # todo: break up this function. lots of repeated code.
     def log_in(self):
-        user_name = self.start_screen.emailEdit.text()
-        password = self.start_screen.passwordEdit.text()
+        user_name = self.start_screen.emailEdit.text()  # himanshu@dayrep.com
+        password = self.start_screen.passwordEdit.text()  # password
         print(user_name)
         print(password)
 
         # assumption: logged in user properly.
         # assumption: all the fields needed for db are set
-        full_name = 'Johnny Appleseed'
-        osf_id = '3672r'
-        oauth_token = 'eyJhbGciOiJIUzUxMiJ9.ZXlKaGJHY2lPaUprYVhJaUxDSmxibU1pT2lKQk1USTRRMEpETFV' \
-                      'oVE1qVTJJbjAuLmVCS25RaW1FSFUtNHFORnZSLWw5UGcuZU1FZTRlVlNaVXR2dGh1a3V4cUhXVW' \
-                      'dsbDY5bTJsTHlUaWM5VHcwZGNvMndFU2xsZzJpR25KUGZOanprbm9mcFc5NjBLQ1JyUVMtSmNjT2J' \
-                      'INVpYYlZ5aTdpdTRENDNDZWxhN2tWTXk0dlVtWHByekxIRTlaMHdVUFhPd1RPdEl1b0NqNEQwX0Vq' \
-                      'MmtQLVpvamF6NVhHNjk1ZVNTMEZYYXBGZGpURFcxX2FYZFdvQlVEUm0zTjJBOGd2SkxTY0ZULk9rQ' \
-                      '1Bwd1kzS2NUeDJTaEJkcXJPbFE.FMsFG-z-eiZ0yI_7pYTVBo9DlkfJfdT7Nwocej_0aRZHA-hxjU' \
-                      'Lt-XwFD8w0m5w0JGH2yi6MFlCQDHJxPwvUaQ'
+        full_name = 'rock band'
+        osf_id = 'qmjhp'
+        oauth_token = 'eyJhbGciOiJIUzUxMiJ9.ZXlKaGJHY2lPaUprYVhJaUxDSmxibU1pT2lKQk1USTRRMEpETFVoVE1qVTJJbjAuLm5wb1d2bGJrb19zMXd0WEpvbXJjTkEuSzJVODIzZXFKcTgxZmNSTTNQZUZMWlAzalRqTnJGNzBEczFPc0x1bUhUN19UQ2F4ejBoSXlpNVFzM0FVZWl1N0dSV0VtbDh1TWZ5R3o1YTFjcTZSUEppZFVHbGJMcWw3QnR5SG1wRjJMUlVCM3FKZ3lQVHRqR3VpWVF1V3ZrQ2hTUEgtVk4tTW9jM3RUWlJjNXhUU0ttcDVqVm9IeG8xS29YSGI2S1YzaDdQc2tHcUVGajJ6YTdQRVlicjZrRlF0LnVGQnJRaHY2NDBGMmV0OWVjUVBqdGc.FxyoisWuhfCyVORF_qY6Umvd4p64MBcLbLWECzl_Hw5VJN93YOHQnhCdvCmFRcBbEQtZOCB-dAmiHaBBJn0RTA'
 
         # check if user already exists in db
         session = get_session()

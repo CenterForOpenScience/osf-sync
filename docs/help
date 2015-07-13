@@ -6,6 +6,7 @@
 6) asyncio.Queue for remote (can yield from asyncio.Queue.pop)
     structure is watch -> do stuff :: do stuff <- watch
 7) make MainWindow main thing. all else run as children.
+    will still run
 8) flake8
 9) snakecase(underscore everything)                                                                                     DONE
 10) all file names should be lower case

@@ -4,7 +4,7 @@ import os
 from watchdog.observers import Observer
 from sqlalchemy.orm.exc import MultipleResultsFound
 from sqlalchemy.orm.exc import NoResultFound
-from osfoffline.sync_local_filesytem_and_db import determine_new_events
+# from osfoffline.sync_local_filesytem_and_db import determine_new_events
 import logging
 import json
 import subprocess
@@ -19,7 +19,7 @@ __author__ = 'himanshu'
 
 
 class OSFController(QDialog):
-    def __init__(self, app_name, app_author, ):
+    def __init__(self, app_name, app_author):
         super().__init__()
         # logging.basicConfig(level=logging.DEBUG)
         self.app_name = app_name

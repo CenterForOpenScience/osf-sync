@@ -42,28 +42,23 @@ class Poll(object):
 
         # todo: make headers be from a remote desktop client
         # todo: make a method make_request that handles putting in header. puts in Auth. streams. async.
-
+        self.request_session = None
         self.headers = {
-            # 'Host': 'staging2.osf.io',
-            # 'User-Agent': 'Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:38.0) Gecko/20100101 Firefox/38.0',
-            # 'Accept': 'application/json',
-            # 'Accept-Language': 'en-US,en;q=0.5',
-            # 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
-            # 'Referer': 'https://staging2.osf.io/api/v2/docs/',
-            # 'X-CSRFToken': 'qnlWxEzFMyJ5GH7tWv842vdocXPcwZfK',
-            # this last one is key!
-            'Cookie': 'osf_staging2=559c6834404f7702fafae988.8McbBgBvu98W-KKYfNEBz5FNSSo;',
-            # this one is key for files
-            'Authorization': 'Bearer {}'.format(self.user.oauth_token)
+                'Cookie': 'osf_staging2=55a3d4f3404f7756a1d84d32.iHwM3kRshA2P8TVJq2i0J7iNxgY;',  # for v1 api
+                'Authorization': 'Bearer {}'.format(self.user.oauth_token)  # for v2 api
         }
-
         self._loop = loop or asyncio.get_event_loop()
 
     def stop(self):
         # todo: can I remove _keep_running?????
         self._keep_running = False
+
+        # fixme: how do guarantee stopping and closing the loop
         self._loop.stop()
-        self._loop.close()
+        if self._loop.is_running():
+            self._loop.stop()
+        if not self._loop.is_running():
+            self._loop.close()
         # self._loop.close()
 
     def start(self):
@@ -75,8 +70,10 @@ class Poll(object):
 
     def get_remote_user(self):
         print("checking projects of user with id {}".format(self.user_osf_id))
-        resp = requests.get('https://staging2.osf.io:443/api/v2/users/{}/'.format(self.user_osf_id),
-                            headers=self.headers)
+        # resp = make_request()requests.get('https://staging2.osf.io:443/api/v2/users/{}/'.format(self.user_osf_id),
+        #                     headers=self.headers)
+        url = 'https://staging2.osf.io:443/api/v2/users/{}/'.format(self.user_osf_id)
+        resp = requests.get(url, headers=self.headers)
         if resp.ok:
             return resp.json()['data']
         else:
@@ -180,7 +177,7 @@ class Poll(object):
         while self._keep_running:
             # get remote projects
             remote_projects = self.get_all_paginated_members(projects_for_user_url)
-
+            print("REMOTE PROJECTS  DO EXIST!!!!!{}".format(remote_projects))
             # todo: figure out how to actually get top level nodes. FOR NOW, I am just filtering by category = projects in response.
             temp = []
             for remote in remote_projects:
@@ -198,14 +195,14 @@ class Poll(object):
             # nodes files.
             # ALSO: this probably means I can't delete nodes for now.
             for local, remote in local_remote_projects:
-                if local is None and remote is None:
-                    raise ValueError('whats going on bro????. both dont exist')
-                elif local is None:
-                    self.create_local_node()
-                elif remote is None:
-                    self.create_remote_node()
-                else:
-                    logs = self.get_logs(local.osf_id)
+                # if local is None and remote is None:
+                #     raise ValueError('whats going on bro????. both dont exist')
+                # elif local is None:
+                #     self.create_local_node()
+                # elif remote is None:
+                #     self.create_remote_node()
+                # else:
+                #     logs = self.get_logs(local.osf_id)
 
                 # optimization: could check date modified of top level
                 # and if not modified then don't worry about children
@@ -338,8 +335,10 @@ class Poll(object):
             remote_children = self.get_all_paginated_members(remote_file_folder['links']['related'])
             local_remote_file_folders = self.make_local_remote_tuple_list(local_file_folder.files, remote_children)
             for local, remote in local_remote_file_folders:
-                self._check_file_folder(local, remote, local_parent_file_folder=local_file_folder,
-                                        remote_parent_folder=remote_file_folder, local_node=local_node)
+                self._check_file_folder(local,
+                                        remote,
+                                        local_parent_file_folder=local_file_folder,
+                                        local_node=local_node)
 
     def get_all_paginated_members(self, remote_url):
         remote_children = []
@@ -349,13 +348,14 @@ class Poll(object):
             return remote_children
 
         try:
+            # fixme: obviously reassigning to same variable.
             resp = requests.get(remote_url, headers=self.headers).json()
+            # resp = resp.json()
             remote_children.extend(resp['data'])
             while resp['links']['next'] is not None:
                 resp = requests.get(resp['links']['next'], headers=self.headers).json()
                 remote_children.extend(resp['data'])
         except:
-
             print('couldnt get subfolder and subfiles. no permission.')
         return remote_children
 
@@ -560,16 +560,17 @@ class Poll(object):
             'provider': local_file_folder.provider,
             'nid': local_node.osf_id
         }
-        # print(params)
+
         params_string = '&'.join([k + '=' + v for k, v in params.items()])
         files_url = 'https://staging2-files.osf.io/file'  # todo: make this global
         file_url = files_url + '?' + params_string
-        # print(file_url)
 
+        resp = None
         if local_file_folder.type == File.FOLDER:
             resp = requests.post(file_url, headers=self.headers)
         elif local_file_folder.type == File.FILE:
             # https://github.com/kennethreitz/requests/issues/2639 issue when file has non-ascii characters.
+
             try:
                 # fixme: UnicodeDecodeError occured once. WHY?????? requests should handle it. idk.
                 files = {'file': open(local_file_folder.path)}
@@ -577,8 +578,10 @@ class Poll(object):
             except UnicodeDecodeError:
                 files = {'file': open(local_file_folder.path).read()}
                 resp = requests.put(file_url, headers=self.headers, files=files)  # try 2
+            except FileNotFoundError:
+                print('file not created on remote server because does not exist locally.')
 
-        if resp.ok:
+        if resp and resp.ok:
             remote_file_folder = resp.json()
 
             # add additional fields to make it like a regular remote_file_folder
@@ -900,11 +903,16 @@ class Poll(object):
 
     @asyncio.coroutine
     def make_request(self, url, method='GET'):
-
-        yield aiohttp.request(
+        print('in make request')
+        if not self.request_session:
+            headers = {
+                'Cookie': 'osf_staging2=559c6834404f7702fafae988.8McbBgBvu98W-KKYfNEBz5FNSSo;',  # for v1 api
+                'Authorization': 'Bearer {}'.format(self.user.oauth_token)  # for v2 api
+            }
+            self.request_session = aiohttp.client.ClientSession(loop=self._loop, headers=headers)
+        yield from self.request_session.request(
             method,
-            url,
-            headers={'Authorization': 'Bearer {}'.format(self.user.oauth_token)}
+            url
         )
 
     def local_remote_etag_are_diff(self, local_file, remote_file):
