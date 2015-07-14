@@ -49,6 +49,7 @@ class Poll(object):
         }
         self._loop = loop or asyncio.get_event_loop()
 
+
     def stop(self):
         # todo: can I remove _keep_running?????
         self._keep_running = False
@@ -84,7 +85,7 @@ class Poll(object):
         This function determines the rules to get the id for a local or remote representation of nodes/files.
         The ways to get the id differ based on the input item type:
             local node -> osf_id ( this is node id (nid) on the OSF )
-            local file -> hash(node.osf_id, provider name, osf path)
+            local file -> osf_path (this is osf_path)hash(node.osf_id, provider name, osf path)
                 ( note, osf path is the 'path' variable provided by waterbutler. It is represented as '/<unique waterbutler identifier>'
             remote node -> id (this is the node if (nid) on the OSF )
             remote file -> path ( this is the path ( '/<unique waterbutler identifier>' ) on the OSF )
@@ -99,7 +100,7 @@ class Poll(object):
             elif item['type'] == 'files':
                 # !!!!!fixme: this is a cheatcode!!!! for here, we are using path+item_type for here only for identifying purposes
                 # fixme: doesn't work for when type/path is modified
-                return str(hash(item['path'] + item['item_type']))
+                return item['path']
             else:
                 raise ValueError(item['type'] + 'is not handled')
         elif isinstance(item, Base):
@@ -177,7 +178,6 @@ class Poll(object):
         while self._keep_running:
             # get remote projects
             remote_projects = self.get_all_paginated_members(projects_for_user_url)
-            print("REMOTE PROJECTS  DO EXIST!!!!!{}".format(remote_projects))
             # todo: figure out how to actually get top level nodes. FOR NOW, I am just filtering by category = projects in response.
             temp = []
             for remote in remote_projects:
@@ -298,7 +298,7 @@ class Poll(object):
         (local, remote) -> check modifications      --
 
         """
-        assert (local_file_folder is not None) or (remote_file_folder is not None)  # both shouldnt be None.
+        assert local_file_folder or remote_file_folder  # both shouldnt be None.
 
         print('checking file_folder internal')
         if local_file_folder is None:
@@ -356,7 +356,7 @@ class Poll(object):
                 resp = requests.get(resp['links']['next'], headers=self.headers).json()
                 remote_children.extend(resp['data'])
         except:
-            print('couldnt get subfolder and subfiles. no permission.')
+            print('couldnt get subfolder and subfiles inside get_all_paginated_members for remote_url {}'.format(remote_url))
         return remote_children
 
     # Create
@@ -409,24 +409,21 @@ class Poll(object):
             assert local_node.category == Node.COMPONENT
             # fixme: THIS IS SOOOOOOOOOO  BROKEN!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
             # todo: make this part A LOT better once api does it.
-            console_log('create remote node', 'creating component')
+
 
             url = 'https://staging2.osf.io/{}/newnode/'.format(remote_parent_node['id'])
-            console_log('url', url)
+
             resp = requests.post(url, data=data, headers=self.headers)
-            # console_log('resp.content',resp.content)
+
 
             # request does not return json.
             # request does have location field that does have node id of the new node.
             if resp.ok:
-                console_log('resp.headers', resp.headers)
+
+                local_node.osf_id = resp.url.split('/')[-2]
+                local_node.locally_created = False
+                self.save(local_node)
                 # location header should have node id: https://staging2.osf.io/yz8eh/
-                # nid = resp.headers['Location'].split('/')[-2]
-
-                # console_log('nid',nid)
-                # remote_node = requests.get('https://staging2.osf.io:443/api/v2/nodes/{}/'.format(nid), headers=self.headers)
-                # console_log('remote_node',remote_node)
-
                 return
             else:
                 raise ValueError('remote node not created:{}'.format(resp.content))
@@ -555,31 +552,30 @@ class Poll(object):
         else:
             path = '/{}'.format(local_file_folder.name)
         params = {
-            # fixme: path is probably incorrect. fix it.
             'path': path,
             'provider': local_file_folder.provider,
             'nid': local_node.osf_id
         }
 
-        params_string = '&'.join([k + '=' + v for k, v in params.items()])
+        # params_string = '&'.join([k + '=' + v for k, v in params.items()])
         files_url = 'https://staging2-files.osf.io/file'  # todo: make this global
-        file_url = files_url + '?' + params_string
+        # file_url = files_url + '?' + params_string
 
         resp = None
         if local_file_folder.type == File.FOLDER:
-            resp = requests.post(file_url, headers=self.headers)
+            resp = requests.post(files_url, params=params, headers=self.headers)
         elif local_file_folder.type == File.FILE:
             # https://github.com/kennethreitz/requests/issues/2639 issue when file has non-ascii characters.
 
             try:
                 # fixme: UnicodeDecodeError occured once. WHY?????? requests should handle it. idk.
                 files = {'file': open(local_file_folder.path)}
-                resp = requests.put(file_url, headers=self.headers, files=files)  # try 1
+                resp = requests.put(files_url, params=params, headers=self.headers, files=files)  # try 1
             except UnicodeDecodeError:
                 files = {'file': open(local_file_folder.path).read()}
-                resp = requests.put(file_url, headers=self.headers, files=files)  # try 2
+                resp = requests.put(files_url, params=params, headers=self.headers, files=files)  # try 2
             except FileNotFoundError:
-                print('file not created on remote server because does not exist locally.')
+                print('file not created on remote server because does not exist locally. inside create_remote_file_folder')
 
         if resp and resp.ok:
             remote_file_folder = resp.json()
@@ -620,7 +616,7 @@ class Poll(object):
         try:
             os.renames(old_path, local_node.path)
         except FileNotFoundError:
-            print('renaming of file failed because file not there.')
+            print('renaming of file failed because file not there. inside modify_local_node')
 
     def modify_remote_node(self, local_node, remote_node):
         print('modify_remote_node')
@@ -644,13 +640,18 @@ class Poll(object):
     def modify_file_folder_logic(self, local_file_folder, remote_file_folder):
         updated_remote_file_folder = None
         if local_file_folder.type == File.FILE:
+            console_log('okay, figure out where we are in code','1')
             # todo: hash? etag doesnt work. etag = hash(version, path) which is not helpful. already handle path. version does not match with local.
             # if self.local_remote_etag_are_diff(local_file_folder, remote_file_folder):
             if self.local_is_newer(local_file_folder, remote_file_folder):
                 # todo: broken
+                console_log('okay, figure out where we are in code','2')
                 updated_remote_file_folder = self.modify_remote_file_folder(local_file_folder, remote_file_folder)
             elif self.remote_is_newer(local_file_folder, remote_file_folder):
+                console_log('okay, figure out where we are in code','3')
                 self.modify_local_file_folder(local_file_folder, remote_file_folder)
+            # elif local_file_folder.name != remote_file_folder['title']:
+
 
         elif local_file_folder.type == File.FOLDER:
             if local_file_folder.name != remote_file_folder['name']:
@@ -658,8 +659,7 @@ class Poll(object):
                 # fixme: we do not have size or date modified of remote folder.
                 # fixme: for now, we just always push to remote
                 # if self.local_is_newer(local_file_folder, remote_file_folder):
-                #     pass #todo: broken
-                print('DEBUG:modify_file_folder_logic:local_file_folder.name:{}'.format(local_file_folder.name))
+                #     pass # todo: broken
                 updated_remote_file_folder = self.modify_remote_file_folder(local_file_folder, remote_file_folder)
                 # elif self.remote_is_newer(local_file_folder, remote_file_folder):
                 #     self.modify_local_file_folder(local_file_folder, remote_file_folder)
@@ -687,7 +687,7 @@ class Poll(object):
             try:
                 os.renames(old_path, local_file_folder.path)
             except FileNotFoundError:
-                print('folder not modified because doesnt exist')
+                print('folder not modified because doesnt exist. inside modify_local_file_folder (1)')
         elif local_file_folder.type == File.FILE:
             # todo: need the db file to be updated to show that its timestamp is in fact updated.
             # todo: can read this: http://docs.sqlalchemy.org/en/improve_toc/orm/events.html
@@ -702,11 +702,14 @@ class Poll(object):
                         fd.write(chunk)
             # file was deleted locally.
             except FileNotFoundError:
-                print('file not updated locally because it doesnt exist')
+                print('file not updated locally because it doesnt exist. inside modify_local_file_folder (2)')
 
     def modify_remote_file_folder(self, local_file_folder, remote_file_folder):
-        print('modify_remote_file_folder. NOTE: this calls create_remote_file_folder and delete_file_folder')
+        print('modify_remote_file_folder. NOTE: this MAY also calls create_remote_file_folder')
         assert isinstance(local_file_folder, File)
+        assert isinstance(remote_file_folder, dict)
+        assert remote_file_folder['type'] == 'files'
+        assert remote_file_folder['path'] == local_file_folder.osf_path
 
         # alerts
         alerts.info(local_file_folder.name, alerts.MODIFYING)
@@ -720,7 +723,9 @@ class Poll(object):
             # fixme: create_remote_file_folder expects the local_file_folder to be .locally_created. thus make it true for now
             local_file_folder.locally_created = True
             new_remote_file_folder = self.create_remote_file_folder(local_file_folder, local_node)
-        else:
+
+        # handle renaming for both files and folders
+        if local_file_folder.name != remote_file_folder['name']:
             # OSF allows you to manually rename a folder. Use That.
             url = 'https://staging2-files.osf.io/ops/move'
             data = {
@@ -741,15 +746,15 @@ class Poll(object):
             resp = requests.post(url, headers=self.headers, data=json.dumps(data))
             if resp.ok:
                 # get the updated remote folder
-                print('debug: resp.content:{}'.format(resp.content))
+
                 # inner_response = requests.get(remote_file_folder['links']['self'], headers=self.headers).json()
                 # we know exactly what changed, so its faster to just change the remote dictionary rather than making a new api call.
-                print(new_remote_file_folder)
+
                 new_remote_file_folder['name'] = data['rename']
-                print(new_remote_file_folder)
+
 
             else:
-                raise ValueError('folder not renamed: {}'.format(resp.content))
+                raise ValueError('file/folder not renamed: {}'.format(resp.content))
 
         return new_remote_file_folder
 
@@ -816,12 +821,12 @@ class Poll(object):
             # todo: avoids_symlink_attacks: https://docs.python.org/3.4/library/shutil.html#shutil.rmtree.avoids_symlink_attacks
             # todo: make better error handling.
             shutil.rmtree(path,
-                          onerror=lambda a, b, c: print('delete local folder failed because folder already deleted'))
+                          onerror=lambda a, b, c: print('delete local folder failed because folder already deleted. inside delete_local_file_folder(1)'))
         else:
             try:
                 os.remove(path)
             except FileNotFoundError:
-                print('file not deleted because does not exist on local filesystem')
+                print('file not deleted because does not exist on local filesystem. inside delete_local_file_folder (2)')
 
     def delete_remote_file_folder(self, local_file_folder, remote_file_folder):
         print('delete_remote_file_folder')
@@ -834,7 +839,6 @@ class Poll(object):
         alerts.info(local_file_folder.name, alerts.DELETING)
 
         url = remote_file_folder['links']['self'].split('&cookie=')[0]
-        print("DEBUG: url in delete_remote_file_folder:{}".format(url))
         resp = requests.delete(url, headers=self.headers)
         if resp.ok:
             local_file_folder.deleted = False
@@ -862,6 +866,7 @@ class Poll(object):
         local_time = local.date_modified.replace(tzinfo=pytz.utc)
         if remote['type'] == 'files' and remote['item_type'] == 'file':
             try:
+                console_log('remote[metadata][modified]',remote['metadata']['modified'])
                 remote_time = self.remote_to_local_datetime(remote['metadata']['modified'])
             # more general way to handle when remote['metadata']['modified'] is None
             except iso8601.ParseError:
@@ -869,18 +874,32 @@ class Poll(object):
         # elif remote['type']=='files' and remote['item_type'] == 'folder':
         #     remote_time = None
         else:
-            print('DEBUG: _get_local_remote_times:remote:{}'.format(str(remote)))
             remote_time = self.remote_to_local_datetime(remote['date_modified'])
+
+        if not remote_time:
+            url = 'https://staging2-files.osf.io/revisions'
+            params = {
+                'path':local.osf_path,
+                'provider':local.provider,
+                'nid':local.node.osf_id,
+            }
+            resp = requests.get(url, params=params, headers=self.headers)
+            if resp.ok:
+                time_modified = resp.json()['data'][0]['modified']
+                for revision in resp.json()['data']:
+                    assert self.remote_to_local_datetime(time_modified) >= self.remote_to_local_datetime(revision['modified'])
+                remote_time = self.remote_to_local_datetime(time_modified)
         return local_time, remote_time
 
     def local_is_newer(self, local, remote):
         local_time, remote_time = self._get_local_remote_times(local, remote)
-
+        console_log('okay, figure out where we are in code','4')
+        console_log('local_time',local_time)
+        console_log('remote_time',remote_time)
         # fixme: for now, if remote is None, then most recent is whichever one is bigger.
         if remote_time is None:
+            console_log('remote_time', remote_time)
             if remote['type'] == 'files' and remote['item_type'] == 'file':
-                print('DEBUG: local_is_newer: look at this as well: local.size:{}, remote[metadata][size]:{}'
-                      .format(local.size, remote['metadata']['size']))
                 return local.size > remote['metadata']['size']
 
         return local_time > remote_time
@@ -890,8 +909,6 @@ class Poll(object):
         # fixme: what should remote_time is None do???
         if remote_time is None:
             if remote['type'] == 'files' and remote['item_type'] == 'file':
-                print('DEBUG: remote_is_newer: look at this as well: local.size:{}, remote[metadata][size]:{}'.format(
-                    local.size, remote['metadata']['size']))
                 return local.size < remote['metadata']['size']
         return local_time < remote_time
 
@@ -903,7 +920,7 @@ class Poll(object):
 
     @asyncio.coroutine
     def make_request(self, url, method='GET'):
-        print('in make request')
+
         if not self.request_session:
             headers = {
                 'Cookie': 'osf_staging2=559c6834404f7702fafae988.8McbBgBvu98W-KKYfNEBz5FNSSo;',  # for v1 api
@@ -975,7 +992,7 @@ class Poll(object):
         resp = requests.get(url, headers=headers)
         if resp.ok:
             return resp.json()
-            # pprint(resp.json())
+
 
 
 def console_log(variable_name, variable_value):

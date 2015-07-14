@@ -32,24 +32,26 @@ class OSFController(QDialog):
 
         self.create_configs()
 
-    def start(self):
         self.loop = self.ensure_event_loop()
+
+    def start(self):
+
         # self.createConfigs()
         self.session = models.get_session()
         self.user = self.get_current_user()
         if self.user:
-            self.containing_folder = os.path.dirname(self.user.osf_path)
+            self.containing_folder = os.path.dirname(self.user.osf_local_folder_path)
             if not self.containing_folder_is_set():
                 self.set_containing_folder()
-            self.user.osf_path = os.path.join(self.containing_folder, "OSF")
+            self.user.osf_local_folder_path = os.path.join(self.containing_folder, "OSF")
             self.save(self.user)
 
             # todo: handle if OSF folder does not exist. OR if user wants custom OSF folder
-            if not os.path.isdir(self.user.osf_path):
-                os.makedirs(self.user.osf_path)
+            if not os.path.isdir(self.user.osf_local_folder_path):
+                os.makedirs(self.user.osf_local_folder_path)
             self.start_logging()
             # todo: remove self.OSFFolder and replace all usages of it with self.user.osf_path
-            self.osf_folder = self.user.osf_path
+            self.osf_folder = self.user.osf_local_folder_path
             self.start_observing_osf_folder()
             # self.preferences = Preferences(self.containingFolder, self.event_handler.data['data'])
             self.start_polling_server()

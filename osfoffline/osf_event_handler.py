@@ -7,7 +7,7 @@ from models import User, Node, File, get_session
 import os
 import logging
 import asyncio
-
+from path import ProperPath
 EVENT_TYPE_MOVED = 'moved'
 EVENT_TYPE_DELETED = 'deleted'
 EVENT_TYPE_CREATED = 'created'
@@ -77,23 +77,25 @@ class OSFEventHandler(FileSystemEventHandler):
 
         # todo: handle renamed!!!!!!!!!
         try:
-            console_log('start on moved','')
+            src_path = ProperPath(event.src_path, event.is_directory)
+            dest_path = ProperPath(event.dest_path, event.is_directory)
+
             # determine and get what moved
-            item = self.get_item_by_path(event.src_path)
-            console_log('item',item)
+            item = self.get_item_by_path(src_path)
+
 
             # update item's position
             try:
-                item.parent = self._get_parent_item_from_path(event.dest_path)
+                item.parent = self._get_parent_item_from_path(dest_path)
                 console_log('item.parent',item.parent)
             except FileNotFoundError:
                 item.parent = None
 
             # rename folder
-            if isinstance(item, Node) and item.title != os.path.basename(event.dest_path):
-                item.title = os.path.basename(event.dest_path)
-            elif isinstance(item, File) and item.name != os.path.basename(event.dest_path):
-                item.name = os.path.basename(event.dest_path)
+            if isinstance(item, Node) and item.title != dest_path.name:
+                item.title = dest_path.name
+            elif isinstance(item, File) and item.name != dest_path.name:
+                item.name = dest_path.name
             else:
                 raise ValueError('some messed up thing was moved')
 
@@ -117,12 +119,13 @@ class OSFEventHandler(FileSystemEventHandler):
         try:
             # logging.info("Created %s: %s", what, event.src_path)
 
-            name = os.path.basename(event.src_path)
+            src_path = ProperPath(event.src_path, event.is_directory)
+            name = src_path.name
 
             # create new model
-            if not self.already_exists(event.src_path):
+            if not self.already_exists(src_path):
                 # if folder and in top level OSF FOlder, then project
-                if os.path.samefile(os.path.dirname(event.src_path), self.osf_folder) :
+                if src_path.parent == ProperPath(self.osf_folder, True):
                     if event.is_directory:
                         project = Node(title=name, category=Node.PROJECT, user=self.user, locally_created=True)
                         # save
@@ -133,10 +136,14 @@ class OSFEventHandler(FileSystemEventHandler):
 
                 elif event.is_directory:
 
-                    if File.DEFAULT_PROVIDER in event.src_path:  # folder
+                    if File.DEFAULT_PROVIDER in src_path.full_path:  # folder
+                        containing_item = self._get_parent_item_from_path(src_path)
+                        if isinstance(containing_item, Node):
+                            node = containing_item
+                        elif isinstance(containing_item, File):
+                            node = containing_item.node
                         folder = File(name=name, type=File.FOLDER, user=self.user, locally_created=True,
-                                      provider=File.DEFAULT_PROVIDER)
-                        containing_item = self._get_parent_item_from_path(event.src_path)
+                                      provider=File.DEFAULT_PROVIDER, node=node)
                         containing_item.files.append(folder)
                         self.save(folder)
                     else:  # component
@@ -148,7 +155,7 @@ class OSFEventHandler(FileSystemEventHandler):
                             user=self.user
                         )
                         console_log('new_component.title', new_component.title)
-                        parent_component = self._get_parent_item_from_path(event.src_path)
+                        parent_component = self._get_parent_item_from_path(src_path)
 
                         parent_component.components.append(new_component)
                         self.save(new_component)
@@ -158,7 +165,7 @@ class OSFEventHandler(FileSystemEventHandler):
                 else:  # if file, then file.
                     file = File(name=name, type=File.FILE, user=self.user, locally_created=True,
                                 provider=File.DEFAULT_PROVIDER)
-                    containing_item = self._get_parent_item_from_path(event.src_path)
+                    containing_item = self._get_parent_item_from_path(src_path)
                     containing_item.files.append(file)
                     self.save(file)
 
@@ -191,11 +198,10 @@ class OSFEventHandler(FileSystemEventHandler):
 
         # logging.info("Modified %s: %s", what, event.src_path)
 
-        # todo: change all path comparisons to os.path.samefile
+        src_path = ProperPath(event.src_path, event.is_directory)
         # whenever anything gets modified, watchdog crawls up the folder tree all the way up to the osf folder
         # handle osf folder changing or not changing
-        if os.path.exists(event.src_path) and os.path.exists(self.osf_folder) and os.path.samefile(event.src_path,
-                                                                                                   self.osf_folder):
+        if src_path == ProperPath(self.osf_folder, True):
             return  # ignore
             # note: if the OSF folder name is changed, that is NOT modified, but rather move.
             # note: when folder recursively delete, the top folder is modified then removed.
@@ -205,7 +211,7 @@ class OSFEventHandler(FileSystemEventHandler):
             # update model
 
             # get item
-            item = self.get_item_by_path(event.src_path)
+            item = self.get_item_by_path(src_path)
 
             # update hash
             item.update_hash()
@@ -231,12 +237,11 @@ class OSFEventHandler(FileSystemEventHandler):
             :class:`DirDeletedEvent` or :class:`FileDeletedEvent`
         """
 
-        what = 'directory' if event.is_directory else 'file'
-        logging.info("Deleted %s: %s", what, event.src_path)
+        src_path = ProperPath(event.src_path, event.is_directory)
 
         try:
             # get item
-            item = self.get_item_by_path(event.src_path)
+            item = self.get_item_by_path(src_path)
 
             # put item in delete state
             item.locally_deleted = True
@@ -252,24 +257,23 @@ class OSFEventHandler(FileSystemEventHandler):
 
     # todo: simplify this. perhaps can use rstrip(os.seperator) but unclear if this leads to issues???
     def _get_parent_item_from_path(self, path):
-        containing_folder_path = os.path.dirname(path)
+        assert isinstance(path, ProperPath)
+        containing_folder_path = path.parent
 
-        if os.path.samefile(containing_folder_path, self.osf_folder):
+        if containing_folder_path == ProperPath(self.osf_folder, True):
             raise FileNotFoundError
-        # what can happen is that the rightmost
-        try:
-            return self.get_item_by_path(containing_folder_path)
-        except FileNotFoundError:
-            containing_folder_path = os.path.dirname(containing_folder_path)
-            return self.get_item_by_path(containing_folder_path)
+
+        return self.get_item_by_path(containing_folder_path)
 
     # todo: figure out how you can improve this
     def get_item_by_path(self, path):
+        assert isinstance(path, ProperPath)
         for node in self.session.query(Node):
-            if node.path == path:
+            if ProperPath(node.path, True) == path:
                 return node
         for file_folder in self.session.query(File):
-            if file_folder.path == path:
+            file_path = ProperPath(file_folder.path, file_folder.type == File.FOLDER)
+            if file_path == path:
                 return file_folder
         raise FileNotFoundError
 
@@ -288,20 +292,13 @@ class OSFEventHandler(FileSystemEventHandler):
                 handler(event)
             )
 
-    def normalize_path(self, path, is_dir):
-        normalized_path = path
-        # if path.endswith(os.sep) and is_dir:
-        #     pass
-        # elif path.endswith(os.sep) and not is_dir:
-        #     normalized_path = path[0:-1* len(os.sep)]  # remove seperator
-        # elif not path.endswith(os.sep) and is_dir:
-        #     normalized_path = os.path.join(path, os.sep)  # add seperator
-        # elif not path.endswith(os.sep) and not is_dir:
-        #     pass
-        if path.endswith(os.sep) and not is_dir:
-            normalized_path = path[0:-1* len(os.sep)]  # remove seperator
-        elif not path.endswith(os.sep) and is_dir:
-            normalized_path = os.path.join(path, os.sep)  # add seperator
-
-        return normalized_path
+    # def normalize_path(self, path, is_dir):
+    #     normalized_path = path
+    #
+    #     if path.endswith(os.sep) and not is_dir:
+    #         normalized_path = path[0:-1* len(os.sep)]  # remove seperator
+    #     elif not path.endswith(os.sep) and is_dir:
+    #         normalized_path = os.path.join(path, '')  # add seperator
+    #
+    #     return normalized_path
 

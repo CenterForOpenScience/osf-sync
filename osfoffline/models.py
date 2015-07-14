@@ -18,7 +18,7 @@ class User(Base):
     full_name = Column(String)
     osf_login = Column(String, unique=True)
     osf_password = Column(String)
-    osf_path = Column(String)
+    osf_local_folder_path = Column(String)
     oauth_token = Column(String)
     osf_id = Column(String)
 
@@ -51,8 +51,8 @@ class User(Base):
         return projects
 
     def __repr__(self):
-        return "<User(fullname={}, osf_password={}, osf_path={})>".format(
-            self.full_name, self.osf_password, self.osf_path)
+        return "<User(fullname={}, osf_password={}, osf_local_folder_path={})>".format(
+            self.full_name, self.osf_password, self.osf_local_folder_path)
 
 
 # class Log(Base):
@@ -114,7 +114,7 @@ class Node(Base):
         if self.parent:
             return os.path.join(self.parent.path, self.title)
         else:
-            return os.path.join(self.user.osf_path, self.title)
+            return os.path.join(self.user.osf_local_folder_path, self.title)
 
     @hybrid_property
     def top_level_file_folders(self):

@@ -71,7 +71,7 @@ class StartScreen(QDialog):
                 full_name=full_name,
                 osf_id=osf_id,
                 osf_login=user_name,
-                osf_path='',
+                osf_local_folder_path='',
                 oauth_token=oauth_token,
                 osf_password=password
             )

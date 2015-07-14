@@ -105,3 +105,10 @@ class StateError(Exception):
 
 class LocalAndRemoteNone(StateError):
     pass
+
+# Path
+class PathError(Exception):
+    pass
+
+class InvalidPathError(PathError):
+    pass
