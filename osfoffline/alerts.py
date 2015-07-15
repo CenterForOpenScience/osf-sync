@@ -29,12 +29,12 @@ def info(file_name, action):
         }
 
         text = "{} {}".format(title[action], file_name)
-        alert_icon.showMessage(
-            text,
-            "      - OSF Offline",  # todo: there is some way to format strings in pyqt. how again?
-            QSystemTrayIcon.NoIcon,
-            1000  # fixme: currently, I have NO control over duration of alert.
-        )
+        # alert_icon.showMessage(
+        #     text,
+        #     "      - OSF Offline",  # todo: there is some way to format strings in pyqt. how again?
+        #     QSystemTrayIcon.NoIcon,
+        #     1000  # fixme: currently, I have NO control over duration of alert.
+        # )
 
 # if __name__=="__main__":
 # app = QApplication(sys.argv)

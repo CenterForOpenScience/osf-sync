@@ -5,7 +5,7 @@ from views.preferences import Preferences
 from views.system_tray import SystemTray
 from controller import OSFController
 from views.start_screen import StartScreen
-from alerts import Alert
+import alerts
 import sys
 
 
@@ -25,7 +25,7 @@ class OSFApp(QDialog):
         self.tray = SystemTray()
         # todo: remove priority abilities
         self.preferences = Preferences(self.controller.containing_folder)
-        self.alerts = Alert(self.tray.tray_icon, self.controller.loop)
+        alerts.setup_alerts(self.tray.tray_icon)
 
         # connect all signal-slot pairs
         self.setup_connections()
@@ -33,7 +33,6 @@ class OSFApp(QDialog):
         # self.thread = threading.Thread(target=self.controller.start)
 
     def start(self):
-        self.alerts.start()
         t = threading.Thread(target=self.controller.start)
         t.start()
 

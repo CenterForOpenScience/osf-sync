@@ -77,31 +77,35 @@ class OSFEventHandler(FileSystemEventHandler):
 
         # todo: handle renamed!!!!!!!!!
         try:
+            console_log('1','1')
             src_path = ProperPath(event.src_path, event.is_directory)
+            console_log('2','2')
             dest_path = ProperPath(event.dest_path, event.is_directory)
-
+            console_log('3','3')
             # determine and get what moved
             item = self.get_item_by_path(src_path)
-
+            console_log('4','4')
 
             # update item's position
             try:
                 item.parent = self._get_parent_item_from_path(dest_path)
-                console_log('item.parent',item.parent)
             except FileNotFoundError:
                 item.parent = None
+            console_log('5','5')
 
             # rename folder
             if isinstance(item, Node) and item.title != dest_path.name:
                 item.title = dest_path.name
             elif isinstance(item, File) and item.name != dest_path.name:
+                console_log('6','6')
                 item.name = dest_path.name
+                console_log('item.name',item.name)
             else:
                 raise ValueError('some messed up thing was moved')
 
             # todo: log
             # logging.info(item.)
-
+            console_log('7','7')
             # save
             self.save(item)
         except FileNotFoundError:
@@ -137,6 +141,7 @@ class OSFEventHandler(FileSystemEventHandler):
                 elif event.is_directory:
 
                     if File.DEFAULT_PROVIDER in src_path.full_path:  # folder
+                        console_log('src_path',src_path)
                         containing_item = self._get_parent_item_from_path(src_path)
                         if isinstance(containing_item, Node):
                             node = containing_item
@@ -147,25 +152,27 @@ class OSFEventHandler(FileSystemEventHandler):
                         containing_item.files.append(folder)
                         self.save(folder)
                     else:  # component
-                        console_log('start', 'debugging')
+
                         new_component = Node(
                             title=name,
                             category=Node.COMPONENT,
                             locally_created=True,
                             user=self.user
                         )
-                        console_log('new_component.title', new_component.title)
+
                         parent_component = self._get_parent_item_from_path(src_path)
 
                         parent_component.components.append(new_component)
                         self.save(new_component)
-                        console_log('parent_component.title', parent_component.title)
-                        console_log('parent_component.components', parent_component.components)
-                        console_log('parent_component.files', parent_component.files)
+
                 else:  # if file, then file.
-                    file = File(name=name, type=File.FILE, user=self.user, locally_created=True,
-                                provider=File.DEFAULT_PROVIDER)
                     containing_item = self._get_parent_item_from_path(src_path)
+                    if isinstance(containing_item, Node):
+                        node = containing_item
+                    elif isinstance(containing_item, File):
+                        node = containing_item.node
+                    file = File(name=name, type=File.FILE, user=self.user, locally_created=True,
+                                provider=File.DEFAULT_PROVIDER, node=node)
                     containing_item.files.append(file)
                     self.save(file)
 

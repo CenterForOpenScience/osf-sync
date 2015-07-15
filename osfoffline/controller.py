@@ -32,9 +32,11 @@ class OSFController(QDialog):
 
         self.create_configs()
 
-        self.loop = self.ensure_event_loop()
+
 
     def start(self):
+        #todo: put this ensure_event_loop code in __init__
+        self.loop = self.ensure_event_loop()
 
         # self.createConfigs()
         self.session = models.get_session()
