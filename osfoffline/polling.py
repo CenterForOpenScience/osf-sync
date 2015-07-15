@@ -3,7 +3,6 @@ import json
 import os
 import asyncio
 import shutil
-import requests
 import iso8601
 import pytz
 import aiohttp
@@ -14,25 +13,7 @@ import alerts
 OK = 200
 CREATED = 201
 ACCEPTED = 202
-
-# this code is for ssl errors that occur due to requests module:
-# http://stackoverflow.com/questions/14102416/python-requests-requests-exceptions-sslerror-errno-8-ssl-c504-eof-occurred
-import ssl
-from functools import wraps
-
-
-def sslwrap(func):
-    @wraps(func)
-    def bar(*args, **kw):
-        kw['ssl_version'] = ssl.PROTOCOL_TLSv1
-        return func(*args, **kw)
-
-    return bar
-
-
-ssl.wrap_socket = sslwrap(ssl.wrap_socket)
 RECHECK_TIME = 5  # in seconds
-
 
 
 class Poll(object):
@@ -48,8 +29,8 @@ class Poll(object):
         # todo: make a method make_request that handles putting in header. puts in Auth. streams. async.
 
         self.headers = {
-                'Cookie': 'osf_staging2=55a3d4f3404f7756a1d84d32.iHwM3kRshA2P8TVJq2i0J7iNxgY;',  # for v1 api
-                'Authorization': 'Bearer {}'.format(self.user.oauth_token)  # for v2 api
+            'Cookie': 'osf_staging2=55a3d4f3404f7756a1d84d32.iHwM3kRshA2P8TVJq2i0J7iNxgY;',  # for v1 api
+            'Authorization': 'Bearer {}'.format(self.user.oauth_token)  # for v2 api
         }
         self._loop = loop or asyncio.get_event_loop()
 
@@ -68,24 +49,28 @@ class Poll(object):
         # self._loop.close()
 
     def start(self):
-        remote_user = self.get_remote_user()
+        console_log('please','work')
+        # annoying and weird way to get the remote user from the coroutine
+
+        future = asyncio.Future()
+        asyncio.async(self.get_remote_user(future), loop=self._loop)
+        self._loop.run_until_complete(future)
+        remote_user =  future.result()
+        # remote_user = yield from future
+
+        console_log('remote_user',remote_user)
         self._loop.call_soon(
             asyncio.async,
             self.check_osf(remote_user)
         )
 
     #todo: make this use make_request() as well
-    def get_remote_user(self):
+    @asyncio.coroutine
+    def get_remote_user(self, future):
         print("checking projects of user with id {}".format(self.user_osf_id))
-
         url = 'https://staging2.osf.io:443/api/v2/users/{}/'.format(self.user_osf_id)
-
-        resp = requests.get(url, headers=self.headers)
-
-        if resp.ok:
-            return resp.json()['data']
-        else:
-            raise ValueError('could not get remote user with osf_id {}:{}'.format(self.user_osf_id, resp.content))
+        resp = yield from self.make_request(url, get_json=True)
+        future.set_result(resp['data'])
 
     def get_id(self, item):
         """
@@ -144,10 +129,20 @@ class Poll(object):
         local_remote_tuple_list = []
         i = 0
         while i < len(sorted_combined_list):
+
+
             both_exist = i + 1 < len(sorted_combined_list) and \
                 self.get_id(sorted_combined_list[i]) == \
                 self.get_id(sorted_combined_list[i + 1])
             if both_exist:
+                # console_log('self.get_id(sorted_combined_list[i])',self.get_id(sorted_combined_list[i]))
+                # console_log('self.get_id(sorted_combined_list[i+1])',self.get_id(sorted_combined_list[i+1]))
+                # console_log('both_exist',both_exist)
+
+                # console_log('note in next two console_logs, one should be local, other should be remote',' in any order')
+                # console_log('sorted_combined_list[i]',sorted_combined_list[i])
+                # console_log('sorted_combined_list[i+1]',sorted_combined_list[i+1])
+
                 # (local, remote)
                 if isinstance(sorted_combined_list[i], dict):  # remote
                     new_tuple = (sorted_combined_list[i + 1], sorted_combined_list[i])
@@ -155,15 +150,26 @@ class Poll(object):
                     new_tuple = (sorted_combined_list[i], sorted_combined_list[i + 1])
                 else:
                     raise TypeError('what the fudge did you pass in')
+                # console_log('new_tuple',new_tuple)
                 # add an extra 1 because both values should be added to tuple list
                 i += 1
             elif isinstance(sorted_combined_list[i], dict):
+                # console_log('self.get_id(sorted_combined_list[i])',self.get_id(sorted_combined_list[i]))
+                # console_log('remote exists only','')
+                # console_log('sorted_combined_list[i]',sorted_combined_list[i])
                 new_tuple = (None, sorted_combined_list[i])
+                # console_log('new_tuple',new_tuple)
             else:
+                # console_log('self.get_id(sorted_combined_list[i])',self.get_id(sorted_combined_list[i]))
+                # console_log('local exists only','')
+                # console_log('sorted_combined_list[i]',sorted_combined_list[i])
                 new_tuple = (sorted_combined_list[i], None)
+                # console_log('new_tuple',new_tuple)
             local_remote_tuple_list.append(new_tuple)
             i += 1
+        # console_log('local_remote_tuple_list',local_remote_tuple_list)
         for local, remote in local_remote_tuple_list:
+            # console_log('remote', remote)
             assert isinstance(local, Base) or local is None
             assert isinstance(remote, dict) or remote is None
             if isinstance(local, Base) and isinstance(remote, dict):
@@ -196,7 +202,7 @@ class Poll(object):
             local_projects = self.user.projects
 
             local_remote_projects = self.make_local_remote_tuple_list(local_projects, remote_projects)
-            console_log('remote_projects',remote_projects)
+
             # BUG: I think there is a bug in the API.
             # If I delete a component online, it still shows up in the parent node's children list in the API.
             # I don't know how to handle this issue. For now, I will just ignore the fail when getting that deleted
@@ -365,6 +371,8 @@ class Poll(object):
             remote_children.extend(resp['data'])
         # except:
         #     print('couldnt get subfolder and subfiles inside get_all_paginated_members for remote_url {}'.format(remote_url))
+        for child in remote_children:
+            assert isinstance(child, dict)
         return remote_children
 
     # Create
@@ -466,8 +474,11 @@ class Poll(object):
             osf_path=remote_file_folder['path'],
             user=self.user,
             parent=local_parent_folder,
-            node=local_node)
+            node=local_node
+        )
         self.save(new_file_folder)
+        if new_file_folder.name == 'LICENSE':
+            console_log('new_file_folder (inside create_local_file_folder)', new_file_folder)
 
         # alert
         alerts.info(new_file_folder.name, alerts.DOWNLOAD)
@@ -679,6 +690,7 @@ class Poll(object):
         local_file_folder.name = remote_file_folder['title']
         self.save(local_file_folder)
 
+
         # update local file system
         try:
             os.renames(old_path, local_file_folder.path)
@@ -700,8 +712,10 @@ class Poll(object):
         try:
             resp = yield from self.make_request(remote_file['links']['self'])
             # todo: which is better? 1024 or 2048? Apparently, not much difference.
+
             with open(local_file.path, 'wb') as fd:
                 while True:
+                    console_log('wrote 2048 chunk to file with path ',local_file.path)
                     chunk = yield from resp.content.read(2048)
                     if not chunk:
                         break
@@ -710,6 +724,7 @@ class Poll(object):
         # file was deleted locally.
         except FileNotFoundError:
             print('file not updated locally because it doesnt exist. inside modify_local_file_folder (2)')
+
     @asyncio.coroutine
     def update_remote_file(self, local_file, remote_file):
         print('update_remote_file')
@@ -730,13 +745,20 @@ class Poll(object):
         }
         files_url = 'https://staging2-files.osf.io/file'  # todo: make this global
 
-        remote_file_folder = {}
-        console_log('local_file.path',local_file.path)
+
+
         try:
+                console_log('this is where the error is','making some dumb temp file and breaking everything.')
                 file = open(local_file.path, 'rb')
-                console_log('file is here','file is here')
-                remote_file_folder = yield from self.make_request(files_url,method='PUT', params=params, data=file, get_json=True)
-                console_log('file done uploading',remote_file_folder)
+
+                remote_file_folder = yield from self.make_request(
+                    files_url,
+                    method='PUT',
+                    params=params,
+                    data=file,
+                    get_json=True
+                )
+
         except FileNotFoundError:
             print('file not created on remote server because does not exist locally. inside create_remote_file_folder')
             return remote_file
@@ -828,7 +850,7 @@ class Poll(object):
         # alerts
         alerts.info(local_node.title, alerts.DELETING)
 
-        # tail recursion to remove child remote nodes before you can remove current top level remote node.
+        # recursively remove child nodes before you can remove current node, as per API.
         remote_children = yield from self.get_all_paginated_members(remote_node['links']['children']['related'])
         local_remote_nodes = self.make_local_remote_tuple_list(local_node.components, remote_children)
         for local, remote in local_remote_nodes:
@@ -866,6 +888,7 @@ class Poll(object):
                 os.remove(path)
             except FileNotFoundError:
                 print('file not deleted because does not exist on local filesystem. inside delete_local_file_folder (2)')
+
     @asyncio.coroutine
     def delete_remote_file_folder(self, local_file_folder, remote_file_folder):
         print('delete_remote_file_folder')
@@ -877,9 +900,9 @@ class Poll(object):
         # alerts
         alerts.info(local_file_folder.name, alerts.DELETING)
 
-        url = remote_file_folder['links']['self'].split('&cookie=')[0]
+        url = remote_file_folder['links']['self']
 
-        resp = yield from self.make_request(url,method="DELETE")
+        resp = yield from self.make_request(url, method="DELETE")
         resp.close()
 
         local_file_folder.deleted = False
@@ -904,19 +927,16 @@ class Poll(object):
         assert isinstance(remote, dict)
 
         local_time = local.date_modified.replace(tzinfo=pytz.utc)
-        if remote['type'] == 'files' and remote['item_type'] == 'file':
-            try:
+        remote_time_string = None
 
-                remote_time = self.remote_to_local_datetime(remote['metadata']['modified'])
-            # more general way to handle when remote['metadata']['modified'] is None
-            except iso8601.ParseError:
-                remote_time = None
-        # elif remote['type']=='files' and remote['item_type'] == 'folder':
-        #     remote_time = None
-        else:
-            remote_time = self.remote_to_local_datetime(remote['date_modified'])
-
-        if not remote_time:
+        # nodes and folders
+        if 'date_modified' in remote and remote['date_modified']:
+            remote_time_string = remote['date_modified']
+        # file
+        elif 'metadata' in remote and 'modified' in remote['metadata'] and remote['metadata']['modified']:
+            remote_time_string = remote['metadata']['modified']
+        # times from online are None
+        elif remote['type'] == 'files' and remote['item_type'] == 'file':
             url = 'https://staging2-files.osf.io/revisions'
             params = {
                 'path':local.osf_path,
@@ -924,11 +944,43 @@ class Poll(object):
                 'nid':local.node.osf_id,
             }
             resp = yield from self.make_request(url, params=params, get_json=True)
-            time_modified = resp['data'][0]['modified']
+            remote_time_string = resp['data'][0]['modified']
             for revision in resp['data']:
-                assert self.remote_to_local_datetime(time_modified) >= self.remote_to_local_datetime(revision['modified'])
-            remote_time = self.remote_to_local_datetime(time_modified)
+                assert self.remote_to_local_datetime(remote_time_string) >= self.remote_to_local_datetime(revision['modified'])
+
+        # if times from online for node are None, you are screwed.
+
+        try:
+            remote_time = self.remote_to_local_datetime(remote_time_string)
+        except iso8601.ParseError:
+            remote_time = None
+
+        # if remote['type'] == 'files' and remote['item_type'] == 'file':
+        #     try:
+        #
+        #         remote_time = self.remote_to_local_datetime(remote['metadata']['modified'])
+        #     # more general way to handle when remote['metadata']['modified'] is None
+        #     except iso8601.ParseError:
+        #         remote_time = None
+        # else:
+        #     remote_time = self.remote_to_local_datetime(remote['date_modified'])
+
+        # if not remote_time:
+        #     url = 'https://staging2-files.osf.io/revisions'
+        #     params = {
+        #         'path':local.osf_path,
+        #         'provider':local.provider,
+        #         'nid':local.node.osf_id,
+        #     }
+        #     resp = yield from self.make_request(url, params=params, get_json=True)
+        #     time_modified = resp['data'][0]['modified']
+        #     for revision in resp['data']:
+        #         assert self.remote_to_local_datetime(time_modified) >= self.remote_to_local_datetime(revision['modified'])
+        #     remote_time = self.remote_to_local_datetime(time_modified)
         return local_time, remote_time
+
+    # NOTE: waterbutler does not give a 'modified' time to something that has been created.
+    # THUS, if we are modifying something and remote is None, the modification MUST be coming from local.
 
     @asyncio.coroutine
     def local_is_newer(self, local, remote):
@@ -941,6 +993,8 @@ class Poll(object):
 
             if remote['type'] == 'files' and remote['item_type'] == 'file':
                 return local.size > remote['metadata']['size']
+            else:
+                return True
 
         return local_time > remote_time
 
@@ -953,6 +1007,9 @@ class Poll(object):
         if remote_time is None:
             if remote['type'] == 'files' and remote['item_type'] == 'file':
                 return local.size < remote['metadata']['size']
+            else:
+                return False
+
         return local_time < remote_time
 
     def remote_to_local_datetime(self, remote_utc_time_string):
@@ -963,16 +1020,6 @@ class Poll(object):
 
     @asyncio.coroutine
     def make_request(self, url, method='GET',params=None, expects=None, get_json=False, timeout=10, data=None):
-        # console_log('self.request_session', self.request_session)
-        # if not self.request_session:
-        #     console_log('inside','bro')
-        #     headers = {
-        #         'Cookie': 'osf_staging2=55a3d4f3404f7756a1d84d32.iHwM3kRshA2P8TVJq2i0J7iNxgY;',  # for v1 api
-        #         'Authorization': 'Bearer {}'.format(self.user.oauth_token)  # for v2 api
-        #     }
-        #     # console_log('headers',headers)
-        #     self.request_session = aiohttp.ClientSession(loop=self._loop, headers=headers)
-        #     console_log('new request session',self.request_session)
         try:
             response = yield from asyncio.wait_for(
                 self.request_session.request(
@@ -994,7 +1041,7 @@ class Poll(object):
         except aiohttp.errors.HttpMethodNotAllowed:
             print('method not allowed {}'.format(method))
             raise
-        except aiohttp.errors.ConnectionError:
+        except aiohttp.errors.ClientConnectionError:
             print("These aren't the domains we're looking for.")
             raise
 
@@ -1002,13 +1049,12 @@ class Poll(object):
             if response.status not in expects:
                 raise ConnectionError('failed because of wrong response status. url: {}, expected status: {}, actual status: {}'.format(url, expects, response.status))
         elif 400 <= response.status < 600 :
-            raise ConnectionError('failed {} request {} with expected response code(s) {}. response.content={}'.format(method, url, expects, response.content))
-
+            content = yield from response.read()
+            raise ConnectionError('failed {} request {} with expected response code(s) {}. response.content={}'.format(method, url, expects,content ))
         if get_json:
             json_response = yield from response.json()
             return json_response
-        # todo: figure out if I need to close the response?? Perhaps this forces me to put into object and then close response?
-        # response.close()
+
         return response
 
     def local_remote_etag_are_diff(self, local_file, remote_file):

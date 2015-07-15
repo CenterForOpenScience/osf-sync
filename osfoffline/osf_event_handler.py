@@ -77,35 +77,29 @@ class OSFEventHandler(FileSystemEventHandler):
 
         # todo: handle renamed!!!!!!!!!
         try:
-            console_log('1','1')
             src_path = ProperPath(event.src_path, event.is_directory)
-            console_log('2','2')
             dest_path = ProperPath(event.dest_path, event.is_directory)
-            console_log('3','3')
             # determine and get what moved
             item = self.get_item_by_path(src_path)
-            console_log('4','4')
+
 
             # update item's position
             try:
                 item.parent = self._get_parent_item_from_path(dest_path)
             except FileNotFoundError:
                 item.parent = None
-            console_log('5','5')
 
             # rename folder
             if isinstance(item, Node) and item.title != dest_path.name:
                 item.title = dest_path.name
             elif isinstance(item, File) and item.name != dest_path.name:
-                console_log('6','6')
                 item.name = dest_path.name
-                console_log('item.name',item.name)
             else:
                 raise ValueError('some messed up thing was moved')
 
             # todo: log
             # logging.info(item.)
-            console_log('7','7')
+
             # save
             self.save(item)
         except FileNotFoundError:
@@ -125,9 +119,10 @@ class OSFEventHandler(FileSystemEventHandler):
 
             src_path = ProperPath(event.src_path, event.is_directory)
             name = src_path.name
-
+            # console_log('create a new thing. it is called',name)
             # create new model
             if not self.already_exists(src_path):
+                # console_log('new thing being created does not already exist in db',name)
                 # if folder and in top level OSF FOlder, then project
                 if src_path.parent == ProperPath(self.osf_folder, True):
                     if event.is_directory:
@@ -166,6 +161,7 @@ class OSFEventHandler(FileSystemEventHandler):
                         self.save(new_component)
 
                 else:  # if file, then file.
+                    console_log('new thing is file',name)
                     containing_item = self._get_parent_item_from_path(src_path)
                     if isinstance(containing_item, Node):
                         node = containing_item
@@ -173,9 +169,12 @@ class OSFEventHandler(FileSystemEventHandler):
                         node = containing_item.node
                     file = File(name=name, type=File.FILE, user=self.user, locally_created=True,
                                 provider=File.DEFAULT_PROVIDER, node=node)
+                    # console_log('new thing as file object',file)
                     containing_item.files.append(file)
                     self.save(file)
-
+                    if file.name == 'LICENSE':
+                        console_log('file', file)
+                    # console_log('new thing as file object AGAIN in order to check name',file)
                     # log
                     # todo: log
 
@@ -204,6 +203,7 @@ class OSFEventHandler(FileSystemEventHandler):
         """
 
         # logging.info("Modified %s: %s", what, event.src_path)
+        console_log('modifying file. hopefully this is the temp file. event.src_path', event.src_path)
 
         src_path = ProperPath(event.src_path, event.is_directory)
         # whenever anything gets modified, watchdog crawls up the folder tree all the way up to the osf folder
@@ -231,6 +231,7 @@ class OSFEventHandler(FileSystemEventHandler):
 
             # save
             self.save(item)
+            # console_log('modifying file. check how temp file is saved back in as', item)
         except FileNotFoundError:
             print('tried to modify {} but it doesnt exist in db'.format(event.src_path))
 
@@ -245,7 +246,7 @@ class OSFEventHandler(FileSystemEventHandler):
         """
 
         src_path = ProperPath(event.src_path, event.is_directory)
-
+        # console_log('deleting file. check if temp file is deleted', src_path.name)
         try:
             # get item
             item = self.get_item_by_path(src_path)
@@ -279,6 +280,12 @@ class OSFEventHandler(FileSystemEventHandler):
             if ProperPath(node.path, True) == path:
                 return node
         for file_folder in self.session.query(File):
+            if file_folder.name == 'my doc':
+                console_log('file_folder',file_folder)
+                console_log('db file: file_path',ProperPath(file_folder.path, file_folder.type == File.FOLDER))
+                console_log('file_folder.type == File.FOLDER',file_folder.type == File.FOLDER)
+                console_log('path being search for: path',path)
+                console_log('file_path == path', ProperPath(file_folder.path, file_folder.type == File.FOLDER) == path)
             file_path = ProperPath(file_folder.path, file_folder.type == File.FOLDER)
             if file_path == path:
                 return file_folder
