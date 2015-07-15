@@ -250,18 +250,18 @@ class Poll(object):
 
         if local_node is None:
             local_node = yield from self.create_local_node(remote_node, local_parent_node)
-        elif local_node.locally_created and remote_node is None:
-            yield from self.create_remote_node(local_node, remote_parent_node)
-            # note: this should NOT return once create_remote_node is fixed.
-            return
-        elif local_node.locally_created and remote_node is not None:
-            raise ValueError('newly created local node already exists on server! WHY? broken!')
-        elif local_node.locally_deleted and remote_node is None:
-            raise ValueError('local node was never on server for some reason. why? fixit!')
-        elif local_node.locally_deleted and remote_node is not None:
-            yield from self.delete_remote_node(local_node, remote_node)
-            # todo: delete_remote_node will have to handle making sure all children are deleted.
-            return
+        # elif local_node.locally_created and remote_node is None:
+        #     yield from self.create_remote_node(local_node, remote_parent_node)
+        #     # note: this should NOT return once create_remote_node is fixed.
+        #     return
+        # elif local_node.locally_created and remote_node is not None:
+        #     raise ValueError('newly created local node already exists on server! WHY? broken!')
+        # elif local_node.locally_deleted and remote_node is None:
+        #     raise ValueError('local node was never on server for some reason. why? fixit!')
+        # elif local_node.locally_deleted and remote_node is not None:
+        #     yield from self.delete_remote_node(local_node, remote_node)
+        #     # todo: delete_remote_node will have to handle making sure all children are deleted.
+        #     return
         elif local_node is not None and remote_node is None:
             yield from self.delete_local_node(local_node)
             return
@@ -269,12 +269,10 @@ class Poll(object):
             # todo: handle other updates to  node
 
             if local_node.title != remote_node['title']:
-                if self.local_is_newer(local_node, remote_node):
-                    yield from self.modify_remote_node(local_node, remote_node)
-                else:
-                    yield from self.modify_local_node(local_node, remote_node)
-        else:
-            raise ValueError('in some weird state. figure it out.')
+                # if self.local_is_newer(local_node, remote_node):
+                #     yield from self.modify_remote_node(local_node, remote_node)
+                # else:
+                yield from self.modify_local_node(local_node, remote_node)
 
         # handle file_folders for node
         yield from self.check_file_folder(local_node, remote_node)
@@ -403,57 +401,57 @@ class Poll(object):
 
         assert local_parent_node is None or (new_node in local_parent_node.components)
         return new_node
-    @asyncio.coroutine
-    def create_remote_node(self, local_node, remote_parent_node):
-        print('create_remote_node')
-        assert isinstance(local_node, Node)
-        assert isinstance(remote_parent_node, dict) or (remote_parent_node is None)
-        # parent_is_none implies new_node_is_project
-        assert (remote_parent_node is not None) or (local_node.category == Node.PROJECT)
-
-        # alert
-        alerts.info(local_node.title, alerts.UPLOAD)
-
-        data = {
-            'title': local_node.title,
-            # todo: allow users to choose other categories
-            'category': 'project' if local_node.category == Node.PROJECT else 'other'
-        }
-
-        if remote_parent_node:
-            # component url
-            assert local_node.category == Node.COMPONENT
-            # fixme: THIS IS SOOOOOOOOOO  BROKEN!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-            # todo: make this part A LOT better once api does it.
-
-
-            url = 'https://staging2.osf.io/{}/newnode/'.format(remote_parent_node['id'])
-
-            resp = yield from self.make_request(url, method='POST', data=data)
-
-            # request does not return json.
-            # response does have url that contains the node if of the new node.
-
-            local_node.osf_id = resp.url.split('/')[-2]
-            local_node.locally_created = False
-            self.save(local_node)
-
-            # I think I need it in this case because I don't do anything with the response. no yield from resp.content or anything.
-            resp.close()
-
-            # location header should have node id: https://staging2.osf.io/yz8eh/
-            return
-        else:
-            # project url
-            assert local_node.category == Node.PROJECT
-            url = 'https://staging2.osf.io:443/api/v2/nodes/'
-            resp = yield from self.make_request(url,method="POST", data=data, get_json=True)
-
-            remote_node = resp['data']
-            local_node.osf_id = remote_node['id']
-            local_node.locally_created = False
-            self.save(local_node)
-            return remote_node
+    # @asyncio.coroutine
+    # def create_remote_node(self, local_node, remote_parent_node):
+    #     print('create_remote_node')
+    #     assert isinstance(local_node, Node)
+    #     assert isinstance(remote_parent_node, dict) or (remote_parent_node is None)
+    #     # parent_is_none implies new_node_is_project
+    #     assert (remote_parent_node is not None) or (local_node.category == Node.PROJECT)
+    #
+    #     # alert
+    #     alerts.info(local_node.title, alerts.UPLOAD)
+    #
+    #     data = {
+    #         'title': local_node.title,
+    #         # todo: allow users to choose other categories
+    #         'category': 'project' if local_node.category == Node.PROJECT else 'other'
+    #     }
+    #
+    #     if remote_parent_node:
+    #         # component url
+    #         assert local_node.category == Node.COMPONENT
+    #         # fixme: THIS IS SOOOOOOOOOO  BROKEN!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    #         # todo: make this part A LOT better once api does it.
+    #
+    #
+    #         url = 'https://staging2.osf.io/{}/newnode/'.format(remote_parent_node['id'])
+    #
+    #         resp = yield from self.make_request(url, method='POST', data=data)
+    #
+    #         # request does not return json.
+    #         # response does have url that contains the node if of the new node.
+    #
+    #         local_node.osf_id = resp.url.split('/')[-2]
+    #         local_node.locally_created = False
+    #         self.save(local_node)
+    #
+    #         # I think I need it in this case because I don't do anything with the response. no yield from resp.content or anything.
+    #         resp.close()
+    #
+    #         # location header should have node id: https://staging2.osf.io/yz8eh/
+    #         return
+    #     else:
+    #         # project url
+    #         assert local_node.category == Node.PROJECT
+    #         url = 'https://staging2.osf.io:443/api/v2/nodes/'
+    #         resp = yield from self.make_request(url,method="POST", data=data, get_json=True)
+    #
+    #         remote_node = resp['data']
+    #         local_node.osf_id = remote_node['id']
+    #         local_node.locally_created = False
+    #         self.save(local_node)
+    #         return remote_node
 
     @asyncio.coroutine
     def create_local_file_folder(self, remote_file_folder, local_parent_folder, local_node):
@@ -633,23 +631,23 @@ class Poll(object):
         except FileNotFoundError:
             print('renaming of file failed because file not there. inside modify_local_node')
 
-    @asyncio.coroutine
-    def modify_remote_node(self, local_node, remote_node):
-        print('modify_remote_node')
-        assert isinstance(local_node, Node)
-        assert isinstance(remote_node, dict)
-        assert remote_node['type'] == 'nodes'
-        assert remote_node['id'] == local_node.osf_id
-
-        # alert
-        alerts.info(local_node.title, alerts.MODIFYING)
-
-        # todo: add other fields here.
-        data = {
-            'title': local_node.title
-        }
-        resp = yield from self.make_request(remote_node['links']['self'],method="PATCH", data=data)
-        resp.close()
+    # @asyncio.coroutine
+    # def modify_remote_node(self, local_node, remote_node):
+    #     print('modify_remote_node')
+    #     assert isinstance(local_node, Node)
+    #     assert isinstance(remote_node, dict)
+    #     assert remote_node['type'] == 'nodes'
+    #     assert remote_node['id'] == local_node.osf_id
+    #
+    #     # alert
+    #     alerts.info(local_node.title, alerts.MODIFYING)
+    #
+    #     # todo: add other fields here.
+    #     data = {
+    #         'title': local_node.title
+    #     }
+    #     resp = yield from self.make_request(remote_node['links']['self'],method="PATCH", data=data)
+    #     resp.close()
 
     @asyncio.coroutine
     def modify_file_folder_logic(self, local_file_folder, remote_file_folder):
@@ -839,29 +837,29 @@ class Poll(object):
         shutil.rmtree(path, onerror=lambda a, b, c: print('local node not deleted because not exists.'))
 
     # todo: delete_remote_node will have to handle making sure all children are deleted.
-    @asyncio.coroutine
-    def delete_remote_node(self, local_node, remote_node):
-        print('delete_remote_node')
-        assert isinstance(local_node, Node)
-        assert isinstance(remote_node, dict)
-        assert local_node.osf_id == remote_node['id']
-        assert local_node.locally_deleted
-
-        # alerts
-        alerts.info(local_node.title, alerts.DELETING)
-
-        # recursively remove child nodes before you can remove current node, as per API.
-        remote_children = yield from self.get_all_paginated_members(remote_node['links']['children']['related'])
-        local_remote_nodes = self.make_local_remote_tuple_list(local_node.components, remote_children)
-        for local, remote in local_remote_nodes:
-            self.delete_remote_node(local, remote)
-
-        resp = yield from self.make_request(remote_node['links']['self'],method="DELETE")
-        resp.close()
-
-        local_node.locally_deleted = False
-        self.session.delete(local_node)
-        self.save()
+    # @asyncio.coroutine
+    # def delete_remote_node(self, local_node, remote_node):
+    #     print('delete_remote_node')
+    #     assert isinstance(local_node, Node)
+    #     assert isinstance(remote_node, dict)
+    #     assert local_node.osf_id == remote_node['id']
+    #     assert local_node.locally_deleted
+    #
+    #     # alerts
+    #     alerts.info(local_node.title, alerts.DELETING)
+    #
+    #     # recursively remove child nodes before you can remove current node, as per API.
+    #     remote_children = yield from self.get_all_paginated_members(remote_node['links']['children']['related'])
+    #     local_remote_nodes = self.make_local_remote_tuple_list(local_node.components, remote_children)
+    #     for local, remote in local_remote_nodes:
+    #         self.delete_remote_node(local, remote)
+    #
+    #     resp = yield from self.make_request(remote_node['links']['self'],method="DELETE")
+    #     resp.close()
+    #
+    #     local_node.locally_deleted = False
+    #     self.session.delete(local_node)
+    #     self.save()
 
     @asyncio.coroutine
     def delete_local_file_folder(self, local_file_folder):
