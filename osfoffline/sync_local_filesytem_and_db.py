@@ -1,16 +1,12 @@
 __author__ = 'himanshu'
-import asyncio
 import os
-from osf_event_handler import OSFEventHandler
 from watchdog.events import (
     DirDeletedEvent,
     FileDeletedEvent,
     FileModifiedEvent,
     FileCreatedEvent,
     DirCreatedEvent,
-    LoggingFileSystemEventHandler
 )
-from watchdog.observers import Observer
 from models import setup_db, User, Node, File, get_session, Base
 
 
@@ -24,8 +20,13 @@ def get_children(item):
         return item.components + item.top_level_file_folders
     elif isinstance(item, User):
         return item.projects
+    elif os.path.isfile(item):
+        return []
     else:
-        return os.listdir(get_path(item))
+        children = []
+        for child in os.listdir(get_path(item)):
+            children.append(os.path.join(item, child))
+        return children
 
 def get_path(item):
     if isinstance(item, User):
@@ -37,6 +38,7 @@ def get_path(item):
 
 def represent_same_values(children, i):
     if i+1 < len(children):
+
         return os.path.samefile(
             get_path(children[i]),
             get_path(children[i+1])
@@ -49,6 +51,7 @@ def make_local_db_tuple_list(local, db):
     if local and db:
         assert get_path(local) == get_path(db)
     out=[]
+    print('DEBUG: local={}'.format(local))
     children = get_children(local) + get_children(db)
     children = sorted(children, key=get_path)
     print(children)
@@ -79,9 +82,10 @@ def make_local_db_tuple_list(local, db):
             assert False
     return out
 
-
+osf_folder = ''
 def determine_new_events(absolute_osf_dir_path, observer, user):
-
+    global osf_folder
+    osf_folder = absolute_osf_dir_path
     local_db_tuple_list = make_local_db_tuple_list(absolute_osf_dir_path, user)
     for local, db in local_db_tuple_list:
         _determine_new_events(local, db, observer)   #local.path = /home/himanshu/OSF-Offline/dumbdir/OSF/p1/
@@ -89,6 +93,7 @@ def determine_new_events(absolute_osf_dir_path, observer, user):
 
 def _determine_new_events(local, db, observer):
     assert local or db # a and b cannot both be none.
+    event = None
     if (local is not None) and (db is not None):
         assert get_path(local) == get_path(db)
         if isinstance(db, File) and db.type == File.FILE and hash(local) != hash(db): # hash!!!!!
@@ -102,8 +107,8 @@ def _determine_new_events(local, db, observer):
             event = DirDeletedEvent(db_path)
     elif db is None:
         local_path = get_path(local)
-        if isinstance(db, File) and db.type == File.FILE:
-            event = FileCreatedEvent(local_path)  # delete event for file
+        if os.path.isdir(local_path):
+            event = FileCreatedEvent(local_path)
         else:
             event = DirCreatedEvent(local_path)
 
@@ -118,13 +123,9 @@ def _determine_new_events(local, db, observer):
 
     local_db_tuple_list = make_local_db_tuple_list(local, db)
     for local, db in local_db_tuple_list:
-        _determine_new_events(local, db)
+        _determine_new_events(local, db, observer)
 
 # observer = Observer()  # create observer. watched for events on files.
-
-    # def stop_observing_osf_folder(self):
-    #     self.observer.stop()
-    #     self.observer.join()
 
 # if __name__=='__main__':
 #
@@ -141,7 +142,7 @@ def _determine_new_events(local, db, observer):
 #     observer.schedule(event_handler, osf_folder, recursive=True)
 #
 #
-#     determine_new_events(user.osf_path)
+#     determine_new_events(user.osf_path, observer, user)
 #     observer.start()
 #     loop.run_forever()
 

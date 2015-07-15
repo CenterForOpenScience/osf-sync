@@ -2,6 +2,7 @@ from PyQt5.QtWidgets import (QApplication, QDialog, QFileDialog, QAction)
 from appdirs import user_log_dir, user_config_dir, user_data_dir
 import os
 from watchdog.observers import Observer
+from sync_local_filesytem_and_db import determine_new_events
 from sqlalchemy.orm.exc import MultipleResultsFound
 from sqlalchemy.orm.exc import NoResultFound
 # from osfoffline.sync_local_filesytem_and_db import determine_new_events
@@ -143,6 +144,7 @@ class OSFController(QDialog):
         self.observer = Observer()  # create observer. watched for events on files.
         # attach event handler to observed events. make observer recursive
         self.observer.schedule(self.event_handler, self.osf_folder, recursive=True)
+        determine_new_events(self.user.osf_path, self.observer, self.user)
         self.observer.start()  # start
 
     def stop_observing_osf_folder(self):
