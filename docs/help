@@ -1,5 +1,5 @@
 1) asyncio.sleep(RECHECK_TIME)                                                                                          DONE
-2) instead of checking everything in poll, I can use logging updates code
+2) instead of checking everything in poll, I can use logging updates code                                               NO
 3) directory structure                                                                                                  DONE
 4) clean git repo                                                                                                       DONE
 5) asyncio.Queue for local (can yield from asyncio.Queue.pop )
@@ -21,3 +21,11 @@
 14) check windows as soon as possible
 15) setup.py
 	
+
+THINGS TO DO:
+1) editing file bug
+2) pyinstaller - turn into a binary
+3) application versioning and updating
+4) list of updates to api
+5) ignore list (list of regex) can be customizable
+        can reset
