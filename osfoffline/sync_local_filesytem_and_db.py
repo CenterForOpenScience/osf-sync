@@ -29,7 +29,7 @@ def get_children(item):
 
 def get_path(item):
     if isinstance(item, User):
-        return item.osf_path
+        return item.osf_local_folder_path
     elif isinstance(item, Base):
         return item.path
     else:
