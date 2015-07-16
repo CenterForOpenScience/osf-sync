@@ -15,8 +15,9 @@ import osf_event_handler
 import polling
 import models
 import sys
+import threading
+from background import BackgroundWorker
 
-__author__ = 'himanshu'
 
 
 class OSFController(QDialog):
@@ -30,14 +31,16 @@ class OSFController(QDialog):
 
         self.login_action = QAction("Open Login Screen", self)
         self.multiple_user_action = QAction("Choose Logged In User", self)
+        self.start_tray_action = QAction("Start System Tray", self)
 
         self.create_configs()
+        self.background_worker = BackgroundWorker()
 
 
 
     def start(self):
         #todo: put this ensure_event_loop code in __init__
-        self.loop = self.ensure_event_loop()
+
 
         # self.createConfigs()
         self.session = models.get_session()
@@ -54,20 +57,16 @@ class OSFController(QDialog):
                 os.makedirs(self.user.osf_local_folder_path)
             self.start_logging()
             # todo: remove self.OSFFolder and replace all usages of it with self.user.osf_path
-            self.osf_folder = self.user.osf_local_folder_path
-            self.start_observing_osf_folder()
-            # self.preferences = Preferences(self.containingFolder, self.event_handler.data['data'])
-            self.start_polling_server()
-            self.loop.run_forever()
 
-    def start_polling_server(self):
-        # todo: can probably change this to just pass in the self.user
-        self.poller = polling.Poll(self.user.osf_id, self.loop)
-        self.poller.start()
+            self.start_tray_action.trigger()
 
-    def stop_polling_server(self):
-        self.poller.stop()
-        # self.poller.join()
+            self.background_worker.start()
+
+
+
+
+
+
 
     # todo: when log in is working, you need to make this work with log in screen.
     def get_current_user(self):
@@ -137,23 +136,6 @@ class OSFController(QDialog):
         logging.getLogger('').addHandler(console)
         # logging.getLogger('sqlalchemy.engine').addHandler()
 
-    def start_observing_osf_folder(self):
-        # if something inside the folder changes, log it to config dir
-        # if something inside the folder changes, show it on console.
-
-        self.event_handler = osf_event_handler.OSFEventHandler(self.osf_folder, self.config['db_dir'], self.user,
-                                                               loop=self.loop)  # create event handler
-        # todo: if config actually has legitimate data. use it.
-        # start
-        self.observer = Observer()  # create observer. watched for events on files.
-        # attach event handler to observed events. make observer recursive
-        self.observer.schedule(self.event_handler, self.osf_folder, recursive=True)
-        determine_new_events(self.user.osf_path, self.observer, self.user)
-        self.observer.start()  # start
-
-    def stop_observing_osf_folder(self):
-        self.observer.stop()
-        self.observer.join()
 
     def close_event(self, event):
         if self.tray_icon.isVisible():
@@ -208,10 +190,8 @@ class OSFController(QDialog):
             self.store_configs()
 
             # stop polling the server
-            self.stop_polling_server()
+            self.background_worker.stop()
 
-            # stop observing OSF folder
-            self.stop_observing_osf_folder()
         except KeyboardInterrupt:
             print('ctr-c pressed. Still going to quit app though.')
             QApplication.instance().quit()
@@ -279,22 +259,7 @@ class OSFController(QDialog):
             self.session.rollback()
             raise
 
-    # courtesy of waterbutler
-    def ensure_event_loop(self):
-        """Ensure the existance of an eventloop
-        Useful for contexts where get_event_loop() may
-        raise an exception.
-        :returns: The new event loop
-        :rtype: BaseEventLoop
-        """
-        try:
-            return asyncio.get_event_loop()
-        except (AssertionError, RuntimeError):
-            asyncio.set_event_loop(asyncio.new_event_loop())
 
-        # Note: No clever tricks are used here to dry up code
-        # This avoids an infinite loop if settings the event loop ever fails
-        return asyncio.get_event_loop()
 
     # todo: finish this!!!!!!!!!!
     def can_skip_startup_screen(self):

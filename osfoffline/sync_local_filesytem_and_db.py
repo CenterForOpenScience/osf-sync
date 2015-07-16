@@ -98,7 +98,7 @@ def _determine_new_events(local, db, observer):
     if (local is not None) and (db is not None):
         assert get_path(local) == get_path(db)
         if isinstance(db, File) and db.type == File.FILE and hash(local) != hash(db): # hash!!!!!
-            event = FileModifiedEvent(local.path)  # create changed event
+            event = FileModifiedEvent(get_path(local))  # create changed event
         # folder modified event should not happen.determine_new_events
     elif local is None:
         db_path = get_path(db)

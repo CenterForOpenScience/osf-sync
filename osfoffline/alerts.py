@@ -1,6 +1,8 @@
 __author__ = 'himanshu'
 from PyQt5.QtWidgets import QSystemTrayIcon
 
+SHOW_ALERTS = True
+
 DOWNLOAD = 0
 UPLOAD = 1
 MODIFYING = 2
@@ -18,7 +20,7 @@ def setup_alerts(system_tray_icon):
 def info(file_name, action):
     global alert_icon
     # global icon
-    if alert_icon is None:
+    if alert_icon is None or not SHOW_ALERTS:
         return
     else:
         title = {
@@ -29,12 +31,12 @@ def info(file_name, action):
         }
 
         text = "{} {}".format(title[action], file_name)
-        # alert_icon.showMessage(
-        #     text,
-        #     "      - OSF Offline",  # todo: there is some way to format strings in pyqt. how again?
-        #     QSystemTrayIcon.NoIcon,
-        #     1000  # fixme: currently, I have NO control over duration of alert.
-        # )
+        alert_icon.showMessage(
+            text,
+            "      - OSF Offline",  # todo: there is some way to format strings in pyqt. how again?
+            QSystemTrayIcon.NoIcon,
+            1000  # fixme: currently, I have NO control over duration of alert.
+        )
 
 # if __name__=="__main__":
 # app = QApplication(sys.argv)

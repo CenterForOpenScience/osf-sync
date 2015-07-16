@@ -13,3 +13,4 @@ NOTE: https://github.com/CenterForOpenScience/osf.io/issues/3309 shows what the 
 5) timestamp for file/folder
 
 6) deleting nodes is not currently working via v2 api. You can delete nodes, but they still show up on a get request afterwards.
+

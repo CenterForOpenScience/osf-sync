@@ -2,7 +2,7 @@ __author__ = 'himanshu'
 from PyQt5.Qt import QIcon
 from PyQt5.QtWidgets import (QDialog, QSystemTrayIcon,
                              QAction, QMenu)
-
+import views.rsc.resources  # need this import for the logo to work properly.
 
 class SystemTray(QDialog):
     def __init__(self):
@@ -39,4 +39,6 @@ class SystemTray(QDialog):
         # todo: hate this icon. make better.
         icon = QIcon(':/cos_logo.png')
         self.tray_icon.setIcon(icon)
+
+    def start(self):
         self.tray_icon.show()
