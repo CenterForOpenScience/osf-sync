@@ -8,7 +8,7 @@ from watchdog.events import (
     DirCreatedEvent,
 )
 from models import setup_db, User, Node, File, get_session, Base
-
+from path import ProperPath
 
 
 def get_children(item):
@@ -82,13 +82,14 @@ def make_local_db_tuple_list(local, db):
             assert False
     return out
 
+# fixme: shouldnt be using a global variable for this.
 osf_folder = ''
 def determine_new_events(absolute_osf_dir_path, observer, user):
     global osf_folder
     osf_folder = absolute_osf_dir_path
     local_db_tuple_list = make_local_db_tuple_list(absolute_osf_dir_path, user)
     for local, db in local_db_tuple_list:
-        _determine_new_events(local, db, observer)   #local.path = /home/himanshu/OSF-Offline/dumbdir/OSF/p1/
+        _determine_new_events(local, db, observer)   # local.path = /home/himanshu/OSF-Offline/dumbdir/OSF/p1/
 
 
 def _determine_new_events(local, db, observer):
@@ -98,7 +99,7 @@ def _determine_new_events(local, db, observer):
         assert get_path(local) == get_path(db)
         if isinstance(db, File) and db.type == File.FILE and hash(local) != hash(db): # hash!!!!!
             event = FileModifiedEvent(local.path)  # create changed event
-        # folder modified event should not happen.
+        # folder modified event should not happen.determine_new_events
     elif local is None:
         db_path = get_path(db)
         if isinstance(db, File) and db.type == File.FILE:
