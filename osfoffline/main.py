@@ -33,8 +33,8 @@ class OSFApp(QDialog):
         # self.thread = threading.Thread(target=self.controller.start)
 
     def start(self):
-        t = threading.Thread(target=self.controller.start)
-        t.start()
+        self.controller.start()
+
 
     # todo: finish this!!
     # def start(self):
@@ -60,6 +60,7 @@ class OSFApp(QDialog):
     def setup_connections(self):
         # [ (signal, slot) ]
         signal_slot_pairs = [
+
             # system tray
             (self.tray.open_project_folder_action.triggered, self.controller.open_project_folder),
             (self.tray.launch_osf_action.triggered, self.controller.start_osf),
@@ -71,10 +72,11 @@ class OSFApp(QDialog):
 
             # controller events
             (self.controller.login_action.triggered, self.start_screen.open_window),
+            (self.controller.start_tray_action.triggered, self.tray.start),
 
             # preferences
             # (self.preferences.preferencesWindow.changeFolderButton.clicked, self.preferences.openContainingFolderPicker)
-
+            (self.preferences.preferences_window.desktopNotifications.stateChanged, self.alerts_changed),
             # start screen
             (self.start_screen.done_logging_in_action.triggered, self.controller.start)
         ]
@@ -93,6 +95,12 @@ class OSFApp(QDialog):
     def open_log_in_screen(self):
         self.preferences.open_window(Preferences.OSF)
 
+
+    def alerts_changed(self):
+        if self.preferences.preferences_window.desktopNotifications.isChecked():
+            alerts.SHOW_ALERTS = True
+        else:
+            alerts.SHOW_ALERTS = False
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)

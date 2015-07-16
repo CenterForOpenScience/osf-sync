@@ -32,7 +32,7 @@ class Poll(object):
             'Cookie': 'osf_staging2=55a3d4f3404f7756a1d84d32.iHwM3kRshA2P8TVJq2i0J7iNxgY;',  # for v1 api
             'Authorization': 'Bearer {}'.format(self.user.oauth_token)  # for v2 api
         }
-        self._loop = loop or asyncio.get_event_loop()
+        self._loop = loop
 
         self.request_session = aiohttp.ClientSession(loop=self._loop, headers=self.headers)
 
@@ -40,13 +40,6 @@ class Poll(object):
         # todo: can I remove _keep_running?????
         self._keep_running = False
 
-        # fixme: how do guarantee stopping and closing the loop
-        self._loop.stop()
-        if self._loop.is_running():
-            self._loop.stop()
-        if not self._loop.is_running():
-            self._loop.close()
-        # self._loop.close()
 
     def start(self):
         console_log('please','work')

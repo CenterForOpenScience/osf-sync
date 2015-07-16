@@ -18,6 +18,8 @@ class Preferences(QDialog):
         super().__init__()
         self._translate = QCoreApplication.translate
         self.containing_folder = containing_folder
+        self.preferences_window = Ui_Preferences()
+        self.preferences_window.setupUi(self)
 
     def setup_actions(self):
         self.set_containing_folder_action = QAction("Set where Project will be stored", self,
@@ -40,8 +42,6 @@ class Preferences(QDialog):
             self.preferences_window.tabWidget.setCurrentIndex(tab)
             self.selector(tab)
         else:
-            self.preferences_window = Ui_Preferences()
-            self.preferences_window.setupUi(self)
             self.preferences_window.tabWidget.setCurrentIndex(tab)
             self.setup_actions()
             # self.setupSlots()
