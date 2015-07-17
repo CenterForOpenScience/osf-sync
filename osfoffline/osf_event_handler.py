@@ -136,7 +136,7 @@ class OSFEventHandler(FileSystemEventHandler):
                 elif event.is_directory:
 
                     if File.DEFAULT_PROVIDER in src_path.full_path:  # folder
-                        console_log('src_path',src_path)
+
                         containing_item = self._get_parent_item_from_path(src_path)
                         if isinstance(containing_item, Node):
                             node = containing_item
@@ -172,8 +172,7 @@ class OSFEventHandler(FileSystemEventHandler):
                     # console_log('new thing as file object',file)
                     containing_item.files.append(file)
                     self.save(file)
-                    if file.name == 'LICENSE':
-                        console_log('file', file)
+                    console_log('new thing is file and inside db it is saved as',file.name)
                     # console_log('new thing as file object AGAIN in order to check name',file)
                     # log
                     # todo: log
@@ -231,7 +230,7 @@ class OSFEventHandler(FileSystemEventHandler):
 
             # save
             self.save(item)
-            # console_log('modifying file. check how temp file is saved back in as', item)
+            console_log('modifying file. check how temp file is saved back in as', item)
         except FileNotFoundError:
             print('tried to modify {} but it doesnt exist in db'.format(event.src_path))
 

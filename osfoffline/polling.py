@@ -6,7 +6,7 @@ import shutil
 import iso8601
 import pytz
 import aiohttp
-
+import concurrent
 from models import User, Node, File, get_session, Base
 import alerts
 
@@ -41,28 +41,32 @@ class Poll(object):
 
 
     def start(self):
-        console_log('please','work')
         # annoying and weird way to get the remote user from the coroutine
-
         future = asyncio.Future()
         asyncio.async(self.get_remote_user(future), loop=self._loop)
         self._loop.run_until_complete(future)
-        remote_user =  future.result()
-        # remote_user = yield from future
+        remote_user = future.result()
 
-        console_log('remote_user',remote_user)
         self._loop.call_soon(
             asyncio.async,
             self.check_osf(remote_user)
         )
 
-    #todo: make this use make_request() as well
+    # Only once you have a remote user do we want to check the osf.
+    # thus this coroutine repeatedly tries to get the remote user.
     @asyncio.coroutine
     def get_remote_user(self, future):
         print("checking projects of user with id {}".format(self.user_osf_id))
         url = 'https://staging2.osf.io:443/api/v2/users/{}/'.format(self.user_osf_id)
-        resp = yield from self.make_request(url, get_json=True)
-        future.set_result(resp['data'])
+        while True:
+            try:
+                resp = yield from self.make_request(url, get_json=True)
+                future.set_result(resp['data'])
+                break
+            except concurrent.futures._base.TimeoutError:
+                print('failed to get remote_user. trying again.')
+            except aiohttp.errors.ClientTimeoutError:
+                print('failed to get remote_user. trying again.')
 
     def get_id(self, item):
         """
@@ -587,6 +591,10 @@ class Poll(object):
             except FileNotFoundError:
                 print('file not created on remote server because does not exist locally. inside create_remote_file_folder')
                 return
+            except IsADirectoryError:
+                local_file_folder.type = File.FOLDER
+                self.save(local_file_folder)
+                return
 
         remote_file_folder = resp
 
@@ -1024,6 +1032,7 @@ class Poll(object):
                 timeout
             )
         except aiohttp.errors.ClientTimeoutError:
+            # try again. if fail again, then raise error.
             response = yield from self.request_session.request(
                 url=url,
                 method=method,
