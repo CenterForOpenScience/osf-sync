@@ -19,6 +19,44 @@ import threading
 from background import BackgroundWorker
 
 
+"""
+The various states the gui can be in:
+
+1) not started
+    application is off
+    if there is data, it should be stored in db. data should be encrypted
+    if there are configs, they should be stored in encrypted file.
+2) started
+    user starts application
+    user gets to log in
+    user gets to choose where to place OSF folder
+3) paused (pause = not running background worker)
+    stop background worker
+    perform whatever actions need to be performed (eg. choose new containing folder)
+4) un pause
+    start background worker
+5) quit (user hits quit button)
+    stop background worker
+    save info to config
+    save info to db
+    destroy gui
+    stop application
+
+state changes will be:
+not started -> started ->
+    pause -> unpause -> pause (loop)
+                            -> quit
+
+
+functions that define state changes:
+on_start
+on_quit
+on_pause
+on_unpause
+
+
+"""
+
 
 class OSFController(QDialog):
     def __init__(self, app_name, app_author):
@@ -37,19 +75,15 @@ class OSFController(QDialog):
         self.create_configs()
         self.background_worker = BackgroundWorker()
 
-
-
+    # state functions
     def start(self):
-        #todo: put this ensure_event_loop code in __init__
-
-
         # self.createConfigs()
         self.session = models.get_session()
         self.user = self.get_current_user()
         if self.user:
             self.containing_folder = os.path.dirname(self.user.osf_local_folder_path)
             if not self.containing_folder_is_set():
-                self.set_containing_folder(restart=False)
+                self.set_containing_folder()
             self.user.osf_local_folder_path = os.path.join(self.containing_folder, "OSF")
             self.save(self.user)
 
@@ -64,9 +98,30 @@ class OSFController(QDialog):
             self.background_worker.start()
 
 
+    def unpause(self):
+        self.background_worker.run_background_tasks()
+
+
+    def pause(self):
+        self.background_worker.pause_background_tasks()
 
 
 
+    def quit(self):
+        self.store_configs()
+        self.background_worker.pause_background_tasks()
+        self.background_worker.stop()
+        # quit() stops gui and then quits application
+        QApplication.instance().quit()
+
+
+
+
+
+    def set_containing_folder_process(self):
+        self.pause()
+        self.set_containing_folder()
+        self.unpause()
 
 
     # todo: when log in is working, you need to make this work with log in screen.
@@ -157,7 +212,7 @@ class OSFController(QDialog):
                     # xdg-open *should* be supported by recent Gnome, KDE, Xfce
                     pass  # todo: what to do in this case?
         else:
-            self.set_containing_folder()
+            self.set_containing_folder_process()
 
     def containing_folder_is_set(self):
         try:
@@ -167,20 +222,7 @@ class OSFController(QDialog):
 
 
     def set_containing_folder(self):
-        print('this is called right....')
-
-        # print('this is CALLED. restart={}'.format(restart))
-
-        # stop observing folder and stop polling
-        # self.background_worker.stop()
-        self.background_worker.pause_background_tasks()
-
         self.containing_folder = QFileDialog.getExistingDirectory(self, "Choose folder to place OSF folder")
-
-        # self.containing_folder_updated_action.emit(self.containing_folder)
-        # restart observing folder and restart polling
-        if restart:
-            self.background_worker.run_background_tasks()
 
     def start_osf(self):
         url = "http://osf.io/dashboard"
@@ -197,23 +239,23 @@ class OSFController(QDialog):
         text = "Up to date ({})".format(str(datetime.datetime.now()))
         self.currently_synching_action.setText(0, text)
 
-    def teardown(self):
-        try:
-            self.store_configs()
-
-            # stop polling the server
-            self.background_worker.stop()
-
-        except KeyboardInterrupt:
-            print('ctr-c pressed. Still going to quit app though.')
-            QApplication.instance().quit()
-            raise
-        except:
-            print('error in tear down. Still going to quit app though.')
-            QApplication.instance().quit()
-            raise
-        # quit the application
-        QApplication.instance().quit()
+    # def teardown(self):
+    #     try:
+    #         self.store_configs()
+    #
+    #         # stop polling the server
+    #         self.background_worker.stop()
+    #
+    #     except KeyboardInterrupt:
+    #         print('ctr-c pressed. Still going to quit app though.')
+    #         QApplication.instance().quit()
+    #         raise
+    #     except:
+    #         print('error in tear down. Still going to quit app though.')
+    #         QApplication.instance().quit()
+    #         raise
+    #     # quit the application
+    #     QApplication.instance().quit()
 
     def store_configs(self):
         # store current configs in config file

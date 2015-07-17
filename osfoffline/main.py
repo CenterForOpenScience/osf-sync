@@ -72,7 +72,7 @@ class OSFApp(QDialog):
             (self.tray.priority_action.triggered, self.open_priority_screen),
             (self.tray.preferences_action.triggered, self.open_preferences),
             (self.tray.about_action.triggered, self.start_about_screen),
-            (self.tray.quit_action.triggered, self.controller.teardown),
+            (self.tray.quit_action.triggered, self.controller.quit),
 
             # controller events
             (self.controller.login_action.triggered, self.start_screen.open_window),
@@ -83,8 +83,8 @@ class OSFApp(QDialog):
             # (self.preferences.preferencesWindow.changeFolderButton.clicked, self.preferences.openContainingFolderPicker)
             (self.preferences.preferences_window.desktopNotifications.stateChanged, self.alerts_changed),
             (self.preferences.preferences_window.startOnStartup.stateChanged, self.startup_changed),
-            (self.preferences.preferences_window.changeFolderButton.clicked, self.controller.set_containing_folder),
-            # (self.preferences.preferences_window.changeFolderButton.clicked, self.controller.set_containing_folder),
+            (self.preferences.preferences_window.changeFolderButton.clicked, self.controller.set_containing_folder_process),
+            # (self.preferences.preferences_window.changeFolderButton.clicked, self.controller.set_containing_folder_process),
 
             # start screen
             (self.start_screen.done_logging_in_action.triggered, self.controller.start)
