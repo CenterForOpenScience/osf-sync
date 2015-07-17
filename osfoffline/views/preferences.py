@@ -26,11 +26,19 @@ class Preferences(QDialog):
                                                     triggered=self.set_containing_folder)
 
     def open_containing_folder_picker(self):
-        self.containing_folder = QFileDialog.getExistingDirectory(self, "Choose folder")
+        self.containing_folder = QFileDialog.getExistingDirectory(self, "Choose where to place OSF folder")
 
     def set_containing_folder(self, new_containing_folder):
+        print('is this function called!!!!!!!')
         self.containing_folder = new_containing_folder
         self.preferences_window.containingFolderTextEdit.setText(self._translate("Preferences", self.containing_folder))
+
+    def update_containing_folder_text(self, containing_folder):
+        print('update containing folder text in preferences called')
+        print('above was called with the argument containing_folder={}'.format(containing_folder))
+        self.containing_folder = containing_folder
+        self.preferences_window.containingFolderTextEdit.setText(self._translate("Preferences", self.containing_folder))
+
 
     def setup_slots(self):
         self.preferences_window.containingFolderTextEdit.setText(self._translate("Preferences", self.containing_folder))

@@ -32,6 +32,7 @@ class OSFController(QDialog):
         self.login_action = QAction("Open Login Screen", self)
         self.multiple_user_action = QAction("Choose Logged In User", self)
         self.start_tray_action = QAction("Start System Tray", self)
+        self.containing_folder_updated_action = QAction("Containing Folder updated", self)
 
         self.create_configs()
         self.background_worker = BackgroundWorker()
@@ -48,7 +49,7 @@ class OSFController(QDialog):
         if self.user:
             self.containing_folder = os.path.dirname(self.user.osf_local_folder_path)
             if not self.containing_folder_is_set():
-                self.set_containing_folder()
+                self.set_containing_folder(restart=False)
             self.user.osf_local_folder_path = os.path.join(self.containing_folder, "OSF")
             self.save(self.user)
 
@@ -164,11 +165,22 @@ class OSFController(QDialog):
         except ValueError:
             return False
 
-    def set_containing_folder(self, new_containing_folder=None):
-        if new_containing_folder is None:
-            self.containing_folder = QFileDialog.getExistingDirectory(self, "Choose folder to place OSF")
-        else:
-            self.containing_folder = new_containing_folder
+
+    def set_containing_folder(self):
+        print('this is called right....')
+
+        # print('this is CALLED. restart={}'.format(restart))
+
+        # stop observing folder and stop polling
+        # self.background_worker.stop()
+        self.background_worker.pause_background_tasks()
+
+        self.containing_folder = QFileDialog.getExistingDirectory(self, "Choose folder to place OSF folder")
+
+        # self.containing_folder_updated_action.emit(self.containing_folder)
+        # restart observing folder and restart polling
+        if restart:
+            self.background_worker.run_background_tasks()
 
     def start_osf(self):
         url = "http://osf.io/dashboard"

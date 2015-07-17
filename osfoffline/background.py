@@ -16,18 +16,33 @@ class BackgroundWorker(threading.Thread):
         self.user = None
         self.osf_folder = ''
         self.loop = None
+        self.running = False
 
 
     def run(self):
-        self.loop = self.ensure_event_loop()
-        self.user = self.get_current_user()
-        self.osf_folder = self.user.osf_local_folder_path
-        if self.user:
-            self.start_observing_osf_folder()
-            self.start_polling_server()
-            self.loop.run_forever()
+        self.run_background_tasks()
 
 
+
+    def run_background_tasks(self):
+        print('starting run_background_tasks')
+        if not self.running:
+            self.loop = self.ensure_event_loop()
+            self.user = self.get_current_user()
+            self.osf_folder = self.user.osf_local_folder_path
+            if self.user:
+                self.start_observing_osf_folder()
+                self.start_polling_server()
+                self.running = True
+                self.loop.run_forever()
+
+
+    def pause_background_tasks(self):
+        if self.running:
+            self.stop_observing_osf_folder()
+            self.stop_polling_server()
+            self.stop_loop()
+            self.running = False
 
 
 
@@ -38,7 +53,7 @@ class BackgroundWorker(threading.Thread):
 
     def stop_polling_server(self):
         self.poller.stop()
-        # self.poller.join()
+
 
     # todo: can refactor this code out to somewhere
     # todo: when log in is working, you need to make this work with log in screen.
@@ -79,23 +94,23 @@ class BackgroundWorker(threading.Thread):
             # self.save(user)
         return user
 
-    def stop_loop(self):
+    def stop_loop(self, close=False):
         self.loop.call_soon_threadsafe(self.loop.stop)
-        while not self.loop.is_closed():
-            if not self.loop.is_running():
-                self.loop.close()
+        if close:
+            while not self.loop.is_closed():
+                if not self.loop.is_running():
+                    self.loop.close()
 
     def stop(self):
         self.stop_polling_server()
         self.stop_observing_osf_folder()
-        self.stop_loop()
+        self.stop_loop(close=True)
 
 
 
 
     def start_observing_osf_folder(self):
         # if something inside the folder changes, log it to config dir
-        # if something inside the folder changes, show it on console.
 
         self.event_handler = osf_event_handler.OSFEventHandler(self.osf_folder, self.user.osf_local_folder_path, self.user,
                                                                loop=self.loop)  # create event handler

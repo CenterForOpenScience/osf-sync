@@ -37,7 +37,6 @@ class Poll(object):
         self.request_session = aiohttp.ClientSession(loop=self._loop, headers=self.headers)
 
     def stop(self):
-        # todo: can I remove _keep_running?????
         self._keep_running = False
 
 
@@ -338,14 +337,17 @@ class Poll(object):
 
         # recursively handle folder's children
         if local_file_folder.type == File.FOLDER:
-
-            remote_children = yield from self.get_all_paginated_members(remote_file_folder['links']['related'])
-            local_remote_file_folders = self.make_local_remote_tuple_list(local_file_folder.files, remote_children)
-            for local, remote in local_remote_file_folders:
-                yield from self._check_file_folder(local,
-                                        remote,
-                                        local_parent_file_folder=local_file_folder,
-                                        local_node=local_node)
+            try:
+                remote_children = yield from self.get_all_paginated_members(remote_file_folder['links']['related'])
+                local_remote_file_folders = self.make_local_remote_tuple_list(local_file_folder.files, remote_children)
+                for local, remote in local_remote_file_folders:
+                    yield from self._check_file_folder(local,
+                                            remote,
+                                            local_parent_file_folder=local_file_folder,
+                                            local_node=local_node)
+            except ConnectionError:
+                pass
+                # if we are unable to get children, then we do not try to get and manipulate children
     @asyncio.coroutine
     def get_all_paginated_members(self, remote_url):
         remote_children = []
@@ -678,7 +680,7 @@ class Poll(object):
         #handle renaming local file and local folder
         old_path = local_file_folder.path
         # update model
-        local_file_folder.name = remote_file_folder['title']
+        local_file_folder.name = remote_file_folder['name']
         self.save(local_file_folder)
 
 

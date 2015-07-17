@@ -41,6 +41,7 @@ class Ui_Preferences(object):
         self.changeFolderButton.setGeometry(QtCore.QRect(440, 20, 99, 31))
         self.changeFolderButton.setObjectName("changeFolderButton")
         self.containingFolderTextEdit = QtWidgets.QTextEdit(self.groupBox_6)
+        self.containingFolderTextEdit.setReadOnly(True)
         self.containingFolderTextEdit.setGeometry(QtCore.QRect(20, 20, 331, 31))
         self.containingFolderTextEdit.setObjectName("containingFolderTextEdit")
         self.tabWidget.addTab(self.tab, "")

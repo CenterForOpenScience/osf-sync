@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import threading
 from PyQt5.QtWidgets import (QApplication, QDialog, QMessageBox, QSystemTrayIcon)
+from PyQt5.QtCore import QSettings
 from views.preferences import Preferences
 from views.system_tray import SystemTray
 from controller import OSFController
@@ -8,12 +9,15 @@ from views.start_screen import StartScreen
 import alerts
 import sys
 
+RUN_PATH = "HKEY_CURRENT_USER\\Software\\Microsoft\\Windows\\CurrentVersion\\Run"
+
 
 class OSFApp(QDialog):
     def __init__(self):
         super().__init__()
 
         # settings
+
         self.app_name = "OSF Offline"
         self.app_author = "COS"
 
@@ -73,10 +77,15 @@ class OSFApp(QDialog):
             # controller events
             (self.controller.login_action.triggered, self.start_screen.open_window),
             (self.controller.start_tray_action.triggered, self.tray.start),
+            (self.controller.containing_folder_updated_action.triggered, self.preferences.update_containing_folder_text),
 
             # preferences
             # (self.preferences.preferencesWindow.changeFolderButton.clicked, self.preferences.openContainingFolderPicker)
             (self.preferences.preferences_window.desktopNotifications.stateChanged, self.alerts_changed),
+            (self.preferences.preferences_window.startOnStartup.stateChanged, self.startup_changed),
+            (self.preferences.preferences_window.changeFolderButton.clicked, self.controller.set_containing_folder),
+            # (self.preferences.preferences_window.changeFolderButton.clicked, self.controller.set_containing_folder),
+
             # start screen
             (self.start_screen.done_logging_in_action.triggered, self.controller.start)
         ]
@@ -101,6 +110,18 @@ class OSFApp(QDialog):
             alerts.SHOW_ALERTS = True
         else:
             alerts.SHOW_ALERTS = False
+
+    def startup_changed(self):
+        # todo: probably should give notification to show that this setting has been changed.
+
+        if self.preferences.preferences_window.startOnStartup.isChecked():
+            # todo: make it so that this application starts on login
+            # self.settings = QSettings(RUN_PATH, QSettings.NativeFormat)
+            pass
+
+        else:
+            # todo: make it so that this application does NOT start on login
+            pass
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)

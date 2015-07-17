@@ -75,7 +75,7 @@ class OSFEventHandler(FileSystemEventHandler):
         # logging.info("Moved %s: from %s to %s", what, event.src_path,
         #              event.dest_path)
 
-        # todo: handle renamed!!!!!!!!!
+        # todo: handle MOVED!!!!!!!!!!!!!!
         try:
             src_path = ProperPath(event.src_path, event.is_directory)
             dest_path = ProperPath(event.dest_path, event.is_directory)
