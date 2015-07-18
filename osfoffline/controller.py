@@ -2,10 +2,9 @@ from PyQt5.QtWidgets import (QApplication, QDialog, QFileDialog, QAction)
 from appdirs import user_log_dir, user_config_dir, user_data_dir
 import os
 from watchdog.observers import Observer
-from sync_local_filesytem_and_db import determine_new_events
+
 from sqlalchemy.orm.exc import MultipleResultsFound
 from sqlalchemy.orm.exc import NoResultFound
-# from osfoffline.sync_local_filesytem_and_db import determine_new_events
 import logging
 import json
 import subprocess

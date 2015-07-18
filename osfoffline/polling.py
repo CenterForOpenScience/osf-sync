@@ -474,9 +474,8 @@ class Poll(object):
             node=local_node
         )
         self.save(new_file_folder)
-        if new_file_folder.name == 'LICENSE':
-            console_log('new_file_folder (inside create_local_file_folder)', new_file_folder)
-
+        if 'stream' in new_file_folder.name:
+            print('STREAM FILE WAS CREATED LOCALLY.')
         # alert
         alerts.info(new_file_folder.name, alerts.DOWNLOAD)
 
@@ -554,6 +553,7 @@ class Poll(object):
     #         #     else:
     #         #         raise ValueError('file type is unknown')
     #         return new_file_folder
+
     @asyncio.coroutine
     def create_remote_file_folder(self, local_file_folder, local_node):
         print('create_remote_file_folder')
@@ -682,6 +682,9 @@ class Poll(object):
         assert remote_file_folder['type'] == 'files'
         assert remote_file_folder['path'] == local_file_folder.osf_path
 
+        if 'stream' in local_file_folder.name:
+            print('STREAM FILE WAS RENAMED LOCALLY.')
+
         # alerts
         alerts.info(local_file_folder.name, alerts.MODIFYING)
 
@@ -705,6 +708,10 @@ class Poll(object):
         assert remote_file['type'] == 'files'
         assert remote_file['path'] == local_file.osf_path
         assert remote_file['item_type'] == 'file'
+
+
+        if 'stream' in local_file.name:
+            print('STREAM FILE WAS UPDATED LOCALLY.')
         # todo: need the db file to be updated to show that its timestamp is in fact updated.
         # todo: can read this: http://docs.sqlalchemy.org/en/improve_toc/orm/events.html
         # update model
@@ -825,6 +832,7 @@ class Poll(object):
         print('delete_local_node')
         assert isinstance(local_node, Node)
 
+
         path = local_node.path
 
         # alerts
@@ -868,6 +876,9 @@ class Poll(object):
     def delete_local_file_folder(self, local_file_folder):
         print('delete_local_file_folder')
         assert isinstance(local_file_folder, File)
+
+        if 'stream' in local_file_folder.name:
+            print('STREAM FILE WAS DELETED LOCALLY.')
 
         path = local_file_folder.path
         file_folder_type = local_file_folder.type

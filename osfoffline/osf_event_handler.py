@@ -130,7 +130,7 @@ class OSFEventHandler(FileSystemEventHandler):
                         # save
                         self.save(project)
                     else:
-                        print("CREATED FILE IN PROJECT AREA. ")
+                        print("CREATED FILE IN PROJECT AREA.")
                         raise NotADirectoryError
 
                 elif event.is_directory:
@@ -172,7 +172,7 @@ class OSFEventHandler(FileSystemEventHandler):
                     # console_log('new thing as file object',file)
                     containing_item.files.append(file)
                     self.save(file)
-                    console_log('new thing is file and inside db it is saved as',file.name)
+                    console_log('new thing is file and inside db it is saved as',file)
                     # console_log('new thing as file object AGAIN in order to check name',file)
                     # log
                     # todo: log
@@ -245,7 +245,8 @@ class OSFEventHandler(FileSystemEventHandler):
         """
 
         src_path = ProperPath(event.src_path, event.is_directory)
-        # console_log('deleting file. check if temp file is deleted', src_path.name)
+        if 'stream' in src_path.name:
+            console_log('deleting file. check if temp file is deleted', src_path.name)
         try:
             # get item
             item = self.get_item_by_path(src_path)
@@ -304,14 +305,4 @@ class OSFEventHandler(FileSystemEventHandler):
                 asyncio.async,
                 handler(event)
             )
-
-    # def normalize_path(self, path, is_dir):
-    #     normalized_path = path
-    #
-    #     if path.endswith(os.sep) and not is_dir:
-    #         normalized_path = path[0:-1* len(os.sep)]  # remove seperator
-    #     elif not path.endswith(os.sep) and is_dir:
-    #         normalized_path = os.path.join(path, '')  # add seperator
-    #
-    #     return normalized_path
 

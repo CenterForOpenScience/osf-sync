@@ -5,7 +5,7 @@ import polling
 from sqlalchemy.orm.exc import MultipleResultsFound, NoResultFound
 import osf_event_handler
 from watchdog.observers import Observer
-from sync_local_filesytem_and_db import determine_new_events
+from sync_local_filesytem_and_db import LocalDBSync
 import  asyncio
 
 class BackgroundWorker(threading.Thread):
@@ -119,7 +119,7 @@ class BackgroundWorker(threading.Thread):
         self.observer = Observer()  # create observer. watched for events on files.
         # attach event handler to observed events. make observer recursive
         self.observer.schedule(self.event_handler, self.osf_folder, recursive=True)
-        determine_new_events(self.user.osf_local_folder_path, self.observer, self.user)
+        LocalDBSync(self.user.osf_local_folder_path, self.observer, self.user).emit_new_events()
         self.observer.start()  # start
 
     def stop_observing_osf_folder(self):
