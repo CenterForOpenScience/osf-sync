@@ -65,6 +65,7 @@ class TestProperPath(TestCase):
         self.assertFalse(ProperPath('/this/folder',True).is_root)
         self.assertFalse(ProperPath('/this/folder',False).is_root)
 
+
 class TestValidation(TestCase):
 
     def test_double_slash_is_invalid(self):

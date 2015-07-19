@@ -110,6 +110,7 @@ class OSFController(QDialog):
         self.store_configs()
         self.background_worker.pause_background_tasks()
         self.background_worker.stop()
+        models.Session.close()
         # quit() stops gui and then quits application
         QApplication.instance().quit()
 
@@ -269,14 +270,14 @@ class OSFController(QDialog):
         # todo: create helper function to check if config/data/OSF/... dirs' exist, and create them if they dont' exist.
 
         # check if dir has config file already in it, if so use it. if not create it.
-        dir = user_config_dir(self.app_name, self.app_author)
+        dir = user_config_dir(appname=self.app_name, appauthor=self.app_author)
         rel_osf_config = os.path.join(dir, 'config.osf')
         # ensure directory exists
         if not os.path.exists(dir):
             os.makedirs(dir)
 
         # ensure data dir exists
-        data_dir = user_data_dir(self.app_name, self.app_author)
+        data_dir = user_data_dir(appname=self.app_name, appauthor=self.app_author)
 
         if not os.path.exists(data_dir):
             os.makedirs(data_dir)

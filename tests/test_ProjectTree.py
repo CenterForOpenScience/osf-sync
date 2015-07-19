@@ -90,11 +90,6 @@ class TestProjectTree(TestCase):
         self.pt.build_from_directory(self.TEST_PROJECT_NORMAL)
         self.assertEqual(self.pt.project, self.DEFAULT_STRUCTURE.project)
 
-    #FAILING
-    # def test_build_from_directory_ending_with_slash(self):
-    #     self.pt.build_from_directory(self.TEST_PROJECT_NORMAL+'/')
-    #     self.printDebug(self.pt, self.DEFAULT_STRUCTURE)
-    #     self.assertEqual(self.pt.project, self.DEFAULT_STRUCTURE.project)
 
     @raises(PermissionError)
     def test_build_from_unaccessible_directory(self):
@@ -186,10 +181,6 @@ class TestProjectTree(TestCase):
         self.assertFalse(self.DEFAULT_STRUCTURE.project.contains_item(item_to_remove))
 
 
-    # def test_remove_items(self):
-    # 	self.fail()
-
-
     def test_add_items_nested(self):
         previous_item_num_in_project_top = len(self.DEFAULT_STRUCTURE.project.items)
         a_folder = self.DEFAULT_STRUCTURE.project.get_item_by_name('a')
@@ -222,12 +213,6 @@ class TestProjectTree(TestCase):
             #note: this checks whether the new file inside the new folder was added as well.
             self.assertEqual(self.DEFAULT_STRUCTURE.project.get_item_by_name('a').get_item_by_name(new_folder_name), new_folder)
 
-
-    # def test_remove_item_nested(self):
-    # 	self.fail()
-    #
-    # def test_remove_items_nested(self):
-    # 	self.fail()
 
     def test_remove_file_by_name(self):
         previous_item_num_in_project_top = len(self.DEFAULT_STRUCTURE.project.items)
@@ -290,11 +275,6 @@ class TestProjectTree(TestCase):
             self.DEFAULT_STRUCTURE.project.get_item_by_name('copy1').generate_md5()
         )
 
-    # def test_compare_file_with_diff_file_with_same_contents(self):
-    #     self.assertEqual(
-    #         self.DEFAULT_STRUCTURE.project.get_item_by_name('b').generate_md5(),
-    #         self.DEFAULT_STRUCTURE.project.get_item_by_name('copy1').generate_md5()
-    #     )
 
     def test_can_put_stuff_in_decorator(self):
         new_item_name = 'should not be added.'
@@ -308,40 +288,6 @@ class TestProjectTree(TestCase):
         self.assertRaises(TypeError, self.DEFAULT_STRUCTURE.project.get_item_by_name('b').add_item,new_item )
         self.assertRaises(TypeError, self.DEFAULT_STRUCTURE.project.get_item_by_name('copy1').add_item,new_item)
         self.assertRaises(TypeError, self.DEFAULT_STRUCTURE.project.get_item_by_name('a').get_item_by_name('b').add_item,new_item)
-
-
-
-    """
-    def test_get_from_db(self):
-    	self.fail()
-
-    def test_store_into_db(self):
-    	self.fail()
-
-
-
-
-    def test_diff_files_in_diff_folders(self):
-    	self.fail()
-
-    def test_same_files_in_same_folder(self):
-    	self.fail()
-
-    def test_same_files_in_diff_folders(self):
-    	self.fail()
-
-    def test_same_files_in_diff_folders(self):
-    	self.fail()
-    def test_empty_project(self):
-    	self.fail()
-
-    def test_get_project_config_metada(self):
-    	self.fail()
-
-    #function tests
-    def test_store_in_db_then_get_back(self):
-    	self.fail()
-    """
 
 
 

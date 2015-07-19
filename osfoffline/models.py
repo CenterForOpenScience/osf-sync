@@ -6,10 +6,10 @@ from sqlalchemy import create_engine, ForeignKey, Enum
 from sqlalchemy.orm import sessionmaker, relationship, backref, scoped_session
 from sqlalchemy import Column, Integer, Boolean, String, DateTime
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.pool import SingletonThreadPool
+from sqlalchemy.pool import QueuePool
 from sqlalchemy.ext.hybrid import hybrid_property
 Base = declarative_base()
-
+import shutil
 
 class User(Base):
     __tablename__ = 'user'
@@ -36,11 +36,6 @@ class User(Base):
         cascade="all, delete-orphan"
     )
 
-    # logs = relationship(
-    #     'Log',
-    #     backref=backref('user'),
-    #     cascade='all, delete-orphan'
-    # )
 
     @hybrid_property
     def projects(self):
@@ -55,16 +50,6 @@ class User(Base):
             self.full_name, self.osf_password, self.osf_local_folder_path)
 
 
-# class Log(Base):
-#     __tablename__ = 'log'
-#
-#     id = Column(Integer, primary_key=True)
-#
-#     PROJECT = 'project'
-#     COMPONENT = 'component'
-#
-#     date = Column(DateTime)
-#     action = Enum(PROJECT, COMPONENT)
 
 
 # todo: can have it so that all nodes and subnodes know that they are part of the same user.
@@ -99,12 +84,6 @@ class Node(Base):
         cascade="all, delete-orphan"
     )
 
-    # logs = relationship(
-    #     'Log',
-    #     backref=backref('project'),
-    #     cascade='all, delete-orphan',
-    #     order_by="Log.position"
-    # )
 
     @hybrid_property
     def path(self):
@@ -215,50 +194,55 @@ def setup_db(dir):
     create_models()
     create_session()
 
+def teardown_db(dir):
+    global db_dir
+    shutil.rmtree(db_dir)
 
 def get_session():
     return Session()
 
 
 def create_models():
+    """ Create sql alchemy engine and models for all file systems.
     """
-    # This shows how this should be for various file systems. The current way should handle all of them.
-    # sqlite://<nohostname>/<path>
-    # where <path> is relative:
-    engine = create_engine('sqlite:///foo.db')
-    And for an absolute file path, the three slashes are followed by the absolute path:
-
-    # Unix/Mac - 4 initial slashes in total
-    engine = create_engine('sqlite:////absolute/path/to/foo.db')
-    #Windows
-    engine = create_engine('sqlite:///C:\\path\\to\\foo.db')
-    #Windows alternative using raw string
-    engine = create_engine(r'sqlite:///C:\path\to\foo.db')
-    """
+    if not os.path.isdir(db_dir):
+        os.makedirs(db_dir)
     db_file_path = os.path.join(db_dir, 'osf.db')
     url = 'sqlite:///{}'.format(db_file_path)
-
     engine = create_engine(url, echo=False)
     Base.metadata.create_all(engine)
 
 
 def create_session():
+    """
+    this function sets up the Session global variable using the previously setup db.
+    The Session object in this case uses the identity map pattern.
+    There is a single Session map. Whenever we create a new session via get_session(),
+    we are really just getting the currently stored session in that thread.
+    Session object here refers to getting a db session from a map from identity map pattern ma
+    :return:
+    """
     db_file_path = os.path.join(db_dir, 'osf.db')
     url = 'sqlite:///{}'.format(db_file_path)
+
+
+    # for this application, that should only lead to 2 connections in total
     # todo: figure out if this is safe or not. If not, how to make it safe?????
     # engine = create_engine(url, echo=False, connect_args={'check_same_thread':False})
-    engine = create_engine(url, echo=False, connect_args={'check_same_thread': False}, poolclass=SingletonThreadPool)
+    engine = create_engine(url, echo=False)
     session_factory = sessionmaker(bind=engine)
+    # figure out safer way to do this
     global Session
     Session = scoped_session(session_factory)
-    # todo: figure out a safer way to do this
-    # global session
+
 
 
 # todo: probably okay to have a method that finds a component by guid.
+
 # evaluatation of autocommit/autoflush for models was decidedly not a good idea.
-# todo: I think evaluation was WRONG. if does not commit until added to session, then autocommit is GOOD.
-# todo: if you do use save method, then you need to standardize rest of code to use this method
+# I think evaluation was WRONG. if does not commit until added to session, then autocommit is GOOD.
+# if you do use save method, then you need to standardize rest of code to use this method
+# autocommit suggested to be BAD idea by their website. So don't do  it.
 def save(session, item=None):
     if item:
         session.add(item)
