@@ -91,15 +91,19 @@ class TestDBSetup(TestCase):
 
 
 
-import tests.fixtures.factories.common
+from .fixtures.factories import common
+
 
 class TestModels(TestCase):
     def setUp(self):
+
         self.db_dir = user_data_dir(appname='test-app-name', appauthor='test-app-author')
-        # setup_db(self.db_dir)
-        self.session = get_session()
         self.db_path = os.path.join(self.db_dir, 'osf.db')
         self.osf_folder_path = os.path.join(self.db_dir, "OSF")
+
+        # creates a new db each time
+        setup_db(self.db_dir)
+
         # self.user = User(
         #     full_name="test user",
         #     osf_login="test@email.com",
@@ -119,6 +123,7 @@ class TestModels(TestCase):
         #     category = Node.PROJECT,
         #     osf_id = "nodeid",
         # )
+        self.session = get_session()
 
     def tearDown(self):
         self.session.rollback()

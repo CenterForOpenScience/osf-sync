@@ -4,7 +4,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import scoped_session, sessionmaker
 from factory.alchemy import SQLAlchemyModelFactory
 from factory import Sequence
-from tests.fixtures.factories.common import session
+from . import common
 
 # class User(Base):
 #     """ A SQLAlchemy simple model class who represents a user """
@@ -15,12 +15,12 @@ from tests.fixtures.factories.common import session
 #
 # Base.metadata.create_all(engine)
 
-session = session
+
 
 class UserFactory(SQLAlchemyModelFactory):
     class Meta:
         model = User
-        sqlalchemy_session = session   # the SQLAlchemy session object
+        sqlalchemy_session = common.Session   # the SQLAlchemy session object
 
     id = Sequence(lambda n: n)
     full_name = Sequence(lambda n: u'User %d' % n)

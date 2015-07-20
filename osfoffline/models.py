@@ -2,6 +2,8 @@ __author__ = 'himanshu'
 import hashlib
 import datetime
 import os
+from appdirs import user_data_dir
+# from settings import PROJECT_NAME, PROJECT_AUTHOR
 from sqlalchemy import create_engine, ForeignKey, Enum
 from sqlalchemy.orm import sessionmaker, relationship, backref, scoped_session
 from sqlalchemy import Column, Integer, Boolean, String, DateTime
@@ -191,9 +193,12 @@ db_dir = ''
 Session = None
 
 
-def setup_db(dir):
+def setup_db(dir=None):
     global db_dir
-    db_dir = dir
+    if dir:
+        db_dir=dir
+    # else:
+    #     db_dir = user_data_dir(PROJECT_NAME, PROJECT_AUTHOR)
     create_models()
     create_session()
 
