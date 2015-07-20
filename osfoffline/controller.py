@@ -12,7 +12,8 @@ import webbrowser
 import asyncio
 import osf_event_handler
 import polling
-import models
+import osfoffline.models as models
+import osfoffline.db as db
 import sys
 import threading
 from background import BackgroundWorker
@@ -77,7 +78,7 @@ class OSFController(QDialog):
     # state functions
     def start(self):
         # self.createConfigs()
-        self.session = models.get_session()
+        self.session = db.get_session()
         self.user = self.get_current_user()
         if self.user:
             self.containing_folder = os.path.dirname(self.user.osf_local_folder_path)
@@ -110,7 +111,7 @@ class OSFController(QDialog):
         self.store_configs()
         self.background_worker.pause_background_tasks()
         self.background_worker.stop()
-        models.Session.close()
+        db.Session.close()
         # quit() stops gui and then quits application
         QApplication.instance().quit()
 
@@ -281,7 +282,7 @@ class OSFController(QDialog):
 
         if not os.path.exists(data_dir):
             os.makedirs(data_dir)
-        models.setup_db(data_dir)
+        db.setup_db(data_dir)
 
         # new file if file doesnt exist.
         try:
@@ -317,7 +318,7 @@ class OSFController(QDialog):
 
     # todo: finish this!!!!!!!!!!
     def can_skip_startup_screen(self):
-        session = models.get_session()
+        session = db.get_session()
         try:
             session.query(models.User).filter(models.User.logged_in).one()
             return True

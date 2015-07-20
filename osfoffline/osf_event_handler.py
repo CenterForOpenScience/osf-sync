@@ -3,11 +3,12 @@ This is the most important file in the system. OSFEventHandler is responsible fo
 storing the data into the db, and then sending a request to the remote server.
 """
 from watchdog.events import FileSystemEventHandler
-from models import User, Node, File, get_session
+from .models import User, Node, File
+from .db import get_session
 import os
 import logging
 import asyncio
-from path import ProperPath
+from .path import ProperPath
 EVENT_TYPE_MOVED = 'moved'
 EVENT_TYPE_DELETED = 'deleted'
 EVENT_TYPE_CREATED = 'created'

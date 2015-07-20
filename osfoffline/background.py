@@ -7,12 +7,13 @@ import osf_event_handler
 from watchdog.observers import Observer
 from sync_local_filesytem_and_db import LocalDBSync
 import  asyncio
+import db
 
 class BackgroundWorker(threading.Thread):
 
     def __init__(self):
         super().__init__()
-        self.session = models.get_session()
+        self.session = db.get_session()
         self.user = None
         self.osf_folder = ''
         self.loop = None

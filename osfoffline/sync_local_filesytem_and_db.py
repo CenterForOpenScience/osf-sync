@@ -8,11 +8,10 @@ from watchdog.events import (
     FileCreatedEvent,
     DirCreatedEvent,
 )
-from models import setup_db, User, Node, File, get_session, Base
-from path import ProperPath
+from .models import User, Node, File, Base
+
+from .path import ProperPath
 from watchdog.observers import Observer
-from osf_event_handler import OSFEventHandler
-import asyncio
 
 
 class LocalDBSync(object):
