@@ -36,14 +36,13 @@ class User(Base):
         cascade="all, delete-orphan"
     )
 
-
     @hybrid_property
-    def projects(self):
-        projects = []
+    def top_level_nodes(self):
+        top_nodes = []
         for node in self.nodes:
             if node.category == Node.PROJECT:
-                projects.append(node)
-        return projects
+                top_nodes.append(node)
+        return top_nodes
 
     def __repr__(self):
         return "<User(fullname={}, osf_password={}, osf_local_folder_path={})>".format(
@@ -70,7 +69,7 @@ class Node(Base):
     locally_created = Column(Boolean, default=False)
     locally_deleted = Column(Boolean, default=False)
 
-    user_id = Column(Integer, ForeignKey('user.id'))
+    user_id = Column(Integer, ForeignKey('user.id'), nullable=False)
     parent_id = Column(Integer, ForeignKey('node.id'))
     components = relationship(
         "Node",
@@ -138,7 +137,7 @@ class File(Base):
     locally_deleted = Column(Boolean, default=False)
 
     user_id = Column(Integer, ForeignKey('user.id'))
-    node_id = Column(Integer, ForeignKey('node.id'))
+    node_id = Column(Integer, ForeignKey('node.id'), nullable=False)
     parent_id = Column(Integer, ForeignKey('file.id'))
     files = relationship(
         "File",
@@ -146,6 +145,10 @@ class File(Base):
         cascade="all, delete-orphan",
         # todo: watchdog crawls up so cascade makes things fail on recursive delete. may want to have delete just ignore fails.
     )
+
+    @hybrid_property
+    def has_parent(self):
+        return self.parent is not None
 
     @hybrid_property
     def path(self):

@@ -2,11 +2,9 @@ __author__ = 'himanshu'
 from osfoffline.models import setup_db, get_session, User, Node, File
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import scoped_session, sessionmaker
-import factory
-from appdirs import user_data_dir
-
-setup_db(user_data_dir('test-app', 'test-author'))
-session = get_session()
+from factory.alchemy import SQLAlchemyModelFactory
+from factory import Sequence
+from tests.fixtures.factories.common import session
 
 # class User(Base):
 #     """ A SQLAlchemy simple model class who represents a user """
@@ -17,12 +15,18 @@ session = get_session()
 #
 # Base.metadata.create_all(engine)
 
+session = session
 
-
-class UserFactory(factory.alchemy.SQLAlchemyModelFactory):
+class UserFactory(SQLAlchemyModelFactory):
     class Meta:
         model = User
         sqlalchemy_session = session   # the SQLAlchemy session object
 
-    id = factory.Sequence(lambda n: n)
-    name = factory.Sequence(lambda n: u'User %d' % n)
+    id = Sequence(lambda n: n)
+    full_name = Sequence(lambda n: u'User %d' % n)
+    osf_login = Sequence(lambda n: u'osf_login %d' % n)
+    osf_password = Sequence(lambda n: u'osf_password %d' % n)
+    oauth_token = Sequence(lambda n: u'oauth_token %d' % n)
+    osf_id = Sequence(lambda n: u'osf_id %d' % n)
+
+    logged_in = False
