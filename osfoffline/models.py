@@ -208,6 +208,17 @@ class File(Base):
         except FileNotFoundError:  # file was deleted locally
             return 0
 
+    @validates('parent_id')
+    def validate_parent_id(self, key, parent_id):
+        assert self.parent.node == self.node
+        return parent_id
+
+    @validates('node_id')
+    def validate_node_id(self, key, node_id):
+        if self.parent:
+            assert self.parent.node == self.node
+        return node_id
+
     def __repr__(self):
         return "<File ({}), type={}, name={}, path={}, parent_id={}>".format(
             self.id, self.type, self.name, self.path, self.parent

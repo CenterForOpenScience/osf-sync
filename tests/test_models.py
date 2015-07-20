@@ -8,6 +8,8 @@ import threading
 import shutil
 from tests.fixtures.factories.factories import UserFactory, NodeFactory, FileFactory
 from sqlite3 import IntegrityError
+from nose.tools import raises, assert_raises
+
 
 
 class TestModels(TestCase):
@@ -23,6 +25,7 @@ class TestModels(TestCase):
 
     def test_create_user(self):
         u = UserFactory()
+        self.session.flush()
         self.assertEqual([u], self.session.query(User).all())
 
     def test_delete_user(self):
@@ -50,7 +53,6 @@ class TestModels(TestCase):
         self.session.delete(u)
         #node should have been deleted as soon as user was deleted
         self.assertEqual([], self.session.query(Node).all())
-
 
 
     def test_delete_users_files_and_nodes(self):
@@ -146,11 +148,15 @@ class TestModels(TestCase):
         self.assertEqual([], u.files)
         self.assertEqual([], self.session.query(File).all())
 
+    # fixme: raise IntegrityError Exception, NOT general Exception.
+
+
 
     def test_node_without_user(self):
-        node = NodeFactory()
-        with self.assertRaises(IntegrityError):
-          self.session.flush()
+
+        with self.assertRaises(Exception):
+            NodeFactory()
+            self.session.flush()
 
 
     def test_node_without_parent(self):
@@ -158,16 +164,20 @@ class TestModels(TestCase):
         node = NodeFactory(user=u)
         self.assertTrue(node.top_level)
 
+
     def test_file_without_node(self):
         user = UserFactory()
-        with self.assertRaises(IntegrityError):
-            file = FileFactory(user=user)
+        self.session.flush()
+        with self.assertRaises(Exception):
+            FileFactory(user=user)
             self.session.flush()
+
 
     def test_file_without_user(self):
         user = UserFactory()
         node = NodeFactory(user=user)
-        with self.assertRaises(IntegrityError):
+        self.session.flush()
+        with self.assertRaises(Exception):
             FileFactory(node=node)
             self.session.flush()
 
@@ -176,35 +186,97 @@ class TestModels(TestCase):
         node = NodeFactory(user=u)
         file = FileFactory(user=u, node=node)
         self.assertFalse(file.has_parent)
+        
+        
+    def test_add_file_to_folder_that_is_of_diff_node(self):
+        u = UserFactory()
+        node1 = NodeFactory(user=u)
+        node2 = NodeFactory(user=u)
+        folder1 = FileFactory(user=u, node=node1)
+        # going to flush to make sure the error wasnt from something before this.
+        self.session.flush()
+        with self.assertRaises(Exception):
+            folder2 = FileFactory(user=u, node=node2, parent=folder1)
+            self.session.flush()
 
-"""
+    def test_add_folder_that_is_of_diff_node_but_same_hierarchy(self):
+        u = UserFactory()
+        node1 = NodeFactory(user=u)
+        node2 = NodeFactory(user=u, parent=node1)
+        folder1 = FileFactory(user=u, node=node1)
+        # going to flush to make sure the error wasnt from something before this.
+        self.session.flush()
+        with self.assertRaises(Exception):
+            folder2 = FileFactory(user=u, node=node2, parent=folder1)
+            self.session.flush()
+
+
 class TestModelPath(TestCase):
     def setUp(self):
-        self.db_dir = user_data_dir(appname='test-app-name', appauthor='test-app-author')
-        setup_db(self.db_dir)
-        self.session = get_session()
-        self.db_path = os.path.join(self.db_dir, 'osf.db')
-        self.osf_folder_path = os.path.join(self.db_dir, "OSF")
+        self.session = common.Session()
+        self.osf_dir = os.path.join(os.getcwd(), "OSF")
+        self.user = UserFactory(osf_local_folder_path = self.osf_dir)
+        self.node = NodeFactory(user=self.user )
+        self.file = FileFactory(user=self.user, node=self.node)
+        self.session.flush()
+
 
     def tearDown(self):
         self.session.rollback()
+        self.session.query(User).delete()
+        self.session.query(Node).delete()
+        self.session.query(File).delete()
+        common.Session.remove()
 
 
     def test_path_for_user(self):
-        user = UserFactory()
+        self.assertEqual(self.user.osf_local_folder_path, self.osf_dir)
 
     def test_path_for_node(self):
-        self.fail()
+        node_path = os.path.join(self.osf_dir, self.node.title)
+        self.assertEqual(node_path, self.node.path)
+
+    def test_path_for_three_level_node(self):
+        node2 = NodeFactory(user=self.user, parent=self.node)
+        node3 = NodeFactory(user=self.user, parent=node2)
+        node_path = os.path.join(self.osf_dir, self.node.title, node2.title, node3.title)
+        self.assertEqual(node_path, node3.path)
+        
+
+    def test_path_for_three_level_node_with_3_level_file(self):
+        node2 = NodeFactory(user=self.user, parent=self.node)
+        node3 = NodeFactory(user=self.user, parent=node2)
+        file1 = FileFactory(user=self.user, node=node3)
+        file2 = FileFactory(user=self.user, node=node3, parent=file1)
+        file3 = FileFactory(user=self.user, node=node3, parent=file2)
+        
+        file_path = os.path.join(
+            self.osf_dir,
+            self.node.title, 
+            node2.title, 
+            node3.title,
+            file1.name,
+            file2.name,
+            file3.name
+        )
+        self.assertEqual(file_path, file3.path)
+
+        
 
     def test_file_path(self):
-        self.fail()
+        file_path = os.path.join(self.osf_dir, self.node.title, self.file.name)
+        self.assertEqual(file_path, self.file.path)
 
     def test_node_path_when_file_deleted(self):
-        self.fail()
+        self.session.delete(self.file)
+        self.session.refresh(self.user)
+        node_path = os.path.join(self.osf_dir, self.node.title)
+        self.assertEqual(node_path, self.node.path)
 
-    def test_node_path_when_file_added(self):
-        self.fail()
+    def test_node_path_when_file_added_to_folder(self):
+        new_file = FileFactory(user=self.user, node=self.node, parent=self.file)
+        folder_path = os.path.join(self.osf_dir, self.node.title, self.file.name)
+        new_file_path = os.path.join(self.osf_dir, self.node.title,self.file.name, new_file.name)
+        self.assertEqual(folder_path, self.file.path)
+        self.assertEqual(new_file_path, new_file.path)
 
-    def test_node_path_without_user(self):
-        self.fail()
-"""
