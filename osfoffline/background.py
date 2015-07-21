@@ -1,13 +1,13 @@
 __author__ = 'himanshu'
 import threading
-import models
-import polling
+import osfoffline.models as models
+import osfoffline.polling as polling
 from sqlalchemy.orm.exc import MultipleResultsFound, NoResultFound
-import osf_event_handler
+import osfoffline.osf_event_handler as osf_event_handler
 from watchdog.observers import Observer
-from sync_local_filesytem_and_db import LocalDBSync
-import  asyncio
-import db
+from osfoffline.sync_local_filesytem_and_db import LocalDBSync
+import asyncio
+import osfoffline.db as db
 
 class BackgroundWorker(threading.Thread):
 

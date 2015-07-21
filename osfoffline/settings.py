@@ -3,13 +3,15 @@ import json
 import logging
 import logging.config
 from appdirs import user_config_dir, user_data_dir
-
+import furl
 PROJECT_NAME = 'osf-offline'
 PROJECT_AUTHOR = 'cos'
 PROJECT_CONFIG_PATH = user_config_dir(PROJECT_NAME, PROJECT_AUTHOR)
 PROJECT_DB_PATH = user_data_dir(PROJECT_NAME, PROJECT_AUTHOR)
 
+API_BASE = 'http://localhost:8000'
 
+WB_BASE = 'http://localhost:7777'
 
 # import hashlib
 #

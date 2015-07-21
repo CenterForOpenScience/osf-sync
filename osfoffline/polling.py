@@ -7,9 +7,10 @@ import iso8601
 import pytz
 import aiohttp
 import concurrent
-from .models import User, Node, File, Base
+from osfoffline.models import User, Node, File, Base
 import osfoffline.alerts as alerts
-from .db import get_session
+import osfoffline.db as db
+from osfoffline.api_url_builder import api_user_url, wb_file_revisions, wb_file_url, api_user_nodes,wb_move_url
 
 OK = 200
 CREATED = 201
@@ -22,7 +23,7 @@ class Poll(object):
         super().__init__()
         self._keep_running = True
         self.user_osf_id = user_osf_id
-        self.session = get_session()
+        self.session = db.get_session()
         self.user = self.session.query(User).filter(
             User.osf_id == user_osf_id).one()  # todo: does passing in user directly break things?
 
@@ -58,7 +59,7 @@ class Poll(object):
     @asyncio.coroutine
     def get_remote_user(self, future):
         print("checking projects of user with id {}".format(self.user_osf_id))
-        url = 'https://staging2.osf.io:443/api/v2/users/{}/'.format(self.user_osf_id)
+        url = api_user_url(self.user_osf_id)
         while True:
             try:
                 resp = yield from self.make_request(url, get_json=True)
@@ -87,8 +88,6 @@ class Poll(object):
             if item['type'] == 'nodes':
                 return item['id']
             elif item['type'] == 'files':
-                # !!!!!fixme: this is a cheatcode!!!! for here, we are using path+item_type for here only for identifying purposes
-                # fixme: doesn't work for when type/path is modified
                 return item['path']
             else:
                 raise ValueError(item['type'] + 'is not handled')
@@ -132,13 +131,6 @@ class Poll(object):
                 self.get_id(sorted_combined_list[i]) == \
                 self.get_id(sorted_combined_list[i + 1])
             if both_exist:
-                # console_log('self.get_id(sorted_combined_list[i])',self.get_id(sorted_combined_list[i]))
-                # console_log('self.get_id(sorted_combined_list[i+1])',self.get_id(sorted_combined_list[i+1]))
-                # console_log('both_exist',both_exist)
-
-                # console_log('note in next two console_logs, one should be local, other should be remote',' in any order')
-                # console_log('sorted_combined_list[i]',sorted_combined_list[i])
-                # console_log('sorted_combined_list[i+1]',sorted_combined_list[i+1])
 
                 # (local, remote)
                 if isinstance(sorted_combined_list[i], dict):  # remote
@@ -147,26 +139,22 @@ class Poll(object):
                     new_tuple = (sorted_combined_list[i], sorted_combined_list[i + 1])
                 else:
                     raise TypeError('what the fudge did you pass in')
-                # console_log('new_tuple',new_tuple)
+
                 # add an extra 1 because both values should be added to tuple list
                 i += 1
             elif isinstance(sorted_combined_list[i], dict):
-                # console_log('self.get_id(sorted_combined_list[i])',self.get_id(sorted_combined_list[i]))
-                # console_log('remote exists only','')
-                # console_log('sorted_combined_list[i]',sorted_combined_list[i])
+
                 new_tuple = (None, sorted_combined_list[i])
-                # console_log('new_tuple',new_tuple)
+
             else:
-                # console_log('self.get_id(sorted_combined_list[i])',self.get_id(sorted_combined_list[i]))
-                # console_log('local exists only','')
-                # console_log('sorted_combined_list[i]',sorted_combined_list[i])
+
                 new_tuple = (sorted_combined_list[i], None)
-                # console_log('new_tuple',new_tuple)
+
             local_remote_tuple_list.append(new_tuple)
             i += 1
-        # console_log('local_remote_tuple_list',local_remote_tuple_list)
+
         for local, remote in local_remote_tuple_list:
-            # console_log('remote', remote)
+
             assert isinstance(local, Base) or local is None
             assert isinstance(remote, dict) or remote is None
             if isinstance(local, Base) and isinstance(remote, dict):
@@ -183,41 +171,30 @@ class Poll(object):
         assert remote_user['type'] == 'users'
 
         remote_user_id = remote_user['id']
-        projects_for_user_url = 'https://staging2.osf.io:443/api/v2/users/{}/nodes/'.format(remote_user_id)
 
+        # all_remote_nodes_url = 'https://staging2.osf.io:443/api/v2/users/{}/nodes/'.format(remote_user_id)
+        all_remote_nodes_url = api_user_nodes(remote_user_id)
         while self._keep_running:
-            # get remote projects
-            remote_projects = yield from self.get_all_paginated_members(projects_for_user_url)
-            # todo: figure out how to actually get top level nodes. FOR NOW, I am just filtering by category = projects in response.
-            temp = []
-            for remote in remote_projects:
-                if remote['category'] == 'project':
-                    temp.append(remote)
-            remote_projects = temp
+            # get remote top level nodes
+            all_remote_nodes = yield from self.get_all_paginated_members(all_remote_nodes_url)
+            remote_top_level_nodes = []
+            for remote in all_remote_nodes:
+                if remote['links']['parent'] is None:
+                    remote_top_level_nodes.append(remote)
 
-            # get local projects
-            local_projects = self.user.projects
 
-            local_remote_projects = self.make_local_remote_tuple_list(local_projects, remote_projects)
+            # get local top level nodes
+            local_top_level_nodes = self.user.top_level_nodes
 
-            # BUG: I think there is a bug in the API.
-            # If I delete a component online, it still shows up in the parent node's children list in the API.
-            # I don't know how to handle this issue. For now, I will just ignore the fail when getting that deleted
-            # nodes files.
-            # ALSO: this probably means I can't delete nodes for now.
-            for local, remote in local_remote_projects:
-                # if local is None and remote is None:
-                #     raise ValueError('whats going on bro????. both dont exist')
-                # elif local is None:
-                #     self.create_local_node()
-                # elif remote is None:
-                #     self.create_remote_node()
-                # else:
-                #     logs = self.get_logs(local.osf_id)
+            local_remote_top_level_nodes = self.make_local_remote_tuple_list(local_top_level_nodes, remote_top_level_nodes)
+
+
+            for local, remote in local_remote_top_level_nodes:
+
 
                 # optimization: could check date modified of top level
                 # and if not modified then don't worry about children
-                yield from self.check_node(local, remote, local_parent_node=None, remote_parent_node=None)
+                yield from self.check_node(local, remote, local_parent_node=None)
 
             print('---------SHOULD HAVE ALL OSF FILES---------')
 
@@ -225,7 +202,7 @@ class Poll(object):
             # todo: figure out how we can prematuraly stop the sleep when user ends the application while sleeping
 
     @asyncio.coroutine
-    def check_node(self, local_node, remote_node, local_parent_node, remote_parent_node):
+    def check_node(self, local_node, remote_node, local_parent_node):
         """
         Responsible for checking whether local node values are same as remote node.
         Values to be checked include: files and folders, name, metadata, child nodes
@@ -247,18 +224,6 @@ class Poll(object):
 
         if local_node is None:
             local_node = yield from self.create_local_node(remote_node, local_parent_node)
-        # elif local_node.locally_created and remote_node is None:
-        #     yield from self.create_remote_node(local_node, remote_parent_node)
-        #     # note: this should NOT return once create_remote_node is fixed.
-        #     return
-        # elif local_node.locally_created and remote_node is not None:
-        #     raise ValueError('newly created local node already exists on server! WHY? broken!')
-        # elif local_node.locally_deleted and remote_node is None:
-        #     raise ValueError('local node was never on server for some reason. why? fixit!')
-        # elif local_node.locally_deleted and remote_node is not None:
-        #     yield from self.delete_remote_node(local_node, remote_node)
-        #     # todo: delete_remote_node will have to handle making sure all children are deleted.
-        #     return
         elif local_node is not None and remote_node is None:
             yield from self.delete_local_node(local_node)
             return
@@ -266,9 +231,6 @@ class Poll(object):
             # todo: handle other updates to  node
 
             if local_node.title != remote_node['title']:
-                # if self.local_is_newer(local_node, remote_node):
-                #     yield from self.modify_remote_node(local_node, remote_node)
-                # else:
                 yield from self.modify_local_node(local_node, remote_node)
 
         # handle file_folders for node
@@ -353,6 +315,7 @@ class Poll(object):
             except ConnectionError:
                 pass
                 # if we are unable to get children, then we do not try to get and manipulate children
+
     @asyncio.coroutine
     def get_all_paginated_members(self, remote_url):
         remote_children = []
@@ -361,14 +324,12 @@ class Poll(object):
         if remote_url is None:
             return remote_children
 
-        # try:
+
         resp = yield from self.make_request(remote_url, get_json=True)
         remote_children.extend(resp['data'])
         while resp['links']['next']:
             resp = yield from self.make_request(resp['links']['next'], get_json=True)
             remote_children.extend(resp['data'])
-        # except:
-        #     print('couldnt get subfolder and subfiles inside get_all_paginated_members for remote_url {}'.format(remote_url))
         for child in remote_children:
             assert isinstance(child, dict)
         return remote_children
@@ -390,7 +351,7 @@ class Poll(object):
             user=self.user,
             parent=local_parent_node
         )
-        self.save(new_node)
+        db.save(self.session,new_node)
 
         # alert
         alerts.info(new_node.title, alerts.DOWNLOAD)
@@ -401,57 +362,7 @@ class Poll(object):
 
         assert local_parent_node is None or (new_node in local_parent_node.components)
         return new_node
-    # @asyncio.coroutine
-    # def create_remote_node(self, local_node, remote_parent_node):
-    #     print('create_remote_node')
-    #     assert isinstance(local_node, Node)
-    #     assert isinstance(remote_parent_node, dict) or (remote_parent_node is None)
-    #     # parent_is_none implies new_node_is_project
-    #     assert (remote_parent_node is not None) or (local_node.category == Node.PROJECT)
-    #
-    #     # alert
-    #     alerts.info(local_node.title, alerts.UPLOAD)
-    #
-    #     data = {
-    #         'title': local_node.title,
-    #         # todo: allow users to choose other categories
-    #         'category': 'project' if local_node.category == Node.PROJECT else 'other'
-    #     }
-    #
-    #     if remote_parent_node:
-    #         # component url
-    #         assert local_node.category == Node.COMPONENT
-    #         # fixme: THIS IS SOOOOOOOOOO  BROKEN!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    #         # todo: make this part A LOT better once api does it.
-    #
-    #
-    #         url = 'https://staging2.osf.io/{}/newnode/'.format(remote_parent_node['id'])
-    #
-    #         resp = yield from self.make_request(url, method='POST', data=data)
-    #
-    #         # request does not return json.
-    #         # response does have url that contains the node if of the new node.
-    #
-    #         local_node.osf_id = resp.url.split('/')[-2]
-    #         local_node.locally_created = False
-    #         self.save(local_node)
-    #
-    #         # I think I need it in this case because I don't do anything with the response. no yield from resp.content or anything.
-    #         resp.close()
-    #
-    #         # location header should have node id: https://staging2.osf.io/yz8eh/
-    #         return
-    #     else:
-    #         # project url
-    #         assert local_node.category == Node.PROJECT
-    #         url = 'https://staging2.osf.io:443/api/v2/nodes/'
-    #         resp = yield from self.make_request(url,method="POST", data=data, get_json=True)
-    #
-    #         remote_node = resp['data']
-    #         local_node.osf_id = remote_node['id']
-    #         local_node.locally_created = False
-    #         self.save(local_node)
-    #         return remote_node
+
 
     @asyncio.coroutine
     def create_local_file_folder(self, remote_file_folder, local_parent_folder, local_node):
@@ -474,7 +385,7 @@ class Poll(object):
             parent=local_parent_folder,
             node=local_node
         )
-        self.save(new_file_folder)
+        db.save(self.session, new_file_folder)
         if 'stream' in new_file_folder.name:
             print('STREAM FILE WAS CREATED LOCALLY.')
         # alert
@@ -484,11 +395,6 @@ class Poll(object):
         if not os.path.exists(new_file_folder.path):
             if type == File.FILE:
                 resp = yield from self.make_request(remote_file_folder['links']['self'])
-                # with open(new_file_folder.path, 'wb') as fd:
-
-                    # for chunk in resp.iter_content(2048):
-                    #     fd.write(chunk)
-                # todo: which is better? 1024 or 2048? Apparently, not much difference.
                 with open(new_file_folder.path, 'wb') as fd:
                     while True:
                         chunk = yield from resp.content.read(2048)
@@ -502,58 +408,6 @@ class Poll(object):
                 raise ValueError('file type is unknown')
         return new_file_folder
 
-    # @asyncio.coroutine
-    # def create_local_file_folder(self, remote_file_folder, local_parent_folder, local_node):
-    # print('creating local file folder')
-    #         assert remote_file_folder is not None
-    #         assert remote_file_folder['type'] == 'files'
-    #         assert isinstance(local_parent_folder, File) or local_parent_folder is None
-    #         assert local_parent_folder is None or (local_parent_folder.type == File.FOLDER)
-    #         assert isinstance(local_node, Node)
-    #
-    #
-    #         #create local file folder in db
-    #         type = File.FILE if remote_file_folder['item_type']=='file' else File.FOLDER
-    #         new_file_folder = File(
-    #             name=remote_file_folder['name'],
-    #             type=type,
-    #             osf_id=self.get_id(remote_file_folder),
-    #             provider=remote_file_folder['provider'],
-    #             osf_path=remote_file_folder['path'],
-    #             user=self.user,
-    #             parent=local_parent_folder,
-    #             node=local_node)
-    #         self.save(new_file_folder)
-    #
-    #         #create local file/folder on actual system
-    #         local_filesystem_provider = make_provider(
-    #             name='filesystem',
-    #             auth={},
-    #             credentials={},
-    #             settings={'folder': new_file_folder.path} # determines where the file is downloaded to
-    #         )
-    #         #validates and returns a WaterButlerPath object
-    #         path = yield from local_filesystem_provider.validate_path(remote_file_folder['name'])
-    #         #wait until response is attained from given url.
-    #         response = yield from self.make_request(url=remote_file_folder['links']['self'])
-    #         if response.ok:
-    #             # stream the file response to where it belongs on local file system
-    #             yield from local_filesystem_provider.upload(
-    #                 ResponseStreamReader(response, unsizable=True),
-    #                 path,
-    #             )
-    #
-    #         # if not os.path.exists(new_file_folder.path):
-    #         #     if type == File.FILE:
-    #         #         resp = requests.get(remote_file_folder['links']['self'], headers=self.headers)
-    #         #         with open(new_file_folder.path, 'wb') as fd:
-    #         #             for chunk in resp.iter_content(2048): #todo: which is better? 1024 or 2048? Apparently, not much difference.
-    #         #                 fd.write(chunk)
-    #         #     elif type == File.FOLDER:
-    #         #         os.makedirs(new_file_folder.path)
-    #         #     else:
-    #         #         raise ValueError('file type is unknown')
-    #         return new_file_folder
 
     @asyncio.coroutine
     def create_remote_file_folder(self, local_file_folder, local_node):
@@ -563,8 +417,6 @@ class Poll(object):
         assert local_node is not None
         assert isinstance(local_node, Node)
         assert local_file_folder.locally_created
-        # assert remote_parent_folder_or_node is not None
-        # assert isinstance(remote_parent_folder_or_node, dict)
 
         # alert
         alerts.info(local_file_folder.name, alerts.DOWNLOAD)
@@ -579,8 +431,8 @@ class Poll(object):
             'nid': local_node.osf_id
         }
 
-        files_url = 'https://staging2-files.osf.io/file'  # todo: make this global
-
+        # files_url = 'https://staging2-files.osf.io/file'  # todo: make this global
+        files_url = wb_file_url()
         resp = None
         if local_file_folder.type == File.FOLDER:
             resp = yield from self.make_request(files_url,method="POST", params=params, get_json=True)
@@ -594,7 +446,7 @@ class Poll(object):
                 return
             except IsADirectoryError:
                 local_file_folder.type = File.FOLDER
-                self.save(local_file_folder)
+                db.save(self.session, local_file_folder)
                 return
 
         remote_file_folder = resp
@@ -608,7 +460,7 @@ class Poll(object):
         local_file_folder.osf_id = self.get_id(remote_file_folder)
         local_file_folder.osf_path = remote_file_folder['path']
         local_file_folder.locally_created = False
-        self.save(local_file_folder)
+        db.save(self.session,local_file_folder)
 
         return remote_file_folder
 
@@ -624,7 +476,7 @@ class Poll(object):
         old_path = local_node.path
         local_node.title = remote_node['title']
         # todo: handle other fields such as category, hash, ...
-        self.save(local_node)
+        db.save(self.session,local_node)
 
         # alert
         alerts.info(local_node.title, alerts.MODIFYING)
@@ -634,24 +486,6 @@ class Poll(object):
             os.renames(old_path, local_node.path)
         except FileNotFoundError:
             print('renaming of file failed because file not there. inside modify_local_node')
-
-    # @asyncio.coroutine
-    # def modify_remote_node(self, local_node, remote_node):
-    #     print('modify_remote_node')
-    #     assert isinstance(local_node, Node)
-    #     assert isinstance(remote_node, dict)
-    #     assert remote_node['type'] == 'nodes'
-    #     assert remote_node['id'] == local_node.osf_id
-    #
-    #     # alert
-    #     alerts.info(local_node.title, alerts.MODIFYING)
-    #
-    #     # todo: add other fields here.
-    #     data = {
-    #         'title': local_node.title
-    #     }
-    #     resp = yield from self.make_request(remote_node['links']['self'],method="PATCH", data=data)
-    #     resp.close()
 
     @asyncio.coroutine
     def modify_file_folder_logic(self, local_file_folder, remote_file_folder):
@@ -675,6 +509,7 @@ class Poll(object):
 
         # want to have the remote file folder continue to be the most recent version.
         return updated_remote_file_folder
+
     @asyncio.coroutine
     def rename_local_file_folder(self, local_file_folder, remote_file_folder):
         print('modify_local_file_folder')
@@ -683,8 +518,6 @@ class Poll(object):
         assert remote_file_folder['type'] == 'files'
         assert remote_file_folder['path'] == local_file_folder.osf_path
 
-        if 'stream' in local_file_folder.name:
-            print('STREAM FILE WAS RENAMED LOCALLY.')
 
         # alerts
         alerts.info(local_file_folder.name, alerts.MODIFYING)
@@ -693,7 +526,7 @@ class Poll(object):
         old_path = local_file_folder.path
         # update model
         local_file_folder.name = remote_file_folder['name']
-        self.save(local_file_folder)
+        db.save(self.session, local_file_folder)
 
 
         # update local file system
@@ -711,10 +544,9 @@ class Poll(object):
         assert remote_file['item_type'] == 'file'
 
 
-        if 'stream' in local_file.name:
-            print('STREAM FILE WAS UPDATED LOCALLY.')
         # todo: need the db file to be updated to show that its timestamp is in fact updated.
         # todo: can read this: http://docs.sqlalchemy.org/en/improve_toc/orm/events.html
+
         # update model
         # self.save(local_file_folder) # todo: this does NOT actually update the local_file_folder timestamp
         # update local file system
@@ -734,6 +566,7 @@ class Poll(object):
         except FileNotFoundError:
             print('file not updated locally because it doesnt exist. inside modify_local_file_folder (2)')
 
+
     @asyncio.coroutine
     def update_remote_file(self, local_file, remote_file):
         print('update_remote_file')
@@ -752,9 +585,9 @@ class Poll(object):
             'provider': local_file.provider,
             'nid': local_node.osf_id
         }
-        files_url = 'https://staging2-files.osf.io/file'  # todo: make this global
+        # files_url = 'https://staging2-files.osf.io/file'  # todo: make this global
 
-
+        files_url = wb_file_url()
 
         try:
                 console_log('this is where the error is','making some dumb temp file and breaking everything.')
@@ -799,7 +632,8 @@ class Poll(object):
         # handle renaming for both files and folders
 
         # OSF allows you to manually rename a folder. Use That.
-        url = 'https://staging2-files.osf.io/ops/move'
+        # url = 'https://staging2-files.osf.io/ops/move'
+        url = wb_move_url()
         data = {
             'rename': local_file_folder.name,
             'conflict': 'replace',
@@ -841,51 +675,24 @@ class Poll(object):
 
         # delete model
         self.session.delete(local_node)
-        self.save()
+        db.save(self.session)
 
         # delete from local
         # todo: avoids_symlink_attacks: https://docs.python.org/3.4/library/shutil.html#shutil.rmtree.avoids_symlink_attacks
         # todo: make better error handling.
         shutil.rmtree(path, onerror=lambda a, b, c: print('local node not deleted because not exists.'))
 
-    # todo: delete_remote_node will have to handle making sure all children are deleted.
-    # @asyncio.coroutine
-    # def delete_remote_node(self, local_node, remote_node):
-    #     print('delete_remote_node')
-    #     assert isinstance(local_node, Node)
-    #     assert isinstance(remote_node, dict)
-    #     assert local_node.osf_id == remote_node['id']
-    #     assert local_node.locally_deleted
-    #
-    #     # alerts
-    #     alerts.info(local_node.title, alerts.DELETING)
-    #
-    #     # recursively remove child nodes before you can remove current node, as per API.
-    #     remote_children = yield from self.get_all_paginated_members(remote_node['links']['children']['related'])
-    #     local_remote_nodes = self.make_local_remote_tuple_list(local_node.components, remote_children)
-    #     for local, remote in local_remote_nodes:
-    #         self.delete_remote_node(local, remote)
-    #
-    #     resp = yield from self.make_request(remote_node['links']['self'],method="DELETE")
-    #     resp.close()
-    #
-    #     local_node.locally_deleted = False
-    #     self.session.delete(local_node)
-    #     self.save()
 
     @asyncio.coroutine
     def delete_local_file_folder(self, local_file_folder):
         print('delete_local_file_folder')
         assert isinstance(local_file_folder, File)
 
-        if 'stream' in local_file_folder.name:
-            print('STREAM FILE WAS DELETED LOCALLY.')
-
         path = local_file_folder.path
         file_folder_type = local_file_folder.type
         # delete model
         self.session.delete(local_file_folder)
-        self.save()
+        db.save(self.session)
 
         # alerts
         alerts.info(local_file_folder.name, alerts.DELETING)
@@ -894,6 +701,7 @@ class Poll(object):
         if file_folder_type == File.FOLDER:
             # todo: avoids_symlink_attacks: https://docs.python.org/3.4/library/shutil.html#shutil.rmtree.avoids_symlink_attacks
             # todo: make better error handling.
+            # I think my preferred solution for this is to just NOT follow any symlinks
             shutil.rmtree(path,
                           onerror=lambda a, b, c: print('delete local folder failed because folder already deleted. inside delete_local_file_folder(1)'))
         else:
@@ -920,16 +728,9 @@ class Poll(object):
 
         local_file_folder.deleted = False
         self.session.delete(local_file_folder)
-        self.save()
+        db.save(self.session)
 
-    def save(self, item=None):
-        if item:
-            self.session.add(item)
-        try:
-            self.session.commit()
-        except:
-            self.session.rollback()
-            raise
+
 
     # todo: determine proper logic for when to update local/remote. (specifically for files based on datetime for now.)
     @asyncio.coroutine
@@ -950,7 +751,8 @@ class Poll(object):
             remote_time_string = remote['metadata']['modified']
         # times from online are None
         elif remote['type'] == 'files' and remote['item_type'] == 'file':
-            url = 'https://staging2-files.osf.io/revisions'
+            # url = 'https://staging2-files.osf.io/revisions'
+            url = wb_file_revisions()
             params = {
                 'path':local.osf_path,
                 'provider':local.provider,
@@ -968,28 +770,6 @@ class Poll(object):
         except iso8601.ParseError:
             remote_time = None
 
-        # if remote['type'] == 'files' and remote['item_type'] == 'file':
-        #     try:
-        #
-        #         remote_time = self.remote_to_local_datetime(remote['metadata']['modified'])
-        #     # more general way to handle when remote['metadata']['modified'] is None
-        #     except iso8601.ParseError:
-        #         remote_time = None
-        # else:
-        #     remote_time = self.remote_to_local_datetime(remote['date_modified'])
-
-        # if not remote_time:
-        #     url = 'https://staging2-files.osf.io/revisions'
-        #     params = {
-        #         'path':local.osf_path,
-        #         'provider':local.provider,
-        #         'nid':local.node.osf_id,
-        #     }
-        #     resp = yield from self.make_request(url, params=params, get_json=True)
-        #     time_modified = resp['data'][0]['modified']
-        #     for revision in resp['data']:
-        #         assert self.remote_to_local_datetime(time_modified) >= self.remote_to_local_datetime(revision['modified'])
-        #     remote_time = self.remote_to_local_datetime(time_modified)
         return local_time, remote_time
 
     # NOTE: waterbutler does not give a 'modified' time to something that has been created.
@@ -1062,7 +842,7 @@ class Poll(object):
         if expects:
             if response.status not in expects:
                 raise ConnectionError('failed because of wrong response status. url: {}, expected status: {}, actual status: {}'.format(url, expects, response.status))
-        elif 400 <= response.status < 600 :
+        elif 400 <= response.status < 600:
             content = yield from response.read()
             raise ConnectionError('failed {} request {} with expected response code(s) {}. response.content={}'.format(method, url, expects,content ))
         if get_json:
@@ -1070,70 +850,6 @@ class Poll(object):
             return json_response
 
         return response
-
-    def local_remote_etag_are_diff(self, local_file, remote_file):
-        assert local_file is not None
-        assert remote_file is not None
-        assert local_file.osf_path == remote_file['path']
-        assert local_file.type == File.FILE
-        assert remote_file['type'] == 'files'
-        assert remote_file['item_type'] == 'file'
-
-        wb_data = self.get_wb_data(local_file, remote_file)
-        assert 'etag' in wb_data
-
-        return local_file.etag != wb_data['etag']
-
-    # def get_wb_data(self, local_file_folder, remote_file_folder):
-    #     """
-    #     This function is meant to be called during modifications, thus can assume both local_file_folder and remote_file_folder exist
-    #     """
-    #     assert local_file_folder is not None
-    #     assert remote_file_folder is not None
-    #     assert local_file_folder.osf_path == remote_file_folder['path']
-    #     # if local_file_folder.parent:
-    #     #     NOTE: only need 1 level up!!!!!! thats how path works in this case.
-    #     #     path = local_file_folder.parent.osf_path + local_file_folder.name
-    #     # else:
-    #     #     path = '/{}'.format(local_file_folder.name)
-    #     path = local_file_folder.osf_path
-    #     params = {
-    #         'path': path,
-    #         'nid': local_file_folder.node.osf_id,
-    #         'provider': local_file_folder.provider,
-    #     }
-    #     params_string = '&'.join([str(k) + '=' + str(v) for k, v in params.items()])
-    #     WB_DATA_URL = 'https://staging2-files.osf.io/data'
-    #     file_url = WB_DATA_URL + '?' + params_string
-    #     print(file_url)
-    #     headers = {
-    #         'Origin': 'https://staging2.osf.io',
-    #         'Accept-Encoding': 'gzip, deflate, sdch',
-    #         'Accept-Language': 'en-US,en;q=0.8',
-    #         'Authorization': 'Bearer {}'.format(self.user.oauth_token),
-    #         'Accept': 'application/json, text/*',
-    #         'Referer': 'https://staging2.osf.io/{}/'.format(local_file_folder.node_id),
-    #         'User-Agent': 'Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:38.0) Gecko/20100101 Firefox/38.0',
-    #         'Connection': 'keep-alive'
-    #     }
-    #
-    #     resp = requests.get(file_url, headers=headers)
-    #     if resp.ok:
-    #         return resp.json()['data']
-    #     else:
-    #         raise ValueError('waterbutler data for file {} not attained: {}'.format(local_file_folder.name, resp.content))
-
-    # def get_logs(self, node_id):
-    #     headers = {
-    #         'Cookie': 'osf_staging2=559c6834404f7702fafae988.8McbBgBvu98W-KKYfNEBz5FNSSo; '
-    #     }
-    #     url = 'https://staging2.osf.io/api/v1/project/{}/log/'.format(node_id)
-    #     resp = requests.get(url, headers=headers)
-    #     if resp.ok:
-    #         return resp.json()
-    #
-    # def good_response(self, response):
-    #     return (response.status < 300) and (response.status >= 200)
 
 def console_log(variable_name, variable_value):
     print("DEBUG: {}: {}".format(variable_name, variable_value))

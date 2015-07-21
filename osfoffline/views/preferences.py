@@ -1,6 +1,6 @@
 from PyQt5.QtWidgets import (QAction, QDialog, QFileDialog)
 from PyQt5.QtCore import QCoreApplication
-from views.rsc.preferences_rc import Ui_Preferences  # REQUIRED FOR GUI
+from osfoffline.views.rsc.preferences_rc import Ui_Preferences  # REQUIRED FOR GUI
 
 __author__ = 'himanshu'
 

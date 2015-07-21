@@ -3,8 +3,8 @@ This is the most important file in the system. OSFEventHandler is responsible fo
 storing the data into the db, and then sending a request to the remote server.
 """
 from watchdog.events import FileSystemEventHandler
-from .models import User, Node, File
-from .db import get_session
+from osfoffline.models import User, Node, File
+from osfoffline.db import get_session
 import os
 import logging
 import asyncio
@@ -124,12 +124,12 @@ class OSFEventHandler(FileSystemEventHandler):
             # create new model
             if not self.already_exists(src_path):
                 # console_log('new thing being created does not already exist in db',name)
-                # if folder and in top level OSF FOlder, then project
+                # if folder and in top level OSF FOlder, then top_level_node
                 if src_path.parent == ProperPath(self.osf_folder, True):
                     if event.is_directory:
-                        project = Node(title=name, category=Node.PROJECT, user=self.user, locally_created=True)
+                        top_level_node = Node(title=name, user=self.user, locally_created=True)
                         # save
-                        self.save(project)
+                        self.save(top_level_node)
                     else:
                         print("CREATED FILE IN PROJECT AREA.")
                         raise NotADirectoryError

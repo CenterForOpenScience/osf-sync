@@ -1,6 +1,6 @@
-from .models import Base
+from osfoffline.models import Base
 from appdirs import user_data_dir
-from .settings import PROJECT_NAME,PROJECT_AUTHOR
+from osfoffline.settings import PROJECT_NAME,PROJECT_AUTHOR
 import shutil
 import os
 from sqlalchemy import create_engine
@@ -27,6 +27,7 @@ def setup_db(dir=None):
 
     create_models()
     create_session()
+
 
 def remove_db():
     shutil.rmtree(DB_DIR)

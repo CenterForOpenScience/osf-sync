@@ -8,9 +8,9 @@ from watchdog.events import (
     FileCreatedEvent,
     DirCreatedEvent,
 )
-from .models import User, Node, File, Base
+from osfoffline.models import User, Node, File, Base
 
-from .path import ProperPath
+from osfoffline.path import ProperPath
 from watchdog.observers import Observer
 
 
@@ -83,7 +83,7 @@ class LocalDBSync(object):
         elif isinstance(item, Node):
             return item.components + item.top_level_file_folders
         elif isinstance(item, User):
-            return item.projects
+            return item.top_level_nodes
         # local
         elif os.path.isfile(item.full_path):
             return []

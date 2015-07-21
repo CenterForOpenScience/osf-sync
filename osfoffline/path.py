@@ -1,5 +1,5 @@
 import os
-import exceptions
+import osfoffline.exceptions as exceptions
 
 
 class ProperPath(object):

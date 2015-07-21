@@ -2,11 +2,11 @@
 import threading
 from PyQt5.QtWidgets import (QApplication, QDialog, QMessageBox, QSystemTrayIcon)
 from PyQt5.QtCore import QSettings
-from views.preferences import Preferences
-from views.system_tray import SystemTray
-from controller import OSFController
-from views.start_screen import StartScreen
-import alerts
+from osfoffline.views.preferences import Preferences
+from osfoffline.views.system_tray import SystemTray
+from osfoffline.controller import OSFController
+from osfoffline.views.start_screen import StartScreen
+import osfoffline.alerts as alerts
 import sys
 
 RUN_PATH = "HKEY_CURRENT_USER\\Software\\Microsoft\\Windows\\CurrentVersion\\Run"
@@ -18,7 +18,7 @@ class OSFApp(QDialog):
 
         # settings
 
-        self.app_name = "OSF Offline"
+        self.app_name = "OSFOffline"
         self.app_author = "COS"
 
         # controller
@@ -66,10 +66,9 @@ class OSFApp(QDialog):
         signal_slot_pairs = [
 
             # system tray
-            (self.tray.open_project_folder_action.triggered, self.controller.open_project_folder),
+            (self.tray.open_osf_folder_action.triggered, self.controller.open_osf_folder),
             (self.tray.launch_osf_action.triggered, self.controller.start_osf),
             (self.tray.currently_synching_action.triggered, self.controller.currently_synching),
-            (self.tray.priority_action.triggered, self.open_priority_screen),
             (self.tray.preferences_action.triggered, self.open_preferences),
             (self.tray.about_action.triggered, self.start_about_screen),
             (self.tray.quit_action.triggered, self.controller.quit),
@@ -123,7 +122,7 @@ class OSFApp(QDialog):
             # todo: make it so that this application does NOT start on login
             pass
 
-if __name__ == '__main__':
+def start():
     app = QApplication(sys.argv)
 
     if not QSystemTrayIcon.isSystemTrayAvailable():

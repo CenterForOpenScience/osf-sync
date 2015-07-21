@@ -10,13 +10,13 @@ import json
 import subprocess
 import webbrowser
 import asyncio
-import osf_event_handler
-import polling
+import osfoffline.osf_event_handler as osf_event_handler
+import osfoffline.polling as polling
 import osfoffline.models as models
 import osfoffline.db as db
 import sys
 import threading
-from background import BackgroundWorker
+from osfoffline.background import BackgroundWorker
 
 
 """
@@ -78,14 +78,17 @@ class OSFController(QDialog):
     # state functions
     def start(self):
         # self.createConfigs()
-        self.session = db.get_session()
-        self.user = self.get_current_user()
+        session = db.get_session()
+        self.user = self.get_current_user(session)
+
         if self.user:
             self.containing_folder = os.path.dirname(self.user.osf_local_folder_path)
             if not self.containing_folder_is_set():
                 self.set_containing_folder()
             self.user.osf_local_folder_path = os.path.join(self.containing_folder, "OSF")
-            self.save(self.user)
+
+            db.save(session, self.user)
+
 
             # todo: handle if OSF folder does not exist. OR if user wants custom OSF folder
             if not os.path.isdir(self.user.osf_local_folder_path):
@@ -94,7 +97,7 @@ class OSFController(QDialog):
             # todo: remove self.OSFFolder and replace all usages of it with self.user.osf_path
 
             self.start_tray_action.trigger()
-
+            session.close()
             self.background_worker.start()
 
 
@@ -111,7 +114,7 @@ class OSFController(QDialog):
         self.store_configs()
         self.background_worker.pause_background_tasks()
         self.background_worker.stop()
-        db.Session.close()
+        db.Session.remove()
         # quit() stops gui and then quits application
         QApplication.instance().quit()
 
@@ -126,42 +129,27 @@ class OSFController(QDialog):
 
 
     # todo: when log in is working, you need to make this work with log in screen.
-    def get_current_user(self):
+    def get_current_user(self, session):
         user = None
         import threading
         print('---inside getcurrentuser-----{}----'.format(threading.current_thread()))
+        action = None
         try:
-            user = self.session.query(models.User).filter(models.User.logged_in).one()
+            user = session.query(models.User).filter(models.User.logged_in).one()
         except MultipleResultsFound:
             # todo: multiple user screen allows you to choose which user is logged in
-            print('multiple users are logged in currently. We want only one use to be logged in.')
-            print('for now, we will just choose the first user in the db to be the logged in user')
-            print('also, we will log out all other users.')
-            # for user in self.session.query(models.User):
-            #     user.logged_in = False
-            #     self.save(user)
-            # user = self.session.query(models.User).first()
-            # user.logged_in = True
-            # self.save(user)
-            self.multiple_user_action.trigger()
+            action = self.multiple_user_action
         except NoResultFound:
             # todo: allows you to log in (creates an account in db and logs it in)
-            self.login_action.trigger()
+            action = self.login_action
             print('no users are logged in currently. Logging in first user in db.')
-            # user = self.session.query(models.User).first()
-            # if not user:
-            #     print('no users at all in the db. creating one and logging him in')
-            #     user = models.User(
-            #         fullname="Johnny Appleseed",
-            #         osf_id='p42te',
-            #         osf_login='rewhe1931@gustr.com',
-            #         osf_path='/home/himanshu/OSF-Offline/dumbdir/OSF',
-            #         oauth_token='eyJhbGciOiJIUzUxMiJ9.ZXlKaGJHY2lPaUprYVhJaUxDSmxibU1pT2lKQk1USTRRMEpETFVoVE1qVTJJbjAuLkJiQkg0TzhIYXMzU0dzQlNPQ29MYUEuSTRlRG4zcmZkNV92b1hJdkRvTmhodjhmV3M1Ql8tYUV1ZmJIR3ZZbkF0X1lPVDJRTFhVc05rdjJKZUhlUFhfUnpvZW1ucW9aN0ZlY0FidGpZcmxRR2hHem5IenRWREVQYWpXSmNnVVhtQWVYLUxSV25ENzBqYk9YczFDVHJKMG9BV29Fd3ZMSkpGSjdnZ29QVVBlLTJsX2NLcGY4UzZtaDRPMEtGX3lBRUlLTjhwMEdXZ3lVNWJ3b0lhZU1FSTVELllDYTBaTm5lSVFkSzBRbDNmY2pkZGc.dO-5NcN9X6ss7PeDt5fWRpFtMomgOBjPPv8Qehn34fJXJH2bCu9FIxo4Lxhja9dYGmCNAtc8jn05FjerjarQgQ',
-            #         osf_password='password'
-            #     )
-            # user.logged_in = True
-            # self.save(user)
-        return user
+
+        session.close()
+
+        if user:
+            return user
+        else:
+            action.trigger()
 
     def start_logging(self):
         # make sure logging directory exists
@@ -199,7 +187,7 @@ class OSFController(QDialog):
             self.hide()
             event.ignore()
 
-    def open_project_folder(self):
+    def open_osf_folder(self):
         if self.containing_folder_is_set():
             if sys.platform == 'win32':
                 os.startfile(self.containing_folder)
@@ -305,14 +293,7 @@ class OSFController(QDialog):
             file.close()
         print(self.config)
 
-    def save(self, item=None):
-        if item:
-            self.session.add(item)
-        try:
-            self.session.commit()
-        except:
-            self.session.rollback()
-            raise
+
 
 
 
