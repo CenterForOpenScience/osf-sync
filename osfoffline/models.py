@@ -219,6 +219,12 @@ class File(Base):
             assert self.parent.node == self.node
         return node_id
 
+    @validates('files')
+    def validate_files(self, key, files):
+        if self.type == File.FILE:
+            assert self.files == []
+        return files
+
     def __repr__(self):
         return "<File ({}), type={}, name={}, path={}, parent_id={}>".format(
             self.id, self.type, self.name, self.path, self.parent

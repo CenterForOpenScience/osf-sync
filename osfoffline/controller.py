@@ -89,12 +89,9 @@ class OSFController(QDialog):
 
             db.save(session, self.user)
 
-
-            # todo: handle if OSF folder does not exist. OR if user wants custom OSF folder
             if not os.path.isdir(self.user.osf_local_folder_path):
                 os.makedirs(self.user.osf_local_folder_path)
             self.start_logging()
-            # todo: remove self.OSFFolder and replace all usages of it with self.user.osf_path
 
             self.start_tray_action.trigger()
             session.close()

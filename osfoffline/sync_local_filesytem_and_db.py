@@ -9,7 +9,8 @@ from watchdog.events import (
     DirCreatedEvent,
 )
 from osfoffline.models import User, Node, File, Base
-
+from osfoffline.exceptions.item_exceptions import InvalidItemType
+from osfoffline.exceptions.local_db_sync_exceptions import LocalDBBothNone, IncorrectLocalDBMatch
 from osfoffline.path import ProperPath
 from watchdog.observers import Observer
 
@@ -30,81 +31,98 @@ class LocalDBSync(object):
             self._emit_new_events(local, db)
 
     def _make_local_db_tuple_list(self, local, db):
-        # assertions
-        assert local or db
-        if local and db:
-            assert self._get_proper_path(local) == self._get_proper_path(db)
         # checks
         if local is None and db is None:
-            raise ValueError
+            raise LocalDBBothNone
         if local and db and self._get_proper_path(local) != self._get_proper_path(db):
-            raise ValueError
+            raise IncorrectLocalDBMatch
+        if local and not isinstance(local, ProperPath):
+            raise InvalidItemType
 
         out = []
         children = self._get_children(local) + self._get_children(db)
+        # sort in order to get matching items next to each other.
         children = sorted(children, key=lambda c: self._get_proper_path(c).full_path)
 
         i = 0
         while i < len(children):
             if self._represent_same_values(children, i):
                 if isinstance(children[i], Base):
-                    out.append(tuple(children[i+1], children[i]))
+                    to_add = (children[i+1], children[i])
                 else:
-                    out.append(tuple(children[i], children[i+1]))
+                    to_add = (children[i], children[i+1])
                 # add an extra 1 because skipping next value
                 i += 1
             elif isinstance(children[i], Base):
-                out.append(tuple(None,children[i]))
+                to_add = (None,children[i])
             else:
-                out.append(tuple(children[i],None))
+                to_add = (children[i],None)
+            out.append(to_add)
             i += 1
 
         # assertions
         for local, db in out:
             if local is not None and db is not None:
-                assert self._get_proper_path(local) == self._get_proper_path(db)
+                assert local == self._get_proper_path(db)
             elif local is not None:
                 assert db is None
-                assert isinstance(local, str)
+                assert isinstance(local, ProperPath)
             elif db is not None:
                 assert isinstance(db, Base)
                 assert local is None
             else:
                 assert False
-
         return out
 
     def _get_children(self, item):
         if item is None:
             return []
-        # db
-        if isinstance(item, File):
-            return item.files
-        elif isinstance(item, Node):
-            return item.components + item.top_level_file_folders
-        elif isinstance(item, User):
-            return item.top_level_nodes
+
         # local
-        elif os.path.isfile(item.full_path):
-            return []
+        if isinstance(item, ProperPath):
+            if item.is_file:
+                return []
+            else:
+                children = []
+                for child in os.listdir(item.full_path):
+                    child_item_path = os.path.join(item.full_path, child)
+                    is_dir = os.path.isdir(child_item_path)
+                    child_item = ProperPath(child_item_path, is_dir)
+                    children.append(child_item)
+                return children
+        # db
         else:
-            children = []
-            for child in os.listdir(item.full_path):
-                children.append(os.path.join(item.full_path, child))
-            return children
+            if isinstance(item, File):
+                return item.files
+            elif isinstance(item, Node):
+                return item.child_nodes + item.top_level_file_folders
+            elif isinstance(item, User):
+                return item.top_level_nodes
+            else:
+                raise InvalidItemType('LocalDBSync._get_children does '
+                                      'not handle items of t'
+                                      'ype '
+                                      '{item_type}'.format(item_type=type(item)))
+
+
+
 
     def _get_proper_path(self, item):
-        if isinstance(item, User):
+        if isinstance(item, ProperPath):
+            return item
+        elif isinstance(item, User):
             return ProperPath(item.osf_local_folder_path, True)
         elif isinstance(item, File) and item.type == File.FILE:
             return ProperPath(item.path, False)
         elif isinstance(item, Base):
             return ProperPath(item.path, True)
-        elif isinstance(item, ProperPath):
-            absolute = os.path.join(self.osf_path.full_path, item.full_path)
+        elif isinstance(item, str):
+            absolute = os.path.join(self.osf_path.full_path, item)
             return ProperPath(absolute, os.path.isdir(absolute))
         else:
-            raise TypeError('somehow passed type {} into LocalDBSync._get_proper_path'.format(type(item)))
+            raise InvalidItemType('LocalDBSync._get_proper_path does '
+                                      'not handle items of type '
+                                      '{item_type}'.format(item_type=type(item)))
 
     def _represent_same_values(self, children, i):
         if i+1 < len(children):
@@ -125,7 +143,7 @@ class LocalDBSync(object):
         return m.hexdigest()
 
     def _determine_event_type(self, local, db):
-        assert local or db  #a and b cannot both be none.
+        assert local or db  # a and b cannot both be none.
         event = None
         if local and db:
             assert self._get_proper_path(local) == self._get_proper_path(db)

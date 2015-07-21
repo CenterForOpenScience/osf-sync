@@ -121,7 +121,10 @@ class BackgroundWorker(threading.Thread):
         # attach event handler to observed events. make observer recursive
         self.observer.schedule(self.event_handler, self.osf_folder, recursive=True)
         LocalDBSync(self.user.osf_local_folder_path, self.observer, self.user).emit_new_events()
-        self.observer.start()  # start
+        try:
+            self.observer.start()  # start
+        except OSError:
+            print('too many things being watched.... hmmmm, what to dooooo????')
 
     def stop_observing_osf_folder(self):
         self.observer.stop()

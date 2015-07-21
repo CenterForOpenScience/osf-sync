@@ -9,8 +9,10 @@ import shutil
 from tests.fixtures.factories.factories import UserFactory, NodeFactory, FileFactory
 from sqlite3 import IntegrityError
 from nose.tools import raises, assert_raises
+from tests import TEST_DIR
 
-
+# todo: make the assert statements in the models actually be custom exceptions.
+# todo:     They might allow you to use nosetests properly
 
 class TestModels(TestCase):
     def setUp(self):
@@ -211,10 +213,35 @@ class TestModels(TestCase):
             self.session.flush()
 
 
+    def test_add_subfile_to_file(self):
+        u = UserFactory()
+        node = NodeFactory(user=u)
+        file = FileFactory(user=u, node=node, type=File.FILE)
+
+        # going to flush to make sure the error wasnt from something before this.
+        self.session.flush()
+        with self.assertRaises(Exception):
+            FileFactory(user=u, node=node, parent=file, type=File.FILE)
+            self.session.flush()
+
+    def test_add_subfolder_to_file(self):
+        u = UserFactory()
+        node = NodeFactory(user=u)
+        file = FileFactory(user=u, node=node, type=File.FILE)
+
+        # going to flush to make sure the error wasnt from something before this.
+        self.session.flush()
+        with self.assertRaises(Exception):
+            FileFactory(user=u, node=node, parent=file, type=File.FOLDER)
+            self.session.flush()
+
+
+
+
 class TestModelPath(TestCase):
     def setUp(self):
         self.session = common.Session()
-        self.osf_dir = os.path.join(os.getcwd(), "OSF")
+        self.osf_dir = os.path.join(TEST_DIR, "OSF")
         self.user = UserFactory(osf_local_folder_path = self.osf_dir)
         self.node = NodeFactory(user=self.user )
         self.file = FileFactory(user=self.user, node=self.node)

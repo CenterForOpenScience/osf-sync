@@ -9,6 +9,7 @@ from osfoffline.views.start_screen import StartScreen
 import osfoffline.alerts as alerts
 import sys
 
+
 RUN_PATH = "HKEY_CURRENT_USER\\Software\\Microsoft\\Windows\\CurrentVersion\\Run"
 
 
@@ -38,28 +39,6 @@ class OSFApp(QDialog):
 
     def start(self):
         self.controller.start()
-
-
-    # todo: finish this!!
-    # def start(self):
-    #     # start all work
-    #     import threading; print('starting thread with id:{}'.format(self.thread.name))
-    #     self.thread.start()
-    #     # backgroundify(self.controller.start())
-    #
-    # def startStartScreen(self):
-    #     """
-    #     Issue is that new user goes to login and then
-    #     :return:
-    #     """
-    #     print(1)
-    #     self.thread.join()
-    #     print(2)
-    #     # can't restart threads. Easy way to handle this is to just recreate a thread after stopping previous one.
-    #     self.thread = threading.Thread(target=self.controller.start)
-    #     print(3)
-    #     self.startScreen.openWindow()
-    #     print(4)
 
     def setup_connections(self):
         # [ (signal, slot) ]

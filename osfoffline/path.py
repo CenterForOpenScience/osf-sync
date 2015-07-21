@@ -20,6 +20,8 @@ class ProperPath(object):
         """
         if not path:
             raise exceptions.InvalidPathError('Must specify path')
+        if not isinstance(path, str):
+            raise exceptions.InValidPathError("input path must be of type str")
         if '//' in path or '..' in path:
             raise exceptions.InvalidPathError('Invalid path \'{}\' specified'.format(path))
 
@@ -36,12 +38,6 @@ class ProperPath(object):
 
         if self.is_file and path.endswith(os.sep):
             raise exceptions.InvalidPathError('file ends with slash')
-
-    # @classmethod
-    # def validate_folder(cls, path):
-    #     if not path.is_dir:
-    #         raise exceptions.CreateFolderError('Path must be a directory', code=400)
-
 
     def __init__(self, path, is_dir):
         self._orig_path = path

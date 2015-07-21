@@ -1,0 +1,59 @@
+{
+    "data": [
+        {
+            "id": "nq782",
+            "title": "new project",
+            "description": "desc",
+            "category": "project",
+            "date_created": "2015-07-06T18:22:54.812000",
+            "date_modified": "2015-07-20T13:31:05.415000",
+            "tags": {
+                "system": [],
+                "user": []
+            },
+            "links": {
+                "files": {
+                    "related": "http://localhost:8000/v2/nodes/nq782/files/"
+                },
+                "parent": {
+                    "self": null
+                },
+                "contributors": {
+                    "count": 1,
+                    "related": "http://localhost:8000/v2/nodes/nq782/contributors/"
+                },
+                "pointers": {
+                    "count": 0,
+                    "related": "http://localhost:8000/v2/nodes/nq782/pointers/"
+                },
+                "registrations": {
+                    "count": 0,
+                    "related": "http://localhost:8000/v2/nodes/nq782/registrations/"
+                },
+                "self": "http://localhost:8000/v2/nodes/nq782/",
+                "html": "http://localhost:5000/nq782/",
+                "children": {
+                    "count": 0,
+                    "related": "http://localhost:8000/v2/nodes/nq782/children/"
+                }
+            },
+            "properties": {
+                "dashboard": false,
+                "collection": false,
+                "registration": false
+            },
+            "public": false,
+            "type": "nodes"
+        }
+    ],
+    "links": {
+        "first": null,
+        "last": null,
+        "prev": null,
+        "next": null,
+        "meta": {
+            "total": 1,
+            "per_page": 10
+        }
+    }
+}

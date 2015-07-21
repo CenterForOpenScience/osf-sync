@@ -1,58 +1,323 @@
 from unittest import TestCase
-from osfoffline.models import setup_db, User, Node, File, get_session, Base
+from osfoffline.db import setup_db, remove_db, get_session
 from osfoffline.path import ProperPath
 from watchdog.observers import Observer
 from osfoffline.osf_event_handler import OSFEventHandler
 from osfoffline.sync_local_filesytem_and_db import LocalDBSync
 import asyncio
+from appdirs import user_data_dir
+from osfoffline.exceptions.local_db_sync_exceptions import LocalDBBothNone
+import os
+from tests import TEST_DIR
+from tests.fixtures.factories import common
+from tests.fixtures.factories.factories import UserFactory, NodeFactory, FileFactory
+from osfoffline.models import User, Node, File, Base
 
-__author__ = 'himanshu'
+
+# unit tests
+
+# first going to test the methods that make up LocalDBSync
+# these tests do NOT require the observer to be properly
+# configured thus are able to use the fake common session
 
 
-class TestLocalDBSync(TestCase):
+class TestLocalDBSyncUnitTests(TestCase):
+
+    def assertContains(self, alist, aitem):
+        if aitem in alist:
+            return
+        else:
+            msg = "{aitem} not found inside list".format(aitem=aitem)
+            raise self.failureException(msg)
+
+
     def setUp(self):
-        setup_db('home/himanshu/.local/share/OSF Offline')
-        osf_folder = '/home/himanshu/OSF-Offline/osfoffline/sandbox/dumbdir/OSF/'
-        user = User(osf_path=osf_folder)
+        self.session = common.Session()
 
-        self.session = get_session()
-        self.session.add(user)
-        self.session.commit()
+        self.osf_dir = os.path.join(TEST_DIR,"fixtures","mock_projects","OSF")
+        self.user = UserFactory(osf_local_folder_path=self.osf_dir)
+        self.top_level_node1 = NodeFactory(user=self.user)
+        self.top_level_node2 = NodeFactory(user=self.user)
+        self.node_1_1 = NodeFactory(user=self.user, parent=self.top_level_node1)
+        self.node_1_2 = NodeFactory(user=self.user, parent=self.top_level_node1)
+        self.node_1_3 = NodeFactory(user=self.user, parent=self.top_level_node1)
+        self.node_2_1 = NodeFactory(user=self.user, parent=self.top_level_node2)
+        self.node_2_2 = NodeFactory(user=self.user, parent=self.top_level_node2)
+        self.node_2_3 = NodeFactory(user=self.user, parent=self.top_level_node2)
+        self.node_2_3_1 = NodeFactory(user=self.user, parent=self.node_2_3)
+
+        self.folder_1 = FileFactory(user=self.user, node=self.node_1_1, type=File.FOLDER)
+        self.folder_1_1 = FileFactory(user=self.user, node=self.node_1_1, parent=self.folder_1, type=File.FOLDER)
+        self.file1 = FileFactory(user=self.user, node=self.node_1_1, parent=self.folder_1, type=File.FILE)
+        self.file2 = FileFactory(user=self.user, node=self.node_1_1, parent=self.folder_1, type=File.FILE)
+
+
+
 
         observer = Observer()
-        loop = asyncio.get_event_loop()
-        event_handler = OSFEventHandler(osf_folder, '','',loop)
-        observer.schedule(event_handler, osf_folder, recursive=True)
+        self.sync = LocalDBSync(self.user.osf_local_folder_path, observer, self.user)
 
-        self.sync = LocalDBSync(user.osf_local_folder_path, observer, user)
+        # self.path1 = os.path.join('fake','path','1')
+        # self.path2 = os.path.join('fake','path','2')
+        # self.path3 = os.path.join('fake','path','3')
+        # self.path4 = os.path.join('fake','path','4')
+        # self.evil_path1 = os.path.join('/','.','bad')
+        # self.evil_path2 = os.path.join('.','.','bad')
+        # self.evil_path3 = os.path.join('<>','<>')
+        # self.evil_path4 = os.path.join('///','<<>>')
+        # self.evil_path5 = os.path.join('rocko','c://')
 
-    def test_emit_new_events(self):
-        self.fail()
 
+    def tearDown(self):
+        self.session.rollback()
+        self.session.query(User).delete()
+        self.session.query(Node).delete()
+        self.session.query(File).delete()
+        common.Session.remove()
+
+    # todo: check edge case of 1
     def test__make_local_db_tuple_list_both_None(self):
         local = None
         db = None
+        with self.assertRaises(LocalDBBothNone):
+            self.sync._make_local_db_tuple_list(local, db)
+
+    def test__make_local_db_tuple_list_db_is_None(self):
+        local = ProperPath(self.osf_dir, True)
+        db = None
         local_db = self.sync._make_local_db_tuple_list(local, db)
+        local_dirs = [os.path.join(self.osf_dir, dir) for dir in os.listdir(self.osf_dir)]
+        self.assertEqual(len(local_dirs), len(local_db))
+        for dir in local_dirs:
+            proper_dir = ProperPath(dir, os.path.isdir(dir))
+            self.assertTrue((proper_dir, None) in local_db)
+
+    def test__make_local_db_tuple_list_local_is_None(self):
+        local = None
+
+        NodeFactory(user=self.user)
+        NodeFactory(user=self.user)
+        NodeFactory(user=self.user)
+        db = self.user
+
+        local_db = self.sync._make_local_db_tuple_list(local, db)
+
+        self.assertEqual(len(self.user.top_level_nodes), len(local_db))
+        for node in self.user.top_level_nodes:
+            self.assertTrue((None, node) in local_db)
+
+    def test__make_local_db_tuple_list_db_both_exist_but_are_all_diff(self):
+        local = ProperPath(self.osf_dir, True)
+
+        NodeFactory(user=self.user, title='nonexistant project 1')
+        NodeFactory(user=self.user, title='nonexistant project 2')
+        NodeFactory(user=self.user, title='nonexistant project 3')
+        db = self.user
+
+        local_db = self.sync._make_local_db_tuple_list(local, db)
+
+        local_dirs = [os.path.join(self.osf_dir, dir) for dir in os.listdir(self.osf_dir)]
+        db_dirs = self.user.top_level_nodes
+
+        self.assertEqual(len(local_dirs) + len(db_dirs), len(local_db))
+        for dir in local_dirs:
+            proper_dir = ProperPath(dir, os.path.isdir(dir))
+            self.assertTrue((proper_dir, None) in local_db)
+        for dir in db_dirs:
+            self.assertTrue((None, dir) in local_db)
+
+    def test__make_local_db_tuple_list_db_both_exist_but_are_all_same(self):
+        user = UserFactory(osf_local_folder_path=self.osf_dir)
+        local = ProperPath(self.osf_dir,True)
+        local_dirs = [os.path.join(self.osf_dir, dir) for dir in os.listdir(self.osf_dir)]
+
+        for dir in local_dirs:
+            NodeFactory(user=user, title=dir)
+        db = user
+
+        self.assertEqual(len(local_dirs), len(user.top_level_nodes))
+
+        local_db = self.sync._make_local_db_tuple_list(local, db)
+
+        self.assertEqual(len(local_dirs), len(local_db))
+        for local, db in local_db:
+            self.assertEqual(local, ProperPath(db.path, True))
+
+
+    def test__make_local_db_tuple_list_db_both_exist_exactly_1_is_same(self):
+        local = ProperPath(self.osf_dir,True)
+        local_dirs = [os.path.join(self.osf_dir, dir) for dir in os.listdir(self.osf_dir)]
+
+        NodeFactory(user=self.user, title=local_dirs[0])
+        db = self.user
+
+
+        local_db = self.sync._make_local_db_tuple_list(local, db)
+
+        db_top_level_nodes = self.user.top_level_nodes
+
+        self.assertEqual(len(local_dirs) + len(db_top_level_nodes) - 1, len(local_db))
+        self.check_local_db_list(local_db)
+
+
+    # # def test__make_local_db_tuple_list_db_with_files(self):
+    # #     self.fail()
+    # """
+    # test with:
+    #     files
+    #     File and NODE
+    #     only File
+    #     only Node
+    #     make sure isnt going an extra level deep
+    #     empty (instead of None)
+    #     only 1 thing inside
+    # """
+
+    def check_local_db_list(self, local_db):
         for local, db in local_db:
             if local is not None and db is not None:
-                assert self._get_proper_path(local) == self._get_proper_path(db)
+                self.assertEqual(self.sync._get_proper_path(local) , self.sync._get_proper_path(db))
             elif local is not None:
-                assert db is None
-                assert isinstance(local, str)
+                self.assertFalse(db)
+                self.assertTrue(isinstance(local, ProperPath))
             elif db is not None:
-                assert isinstance(db, Base)
-                assert local is None
+                self.assertFalse(local)
+                self.assertTrue(isinstance(db, Base))
             else:
-                assert False
+                self.fail("both are None")
 
-    def test__get_children(self):
-        self.fail()
 
-    def test__get_proper_path(self):
-        self.fail()
 
-    def test__represent_same_values(self):
-        self.fail()
+    def test__get_children_None(self):
+        self.assertEqual([], self.sync._get_children(None))
 
-    def test__emit_new_events(self):
-        self.fail()
+    def test__get_children_Empty_dir(self):
+        dir = os.path.join(self.osf_dir,"empty_project")
+        proper_dir = ProperPath(dir, True)
+        self.assertEqual([], self.sync._get_children(proper_dir))
+
+    def test__get_children_file(self):
+        file = os.path.join(self.osf_dir,"test_normal_project","b")
+        proper_file = ProperPath(file, False)
+        self.assertEqual([], self.sync._get_children(proper_file))
+
+    def test__get_children_empty_models(self):
+        user = UserFactory()
+        self.assertEqual([], self.sync._get_children(user))
+
+        node = NodeFactory(user=user)
+        self.assertEqual([], self.sync._get_children(node))
+
+        subnode = NodeFactory(user=user, parent=node)
+        self.assertEqual([], self.sync._get_children(subnode))
+
+        folder = FileFactory(user=user, node=node)
+        self.assertEqual([], self.sync._get_children(folder))
+
+        subfolder = FileFactory(user=user, node=node, parent=folder)
+        self.assertEqual([], self.sync._get_children(subfolder))
+
+        model_file1 = FileFactory(user=user, node=node, parent=subfolder)
+        self.assertEqual([], self.sync._get_children(model_file1))
+
+        model_file2 = FileFactory(user=user, node=node, parent=folder)
+        self.assertEqual([], self.sync._get_children(model_file2))
+
+
+    def test__get_children_folder(self):
+        project_folder = os.path.join(self.osf_dir,"test_project_normal")
+        children = self.sync._get_children(ProperPath(project_folder,True))
+        local_dirs = [os.path.join(project_folder, dir) for dir in os.listdir(project_folder)]
+        proper_local_dirs = [ProperPath(dir, os.path.isdir(dir)) for dir in local_dirs]
+        self.assertEqual(len(local_dirs), len(children))
+        for child in children:
+            self.assertContains(proper_local_dirs, child)
+
+
+    def test__get_children_model_file(self):
+        children = self.sync._get_children(self.file1)
+        self.assertEqual([], children)
+
+    def test__get_children_model_folder(self):
+        children = self.sync._get_children(self.folder_1)
+        self.assertEqual(len(children), len(self.folder_1.files))
+        for child in children:
+            self.assertContains(self.folder_1.files, child)
+
+    def test__get_children_model_user(self):
+        children = self.sync._get_children(self.user)
+        self.assertEqual(len(children), len(self.user.top_level_nodes))
+        for child in children:
+            self.assertContains(self.user.top_level_nodes, child)
+
+    def test__get_children_model_top_level_node(self):
+        children = self.sync._get_children(self.top_level_node1)
+        for_sure_children = self.top_level_node1.child_nodes + self.top_level_node1.top_level_file_folders
+        self.assertEqual(len(children), len(for_sure_children))
+        for child in children:
+            self.assertContains(for_sure_children, child)
+
+    def test__get_children_model_inner_node(self):
+        children = self.sync._get_children(self.node_2_3)
+        for_sure_children = self.node_2_3.child_nodes + self.node_2_3.top_level_file_folders
+        self.assertEqual(len(children), len(for_sure_children))
+        for child in children:
+            self.assertTrue(child in for_sure_children)
+
+    def test__get_children_model_nodes_with_files(self):
+        children = self.sync._get_children(self.node_1_1)
+        for_sure_children = self.node_1_1.child_nodes + self.node_1_1.top_level_file_folders
+        self.assertEqual(len(children), len(for_sure_children))
+        for child in children:
+            self.assertTrue(child in for_sure_children)
+
+    # def test__get_proper_path(self):
+    #     self.fail()
+    #
+    # def test__represent_same_values(self):
+    #     self.fail()
+    #
+    # def test__emit_new_events(self):
+    #     self.fail()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
