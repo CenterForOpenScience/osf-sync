@@ -13,7 +13,7 @@ class BackgroundWorker(threading.Thread):
 
     def __init__(self):
         super().__init__()
-        self.session = db.get_session()
+        self.session = None
         self.user = None
         self.osf_folder = ''
         self.loop = None
@@ -23,11 +23,10 @@ class BackgroundWorker(threading.Thread):
     def run(self):
         self.run_background_tasks()
 
-
-
     def run_background_tasks(self):
         print('starting run_background_tasks')
         if not self.running:
+            self.session = db.get_session()
             self.loop = self.ensure_event_loop()
             self.user = self.get_current_user()
             self.osf_folder = self.user.osf_local_folder_path
@@ -37,15 +36,17 @@ class BackgroundWorker(threading.Thread):
                 self.running = True
                 self.loop.run_forever()
 
-
     def pause_background_tasks(self):
+        print('background pause background tasks called')
         if self.running:
+            print('stop obsering osf folder')
             self.stop_observing_osf_folder()
+            print('stop polling server')
             self.stop_polling_server()
+            print('stop loop')
             self.stop_loop()
+
             self.running = False
-
-
 
     def start_polling_server(self):
         # todo: can probably change this to just pass in the self.user
@@ -55,7 +56,6 @@ class BackgroundWorker(threading.Thread):
     def stop_polling_server(self):
         self.poller.stop()
 
-
     # todo: can refactor this code out to somewhere
     # todo: when log in is working, you need to make this work with log in screen.
     def get_current_user(self):
@@ -64,35 +64,16 @@ class BackgroundWorker(threading.Thread):
         print('---inside getcurrentuser-----{}----'.format(threading.current_thread()))
         try:
             user = self.session.query(models.User).filter(models.User.logged_in).one()
+            print('user attained in background')
         except MultipleResultsFound:
             # todo: multiple user screen allows you to choose which user is logged in
-            print('multiple users are logged in currently. We want only one use to be logged in.')
-            print('for now, we will just choose the first user in the db to be the logged in user')
-            print('also, we will log out all other users.')
-            # for user in self.session.query(models.User):
-            #     user.logged_in = False
-            #     self.save(user)
-            # user = self.session.query(models.User).first()
-            # user.logged_in = True
-            # self.save(user)
+
             self.multiple_user_action.trigger()
         except NoResultFound:
             # todo: allows you to log in (creates an account in db and logs it in)
             self.login_action.trigger()
             print('no users are logged in currently. Logging in first user in db.')
-            # user = self.session.query(models.User).first()
-            # if not user:
-            #     print('no users at all in the db. creating one and logging him in')
-            #     user = models.User(
-            #         fullname="Johnny Appleseed",
-            #         osf_id='p42te',
-            #         osf_login='rewhe1931@gustr.com',
-            #         osf_path='/home/himanshu/OSF-Offline/dumbdir/OSF',
-            #         oauth_token='eyJhbGciOiJIUzUxMiJ9.ZXlKaGJHY2lPaUprYVhJaUxDSmxibU1pT2lKQk1USTRRMEpETFVoVE1qVTJJbjAuLkJiQkg0TzhIYXMzU0dzQlNPQ29MYUEuSTRlRG4zcmZkNV92b1hJdkRvTmhodjhmV3M1Ql8tYUV1ZmJIR3ZZbkF0X1lPVDJRTFhVc05rdjJKZUhlUFhfUnpvZW1ucW9aN0ZlY0FidGpZcmxRR2hHem5IenRWREVQYWpXSmNnVVhtQWVYLUxSV25ENzBqYk9YczFDVHJKMG9BV29Fd3ZMSkpGSjdnZ29QVVBlLTJsX2NLcGY4UzZtaDRPMEtGX3lBRUlLTjhwMEdXZ3lVNWJ3b0lhZU1FSTVELllDYTBaTm5lSVFkSzBRbDNmY2pkZGc.dO-5NcN9X6ss7PeDt5fWRpFtMomgOBjPPv8Qehn34fJXJH2bCu9FIxo4Lxhja9dYGmCNAtc8jn05FjerjarQgQ',
-            #         osf_password='password'
-            #     )
-            # user.logged_in = True
-            # self.save(user)
+
         return user
 
     def stop_loop(self, close=False):
@@ -103,6 +84,8 @@ class BackgroundWorker(threading.Thread):
                     self.loop.close()
 
     def stop(self):
+        print('background stop called')
+        self.session.close()
         self.stop_polling_server()
         self.stop_observing_osf_folder()
         self.stop_loop(close=True)
@@ -117,11 +100,16 @@ class BackgroundWorker(threading.Thread):
                                                                loop=self.loop)  # create event handler
         # todo: if config actually has legitimate data. use it.
         # start
+        print('starting observer for osf folder')
         self.observer = Observer()  # create observer. watched for events on files.
         # attach event handler to observed events. make observer recursive
+        print('schedule observer')
         self.observer.schedule(self.event_handler, self.osf_folder, recursive=True)
-        LocalDBSync(self.user.osf_local_folder_path, self.observer, self.user).emit_new_events()
+        # LocalDBSync(self.user.osf_local_folder_path, self.observer, self.user).emit_new_events()
+
         try:
+            print('observer.start')
+            import pdb;pdb.set_trace()
             self.observer.start()  # start
         except OSError:
             print('too many things being watched.... hmmmm, what to dooooo????')

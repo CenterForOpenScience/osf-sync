@@ -108,12 +108,15 @@ class OSFController(QDialog):
 
 
     def quit(self):
-        self.store_configs()
-        self.background_worker.pause_background_tasks()
-        self.background_worker.stop()
-        db.Session.remove()
-        # quit() stops gui and then quits application
-        QApplication.instance().quit()
+        try:
+            self.store_configs()
+            self.background_worker.pause_background_tasks()
+            self.background_worker.stop()
+            db.Session.remove()
+        except:
+            print('quit broke. stopping anyway')
+            # quit() stops gui and then quits application
+            QApplication.instance().quit()
 
 
 
@@ -136,12 +139,12 @@ class OSFController(QDialog):
         except MultipleResultsFound:
             # todo: multiple user screen allows you to choose which user is logged in
             action = self.multiple_user_action
+            session.close()
         except NoResultFound:
             # todo: allows you to log in (creates an account in db and logs it in)
             action = self.login_action
             print('no users are logged in currently. Logging in first user in db.')
-
-        session.close()
+            session.close()
 
         if user:
             return user

@@ -20,6 +20,7 @@ class StartScreen(QDialog):
         super().__init__()
         self.done_logging_in_action = QAction("done logging in user", self)
         self.containing_folder = ''
+        self.start_screen = Ui_startscreen()
 
         # self._translate = QCoreApplication.translate
         # self.containingFolder = containingFolder
@@ -46,16 +47,16 @@ class StartScreen(QDialog):
 
         # assumption: logged in user properly.
         # assumption: all the fields needed for db are set
-        full_name = 'rock band'
-        osf_id = 'qmjhp'
-        oauth_token = 'eyJhbGciOiJIUzUxMiJ9.ZXlKaGJHY2lPaUprYVhJaUxDSmxibU1pT2lKQk1USTRRMEpETFVoVE1qVTJJbjAuLm5wb1d2bGJrb19zMXd0WEpvbXJjTkEuSzJVODIzZXFKcTgxZmNSTTNQZUZMWlAzalRqTnJGNzBEczFPc0x1bUhUN19UQ2F4ejBoSXlpNVFzM0FVZWl1N0dSV0VtbDh1TWZ5R3o1YTFjcTZSUEppZFVHbGJMcWw3QnR5SG1wRjJMUlVCM3FKZ3lQVHRqR3VpWVF1V3ZrQ2hTUEgtVk4tTW9jM3RUWlJjNXhUU0ttcDVqVm9IeG8xS29YSGI2S1YzaDdQc2tHcUVGajJ6YTdQRVlicjZrRlF0LnVGQnJRaHY2NDBGMmV0OWVjUVBqdGc.FxyoisWuhfCyVORF_qY6Umvd4p64MBcLbLWECzl_Hw5VJN93YOHQnhCdvCmFRcBbEQtZOCB-dAmiHaBBJn0RTA'
-
+        full_name = 'himanshu'
+        osf_id = '5bqt9'
+        oauth_token = '5bqt9'
         # check if user already exists in db
         session = get_session()
         try:
             user = session.query(User).filter(User.osf_login == user_name).one()
             user.logged_in = True
             save(session, user)
+            session.close()
             self.destroy()
             self.doneLoggingInAction.trigger()
         except MultipleResultsFound:
@@ -65,6 +66,7 @@ class StartScreen(QDialog):
                 if user.osf_login == user_name:
                     session.delete(user)
                     save(session)
+            session.close()
             self.log_in()
         except NoResultFound:
             print('user doesnt exist. Creating user. and logging him in.')
@@ -78,16 +80,16 @@ class StartScreen(QDialog):
             )
             user.logged_in = True
             save(session, user)
+            session.close()
             self.destroy()
             self.done_logging_in_action.trigger()
-        session.close()
+
 
     def setup_slots(self):
         self.start_screen.logInButton.clicked.connect(self.log_in)
 
     def open_window(self):
         if not self.isVisible():
-            self.start_screen = Ui_startscreen()
             self.start_screen.setupUi(self)
             # self.setupActions()
             self.setup_slots()

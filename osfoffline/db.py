@@ -5,7 +5,7 @@ import shutil
 import os
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, scoped_session
-
+from sqlalchemy.pool import SingletonThreadPool
 
 
 DB_DIR = user_data_dir(PROJECT_NAME, PROJECT_AUTHOR)
@@ -43,7 +43,11 @@ def create_models():
     """
     if not os.path.isdir(DB_DIR):
         os.makedirs(DB_DIR)
-    engine = create_engine(URL)
+    engine = create_engine(
+        URL,
+        # connect_args={'check_same_thread':False},
+        # poolclass=SingletonThreadPool
+    )
     Base.metadata.create_all(engine)
 
 

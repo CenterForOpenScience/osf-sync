@@ -1,15 +1,15 @@
 from osfoffline.settings import API_BASE, WB_BASE
-import furl
+from furl import furl
 
 
 def api_user_url(user_id):
     base = furl(API_BASE)
-    base.path.segments = ['api','v2','users',user_id,'']
+    base.path.segments = ['v2','users',user_id,'']
     return base.url
 
 def api_user_nodes(user_id):
     base = furl(API_BASE)
-    base.path.segments = ['api','v2','users',user_id, 'nodes', '']
+    base.path.segments = ['v2','users',user_id, 'nodes', '']
     return base.url
 
 def wb_file_url():

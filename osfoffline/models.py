@@ -210,7 +210,8 @@ class File(Base):
 
     @validates('parent_id')
     def validate_parent_id(self, key, parent_id):
-        assert self.parent.node == self.node
+        if self.parent:
+            assert self.parent.node == self.node
         return parent_id
 
     @validates('node_id')

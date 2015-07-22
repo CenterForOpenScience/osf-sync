@@ -39,6 +39,6 @@ class TestLocalDBSyncAcceptance(TestCase):
     def test_empty_db_and_local(self):
         sync = LocalDBSync(self.user.osf_local_folder_path, self.observer, self.user)
         sync.emit_new_events()
-        self.assertEqual(1, 1)
+
 
         # self.loop.run_forever()

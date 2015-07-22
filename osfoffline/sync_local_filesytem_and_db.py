@@ -9,7 +9,7 @@ from watchdog.events import (
     DirCreatedEvent,
 )
 from osfoffline.models import User, Node, File, Base
-from osfoffline.exceptions.item_exceptions import InvalidItemType
+from osfoffline.exceptions.item_exceptions import InvalidItemType, FolderNotInFileSystem
 from osfoffline.exceptions.local_db_sync_exceptions import LocalDBBothNone, IncorrectLocalDBMatch
 from osfoffline.path import ProperPath
 from watchdog.observers import Observer
@@ -17,9 +17,12 @@ from watchdog.observers import Observer
 
 class LocalDBSync(object):
     def __init__(self, absolute_osf_dir_path, observer, user):
-        assert isinstance(observer, Observer)
-        assert isinstance(user, User)
-        assert os.path.isdir(absolute_osf_dir_path)
+        if not isinstance(observer, Observer):
+            raise TypeError
+        if not isinstance(user, User):
+            raise TypeError
+        if not os.path.isdir(absolute_osf_dir_path):
+            raise FolderNotInFileSystem
 
         self.osf_path = ProperPath(absolute_osf_dir_path, True)
         self.observer = observer
@@ -105,8 +108,6 @@ class LocalDBSync(object):
                                       '{item_type}'.format(item_type=type(item)))
 
 
-
-
     def _get_proper_path(self, item):
         if isinstance(item, ProperPath):
             return item
@@ -143,10 +144,13 @@ class LocalDBSync(object):
         return m.hexdigest()
 
     def _determine_event_type(self, local, db):
-        assert local or db  # a and b cannot both be none.
+        if not local and not db:
+            raise LocalDBBothNone
+
         event = None
         if local and db:
-            assert self._get_proper_path(local) == self._get_proper_path(db)
+            if self._get_proper_path(local) != self._get_proper_path(db):
+                raise IncorrectLocalDBMatch
             # todo: implement hash properly in db.
             if isinstance(db, File) and db.type == File.FILE and self._make_hash(local) != db.hash:
                 event = FileModifiedEvent(self._get_proper_path(local).full_path)  # create changed event

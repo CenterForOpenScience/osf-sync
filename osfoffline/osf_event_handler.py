@@ -8,7 +8,7 @@ from osfoffline.db import get_session
 import os
 import logging
 import asyncio
-from .path import ProperPath
+from osfoffline.path import ProperPath
 EVENT_TYPE_MOVED = 'moved'
 EVENT_TYPE_DELETED = 'deleted'
 EVENT_TYPE_CREATED = 'created'
@@ -30,7 +30,7 @@ class OSFEventHandler(FileSystemEventHandler):
         self.osf_folder = osf_folder
 
         self.session = get_session()
-        self.user = self.session.query(User).first()  # assume only one user for now!!!!!
+        self.user = user
 
         # self.queue = queue()
         # self._running = True
@@ -47,6 +47,7 @@ class OSFEventHandler(FileSystemEventHandler):
     #         return func(event)
     #     else:
     #         self.queue.put(event)
+        print('osf event handler created')
 
     def save(self, item):
         if item:

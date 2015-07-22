@@ -178,8 +178,10 @@ class Poll(object):
             # get remote top level nodes
             all_remote_nodes = yield from self.get_all_paginated_members(all_remote_nodes_url)
             remote_top_level_nodes = []
+            # print(all_remote_nodes)
             for remote in all_remote_nodes:
-                if remote['links']['parent'] is None:
+                if remote['links']['parent']['self'] is None:
+                    print(remote)
                     remote_top_level_nodes.append(remote)
 
 
@@ -238,9 +240,9 @@ class Poll(object):
 
         # recursively handle node's children
         remote_children = yield from self.get_all_paginated_members(remote_node['links']['children']['related'])
-        local_remote_nodes = self.make_local_remote_tuple_list(local_node.components, remote_children)
+        local_remote_nodes = self.make_local_remote_tuple_list(local_node.child_nodes, remote_children)
         for local, remote in local_remote_nodes:
-            yield from self.check_node(local, remote, local_parent_node=local_node, remote_parent_node=remote_node)
+            yield from self.check_node(local, remote, local_parent_node=local_node)
 
     # todo: determine if we just want osfstorage or also other things
     @asyncio.coroutine
@@ -351,7 +353,7 @@ class Poll(object):
             user=self.user,
             parent=local_parent_node
         )
-        db.save(self.session,new_node)
+        db.save(self.session, new_node)
 
         # alert
         alerts.info(new_node.title, alerts.DOWNLOAD)
@@ -360,7 +362,7 @@ class Poll(object):
         if not os.path.exists(new_node.path):
             os.makedirs(new_node.path)
 
-        assert local_parent_node is None or (new_node in local_parent_node.components)
+        assert local_parent_node is None or (new_node in local_parent_node.child_nodes)
         return new_node
 
 

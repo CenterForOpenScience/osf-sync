@@ -12,7 +12,13 @@ from tests import TEST_DIR
 from tests.fixtures.factories import common
 from tests.fixtures.factories.factories import UserFactory, NodeFactory, FileFactory
 from osfoffline.models import User, Node, File, Base
-
+from watchdog.events import (
+    DirDeletedEvent,
+    FileDeletedEvent,
+    FileModifiedEvent,
+    FileCreatedEvent,
+    DirCreatedEvent,
+)
 
 # unit tests
 
@@ -271,6 +277,42 @@ class TestLocalDBSyncUnitTests(TestCase):
         for child in children:
             self.assertTrue(child in for_sure_children)
 
+
+
+    def test__determine_event_type_both_None(self):
+        with self.assertRaises(LocalDBBothNone):
+            self.sync._determine_event_type(None, None)
+
+    def test__determine_event_type_local_None(self):
+        db = self.user
+    def test__determine_event_type_db_None(self):
+        db = self.user
+    def test__determine_event_type_local_top_level_node_only(self):
+        self.fail()
+    def test__determine_event_type_local_node_only(self):
+        self.fail()
+    def test__determine_event_type_local_folder_only(self):
+        self.fail()
+    def test__determine_event_type_local_file_only(self):
+        self.fail()
+    def test__determine_event_type_db_top_level_node_only(self):
+        self.fail()
+    def test__determine_event_type_db_top_level_node_only(self):
+        self.fail()
+    def test__determine_event_type_db_node_only(self):
+        self.fail()
+    def test__determine_event_type_db_file_only(self):
+        self.fail()
+    def test__determine_event_type_db_folder_only(self):
+        self.fail()
+    def test__determine_event_type_both_top_level_node_changed(self):
+        self.fail()
+    def test__determine_event_type_both_top_level_node_changed(self):
+        self.fail()
+    def test__determine_event_type_both_top_level_node_changed(self):
+        self.fail()
+    def test__determine_event_type_both_top_level_node_changed(self):
+        self.fail()
     # def test__get_proper_path(self):
     #     self.fail()
     #
@@ -279,6 +321,9 @@ class TestLocalDBSyncUnitTests(TestCase):
     #
     # def test__emit_new_events(self):
     #     self.fail()
+
+
+
 
 
 
