@@ -4,11 +4,12 @@ storing the data into the db, and then sending a request to the remote server.
 """
 from watchdog.events import FileSystemEventHandler
 from osfoffline.models import User, Node, File
-from osfoffline.db import get_session
+from osfoffline.db import get_session, save
 import os
 import logging
 import asyncio
 from osfoffline.path import ProperPath
+from osfoffline.exceptions.event_handler_exceptions import MovedNodeUnderFile
 EVENT_TYPE_MOVED = 'moved'
 EVENT_TYPE_DELETED = 'deleted'
 EVENT_TYPE_CREATED = 'created'
@@ -34,16 +35,9 @@ class OSFEventHandler(FileSystemEventHandler):
 
         print('osf event handler created')
 
-    def save(self, item):
-        if item:
-            self.session.add(item)
-        try:
-            self.session.commit()
-        except:
-            raise
 
     def close(self):
-        self.save()
+        save(self.session)
         self.session.close()
 
     @asyncio.coroutine
@@ -64,31 +58,73 @@ class OSFEventHandler(FileSystemEventHandler):
 
         # todo: handle MOVED!!!!!!!!!!!!!!
         try:
+
             src_path = ProperPath(event.src_path, event.is_directory)
             dest_path = ProperPath(event.dest_path, event.is_directory)
             # determine and get what moved
             item = self.get_item_by_path(src_path)
 
-
-            # update item's position
-            try:
-                item.parent = self._get_parent_item_from_path(dest_path)
-            except FileNotFoundError:
-                item.parent = None
-
-            # rename folder
+            import pdb; pdb.set_trace()
+            # rename
             if isinstance(item, Node) and item.title != dest_path.name:
-                item.title = dest_path.name
+                if self.already_exists(dest_path):
+                    self.session.delete(item)
+                    save(self.session)
+                else:
+                    item.title = dest_path.name
+                    save(self.session, item)
             elif isinstance(item, File) and item.name != dest_path.name:
-                item.name = dest_path.name
-            else:
-                raise ValueError('some messed up thing was moved')
+                if self.already_exists(dest_path):
+                    self.session.delete(item)
+                    save(self.session)
+                else:
+                    item.name = dest_path.name
+                    save(self.session, item)
+            # move
+            elif src_path != dest_path:
+                try:
+
+
+                    #create a dummy item in old place with .locally deleted so polling does not create new item
+                    if isinstance(item, Node):
+                        dummy = Node(title=item.title, parent=item.parent, user=item.user, category=item.category, osf_id=item.osf_id)
+                    elif isinstance(item, File):
+                        dummy = File(name=item.name, parent=item.parent, user=item.user, type=item.type, osf_id=item.osf_id)
+                    dummy.locally_deleted = True
+
+                    # move item
+                    # fixme: move get_parent_item to above all this because in the time in between dummy is created and item is moved, you have duplicate in db.
+                    # fixme: duplicate created because get_parentitem from path queries thus flushes to db.
+                    new_parent = self._get_parent_item_from_path(dest_path)
+                    if isinstance(item, Node):
+                        if isinstance(new_parent, Node):
+                            item.parent = new_parent
+                        elif isinstance(new_parent, File):
+                            raise MovedNodeUnderFile
+                    elif isinstance(item, File):
+                        if isinstance(new_parent, Node):
+                            item.parent = None
+                            item.node = new_parent
+                        elif isinstance(new_parent, File):
+                            item.parent = new_parent
+
+                    item.locally_created = True
+
+                    save(self.session, dummy)
+                    save(self.session, item)
+                except FileNotFoundError:
+                    # todo:
+                    console_log('tried to move to OSF folder. cant do this.')
+                    # item.parent = None
+
+
+
 
             # todo: log
             # logging.info(item.)
 
-            # save
-            self.save(item)
+
+
         except FileNotFoundError:
             print('tried to move {} but it doesnt exist in db'.format(event.src_path))
 
@@ -115,7 +151,7 @@ class OSFEventHandler(FileSystemEventHandler):
                     if event.is_directory:
                         top_level_node = Node(title=name, user=self.user, locally_created=True)
                         # save
-                        self.save(top_level_node)
+                        save(self.session, top_level_node)
                     else:
                         print("CREATED FILE IN PROJECT AREA.")
                         raise NotADirectoryError
@@ -132,7 +168,7 @@ class OSFEventHandler(FileSystemEventHandler):
                         folder = File(name=name, type=File.FOLDER, user=self.user, locally_created=True,
                                       provider=File.DEFAULT_PROVIDER, node=node)
                         containing_item.files.append(folder)
-                        self.save(folder)
+                        save(self.session, folder)
                     else:  # component
 
                         new_component = Node(
@@ -145,7 +181,7 @@ class OSFEventHandler(FileSystemEventHandler):
                         parent_component = self._get_parent_item_from_path(src_path)
 
                         parent_component.components.append(new_component)
-                        self.save(new_component)
+                        save(self.session, new_component)
 
                 else:  # if file, then file.
                     console_log('new thing is file',name)
@@ -158,7 +194,7 @@ class OSFEventHandler(FileSystemEventHandler):
                                 provider=File.DEFAULT_PROVIDER, node=node)
                     # console_log('new thing as file object',file)
                     containing_item.files.append(file)
-                    self.save(file)
+                    save(self.session, file)
                     console_log('new thing is file and inside db it is saved as',file)
                     # console_log('new thing as file object AGAIN in order to check name',file)
                     # log
@@ -214,7 +250,7 @@ class OSFEventHandler(FileSystemEventHandler):
             # todo: log
 
             # save
-            self.save(item)
+            save(self.session, item)
             console_log('modifying file. check how temp file is saved back in as', item)
         except FileNotFoundError:
             print('tried to modify {} but it doesnt exist in db'.format(event.src_path))
@@ -243,7 +279,7 @@ class OSFEventHandler(FileSystemEventHandler):
             # todo: log
 
             # save
-            self.save(item)
+            save(self.session, item)
         except FileNotFoundError:
             # if file does not exist in db, then do nothing.
             print('tried to delete file {} but was not in db'.format(event.src_path))
@@ -265,12 +301,6 @@ class OSFEventHandler(FileSystemEventHandler):
             if ProperPath(node.path, True) == path:
                 return node
         for file_folder in self.session.query(File):
-            if file_folder.name == 'my doc':
-                console_log('file_folder',file_folder)
-                console_log('db file: file_path',ProperPath(file_folder.path, file_folder.type == File.FOLDER))
-                console_log('file_folder.type == File.FOLDER',file_folder.type == File.FOLDER)
-                console_log('path being search for: path',path)
-                console_log('file_path == path', ProperPath(file_folder.path, file_folder.type == File.FOLDER) == path)
             file_path = ProperPath(file_folder.path, file_folder.type == File.FOLDER)
             if file_path == path:
                 return file_folder

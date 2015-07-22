@@ -600,17 +600,16 @@ class Poll(object):
         files_url = wb_file_url()
 
         try:
-                console_log('this is where the error is','making some dumb temp file and breaking everything.')
-                file = open(local_file.path, 'rb')
+            console_log('this is where the error is','making some dumb temp file and breaking everything.')
+            file = open(local_file.path, 'rb')
 
-                remote_file_folder = yield from self.make_request(
-                    files_url,
-                    method='PUT',
-                    params=params,
-                    data=file,
-                    get_json=True
-                )
-
+            remote_file_folder = yield from self.make_request(
+                files_url,
+                method='PUT',
+                params=params,
+                data=file,
+                get_json=True
+            )
         except FileNotFoundError:
             print('file not created on remote server because does not exist locally. inside create_remote_file_folder')
             return remote_file
@@ -643,7 +642,7 @@ class Poll(object):
 
         # OSF allows you to manually rename a folder. Use That.
         # url = 'https://staging2-files.osf.io/ops/move'
-        import pdb;pdb.set_trace()
+
         url = wb_move_url()
         console_log('url (wb_move_url)', url)
         data = {
