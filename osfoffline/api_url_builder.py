@@ -24,5 +24,5 @@ def wb_file_revisions():
 
 def wb_move_url():
     base = furl(WB_BASE)
-    base.path.segments = ['ops','move','']
+    base.path.segments = ['ops','move']
     return base.url

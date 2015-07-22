@@ -32,21 +32,6 @@ class OSFEventHandler(FileSystemEventHandler):
         self.session = get_session()
         self.user = user
 
-        # self.queue = queue()
-        # self._running = True
-    # def pause(self):
-    # self._running = False
-    # def unpause(self):
-    #     while not self.queue.empty():
-    #         event = self.queue.get()
-    #         self.dispatch(event)
-    #     self._running = True
-
-    # def check_pause(self,func, event):
-    #     if self._running:
-    #         return func(event)
-    #     else:
-    #         self.queue.put(event)
         print('osf event handler created')
 
     def save(self, item):
@@ -222,10 +207,8 @@ class OSFEventHandler(FileSystemEventHandler):
             item = self.get_item_by_path(src_path)
 
             # update hash
-            item.update_hash()
-
-            # send to server
-            # todo: send to server
+            if isinstance(item, File) and item.type == File.FILE:
+                item.update_hash()
 
             # log
             # todo: log

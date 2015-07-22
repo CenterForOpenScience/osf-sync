@@ -11,7 +11,7 @@ from osfoffline.models import User, Node, File, Base
 import osfoffline.alerts as alerts
 import osfoffline.db as db
 from osfoffline.api_url_builder import api_user_url, wb_file_revisions, wb_file_url, api_user_nodes,wb_move_url
-
+from sqlite3 import ProgrammingError
 OK = 200
 CREATED = 201
 ACCEPTED = 202
@@ -39,11 +39,19 @@ class Poll(object):
         self.request_session = aiohttp.ClientSession(loop=self._loop, headers=self.headers)
 
     def stop(self):
+        print('INSIDE polling.stop')
         self._keep_running = False
-
+        try:
+            self.session.close()
+            print('just successfully closed the session')
+        # except ProgrammingError:
+        except:
+            print('session NOT closed properly.')
+        print('just tried to close the session')
 
     def start(self):
         # annoying and weird way to get the remote user from the coroutine
+
         future = asyncio.Future()
         asyncio.async(self.get_remote_user(future), loop=self._loop)
         self._loop.run_until_complete(future)
@@ -635,7 +643,9 @@ class Poll(object):
 
         # OSF allows you to manually rename a folder. Use That.
         # url = 'https://staging2-files.osf.io/ops/move'
+        import pdb;pdb.set_trace()
         url = wb_move_url()
+        console_log('url (wb_move_url)', url)
         data = {
             'rename': local_file_folder.name,
             'conflict': 'replace',

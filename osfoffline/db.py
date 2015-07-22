@@ -45,8 +45,8 @@ def create_models():
         os.makedirs(DB_DIR)
     engine = create_engine(
         URL,
-        # connect_args={'check_same_thread':False},
-        # poolclass=SingletonThreadPool
+        poolclass=SingletonThreadPool,
+        connect_args={'check_same_thread':False},
     )
     Base.metadata.create_all(engine)
 

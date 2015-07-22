@@ -54,7 +54,9 @@ class BackgroundWorker(threading.Thread):
         self.poller.start()
 
     def stop_polling_server(self):
+        print('ABOUT TO STOP POLLING SERVER')
         self.poller.stop()
+
 
     # todo: can refactor this code out to somewhere
     # todo: when log in is working, you need to make this work with log in screen.
@@ -86,10 +88,13 @@ class BackgroundWorker(threading.Thread):
     def stop(self):
         print('background stop called')
         self.session.close()
+        print('1 error')
         self.stop_polling_server()
+        print('2 error')
         self.stop_observing_osf_folder()
+        print('3 error')
         self.stop_loop(close=True)
-
+        print('4 error')
 
 
 
@@ -109,7 +114,6 @@ class BackgroundWorker(threading.Thread):
 
         try:
             print('observer.start')
-            import pdb;pdb.set_trace()
             self.observer.start()  # start
         except OSError:
             print('too many things being watched.... hmmmm, what to dooooo????')
