@@ -109,6 +109,9 @@ class ProperPath(object):
     def __eq__(self, other):
         return isinstance(other, self.__class__) and self.is_dir == other.is_dir and str(self) == str(other)
 
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
     def __str__(self):
         return self.full_path
 

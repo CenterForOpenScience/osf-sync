@@ -21,7 +21,7 @@ class User(Base):
     osf_password = Column(String)
     osf_local_folder_path = Column(String)
     oauth_token = Column(String)
-    osf_id = Column(String)
+    osf_id = Column(String, unique=True, nullable=True, default=None)  # multiple things allowed to be null
 
     logged_in = Column(Boolean, default=False)
 
@@ -66,7 +66,7 @@ class Node(Base):
     hash = Column(String)
     category = Column(Enum(PROJECT, COMPONENT))
     date_modified = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
-    osf_id = Column(String)
+    osf_id = Column(String, unique=True, nullable=True, default=None) # multiple things allowed to be null
 
 
     locally_created = Column(Boolean, default=False)
@@ -124,6 +124,7 @@ class Node(Base):
             assert self.parent is not None
         return top_level
 
+
     def __repr__(self):
         return "<Node ({}), category={}, title={}, path={}, parent_id={}>".format(
             self.id, self.category, self.title, self.path, self.parent_id
@@ -144,7 +145,7 @@ class File(Base):
     hash = Column(String)
     type = Column(Enum(FOLDER, FILE), nullable=False)
     date_modified = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
-    osf_id = Column(String)
+    osf_id = Column(String, unique=True, nullable=True, default=None)  # multiple things allowed to be null
     provider = Column(String, default=DEFAULT_PROVIDER)
 
     # NOTE: this is called path. It is not any type of file/folder path. Think of it just as an id.
@@ -171,6 +172,11 @@ class File(Base):
         backref=backref('parent', remote_side=[id]),
         cascade="all, delete-orphan",
     )
+
+    #todo: actually use this field. everywhere.
+    @hybrid_property
+    def is_file(self):
+        return self.type == File.FILE
 
     @hybrid_property
     def has_parent(self):
@@ -225,6 +231,7 @@ class File(Base):
         if self.type == File.FILE:
             assert self.files == []
         return files
+
 
     def __repr__(self):
         return "<File ({}), type={}, name={}, path={}, parent_id={}>".format(

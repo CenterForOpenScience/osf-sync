@@ -11,7 +11,7 @@ from osfoffline.models import User, Node, File, Base
 import osfoffline.alerts as alerts
 import osfoffline.db as db
 from osfoffline.api_url_builder import api_user_url, wb_file_revisions, wb_file_url, api_user_nodes,wb_move_url
-
+from sqlite3 import ProgrammingError
 OK = 200
 CREATED = 201
 ACCEPTED = 202
@@ -39,11 +39,19 @@ class Poll(object):
         self.request_session = aiohttp.ClientSession(loop=self._loop, headers=self.headers)
 
     def stop(self):
+        print('INSIDE polling.stop')
         self._keep_running = False
-
+        try:
+            self.session.close()
+            print('just successfully closed the session')
+        # except ProgrammingError:
+        except:
+            print('session NOT closed properly.')
+        print('just tried to close the session')
 
     def start(self):
         # annoying and weird way to get the remote user from the coroutine
+
         future = asyncio.Future()
         asyncio.async(self.get_remote_user(future), loop=self._loop)
         self._loop.run_until_complete(future)
@@ -56,6 +64,7 @@ class Poll(object):
 
     # Only once you have a remote user do we want to check the osf.
     # thus this coroutine repeatedly tries to get the remote user.
+    # It blocks check_osf from running.
     @asyncio.coroutine
     def get_remote_user(self, future):
         print("checking projects of user with id {}".format(self.user_osf_id))
@@ -375,6 +384,8 @@ class Poll(object):
         assert local_parent_folder is None or (local_parent_folder.type == File.FOLDER)
         assert isinstance(local_node, Node)
 
+        # NOTE: develop is not letting me download files. dont know why.
+
         # create local file folder in db
         type = File.FILE if remote_file_folder['item_type'] == 'file' else File.FOLDER
         new_file_folder = File(
@@ -592,17 +603,16 @@ class Poll(object):
         files_url = wb_file_url()
 
         try:
-                console_log('this is where the error is','making some dumb temp file and breaking everything.')
-                file = open(local_file.path, 'rb')
+            console_log('this is where the error is','making some dumb temp file and breaking everything.')
+            file = open(local_file.path, 'rb')
 
-                remote_file_folder = yield from self.make_request(
-                    files_url,
-                    method='PUT',
-                    params=params,
-                    data=file,
-                    get_json=True
-                )
-
+            remote_file_folder = yield from self.make_request(
+                files_url,
+                method='PUT',
+                params=params,
+                data=file,
+                get_json=True
+            )
         except FileNotFoundError:
             print('file not created on remote server because does not exist locally. inside create_remote_file_folder')
             return remote_file
@@ -635,7 +645,9 @@ class Poll(object):
 
         # OSF allows you to manually rename a folder. Use That.
         # url = 'https://staging2-files.osf.io/ops/move'
+
         url = wb_move_url()
+
         data = {
             'rename': local_file_folder.name,
             'conflict': 'replace',
@@ -662,6 +674,68 @@ class Poll(object):
 
 
         return new_remote_file_folder
+
+    @asyncio.coroutine
+    def move_remote_file_folder(self, local_file_folder, remote_file_folder):
+        """
+        handles both moving the remote_file_folder and renaming it.
+        :param local_file_folder:
+        :param remote_file_folder:
+        :return:
+        """
+        print('rename_remote_file_folder.')
+        assert isinstance(local_file_folder, File)
+        assert isinstance(remote_file_folder, dict)
+        assert remote_file_folder['type'] == 'files'
+        assert remote_file_folder['path'] == local_file_folder.osf_path
+        assert local_file_folder.name != remote_file_folder['name'] or local_file_folder.locally_moved
+
+        # alerts
+        alerts.info(local_file_folder.name, alerts.MODIFYING)
+
+        new_remote_file_folder = remote_file_folder
+
+        # handle renaming for both files and folders
+
+        # OSF allows you to manually rename a folder. Use That.
+        # url = 'https://staging2-files.osf.io/ops/move'
+
+        url = wb_move_url()
+        """
+        current thinking is that we rename node.top_level_file_folders to node.providers.
+        We then add a provider boolean to File - node.providers gives you File.provider==True Files
+        Each File has a provider field. It points to the provider, or None (if the file itself is the provider file)
+
+        If we get an event that is trying to move the provider file, we ignore it.
+        """
+        data = {
+            'rename': local_file_folder.name,
+            'conflict': 'replace',
+            'source': {
+                'path': local_file_folder.osf_path,
+                'provider': local_file_folder.provider,
+                'nid': local_file_folder.previous_node_osf_id  # fixme: what is the old node id???
+            },
+            'destination': {
+                'path': local_file_folder.parent.osf_path if local_file_folder.parent else '/',  # fixme: parent could be None. in which case we use / for the provider.
+                'provider': local_file_folder.provider,  # fixme: add validation for moving around osfstorage provider folder. parent=None in this case.
+                'nid': local_file_folder.node.osf_id
+            }
+        }
+
+        resp = yield from self.make_request(url, method="POST", data=json.dumps(data))
+        resp.close()
+        # get the updated remote folder
+
+        # inner_response = requests.get(remote_file_folder['links']['self'], headers=self.headers).json()
+        # we know exactly what changed, so its faster to just change the remote dictionary rather than making a new api call.
+
+        new_remote_file_folder['name'] = data['rename']
+
+
+        return new_remote_file_folder
+
+
 
     # Delete
     @asyncio.coroutine
