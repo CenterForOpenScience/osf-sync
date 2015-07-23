@@ -383,6 +383,8 @@ class Poll(object):
         assert local_parent_folder is None or (local_parent_folder.type == File.FOLDER)
         assert isinstance(local_node, Node)
 
+        # NOTE: develop is not letting me download files. dont know why.
+
         # create local file folder in db
         type = File.FILE if remote_file_folder['item_type'] == 'file' else File.FOLDER
         new_file_folder = File(
@@ -644,7 +646,7 @@ class Poll(object):
         # url = 'https://staging2-files.osf.io/ops/move'
 
         url = wb_move_url()
-        console_log('url (wb_move_url)', url)
+
         data = {
             'rename': local_file_folder.name,
             'conflict': 'replace',
@@ -671,6 +673,56 @@ class Poll(object):
 
 
         return new_remote_file_folder
+
+    @asyncio.coroutine
+    def move_remote_file_folder(self, local_file_folder, remote_file_folder):
+        print('rename_remote_file_folder.')
+        assert isinstance(local_file_folder, File)
+        assert isinstance(remote_file_folder, dict)
+        assert remote_file_folder['type'] == 'files'
+        assert remote_file_folder['path'] == local_file_folder.osf_path
+        assert local_file_folder.name != remote_file_folder['name']
+
+        # alerts
+        alerts.info(local_file_folder.name, alerts.MODIFYING)
+
+        new_remote_file_folder = remote_file_folder
+
+        # handle renaming for both files and folders
+
+        # OSF allows you to manually rename a folder. Use That.
+        # url = 'https://staging2-files.osf.io/ops/move'
+
+        url = wb_move_url()
+
+        data = {
+            'rename': local_file_folder.name,
+            'conflict': 'replace',
+            'source': {
+                'path': local_file_folder.osf_path,
+                'provider': local_file_folder.provider,
+                'nid': local_file_folder.node.osf_id
+            },
+            'destination': {
+                'path': local_file_folder.parent.osf_path,
+                'provider': local_file_folder.provider,
+                'nid': local_file_folder.node.osf_id
+            }
+        }
+
+        resp = yield from self.make_request(url, method="POST", data=json.dumps(data))
+        resp.close()
+        # get the updated remote folder
+
+        # inner_response = requests.get(remote_file_folder['links']['self'], headers=self.headers).json()
+        # we know exactly what changed, so its faster to just change the remote dictionary rather than making a new api call.
+
+        new_remote_file_folder['name'] = data['rename']
+
+
+        return new_remote_file_folder
+
+
 
     # Delete
     @asyncio.coroutine

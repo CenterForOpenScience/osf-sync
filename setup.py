@@ -9,7 +9,6 @@ def parse_requirements(requirements):
 
 
 requirements = parse_requirements('requirements.txt')
-
 setup(
     name='osfoffline',
     version=__version__,
@@ -25,10 +24,13 @@ setup(
     zip_safe=False,
     classifiers=[
         'Natural Language :: English',
-        'Intended Audience :: Developers',
-        'Programming Language :: Python :: 3',
+        'Intended Audience :: Science/Research',
+        'Development Status :: 1 - Planning',
+        'Framework :: QT',
         'Programming Language :: Python :: 3.4',
-        'Development Status :: 0 - Development',
+        'Operating System :: MacOS',
+        'Operating System :: Microsoft :: Windows',
+        'Operating System :: POSIX :: Linux',
         # 'License :: OSI Approved :: Apache Software License',
     ],
 )

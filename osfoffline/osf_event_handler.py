@@ -64,7 +64,6 @@ class OSFEventHandler(FileSystemEventHandler):
             # determine and get what moved
             item = self.get_item_by_path(src_path)
 
-            import pdb; pdb.set_trace()
             # rename
             if isinstance(item, Node) and item.title != dest_path.name:
                 if self.already_exists(dest_path):
@@ -89,12 +88,12 @@ class OSFEventHandler(FileSystemEventHandler):
                     if isinstance(item, Node):
                         dummy = Node(title=item.title, parent=item.parent, user=item.user, category=item.category, osf_id=item.osf_id)
                     elif isinstance(item, File):
-                        dummy = File(name=item.name, parent=item.parent, user=item.user, type=item.type, osf_id=item.osf_id)
+                        dummy = File(name=item.name, parent=item.parent, user=item.user, type=item.type, osf_id=item.osf_id, node=item.node)
                     dummy.locally_deleted = True
 
                     # move item
                     # fixme: move get_parent_item to above all this because in the time in between dummy is created and item is moved, you have duplicate in db.
-                    # fixme: duplicate created because get_parentitem from path queries thus flushes to db.
+                    # fixme: duplicate created because get_parent_item_from_path queries thus flushes to db.
                     new_parent = self._get_parent_item_from_path(dest_path)
                     if isinstance(item, Node):
                         if isinstance(new_parent, Node):
@@ -104,9 +103,10 @@ class OSFEventHandler(FileSystemEventHandler):
                     elif isinstance(item, File):
                         if isinstance(new_parent, Node):
                             item.parent = None
-                            item.node = new_parent
+                            item.node = new_parent.node
                         elif isinstance(new_parent, File):
                             item.parent = new_parent
+                            item.node = new_parent.node
 
                     item.locally_created = True
 

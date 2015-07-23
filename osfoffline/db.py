@@ -23,7 +23,16 @@ def setup_db(dir=None):
         # todo: determine if we change db_dir, then do the other constants already get updated as we need them???
         DB_DIR = dir
         DB_FILE_PATH = os.path.join(DB_DIR, 'osf.db')
-        URL = 'sqlite:///{}'.format(DB_FILE_PATH)
+        # # sqlite+pysqlcipher://:passphrase/file_path
+        #
+        # #Unix/Mac - 4 initial slashes in total
+        # engine = create_engine('sqlite:////absolute/path/to/foo.db')
+        # #Windows
+        # engine = create_engine('sqlite:///C:\\path\\to\\foo.db')
+        # #Windows alternative using raw string
+        # engine = create_engine(r'sqlite:///C:\path\to\foo.db')
+        URL = 'sqlite+pysqlcipher://:PASSWORD/{DB_FILE_PATH}'.format(DB_FILE_PATH=DB_FILE_PATH)
+        # URL = 'sqlite:///{}'.format(DB_FILE_PATH)
 
     create_models()
     create_session()

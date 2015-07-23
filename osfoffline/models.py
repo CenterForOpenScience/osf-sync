@@ -21,7 +21,7 @@ class User(Base):
     osf_password = Column(String)
     osf_local_folder_path = Column(String)
     oauth_token = Column(String)
-    osf_id = Column(String)
+    osf_id = Column(String, unique=True, nullable=True, default=None)  # multiple things allowed to be null
 
     logged_in = Column(Boolean, default=False)
 
@@ -66,7 +66,7 @@ class Node(Base):
     hash = Column(String)
     category = Column(Enum(PROJECT, COMPONENT))
     date_modified = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
-    osf_id = Column(String)
+    osf_id = Column(String, unique=True, nullable=True, default=None) # multiple things allowed to be null
 
 
     locally_created = Column(Boolean, default=False)
@@ -145,7 +145,7 @@ class File(Base):
     hash = Column(String)
     type = Column(Enum(FOLDER, FILE), nullable=False)
     date_modified = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
-    osf_id = Column(String)
+    osf_id = Column(String, unique=True, nullable=True, default=None)  # multiple things allowed to be null
     provider = Column(String, default=DEFAULT_PROVIDER)
 
     # NOTE: this is called path. It is not any type of file/folder path. Think of it just as an id.
