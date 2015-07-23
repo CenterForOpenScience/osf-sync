@@ -64,6 +64,7 @@ class Poll(object):
 
     # Only once you have a remote user do we want to check the osf.
     # thus this coroutine repeatedly tries to get the remote user.
+    # It blocks check_osf from running.
     @asyncio.coroutine
     def get_remote_user(self, future):
         print("checking projects of user with id {}".format(self.user_osf_id))
@@ -676,12 +677,18 @@ class Poll(object):
 
     @asyncio.coroutine
     def move_remote_file_folder(self, local_file_folder, remote_file_folder):
+        """
+        handles both moving the remote_file_folder and renaming it.
+        :param local_file_folder:
+        :param remote_file_folder:
+        :return:
+        """
         print('rename_remote_file_folder.')
         assert isinstance(local_file_folder, File)
         assert isinstance(remote_file_folder, dict)
         assert remote_file_folder['type'] == 'files'
         assert remote_file_folder['path'] == local_file_folder.osf_path
-        assert local_file_folder.name != remote_file_folder['name']
+        assert local_file_folder.name != remote_file_folder['name'] or local_file_folder.locally_moved
 
         # alerts
         alerts.info(local_file_folder.name, alerts.MODIFYING)
@@ -694,18 +701,24 @@ class Poll(object):
         # url = 'https://staging2-files.osf.io/ops/move'
 
         url = wb_move_url()
+        """
+        current thinking is that we rename node.top_level_file_folders to node.providers.
+        We then add a provider boolean to File - node.providers gives you File.provider==True Files
+        Each File has a provider field. It points to the provider, or None (if the file itself is the provider file)
 
+        If we get an event that is trying to move the provider file, we ignore it.
+        """
         data = {
             'rename': local_file_folder.name,
             'conflict': 'replace',
             'source': {
                 'path': local_file_folder.osf_path,
                 'provider': local_file_folder.provider,
-                'nid': local_file_folder.node.osf_id
+                'nid': local_file_folder.previous_node_osf_id  # fixme: what is the old node id???
             },
             'destination': {
-                'path': local_file_folder.parent.osf_path,
-                'provider': local_file_folder.provider,
+                'path': local_file_folder.parent.osf_path if local_file_folder.parent else '/',  # fixme: parent could be None. in which case we use / for the provider.
+                'provider': local_file_folder.provider,  # fixme: add validation for moving around osfstorage provider folder. parent=None in this case.
                 'nid': local_file_folder.node.osf_id
             }
         }
