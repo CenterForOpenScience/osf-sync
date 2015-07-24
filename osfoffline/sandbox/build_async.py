@@ -8,7 +8,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, scoped_session
 import requests
 
-from osfoffline.models import User, Node, File, get_session, Base
+from osfoffline.database_handler.models import User, Node, File, get_session, Base
 
 
 EVENT_TYPE_MOVED = 'moved'

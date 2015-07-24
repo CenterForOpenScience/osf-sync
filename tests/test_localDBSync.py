@@ -1,24 +1,19 @@
 from unittest import TestCase
-from osfoffline.db import setup_db, remove_db, get_session
-from osfoffline.path import ProperPath
-from watchdog.observers import Observer
-from osfoffline.osf_event_handler import OSFEventHandler
-from osfoffline.sync_local_filesytem_and_db import LocalDBSync
-import asyncio
-from appdirs import user_data_dir
-from osfoffline.exceptions.local_db_sync_exceptions import LocalDBBothNone
 import os
+
+from watchdog.observers import Observer
+
+from osfoffline.utils.path import ProperPath
+from osfoffline.filesystem_manager.sync_local_filesytem_and_db import LocalDBSync
+from osfoffline.exceptions.local_db_sync_exceptions import LocalDBBothNone
 from tests import TEST_DIR
 from tests.fixtures.factories import common
 from tests.fixtures.factories.factories import UserFactory, NodeFactory, FileFactory
-from osfoffline.models import User, Node, File, Base
-from watchdog.events import (
-    DirDeletedEvent,
-    FileDeletedEvent,
-    FileModifiedEvent,
-    FileCreatedEvent,
-    DirCreatedEvent,
-)
+from osfoffline.database_handler.models import User, Node, File, Base
+
+
+
+
 
 # unit tests
 

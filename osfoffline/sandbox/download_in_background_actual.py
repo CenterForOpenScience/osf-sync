@@ -4,7 +4,7 @@ from threading import Thread
 
 import aiohttp
 
-from osfoffline.models import create_session
+from osfoffline.database_handler.models import create_session
 
 
 class Poll(Thread):

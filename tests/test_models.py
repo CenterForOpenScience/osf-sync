@@ -1,15 +1,12 @@
 from unittest import TestCase
-from osfoffline.models import User, Node, File
-import osfoffline.db as db
-from tests.fixtures.factories import common
-from appdirs import user_data_dir
 import os
-import threading
-import shutil
+
+from osfoffline.database_handler.models import User, Node, File
+from tests.fixtures.factories import common
 from tests.fixtures.factories.factories import UserFactory, NodeFactory, FileFactory
-from sqlite3 import IntegrityError
-from nose.tools import raises, assert_raises
 from tests import TEST_DIR
+
+
 
 # todo: make the assert statements in the models actually be custom exceptions.
 # todo:     They might allow you to use nosetests properly

@@ -1,13 +1,19 @@
 from unittest import TestCase
-from appdirs import user_data_dir
-from osfoffline.db import get_session, setup_db, remove_db
-from tests import TEST_DIR
 import os
-from osfoffline.sync_local_filesytem_and_db import LocalDBSync
-from osfoffline.models import User, Node, File, Base
-from watchdog.observers import Observer
 import asyncio
-from osfoffline.osf_event_handler import OSFEventHandler
+
+from appdirs import user_data_dir
+from watchdog.observers import Observer
+
+from osfoffline.database_handler.db import get_session, setup_db, remove_db
+from tests import TEST_DIR
+from osfoffline.filesystem_manager.sync_local_filesytem_and_db import LocalDBSync
+from osfoffline.database_handler.models import User
+from osfoffline.filesystem_manager.osf_event_handler import OSFEventHandler
+
+
+
+
 
 # acceptance tests
 # now going to test whether the class overall functions properly

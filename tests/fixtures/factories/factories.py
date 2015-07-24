@@ -1,10 +1,10 @@
 __author__ = 'himanshu'
-from osfoffline.models import User, Node, File
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import scoped_session, sessionmaker
 from factory.alchemy import SQLAlchemyModelFactory
 from factory import Sequence
+
+from osfoffline.database_handler.models import User, Node, File
 from .common import Session
+
 
 # class User(Base):
 #     """ A SQLAlchemy simple model class who represents a user """

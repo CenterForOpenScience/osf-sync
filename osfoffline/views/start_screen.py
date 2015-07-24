@@ -1,9 +1,11 @@
 from PyQt5.QtWidgets import (QAction, QDialog, QFileDialog)
 from sqlalchemy.orm.exc import MultipleResultsFound, NoResultFound
 
-from osfoffline.db import get_session, save
-from osfoffline.models import User
+from osfoffline.database_handler.db import get_session, save
+from osfoffline.database_handler.models import User
 from osfoffline.views.rsc.startscreen import Ui_startscreen  # REQUIRED FOR GUI
+
+
 __author__ = 'himanshu'
 
 

@@ -1,11 +1,12 @@
 __author__ = 'himanshu'
-from osfoffline.path import ProperPath
-from osfoffline.exceptions import InvalidPathError
 from unittest import TestCase
-from nose.tools import *
+
+from osfoffline.utils.path import ProperPath
+from osfoffline.exceptions import InvalidPathError
+
 
 __author__ = 'himanshu'
-import os
+
 
 class TestProperPath(TestCase):
 

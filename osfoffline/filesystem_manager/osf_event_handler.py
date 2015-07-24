@@ -2,14 +2,15 @@
 This is the most important file in the system. OSFEventHandler is responsible for updating the models,
 storing the data into the db, and then sending a request to the remote server.
 """
-from watchdog.events import FileSystemEventHandler
-from osfoffline.models import User, Node, File
-from osfoffline.db import get_session, save
-import os
-import logging
 import asyncio
-from osfoffline.path import ProperPath
+
+from watchdog.events import FileSystemEventHandler
+
+from osfoffline.database_manager.models import Node, File
+from osfoffline.database_manager.db import get_session, save
+from osfoffline.utils.path import ProperPath
 from osfoffline.exceptions.event_handler_exceptions import MovedNodeUnderFile
+
 EVENT_TYPE_MOVED = 'moved'
 EVENT_TYPE_DELETED = 'deleted'
 EVENT_TYPE_CREATED = 'created'

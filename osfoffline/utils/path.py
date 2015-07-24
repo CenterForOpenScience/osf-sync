@@ -1,5 +1,5 @@
 import os
-import osfoffline.exceptions as exceptions
+from osfoffline.exceptions.path_exceptions import InvalidPathError
 
 
 class ProperPath(object):
@@ -19,25 +19,25 @@ class ProperPath(object):
         :param str path: a path
         """
         if not path:
-            raise exceptions.InvalidPathError('Must specify path')
+            raise InvalidPathError('Must specify path')
         if not isinstance(path, str):
-            raise exceptions.InValidPathError("input path must be of type str")
+            raise InvalidPathError("input path must be of type str")
         if '//' in path or '..' in path:
-            raise exceptions.InvalidPathError('Invalid path \'{}\' specified'.format(path))
+            raise InvalidPathError('Invalid path \'{}\' specified'.format(path))
 
         # don't allow shortcuts
         absolute_path = os.path.abspath(path)
         if self.is_dir:
             if self.full_path != os.path.join(absolute_path, ''):
-                raise exceptions.InvalidPathError('Invalid path \'{}\' specified'.format(absolute_path))
+                raise InvalidPathError('Invalid path \'{}\' specified'.format(absolute_path))
         else:
             if self.is_root:
-                raise exceptions.InvalidPathError('Invalid path \'{}\' specified'.format(absolute_path))
+                raise InvalidPathError('Invalid path \'{}\' specified'.format(absolute_path))
             if self.full_path != absolute_path:
-                raise exceptions.InvalidPathError('Invalid path \'{}\' specified'.format(absolute_path))
+                raise InvalidPathError('Invalid path \'{}\' specified'.format(absolute_path))
 
         if self.is_file and path.endswith(os.sep):
-            raise exceptions.InvalidPathError('file ends with slash')
+            raise InvalidPathError('file ends with slash')
 
     def __init__(self, path, is_dir):
         self._orig_path = path

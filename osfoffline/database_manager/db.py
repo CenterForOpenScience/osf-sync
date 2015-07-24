@@ -1,11 +1,13 @@
-from osfoffline.models import Base
-from appdirs import user_data_dir
-from osfoffline.settings import PROJECT_NAME,PROJECT_AUTHOR
 import shutil
 import os
+
+from appdirs import user_data_dir
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, scoped_session
 from sqlalchemy.pool import SingletonThreadPool
+
+from osfoffline.database_manager.models import Base
+from osfoffline.settings import PROJECT_NAME,PROJECT_AUTHOR
 
 
 DB_DIR = user_data_dir(PROJECT_NAME, PROJECT_AUTHOR)

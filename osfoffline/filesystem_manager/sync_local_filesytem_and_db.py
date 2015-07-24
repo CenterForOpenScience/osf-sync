@@ -1,6 +1,7 @@
 __author__ = 'himanshu'
 import os
 import hashlib
+
 from watchdog.events import (
     DirDeletedEvent,
     FileDeletedEvent,
@@ -8,11 +9,12 @@ from watchdog.events import (
     FileCreatedEvent,
     DirCreatedEvent,
 )
-from osfoffline.models import User, Node, File, Base
+from watchdog.observers import Observer
+
+from osfoffline.database_manager.models import User, Node, File, Base
 from osfoffline.exceptions.item_exceptions import InvalidItemType, FolderNotInFileSystem
 from osfoffline.exceptions.local_db_sync_exceptions import LocalDBBothNone, IncorrectLocalDBMatch
-from osfoffline.path import ProperPath
-from watchdog.observers import Observer
+from osfoffline.utils.path import ProperPath
 
 
 class LocalDBSync(object):

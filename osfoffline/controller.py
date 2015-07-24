@@ -1,21 +1,17 @@
-from PyQt5.QtWidgets import (QApplication, QDialog, QFileDialog, QAction)
-from appdirs import user_log_dir, user_config_dir, user_data_dir
 import os
-from watchdog.observers import Observer
-
-from sqlalchemy.orm.exc import MultipleResultsFound
-from sqlalchemy.orm.exc import NoResultFound
 import logging
 import json
 import subprocess
 import webbrowser
-import asyncio
-import osfoffline.osf_event_handler as osf_event_handler
-import osfoffline.polling as polling
-import osfoffline.models as models
-import osfoffline.db as db
 import sys
-import threading
+
+from PyQt5.QtWidgets import (QApplication, QDialog, QFileDialog, QAction)
+from appdirs import user_log_dir, user_config_dir, user_data_dir
+from sqlalchemy.orm.exc import MultipleResultsFound
+from sqlalchemy.orm.exc import NoResultFound
+
+import osfoffline.database_manager.models as models
+import osfoffline.database_manager.db as db
 from osfoffline.background import BackgroundWorker
 
 

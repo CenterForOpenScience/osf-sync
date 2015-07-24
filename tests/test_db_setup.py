@@ -1,8 +1,11 @@
 from unittest import TestCase
-from appdirs import user_data_dir
-import osfoffline.db as db
-from osfoffline.models import User,Node,File
 import os
+
+from appdirs import user_data_dir
+
+import osfoffline.database_handler.db as db
+from osfoffline.database_handler.models import User,Node,File
+
 
 class TestDBSetup(TestCase):
     def setUp(self):
