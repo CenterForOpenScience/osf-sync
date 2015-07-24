@@ -185,7 +185,7 @@ class OSFEventHandler(FileSystemEventHandler):
                         save(self.session, new_component)
 
                 else:  # if file, then file.
-                    console_log('new thing is file',name)
+
                     containing_item = self._get_parent_item_from_path(src_path)
                     if isinstance(containing_item, Node):
                         node = containing_item
@@ -196,7 +196,7 @@ class OSFEventHandler(FileSystemEventHandler):
                     # console_log('new thing as file object',file)
                     containing_item.files.append(file)
                     save(self.session, file)
-                    console_log('new thing is file and inside db it is saved as',file)
+
                     # console_log('new thing as file object AGAIN in order to check name',file)
                     # log
                     # todo: log

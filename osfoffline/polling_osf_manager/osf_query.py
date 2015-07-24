@@ -96,6 +96,7 @@ class OSFQuery(object):
             item_type                                           --folder
             type                                                --files
             ['links']['related']                                --api_file_children(local_folder.user.osf_id, resp_json['path'], local_folder.provider)
+            ['links']['self']                                   --wb_file_url()
             'POST' in remote_dict['links']['self_methods']      --can create this. make POST in there. make this true
             metadata
                 modified                                        --CHECK THIS...
@@ -108,6 +109,7 @@ class OSFQuery(object):
         resp_json['item_type'] = 'folder'
         resp_json['type'] = 'files'
         resp_json['links'] = {}
+        resp_json['links']['self'] = wb_file_url(path=resp_json['path'], nid=local_folder.node.id, provider=local_folder.provider)
         resp_json['links']['related'] = api_file_children(local_folder.user.osf_id, resp_json['path'], local_folder.provider)
         resp_json['links']['self_methods'] = ['POST']
         resp_json['metadata'] = {}
@@ -162,10 +164,10 @@ class OSFQuery(object):
         resp_json['type'] = 'files'
         resp_json['links'] = {}
         resp_json['links']['self'] = wb_file_url(path=resp_json['path'], nid=local_file.node.id, provider=local_file.provider)
-        resp_json['links']['self_methods'] = ['POST']
+        resp_json['links']['self_methods'] = ['POST', 'GET']
         resp_json['metadata'] = {}
         resp_json['metadata']['modified'] = 'FAKE TIME. I THINK THIS ALREADY EXISTS IN RESP_JSON'
-        resp_json['metadata']['size'] = 'FAKE TIME. I THINK THIS ALREADY EXISTS IN RESP_JSON'
+        resp_json['metadata']['size'] = resp_json['size']
         # resp_json['metadata']['extra'] = {}
         # resp_json['metadata']['extra']['hash'] = 'NOT INCLUDED YET
         # resp_json['metadata']['extra']['rented'] = 'NOT INCLUDED YET'
@@ -325,8 +327,9 @@ class OSFQuery(object):
         elif 400 <= response.status < 600:
             content = yield from response.read()
             raise ConnectionError('failed {} request {} with expected response code(s) {}. response.content={}'.format(method, url, expects,content ))
-        json_response = yield from response.json()
+
         if get_json:
+            json_response = yield from response.json()
             return json_response
         return response
 

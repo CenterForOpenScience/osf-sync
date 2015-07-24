@@ -3,7 +3,9 @@ from factory.alchemy import SQLAlchemyModelFactory
 from factory import Sequence
 
 from osfoffline.database_handler.models import User, Node, File
-from .common import Session
+from tests.fixtures.factories.common import Session
+
+
 
 
 # class User(Base):
@@ -53,4 +55,6 @@ class FileFactory(SQLAlchemyModelFactory):
     name = Sequence(lambda n: u'Node %d' % n)
     osf_id = Sequence(lambda n: u'osf_id %d' % n)
     type = File.FOLDER
+
+
 

@@ -13,6 +13,9 @@ import osfoffline.database_manager.db as db
 from osfoffline.polling_osf_manager.api_url_builder import api_user_url, wb_file_revisions, wb_file_url, api_user_nodes,wb_move_url
 from osfoffline.polling_osf_manager.osf_query import OSFQuery
 from osfoffline.polling_osf_manager.remote_objects import RemoteObject, RemoteNode, RemoteFile, RemoteFolder,RemoteFileFolder
+from osfoffline.polling_osf_manager.polling_event_queue import PollingEventQueue
+from osfoffline.polling_osf_manager.polling_events import CreateFile,CreateFolder,RenameFile,RenameFolder, DeleteFile,DeleteFolder,UpdateFile
+import iso8601
 
 RECHECK_TIME = 5  # in seconds
 
@@ -31,7 +34,7 @@ class Poll(object):
 
         self._loop = loop
         self.osf_query = OSFQuery(loop=self._loop, oauth_token=self.user.oauth_token)
-
+        self.polling_event_queue = PollingEventQueue(loop=self._loop)
 
 
     def stop(self):
@@ -187,10 +190,13 @@ class Poll(object):
             for local, remote in local_remote_top_level_nodes:
                 yield from self.check_node(local, remote, local_parent_node=None)
 
+
+            yield from self.polling_event_queue.run()
+
             print('---------SHOULD HAVE ALL OSF FILES---------')
 
-            yield from asyncio.sleep(RECHECK_TIME)
             # todo: figure out how we can prematuraly stop the sleep when user ends the application while sleeping
+            yield from asyncio.sleep(RECHECK_TIME)
 
     @asyncio.coroutine
     def check_node(self, local_node, remote_node, local_parent_node):
@@ -328,9 +334,7 @@ class Poll(object):
         # alert
         alerts.info(new_node.title, alerts.DOWNLOAD)
 
-        # create local node folder on filesystem
-        if not os.path.exists(new_node.path):
-            os.makedirs(new_node.path)
+        self.polling_event_queue.put(CreateFolder(new_node.path))
 
         assert local_parent_node is None or (new_node in local_parent_node.child_nodes)
         return new_node
@@ -364,23 +368,19 @@ class Poll(object):
         # alert
         alerts.info(new_file_folder.name, alerts.DOWNLOAD)
 
-        # create local file/folder on actual system
-        if not os.path.exists(new_file_folder.path):
-            if type == File.FILE:
-                resp = yield from self.osf_query.make_request(remote_file_folder.download_url)
-                with open(new_file_folder.path, 'wb') as fd:
-                    while True:
-                        chunk = yield from resp.content.read(2048)
-                        if not chunk:
-                            break
-                        fd.write(chunk)
-                    resp.close()
-            elif type == File.FOLDER:
-                os.makedirs(new_file_folder.path)
-            else:
-                raise ValueError('file type is unknown')
-        return new_file_folder
+        if type == File.FILE:
+            event = CreateFile(
+                path=new_file_folder.path,
+                download_url=remote_file_folder.download_url,
+                osf_query=self.osf_query
+            )
+            self.polling_event_queue.put(event)
+        elif type == File.FOLDER:
+            self.polling_event_queue.put(CreateFolder(new_file_folder.path))
+        else:
+            raise ValueError('file type is unknown')
 
+        return new_file_folder
 
     @asyncio.coroutine
     def create_remote_file_folder(self, local_file_folder, local_node):
@@ -429,18 +429,15 @@ class Poll(object):
         # alert
         alerts.info(local_node.title, alerts.MODIFYING)
 
-        # modify local node on filesystem
-        try:
-            os.renames(old_path, local_node.path)
-        except FileNotFoundError:
-            print('renaming of file failed because file not there. inside modify_local_node')
+
+        self.polling_event_queue.put(RenameFolder(old_path, local_node.path))
 
 
     @asyncio.coroutine
     def modify_file_folder_logic(self, local_file_folder, remote_file_folder):
         assert isinstance(local_file_folder,File)
         assert isinstance(remote_file_folder,RemoteFileFolder)
-
+        import pdb;pdb.set_trace()
         updated_remote_file_folder = None
         # this handles both files and folders being renamed
         if local_file_folder.name != remote_file_folder.name:
@@ -476,12 +473,10 @@ class Poll(object):
         local_file_folder.name = remote_file_folder.name
         db.save(self.session, local_file_folder)
 
-
-        # update local file system
-        try:
-            os.renames(old_path, local_file_folder.path)
-        except FileNotFoundError:
-            print('folder not modified because doesnt exist. inside modify_local_file_folder (1)')
+        if local_file_folder.type == File.FOLDER:
+            self.polling_event_queue.put(RenameFolder(old_path, local_file_folder.path))
+        elif local_file_folder.type == File.FILE:
+            self.polling_event_queue.put(RenameFile(old_path, local_file_folder.path))
 
     @asyncio.coroutine
     def update_local_file(self, local_file, remote_file):
@@ -496,22 +491,12 @@ class Poll(object):
         # update model
         # self.save(local_file_folder) # todo: this does NOT actually update the local_file_folder timestamp
         # update local file system
-        try:
-            resp = yield from self.osf_query.make_request(remote_file.download_url)
-            # todo: which is better? 1024 or 2048? Apparently, not much difference.
-
-            with open(local_file.path, 'wb') as fd:
-                while True:
-                    console_log('wrote 2048 chunk to file with path ',local_file.path)
-                    chunk = yield from resp.content.read(2048)
-                    if not chunk:
-                        break
-                    fd.write(chunk)
-                resp.close()
-        # file was deleted locally.
-        except FileNotFoundError:
-            print('file not updated locally because it doesnt exist. inside modify_local_file_folder (2)')
-
+        event = UpdateFile(
+                path=local_file.path,
+                download_url=remote_file.download_url,
+                osf_query=self.osf_query
+        )
+        self.polling_event_queue.put(event)
 
     @asyncio.coroutine
     def update_remote_file(self, local_file, remote_file):
@@ -523,7 +508,7 @@ class Poll(object):
         alerts.info(local_file.name, alerts.MODIFYING)
 
         try:
-            new_remote_file = yield self.osf_query.upload_file(local_file)
+            new_remote_file = yield from self.osf_query.upload_file(local_file)
         except FileNotFoundError:
             print('file not created on remote server because does not exist locally. inside create_remote_file_folder')
             return remote_file
@@ -567,11 +552,7 @@ class Poll(object):
         self.session.delete(local_node)
         db.save(self.session)
 
-        # delete from local
-        # todo: avoids_symlink_attacks: https://docs.python.org/3.4/library/shutil.html#shutil.rmtree.avoids_symlink_attacks
-        # todo: make better error handling.
-        shutil.rmtree(path, onerror=lambda a, b, c: print('local node not deleted because not exists.'))
-
+        self.polling_event_queue.put(DeleteFolder(path))
 
     @asyncio.coroutine
     def delete_local_file_folder(self, local_file_folder):
@@ -589,16 +570,9 @@ class Poll(object):
 
         # delete from local
         if file_folder_type == File.FOLDER:
-            # todo: avoids_symlink_attacks: https://docs.python.org/3.4/library/shutil.html#shutil.rmtree.avoids_symlink_attacks
-            # todo: make better error handling.
-            # I think my preferred solution for this is to just NOT follow any symlinks
-            shutil.rmtree(path,
-                          onerror=lambda a, b, c: print('delete local folder failed because folder already deleted. inside delete_local_file_folder(1)'))
+            self.polling_event_queue.put(DeleteFolder(path))
         else:
-            try:
-                os.remove(path)
-            except FileNotFoundError:
-                print('file not deleted because does not exist on local filesystem. inside delete_local_file_folder (2)')
+            self.polling_event_queue.put(DeleteFile(path))
 
     @asyncio.coroutine
     def delete_remote_file_folder(self, local_file_folder, remote_file_folder):
@@ -631,8 +605,9 @@ class Poll(object):
         assert isinstance(remote, RemoteObject)
 
         local_time = local.date_modified.replace(tzinfo=pytz.utc)
+
         if isinstance(remote, RemoteFileFolder):
-            remote_time = yield from remote.last_modified(local.node.id, self.osf_query)
+            remote_time = yield from remote.last_modified(local.node.osf_id, self.osf_query)
         else:
             remote_time = remote.last_modified
 
@@ -645,30 +620,32 @@ class Poll(object):
     def local_is_newer(self, local, remote):
         assert local
         assert remote
-        local_time, remote_time = yield from self._get_local_remote_times(local, remote)
+        try:
 
-        # fixme: for now, if remote is None, then most recent is whichever one is bigger.
-        if remote_time is None:
+            local_time, remote_time = yield from self._get_local_remote_times(local, remote)
+            return local_time > remote_time
+        except iso8601.ParseError:
             if isinstance(remote, RemoteFile):
                 return local.size > remote.size
             else:
                 return True
 
-        return local_time > remote_time
+
 
     @asyncio.coroutine
     def remote_is_newer(self, local, remote):
         assert local
         assert remote
-        local_time, remote_time = yield from self._get_local_remote_times(local, remote)
-        # fixme: what should remote_time is None do???
-        if remote_time is None:
+
+        try:
+
+            local_time, remote_time = yield from self._get_local_remote_times(local, remote)
+            return local_time < remote_time
+        except iso8601.ParseError:
             if isinstance(remote, RemoteFile):
                 return local.size < remote.size
             else:
-                return False
-
-        return local_time < remote_time
+                return True
 
 def console_log(variable_name, variable_value):
     print("DEBUG: {}: {}".format(variable_name, variable_value))
