@@ -41,10 +41,10 @@ class RemoteNode(RemoteObject):
         assert remote_dict['type'] == 'nodes'
         self.id = remote_dict['id']
         self.name = remote_dict['title']
-        self.category = remote_dict['category']
+        self.category = remote_dict['category'] if remote_dict['category'] else 'other'
         self.child_files_url = remote_dict['links']['files']['related']
         self.is_top_level = remote_dict['links']['parent']['self'] is None
-        self.child_nodes_url = remote_dict['links']['related']
+        self.child_nodes_url = remote_dict['links']['children']['related']
 
         self._date_modified = remote_dict['date_modified']
 
@@ -72,14 +72,14 @@ class RemoteFileFolder(RemoteObject):
         self.provider = remote_dict['provider']
         self._metadata = remote_dict['metadata']
 
-        self.validate()
+
 
     def validate(self):
         super().validate()
         assert self.provider
         assert self._metadata is not None
 
-    @property
+
     @asyncio.coroutine
     def last_modified(self, node_id, osf_query):
         remote_time_string = None
@@ -105,6 +105,7 @@ class RemoteFileFolder(RemoteObject):
 
 class RemoteFolder(RemoteFileFolder):
     def __init__(self, remote_dict):
+
         super().__init__(remote_dict)
         assert remote_dict['item_type'] == 'folder'
 
@@ -160,9 +161,9 @@ def dict_to_remote_object(remote_dict):
             return RemoteFile(remote_dict)
         else:
             return RemoteFolder(remote_dict)
-    elif remote_dict['item_type'] == 'nodes':
+    elif remote_dict['type'] == 'nodes':
         return RemoteNode(remote_dict)
-    elif remote_dict['item_type'] == 'users':
+    elif remote_dict['type'] == 'users':
         return RemoteUser(remote_dict)
     else:
         raise TypeError('unable to convert dict {} to RemoteObject'.format(remote_dict))

@@ -70,7 +70,7 @@ class Poll(object):
         url = api_user_url(self.user_osf_id)
         while True:
             try:
-                resp = yield from self.make_request(url, get_json=True)
+                resp = yield from self.osf_query.make_request(url, get_json=True)
                 future.set_result(resp['data'])
                 break
             except concurrent.futures._base.TimeoutError:
@@ -178,11 +178,8 @@ class Poll(object):
         all_remote_nodes_url = api_user_nodes(remote_user_id)
         while self._keep_running:
             # get remote top level nodes
-            all_remote_nodes = yield from self.osf_query.get_child_nodes(all_remote_nodes_url)
-            remote_top_level_nodes = []
-            for remote in all_remote_nodes:
-                if remote.is_top_level:
-                    remote_top_level_nodes.append(remote)
+            remote_top_level_nodes = yield from self.osf_query.get_top_level_nodes(all_remote_nodes_url)
+
 
             # get local top level nodes
             local_top_level_nodes = self.user.top_level_nodes
@@ -233,7 +230,7 @@ class Poll(object):
         yield from self.check_file_folder(local_node, remote_node)
 
         # recursively handle node's children
-        remote_children = yield from self.osf_query.get_child_nodes(remote_node.child_nodes_url)
+        remote_children = yield from self.osf_query.get_child_nodes(remote_node)
         local_remote_nodes = self.make_local_remote_tuple_list(local_node.child_nodes, remote_children)
         for local, remote in local_remote_nodes:
             yield from self.check_node(local, remote, local_parent_node=local_node)
@@ -242,8 +239,7 @@ class Poll(object):
     @asyncio.coroutine
     def check_file_folder(self, local_node, remote_node):
         print('checking file_folder')
-
-        remote_node_files = yield from self.osf_query.get_child_files(remote_node.child_files_url)
+        remote_node_files = yield from self.osf_query.get_child_files(remote_node)
         local_remote_files = self.make_local_remote_tuple_list(local_node.top_level_file_folders, remote_node_files)
 
         for local, remote in local_remote_files:
@@ -374,7 +370,7 @@ class Poll(object):
         # create local file/folder on actual system
         if not os.path.exists(new_file_folder.path):
             if type == File.FILE:
-                resp = yield from self.make_request(remote_file_folder.download_url)
+                resp = yield from self.osf_query.make_request(remote_file_folder.download_url)
                 with open(new_file_folder.path, 'wb') as fd:
                     while True:
                         chunk = yield from resp.content.read(2048)
@@ -446,7 +442,7 @@ class Poll(object):
     @asyncio.coroutine
     def modify_file_folder_logic(self, local_file_folder, remote_file_folder):
         assert isinstance(local_file_folder,File)
-        assert isinstance(remote_file_folder,dict)
+        assert isinstance(remote_file_folder,RemoteFileFolder)
 
         updated_remote_file_folder = None
         # this handles both files and folders being renamed
@@ -504,7 +500,7 @@ class Poll(object):
         # self.save(local_file_folder) # todo: this does NOT actually update the local_file_folder timestamp
         # update local file system
         try:
-            resp = yield from self.make_request(remote_file.download_url)
+            resp = yield from self.osf_query.make_request(remote_file.download_url)
             # todo: which is better? 1024 or 2048? Apparently, not much difference.
 
             with open(local_file.path, 'wb') as fd:
@@ -638,7 +634,10 @@ class Poll(object):
         assert isinstance(remote, RemoteObject)
 
         local_time = local.date_modified.replace(tzinfo=pytz.utc)
-        remote_time = remote.last_modified
+        if isinstance(remote, RemoteFileFolder):
+            remote_time = yield from remote.last_modified(local.node.id, self.osf_query)
+        else:
+            remote_time = remote.last_modified
 
         return local_time, remote_time
 

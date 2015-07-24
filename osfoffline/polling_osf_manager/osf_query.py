@@ -20,7 +20,7 @@ class OSFQuery(object):
         self.request_session = aiohttp.ClientSession(loop=loop, headers=self.headers)
 
     @asyncio.coroutine
-    def _get_all_paginated_members(self, remote_url, cls):
+    def _get_all_paginated_members(self, remote_url):
         remote_children = []
 
         # this is for the case that a new folder is created so does not have the proper links.
@@ -49,7 +49,7 @@ class OSFQuery(object):
             if remote['links']['parent']['self'] is None:
                 remote_top_level_nodes.append(RemoteNode(remote))
         for node in remote_top_level_nodes:
-            assert node.top_level
+            assert node.is_top_level
         return remote_top_level_nodes
 
     @asyncio.coroutine
@@ -61,7 +61,7 @@ class OSFQuery(object):
     @asyncio.coroutine
     def get_child_files(self, remote_node_or_folder):
         assert isinstance(remote_node_or_folder, RemoteNode) or isinstance(remote_node_or_folder, RemoteFolder)
-        file_folders = yield from self._get_all_paginated_members(remote_node_or_folder.child_nodes_url)
+        file_folders = yield from self._get_all_paginated_members(remote_node_or_folder.child_files_url)
         return [dict_to_remote_object(file_folder) for file_folder in file_folders]
 
     @asyncio.coroutine
