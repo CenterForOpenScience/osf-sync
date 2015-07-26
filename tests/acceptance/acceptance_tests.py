@@ -4,14 +4,9 @@ import os
 
 import requests
 
-from osfoffline import ProjectTree
-from osfoffline.ProjectTree.Item import Item
 
 
 class Actions(object):
-    """
-    Idea is that you pass in a ProjectTree object representing a project and do whatever you need to with it.
-    """
     OSF_FOLDER_LOCATION= ''
 
     def __init__(self, location):
