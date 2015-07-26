@@ -6,7 +6,7 @@ from osfoffline.polling_osf_manager.api_url_builder import api_user_url
 from osfoffline.polling_osf_manager.remote_objects import RemoteFile,RemoteFileFolder,RemoteObject,RemoteFolder,RemoteNode,RemoteUser
 from osfoffline.polling_osf_manager.osf_query import OSFQuery
 import asyncio
-from tests.utils.test_utils import async
+from tests.utils.decorators import async
 class TestRemoteObjects(TestCase):
 
     def setUp(self):
