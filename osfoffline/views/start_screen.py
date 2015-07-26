@@ -1,7 +1,8 @@
 from PyQt5.QtWidgets import (QAction, QDialog, QFileDialog)
 from sqlalchemy.orm.exc import MultipleResultsFound, NoResultFound
 
-from osfoffline.database_manager.db import get_session, save
+from osfoffline.database_manager.db import DB
+from osfoffline.database_manager.utils import save
 from osfoffline.database_manager.models import User
 from osfoffline.views.rsc.startscreen import Ui_startscreen  # REQUIRED FOR GUI
 
@@ -15,7 +16,6 @@ class StartScreen(QDialog):
     """
     GENERAL = 0
     OSF = 1
-    PRIORITY = 3
     ABOUT = 4
 
     def __init__(self):
@@ -53,7 +53,7 @@ class StartScreen(QDialog):
         osf_id = '5bqt9'
         oauth_token = '5bqt9'
         # check if user already exists in db
-        session = get_session()
+        session = DB.get_session()
         try:
             user = session.query(User).filter(User.osf_login == user_name).one()
             user.logged_in = True

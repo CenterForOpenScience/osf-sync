@@ -73,7 +73,7 @@ class OSFQuery(object):
     @asyncio.coroutine
     def upload_folder(self, local_folder):
         assert isinstance(local_folder, File)
-        assert local_folder.type == File.FOLDER
+        assert local_folder.is_folder
 
         if local_folder.parent:
             path = local_folder.parent.osf_path + local_folder.name
@@ -102,7 +102,7 @@ class OSFQuery(object):
                 modified                                        --CHECK THIS...
 
         """
-        import pdb; pdb.set_trace()
+
         # path exist aleady
         resp_json['name'] = local_folder.name
         resp_json['provider'] = local_folder.provider
@@ -125,7 +125,7 @@ class OSFQuery(object):
         :return:
         """
         assert isinstance(local_file, File)
-        assert local_file.type == File.FILE
+        assert local_file.is_file
         if local_file.parent:
             path = local_file.parent.osf_path + local_file.name
         else:
@@ -156,7 +156,7 @@ class OSFQuery(object):
                     hash
                     rented
         """
-        import pdb; pdb.set_trace()
+
         # path exist aleady
         resp_json['name'] = local_file.name
         resp_json['provider'] = local_file.provider
@@ -177,7 +177,7 @@ class OSFQuery(object):
     @asyncio.coroutine
     def rename_remote_file(self, local_file, remote_file):
         assert isinstance(local_file, File)
-        assert local_file.type == File.FILE
+        assert local_file.is_file
         assert isinstance(remote_file, RemoteFile)
 
         return (yield from self._rename_remote(local_file, remote_file))
@@ -186,7 +186,7 @@ class OSFQuery(object):
     @asyncio.coroutine
     def rename_remote_folder(self, local_folder, remote_folder):
         assert isinstance(local_folder, File)
-        assert local_folder.type == File.FOLDER
+        assert local_folder.is_folder
         assert isinstance(local_folder, RemoteFolder)
 
         return (yield from self._rename_remote(local_folder, remote_folder))

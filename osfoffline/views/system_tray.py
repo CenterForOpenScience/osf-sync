@@ -34,7 +34,7 @@ class SystemTray(QDialog):
         self.tray_icon = QSystemTrayIcon(self)
         self.tray_icon.setContextMenu(self.tray_icon_menu)
 
-        # todo: hate this icon. make better.
+        # todo: do we have a better icon for use with desktop apps?
         icon = QIcon(':/cos_logo.png')
         self.tray_icon.setIcon(icon)
 

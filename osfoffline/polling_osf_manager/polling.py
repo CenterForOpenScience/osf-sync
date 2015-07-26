@@ -8,8 +8,9 @@ import pytz
 import aiohttp
 
 from osfoffline.database_manager.models import User, Node, File, Base
-import osfoffline.alerts as alerts
-import osfoffline.database_manager.db as db
+from osfoffline.alerts import AlertHandler
+from osfoffline.database_manager.db import DB
+from osfoffline.database_manager.utils import save
 from osfoffline.polling_osf_manager.api_url_builder import api_user_url, wb_file_revisions, wb_file_url, api_user_nodes,wb_move_url
 from osfoffline.polling_osf_manager.osf_query import OSFQuery
 from osfoffline.polling_osf_manager.remote_objects import RemoteObject, RemoteNode, RemoteFile, RemoteFolder,RemoteFileFolder
@@ -21,16 +22,12 @@ RECHECK_TIME = 5  # in seconds
 
 
 class Poll(object):
-    def __init__(self, user_osf_id, loop):
+    def __init__(self, user, loop):
         super().__init__()
+        assert isinstance(user, User)
         self._keep_running = True
-        self.user_osf_id = user_osf_id
-        self.session = db.get_session()
-        self.user = self.session.query(User).filter(
-            User.osf_id == user_osf_id).one()  # todo: does passing in user directly break things?
-
-        # todo: make headers be from a remote desktop client
-        # todo: make a method make_request that handles putting in header. puts in Auth. streams. async.
+        self.session = DB.get_session()
+        self.user = user
 
         self._loop = loop
         self.osf_query = OSFQuery(loop=self._loop, oauth_token=self.user.oauth_token)
@@ -66,8 +63,8 @@ class Poll(object):
     # It blocks check_osf from running.
     @asyncio.coroutine
     def get_remote_user(self, future):
-        print("checking projects of user with id {}".format(self.user_osf_id))
-        url = api_user_url(self.user_osf_id)
+        print("checking projects of user with id {}".format(self.user.osf_id))
+        url = api_user_url(self.user.osf_id)
         while True:
             try:
                 resp = yield from self.osf_query.make_request(url, get_json=True)
@@ -195,8 +192,9 @@ class Poll(object):
 
             print('---------SHOULD HAVE ALL OSF FILES---------')
 
-            # todo: figure out how we can prematuraly stop the sleep when user ends the application while sleeping
-            yield from asyncio.sleep(RECHECK_TIME)
+            # waits till the end of a sleep to stop. thus can make numerous smaller sleeps
+            for i in range(RECHECK_TIME):
+                yield from asyncio.sleep(1)
 
     @asyncio.coroutine
     def check_node(self, local_node, remote_node, local_parent_node):
@@ -225,7 +223,6 @@ class Poll(object):
             yield from self.delete_local_node(local_node)
             return
         elif local_node is not None and remote_node is not None:
-            # todo: handle other updates to  node
             if local_node.title != remote_node.name:
                 yield from self.modify_local_node(local_node, remote_node)
 
@@ -238,7 +235,6 @@ class Poll(object):
         for local, remote in local_remote_nodes:
             yield from self.check_node(local, remote, local_parent_node=local_node)
 
-    # todo: determine if we just want osfstorage or also other things
     @asyncio.coroutine
     def check_file_folder(self, local_node, remote_node):
         print('checking file_folder')
@@ -272,7 +268,6 @@ class Poll(object):
         if local_file_folder is None:
             local_file_folder = yield from self.create_local_file_folder(remote_file_folder, local_parent_file_folder, local_node)
         elif local_file_folder.locally_created and remote_file_folder is None:
-            # todo: this is broken for now. Need to figure out a diff way to do this.
             remote_file_folder = yield from self.create_remote_file_folder(local_file_folder, local_node)
             return
         elif local_file_folder.locally_created and remote_file_folder is not None:
@@ -286,9 +281,9 @@ class Poll(object):
             yield from self.delete_local_file_folder(local_file_folder)
             return
         elif local_file_folder is not None and remote_file_folder is not None:
-            # todo: this is broken for now as well. Need additional functionalities on server for this.
-            # todo: diff way to do this is also good.
             possibly_new_remote_file_folder = yield from self.modify_file_folder_logic(local_file_folder, remote_file_folder)
+            # if we do not need to modify things, remote file folder and local file folder does not change
+            # we do not need to get a new local file folder because it is updated internally by the db
             if possibly_new_remote_file_folder:
                 remote_file_folder = possibly_new_remote_file_folder
         else:
@@ -298,7 +293,7 @@ class Poll(object):
         assert remote_file_folder is not None
 
         # recursively handle folder's children
-        if local_file_folder.type == File.FOLDER:
+        if local_file_folder.is_folder:
             try:
                 remote_children = yield from self.osf_query.get_child_files(remote_file_folder)
                 local_remote_file_folders = self.make_local_remote_tuple_list(local_file_folder.files, remote_children)
@@ -329,10 +324,10 @@ class Poll(object):
             user=self.user,
             parent=local_parent_node
         )
-        db.save(self.session, new_node)
+        save(self.session, new_node)
 
         # alert
-        alerts.info(new_node.title, alerts.DOWNLOAD)
+        AlertHandler.info(new_node.title, AlertHandler.DOWNLOAD)
 
         self.polling_event_queue.put(CreateFolder(new_node.path))
 
@@ -346,7 +341,7 @@ class Poll(object):
         assert remote_file_folder is not None
         assert isinstance(remote_file_folder, RemoteFileFolder)
         assert isinstance(local_parent_folder, File) or local_parent_folder is None
-        assert local_parent_folder is None or (local_parent_folder.type == File.FOLDER)
+        assert local_parent_folder is None or (local_parent_folder.is_folder)
         assert isinstance(local_node, Node)
 
         # NOTE: develop is not letting me download files. dont know why.
@@ -363,10 +358,10 @@ class Poll(object):
             parent=local_parent_folder,
             node=local_node
         )
-        db.save(self.session, new_file_folder)
+        save(self.session, new_file_folder)
 
         # alert
-        alerts.info(new_file_folder.name, alerts.DOWNLOAD)
+        AlertHandler.info(new_file_folder.name, AlertHandler.DOWNLOAD)
 
         if type == File.FILE:
             event = CreateFile(
@@ -392,11 +387,11 @@ class Poll(object):
         assert local_file_folder.locally_created
 
         # alert
-        alerts.info(local_file_folder.name, alerts.DOWNLOAD)
+        AlertHandler.info(local_file_folder.name, AlertHandler.DOWNLOAD)
 
-        if local_file_folder.type == File.FOLDER:
+        if local_file_folder.is_folder:
             remote_file_folder = yield from self.osf_query.upload_folder(local_file_folder)
-        elif local_file_folder.type == File.FILE:
+        elif local_file_folder.is_file:
             try:
                 remote_file_folder = yield from self.osf_query.upload_file(local_file_folder)
             except FileNotFoundError:
@@ -407,7 +402,7 @@ class Poll(object):
         local_file_folder.osf_path = remote_file_folder.id
         local_file_folder.locally_created = False
 
-        db.save(self.session,local_file_folder)
+        save(self.session,local_file_folder)
 
         return remote_file_folder
 
@@ -421,13 +416,13 @@ class Poll(object):
 
         old_path = local_node.path
         local_node.title = remote_node.name
-        # todo: handle other fields such as category, hash, ...
-        # local_node.category = remote_node.category
 
-        db.save(self.session, local_node)
+        local_node.category = remote_node.category
+
+        save(self.session, local_node)
 
         # alert
-        alerts.info(local_node.title, alerts.MODIFYING)
+        AlertHandler.info(local_node.title, AlertHandler.MODIFYING)
 
 
         self.polling_event_queue.put(RenameFolder(old_path, local_node.path))
@@ -437,7 +432,7 @@ class Poll(object):
     def modify_file_folder_logic(self, local_file_folder, remote_file_folder):
         assert isinstance(local_file_folder,File)
         assert isinstance(remote_file_folder,RemoteFileFolder)
-        import pdb;pdb.set_trace()
+
         updated_remote_file_folder = None
         # this handles both files and folders being renamed
         if local_file_folder.name != remote_file_folder.name:
@@ -447,7 +442,7 @@ class Poll(object):
                 yield from self.rename_local_file_folder(local_file_folder,  remote_file_folder)
 
         # if file size is different, then only do you  bother checking whether to upload or to download
-        if local_file_folder.type == File.FILE and local_file_folder.size != remote_file_folder.size: # todo: local_file_folder.hash != remote_file_folder.size
+        if local_file_folder.is_file and local_file_folder.size != remote_file_folder.size: # todo: local_file_folder.hash != remote_file_folder.size
             if (yield from self.local_is_newer(local_file_folder, remote_file_folder)):
                 updated_remote_file_folder = yield from self.update_remote_file(local_file_folder, remote_file_folder)
             elif (yield from self.remote_is_newer(local_file_folder, remote_file_folder)):
@@ -465,17 +460,17 @@ class Poll(object):
 
 
         # alerts
-        alerts.info(local_file_folder.name, alerts.MODIFYING)
+        AlertHandler.info(local_file_folder.name, AlertHandler.MODIFYING)
 
         #handle renaming local file and local folder
         old_path = local_file_folder.path
         # update model
         local_file_folder.name = remote_file_folder.name
-        db.save(self.session, local_file_folder)
+        save(self.session, local_file_folder)
 
-        if local_file_folder.type == File.FOLDER:
+        if local_file_folder.is_folder:
             self.polling_event_queue.put(RenameFolder(old_path, local_file_folder.path))
-        elif local_file_folder.type == File.FILE:
+        elif local_file_folder.is_file:
             self.polling_event_queue.put(RenameFile(old_path, local_file_folder.path))
 
     @asyncio.coroutine
@@ -485,11 +480,9 @@ class Poll(object):
         assert remote_file.id == local_file.osf_path
 
 
-        # todo: need the db file to be updated to show that its timestamp is in fact updated.
-        # todo: can read this: http://docs.sqlalchemy.org/en/improve_toc/orm/events.html
-
         # update model
-        # self.save(local_file_folder) # todo: this does NOT actually update the local_file_folder timestamp
+        # nothing to update. size, hash are all updated internally as the event occurs.
+
         # update local file system
         event = UpdateFile(
                 path=local_file.path,
@@ -505,7 +498,7 @@ class Poll(object):
         assert isinstance(remote_file, RemoteFile)
         assert remote_file.id == local_file.osf_path
 
-        alerts.info(local_file.name, alerts.MODIFYING)
+        AlertHandler.info(local_file.name, AlertHandler.MODIFYING)
 
         try:
             new_remote_file = yield from self.osf_query.upload_file(local_file)
@@ -526,11 +519,11 @@ class Poll(object):
         assert local_file_folder.name != remote_file_folder['name']
 
         # alerts
-        alerts.info(local_file_folder.name, alerts.MODIFYING)
+        AlertHandler.info(local_file_folder.name, AlertHandler.MODIFYING)
 
-        if local_file_folder.type == File.FILE:
+        if local_file_folder.is_file:
             new_remote_file_folder = yield from self.osf_query.rename_remote_file(local_file_folder, remote_file_folder)
-        elif local_file_folder.type == File.FOLDER:
+        elif local_file_folder.is_folder:
             new_remote_file_folder = yield from self.osf_query.rename_remote_folder(local_file_folder, remote_file_folder)
 
         return new_remote_file_folder
@@ -546,11 +539,11 @@ class Poll(object):
         path = local_node.path
 
         # alerts
-        alerts.info(local_node.title, alerts.DELETING)
+        AlertHandler.info(local_node.title, AlertHandler.DELETING)
 
         # delete model
         self.session.delete(local_node)
-        db.save(self.session)
+        save(self.session)
 
         self.polling_event_queue.put(DeleteFolder(path))
 
@@ -563,10 +556,10 @@ class Poll(object):
         file_folder_type = local_file_folder.type
         # delete model
         self.session.delete(local_file_folder)
-        db.save(self.session)
+        save(self.session)
 
         # alerts
-        alerts.info(local_file_folder.name, alerts.DELETING)
+        AlertHandler.info(local_file_folder.name, AlertHandler.DELETING)
 
         # delete from local
         if file_folder_type == File.FOLDER:
@@ -583,20 +576,18 @@ class Poll(object):
         assert local_file_folder.locally_deleted
 
         # alerts
-        alerts.info(local_file_folder.name, alerts.DELETING)
+        AlertHandler.info(local_file_folder.name, AlertHandler.DELETING)
 
-        if local_file_folder.type == File.FILE:
+        if local_file_folder.is_file:
             yield from self.osf_query.delete_remote_file(remote_file_folder)
-        elif local_file_folder.type == File.FOLDER:
+        elif local_file_folder.is_folder:
             yield from self.osf_query.delete_remote_folder(remote_file_folder)
 
         local_file_folder.deleted = False
         self.session.delete(local_file_folder)
-        db.save(self.session)
+        save(self.session)
 
 
-
-    # todo: determine proper logic for when to update local/remote. (specifically for files based on datetime for now.)
     @asyncio.coroutine
     def _get_local_remote_times(self, local, remote):
         assert local

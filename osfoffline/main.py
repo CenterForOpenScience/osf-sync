@@ -6,7 +6,7 @@ from osfoffline.views.preferences import Preferences
 from osfoffline.views.system_tray import SystemTray
 from osfoffline.controller import OSFController
 from osfoffline.views.start_screen import StartScreen
-import osfoffline.alerts as alerts
+from osfoffline.alerts import AlertHandler
 import sys
 
 
@@ -28,9 +28,8 @@ class OSFApp(QDialog):
         # views
         self.start_screen = StartScreen()
         self.tray = SystemTray()
-        # todo: remove priority abilities
         self.preferences = Preferences(self.controller.containing_folder)
-        alerts.setup_alerts(self.tray.tray_icon)
+        AlertHandler.setup_alerts(self.tray.tray_icon)
 
         # connect all signal-slot pairs
         self.setup_connections()
@@ -70,8 +69,7 @@ class OSFApp(QDialog):
         for signal, slot in signal_slot_pairs:
             signal.connect(slot)
 
-    def open_priority_screen(self):
-        self.preferences.open_window(Preferences.PRIORITY)
+
 
     def open_preferences(self):
         self.preferences.open_window(Preferences.GENERAL)
@@ -85,9 +83,9 @@ class OSFApp(QDialog):
 
     def alerts_changed(self):
         if self.preferences.preferences_window.desktopNotifications.isChecked():
-            alerts.SHOW_ALERTS = True
+            AlertHandler.show_alerts = True
         else:
-            alerts.SHOW_ALERTS = False
+            AlertHandler.show_alerts = False
 
     def startup_changed(self):
         # todo: probably should give notification to show that this setting has been changed.

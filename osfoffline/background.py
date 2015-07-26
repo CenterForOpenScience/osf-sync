@@ -1,18 +1,12 @@
 __author__ = 'himanshu'
 import threading
 import asyncio
-
 from sqlalchemy.orm.exc import MultipleResultsFound, NoResultFound
-
 from watchdog.observers import Observer
-
 import osfoffline.database_manager.models as models
-
 import osfoffline.polling_osf_manager.polling as polling
-
 import osfoffline.filesystem_manager.osf_event_handler as osf_event_handler
-
-import osfoffline.database_manager.db as db
+from osfoffline.database_manager.db import DB
 
 
 class BackgroundWorker(threading.Thread):
@@ -32,7 +26,7 @@ class BackgroundWorker(threading.Thread):
     def run_background_tasks(self):
         print('starting run_background_tasks')
         if not self.running:
-            self.session = db.get_session()
+            self.session = DB.get_session()
             self.loop = self.ensure_event_loop()
             self.user = self.get_current_user()
             self.osf_folder = self.user.osf_local_folder_path
@@ -55,8 +49,7 @@ class BackgroundWorker(threading.Thread):
             self.running = False
 
     def start_polling_server(self):
-        # todo: can probably change this to just pass in the self.user
-        self.poller = polling.Poll(self.user.osf_id, self.loop)
+        self.poller = polling.Poll(self.user, self.loop)
         self.poller.start()
 
     def stop_polling_server(self):
@@ -78,7 +71,6 @@ class BackgroundWorker(threading.Thread):
 
             self.multiple_user_action.trigger()
         except NoResultFound:
-            # todo: allows you to log in (creates an account in db and logs it in)
             self.login_action.trigger()
             print('no users are logged in currently. Logging in first user in db.')
 

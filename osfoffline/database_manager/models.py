@@ -173,10 +173,14 @@ class File(Base):
         cascade="all, delete-orphan",
     )
 
-    #todo: actually use this field. everywhere.
+
     @hybrid_property
     def is_file(self):
         return self.type == File.FILE
+
+    @hybrid_property
+    def is_folder(self):
+        return self.type == File.FOLDER
 
     @hybrid_property
     def has_parent(self):
@@ -193,19 +197,15 @@ class File(Base):
             return os.path.join(self.node.path, self.name)
 
     def update_hash(self, block_size=2 ** 20):
-        m = hashlib.md5()
-        if self.type == File.FILE:
+        if self.is_file:
+            m = hashlib.md5()
             with open(self.path, "rb") as f:
                 while True:
                     buf = f.read(block_size)
                     if not buf:
                         break
                     m.update(buf)
-        else:
-            pass
-            # todo: what to do in this case?
-            # m.update()
-        self.hash = m.hexdigest()
+            self.hash = m.hexdigest()
 
     @hybrid_property
     def size(self):
@@ -228,7 +228,7 @@ class File(Base):
 
     @validates('files')
     def validate_files(self, key, files):
-        if self.type == File.FILE:
+        if self.is_file:
             assert self.files == []
         return files
 

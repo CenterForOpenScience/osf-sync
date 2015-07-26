@@ -42,10 +42,10 @@ class CreateFile(PollingEvent):
 
 class RenameFolder(PollingEvent):
     def __init__(self, old_path, new_path):
-        super().__init__(old_path)  # fixme: this is unnecessary
+        super().__init__(old_path)
         assert isinstance(new_path, str)
 
-        self.old_path = ProperPath(old_path, is_dir=True)
+        self.old_path = self.path
         self.new_path = ProperPath(new_path, is_dir=True)
         assert self.old_path
         assert self.new_path
@@ -56,10 +56,10 @@ class RenameFolder(PollingEvent):
 
 class RenameFile(PollingEvent):
     def __init__(self, old_path, new_path):
-        super().__init__(old_path)  # fixme: this is unnecessary
+        super().__init__(old_path)
         assert isinstance(new_path, str)
 
-        self.old_path = ProperPath(old_path, is_dir=False)
+        self.old_path = self.path
         self.new_path = ProperPath(new_path, is_dir=False)
         assert self.old_path
         assert self.new_path
@@ -89,12 +89,16 @@ class DeleteFolder(PollingEvent):
 
     @asyncio.coroutine
     def run(self):
-        # todo: avoids_symlink_attacks: https://docs.python.org/3.4/library/shutil.html#shutil.rmtree.avoids_symlink_attacks
-        # todo: make better error handling.
-        shutil.rmtree(
-            self.path.full_path,
-            onerror=lambda a, b, c: print('local node not deleted because not exists.')
-        )
+        # this works on systems that use file descriptors.
+        # thus, linux, mac are supported.
+        # todo: is windows supported??
+        if shutil.avoids_symlink_attacks:
+            shutil.rmtree(
+                self.path.full_path,
+                onerror=lambda a, b, c: print('local node not deleted because not exists.')
+            )
+        else:
+            raise NotImplementedError
 
 
 class DeleteFile(PollingEvent):

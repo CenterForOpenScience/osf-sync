@@ -93,7 +93,7 @@ class ProperPath(object):
     @property
     def parent(self):
         if self.is_root:
-            raise exceptions.InvalidPathError('path is already root. no parent.')
+            raise InvalidPathError('path is already root. no parent.')
         else:
             if self.is_dir:
                 without_trailing_sep = os.path.dirname(self.full_path)
@@ -102,9 +102,6 @@ class ProperPath(object):
             else:
                 parent_path = os.path.dirname(self.full_path)
                 return ProperPath(parent_path, True)
-
-    # def child(self, name, _id=None, folder=False):
-    #     return self.__class__.from_parts(self.parts + [self.PART_CLASS(name, _id=_id)], folder=folder, prepend=self._prepend)
 
     def __eq__(self, other):
         return isinstance(other, self.__class__) and self.is_dir == other.is_dir and str(self) == str(other)

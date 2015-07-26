@@ -4,10 +4,11 @@ storing the data into the db, and then sending a request to the remote server.
 """
 import asyncio
 
-from watchdog.events import FileSystemEventHandler
+from watchdog.events import FileSystemEventHandler, DirModifiedEvent
 
 from osfoffline.database_manager.models import Node, File
-from osfoffline.database_manager.db import get_session, save
+from osfoffline.database_manager.db import DB
+from osfoffline.database_manager.utils import save
 from osfoffline.utils.path import ProperPath
 from osfoffline.exceptions.event_handler_exceptions import MovedNodeUnderFile
 
@@ -31,7 +32,7 @@ class OSFEventHandler(FileSystemEventHandler):
         self._loop = loop or asyncio.get_event_loop()
         self.osf_folder = osf_folder
 
-        self.session = get_session()
+        self.session = DB.get_session()
         self.user = user
 
         print('osf event handler created')
@@ -114,7 +115,7 @@ class OSFEventHandler(FileSystemEventHandler):
                     save(self.session, dummy)
                     save(self.session, item)
                 except FileNotFoundError:
-                    # todo:
+                    # todo: logging levels. make one for debug. use that instead of console_log
                     console_log('tried to move to OSF folder. cant do this.')
                     # item.parent = None
 
@@ -195,15 +196,14 @@ class OSFEventHandler(FileSystemEventHandler):
                                 provider=File.DEFAULT_PROVIDER, node=node)
                     # console_log('new thing as file object',file)
                     containing_item.files.append(file)
+                    file.update_hash()
                     save(self.session, file)
+
 
                     # console_log('new thing as file object AGAIN in order to check name',file)
                     # log
                     # todo: log
 
-                    # allow for this method to be a coroutine
-                    # print('DONE with on created')
-                    # yield from asyncio.sleep(1)
         except:
             raise Exception('something wrong in oncreate')
 
@@ -214,7 +214,6 @@ class OSFEventHandler(FileSystemEventHandler):
         except FileNotFoundError:
             return False
 
-    # todo: Evaluate whether I can just ignore DirModifiedEvent's
     @asyncio.coroutine
     def on_modified(self, event):
         """Called when a file or directory is modified.
@@ -224,19 +223,12 @@ class OSFEventHandler(FileSystemEventHandler):
         :type event:
             :class:`DirModifiedEvent` or :class:`FileModifiedEvent`
         """
+        if isinstance(event, DirModifiedEvent):
+            return
 
         # logging.info("Modified %s: %s", what, event.src_path)
-        console_log('modifying file. hopefully this is the temp file. event.src_path', event.src_path)
 
         src_path = ProperPath(event.src_path, event.is_directory)
-        # whenever anything gets modified, watchdog crawls up the folder tree all the way up to the osf folder
-        # handle osf folder changing or not changing
-        if src_path == ProperPath(self.osf_folder, True):
-            return  # ignore
-            # note: if the OSF folder name is changed, that is NOT modified, but rather move.
-            # note: when folder recursively delete, the top folder is modified then removed.
-            #       os.path.samefile() tries to open the deleted file and fails. fix is to not open file.
-
         try:
             # update model
 
@@ -244,7 +236,7 @@ class OSFEventHandler(FileSystemEventHandler):
             item = self.get_item_by_path(src_path)
 
             # update hash
-            if isinstance(item, File) and item.type == File.FILE:
+            if isinstance(item, File) and item.is_file:
                 item.update_hash()
 
             # log
@@ -285,7 +277,7 @@ class OSFEventHandler(FileSystemEventHandler):
             # if file does not exist in db, then do nothing.
             print('tried to delete file {} but was not in db'.format(event.src_path))
 
-    # todo: simplify this. perhaps can use rstrip(os.seperator) but unclear if this leads to issues???
+
     def _get_parent_item_from_path(self, path):
         assert isinstance(path, ProperPath)
         containing_folder_path = path.parent
@@ -302,7 +294,7 @@ class OSFEventHandler(FileSystemEventHandler):
             if ProperPath(node.path, True) == path:
                 return node
         for file_folder in self.session.query(File):
-            file_path = ProperPath(file_folder.path, file_folder.type == File.FOLDER)
+            file_path = ProperPath(file_folder.path, file_folder.is_folder)
             if file_path == path:
                 return file_folder
         raise FileNotFoundError

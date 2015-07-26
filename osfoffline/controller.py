@@ -11,7 +11,8 @@ from sqlalchemy.orm.exc import MultipleResultsFound
 from sqlalchemy.orm.exc import NoResultFound
 
 import osfoffline.database_manager.models as models
-import osfoffline.database_manager.db as db
+from osfoffline.database_manager.db import DB
+from osfoffline.database_manager.utils import save
 from osfoffline.background import BackgroundWorker
 
 
@@ -69,12 +70,13 @@ class OSFController(QDialog):
         self.containing_folder_updated_action = QAction("Containing Folder updated", self)
 
         self.create_configs()
+        self.create_db()
         self.background_worker = BackgroundWorker()
 
     # state functions
     def start(self):
         # self.createConfigs()
-        session = db.get_session()
+        session = DB.get_session()
         self.user = self.get_current_user(session)
 
         if self.user:
@@ -83,7 +85,7 @@ class OSFController(QDialog):
                 self.set_containing_folder()
             self.user.osf_local_folder_path = os.path.join(self.containing_folder, "OSF")
 
-            db.save(session, self.user)
+            save(session, self.user)
 
             if not os.path.isdir(self.user.osf_local_folder_path):
                 os.makedirs(self.user.osf_local_folder_path)
@@ -256,22 +258,14 @@ class OSFController(QDialog):
         file.write(json.dumps(self.config))
         file.close()
 
+    def create_db(self):
+        data_dir = self.ensure_data_dir()
+        DB.setup_db(data_dir)
+
     def create_configs(self):
-        # todo: create helper function to check if config/data/OSF/... dirs' exist, and create them if they dont' exist.
+        config_dir = self.ensure_config_dir()
+        rel_osf_config = os.path.join(config_dir, 'config.osf')
 
-        # check if dir has config file already in it, if so use it. if not create it.
-        dir = user_config_dir(appname=self.app_name, appauthor=self.app_author)
-        rel_osf_config = os.path.join(dir, 'config.osf')
-        # ensure directory exists
-        if not os.path.exists(dir):
-            os.makedirs(dir)
-
-        # ensure data dir exists
-        data_dir = user_data_dir(appname=self.app_name, appauthor=self.app_author)
-
-        if not os.path.exists(data_dir):
-            os.makedirs(data_dir)
-        db.setup_db(data_dir)
 
         # new file if file doesnt exist.
         try:
@@ -294,13 +288,28 @@ class OSFController(QDialog):
             file.close()
         print(self.config)
 
+    def ensure_config_dir(self):
+        # check if dir has config file already in it, if so use it. if not create it.
+        config_dir = user_config_dir(appname=self.app_name, appauthor=self.app_author)
+        # ensure directory exists
+        if not os.path.exists(config_dir):
+            os.makedirs(config_dir)
+        return config_dir
+
+    def ensure_data_dir(self):
+        # ensure data dir exists
+        data_dir = user_data_dir(appname=self.app_name, appauthor=self.app_author)
+        if not os.path.exists(data_dir):
+            os.makedirs(data_dir)
+        return data_dir
+
 
 
 
 
     # todo: finish this!!!!!!!!!!
     def can_skip_startup_screen(self):
-        session = db.get_session()
+        session = DB.get_session()
         try:
             session.query(models.User).filter(models.User.logged_in).one()
             return True

@@ -115,7 +115,7 @@ class LocalDBSync(object):
             return item
         elif isinstance(item, User):
             return ProperPath(item.osf_local_folder_path, True)
-        elif isinstance(item, File) and item.type == File.FILE:
+        elif isinstance(item, File) and item.is_file:
             return ProperPath(item.path, False)
         elif isinstance(item, Base):
             return ProperPath(item.path, True)
@@ -153,13 +153,12 @@ class LocalDBSync(object):
         if local and db:
             if self._get_proper_path(local) != self._get_proper_path(db):
                 raise IncorrectLocalDBMatch
-            # todo: implement hash properly in db.
-            if isinstance(db, File) and db.type == File.FILE and self._make_hash(local) != db.hash:
+            if isinstance(db, File) and db.is_file and self._make_hash(local) != db.hash:
                 event = FileModifiedEvent(self._get_proper_path(local).full_path)  # create changed event
             # folder modified event should not happen.determine_new_events
         elif local is None:
             db_path = self._get_proper_path(db).full_path
-            if isinstance(db, File) and db.type == File.FILE:
+            if isinstance(db, File) and db.is_file:
                 event = FileDeletedEvent(db_path)  # delete event for file
             else:
                 event = DirDeletedEvent(db_path)

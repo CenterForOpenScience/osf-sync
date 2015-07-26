@@ -11,7 +11,6 @@ class Preferences(QDialog):
     """
     GENERAL = 0
     OSF = 1
-    PRIORITY = 3
     ABOUT = 4
 
     def __init__(self, containing_folder):
@@ -61,5 +60,4 @@ class Preferences(QDialog):
             pass
         elif selected_index == self.OSF:
             pass
-        elif selected_index == self.PRIORITY:
-            pass
+
