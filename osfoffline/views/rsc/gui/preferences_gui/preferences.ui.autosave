@@ -159,7 +159,7 @@ p, li { white-space: pre-wrap; }
          <widget class="QPushButton" name="accountLogOutButton">
           <property name="geometry">
            <rect>
-            <x>460</x>
+            <x>450</x>
             <y>10</y>
             <width>99</width>
             <height>31</height>

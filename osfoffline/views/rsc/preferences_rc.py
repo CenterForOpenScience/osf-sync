@@ -2,24 +2,21 @@
 
 # Form implementation generated from reading ui file 'preferences.ui'
 #
-# Created by: PyQt5 UI code generator 5.4.1
+# Created by: PyQt5 UI code generator 5.4.2
 #
 # WARNING! All changes made in this file will be lost!
 
 from PyQt5 import QtCore, QtGui, QtWidgets
 
-
 class Ui_Preferences(object):
     def setupUi(self, Preferences):
         Preferences.setObjectName("Preferences")
         Preferences.resize(590, 320)
-        self.verticalLayoutWidget = QtWidgets.QWidget(Preferences)
-        self.verticalLayoutWidget.setGeometry(QtCore.QRect(0, 0, 591, 321))
-        self.verticalLayoutWidget.setObjectName("verticalLayoutWidget")
-        self.verticalLayout = QtWidgets.QVBoxLayout(self.verticalLayoutWidget)
-        self.verticalLayout.setContentsMargins(0, 0, 0, 0)
-        self.verticalLayout.setObjectName("verticalLayout")
-        self.tabWidget = QtWidgets.QTabWidget(self.verticalLayoutWidget)
+        self.verticalLayout_2 = QtWidgets.QVBoxLayout(Preferences)
+        self.verticalLayout_2.setObjectName("verticalLayout_2")
+        self.horizontalLayout = QtWidgets.QHBoxLayout()
+        self.horizontalLayout.setObjectName("horizontalLayout")
+        self.tabWidget = QtWidgets.QTabWidget(Preferences)
         self.tabWidget.setObjectName("tabWidget")
         self.tab = QtWidgets.QWidget()
         self.tab.setObjectName("tab")
@@ -41,7 +38,6 @@ class Ui_Preferences(object):
         self.changeFolderButton.setGeometry(QtCore.QRect(440, 20, 99, 31))
         self.changeFolderButton.setObjectName("changeFolderButton")
         self.containingFolderTextEdit = QtWidgets.QTextEdit(self.groupBox_6)
-        self.containingFolderTextEdit.setReadOnly(True)
         self.containingFolderTextEdit.setGeometry(QtCore.QRect(20, 20, 331, 31))
         self.containingFolderTextEdit.setObjectName("containingFolderTextEdit")
         self.tabWidget.addTab(self.tab, "")
@@ -63,73 +59,40 @@ class Ui_Preferences(object):
         self.groupBox_4.setGeometry(QtCore.QRect(10, 70, 561, 211))
         self.groupBox_4.setObjectName("groupBox_4")
         self.groupBox_5 = QtWidgets.QGroupBox(self.groupBox_4)
-        self.groupBox_5.setGeometry(QtCore.QRect(10, 30, 541, 81))
+        self.groupBox_5.setGeometry(QtCore.QRect(10, 30, 541, 161))
         self.groupBox_5.setObjectName("groupBox_5")
-        self.radioButton = QtWidgets.QRadioButton(self.groupBox_5)
-        self.radioButton.setGeometry(QtCore.QRect(30, 20, 117, 22))
-        self.radioButton.setObjectName("radioButton")
-        self.radioButton_2 = QtWidgets.QRadioButton(self.groupBox_5)
-        self.radioButton_2.setGeometry(QtCore.QRect(30, 40, 117, 22))
-        self.radioButton_2.setObjectName("radioButton_2")
         self.changeFolderButton_2 = QtWidgets.QPushButton(self.groupBox_5)
         self.changeFolderButton_2.setGeometry(QtCore.QRect(440, 20, 99, 31))
         self.changeFolderButton_2.setObjectName("changeFolderButton_2")
+        self.scrollArea = QtWidgets.QScrollArea(self.groupBox_5)
+        self.scrollArea.setGeometry(QtCore.QRect(0, 29, 281, 111))
+        self.scrollArea.setWidgetResizable(True)
+        self.scrollArea.setObjectName("scrollArea")
+        self.scrollAreaWidgetContents = QtWidgets.QWidget()
+        self.scrollAreaWidgetContents.setGeometry(QtCore.QRect(0, 0, 279, 109))
+        self.scrollAreaWidgetContents.setObjectName("scrollAreaWidgetContents")
+        self.checkBox = QtWidgets.QCheckBox(self.scrollAreaWidgetContents)
+        self.checkBox.setGeometry(QtCore.QRect(30, 0, 97, 22))
+        self.checkBox.setObjectName("checkBox")
+        self.checkBox_2 = QtWidgets.QCheckBox(self.scrollAreaWidgetContents)
+        self.checkBox_2.setGeometry(QtCore.QRect(30, 20, 97, 22))
+        self.checkBox_2.setObjectName("checkBox_2")
+        self.checkBox_3 = QtWidgets.QCheckBox(self.scrollAreaWidgetContents)
+        self.checkBox_3.setGeometry(QtCore.QRect(30, 40, 97, 22))
+        self.checkBox_3.setObjectName("checkBox_3")
+        self.scrollArea.setWidget(self.scrollAreaWidgetContents)
         self.tabWidget.addTab(self.tab_2, "")
-        self.tab_3 = QtWidgets.QWidget()
-        self.tab_3.setObjectName("tab_3")
-        self.groupBox_7 = QtWidgets.QGroupBox(self.tab_3)
-        self.groupBox_7.setGeometry(QtCore.QRect(50, 40, 441, 181))
-        self.groupBox_7.setObjectName("groupBox_7")
-        self.logInButton = QtWidgets.QPushButton(self.groupBox_7)
-        self.logInButton.setGeometry(QtCore.QRect(330, 150, 99, 27))
-        self.logInButton.setObjectName("logInButton")
-        self.emailEdit = QtWidgets.QLineEdit(self.groupBox_7)
-        self.emailEdit.setGeometry(QtCore.QRect(160, 30, 261, 27))
-        self.emailEdit.setObjectName("emailEdit")
-        self.passwordEdit = QtWidgets.QLineEdit(self.groupBox_7)
-        self.passwordEdit.setGeometry(QtCore.QRect(160, 70, 261, 27))
-        self.passwordEdit.setObjectName("passwordEdit")
-        self.label_3 = QtWidgets.QLabel(self.groupBox_7)
-        self.label_3.setGeometry(QtCore.QRect(70, 26, 61, 31))
-        self.label_3.setObjectName("label_3")
-        self.label_5 = QtWidgets.QLabel(self.groupBox_7)
-        self.label_5.setGeometry(QtCore.QRect(70, 70, 81, 31))
-        self.label_5.setObjectName("label_5")
-        self.tabWidget.addTab(self.tab_3, "")
-        self.tab_4 = QtWidgets.QWidget()
-        self.tab_4.setObjectName("tab_4")
-        self.treeWidget = QtWidgets.QTreeWidget(self.tab_4)
-        self.treeWidget.setGeometry(QtCore.QRect(10, 40, 561, 221))
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Preferred)
-        sizePolicy.setHorizontalStretch(0)
-        sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.treeWidget.sizePolicy().hasHeightForWidth())
-        self.treeWidget.setSizePolicy(sizePolicy)
-        self.treeWidget.setMouseTracking(False)
-        self.treeWidget.setAcceptDrops(False)
-        self.treeWidget.setAnimated(False)
-        self.treeWidget.setWordWrap(True)
-        self.treeWidget.setHeaderHidden(False)
-        self.treeWidget.setObjectName("treeWidget")
-        self.treeWidget.headerItem().setTextAlignment(0, QtCore.Qt.AlignJustify | QtCore.Qt.AlignVCenter)
-        self.treeWidget.headerItem().setTextAlignment(1, QtCore.Qt.AlignJustify | QtCore.Qt.AlignVCenter)
-        self.treeWidget.header().setCascadingSectionResizes(True)
-        self.treeWidget.header().setDefaultSectionSize(200)
-        self.treeWidget.header().setHighlightSections(True)
-        self.label_2 = QtWidgets.QLabel(self.tab_4)
-        self.label_2.setGeometry(QtCore.QRect(10, 10, 561, 17))
-        self.label_2.setObjectName("label_2")
-        self.tabWidget.addTab(self.tab_4, "")
         self.tab_5 = QtWidgets.QWidget()
         self.tab_5.setObjectName("tab_5")
         self.textEdit_2 = QtWidgets.QTextEdit(self.tab_5)
         self.textEdit_2.setGeometry(QtCore.QRect(20, 20, 551, 251))
         self.textEdit_2.setObjectName("textEdit_2")
         self.tabWidget.addTab(self.tab_5, "")
-        self.verticalLayout.addWidget(self.tabWidget)
+        self.horizontalLayout.addWidget(self.tabWidget)
+        self.verticalLayout_2.addLayout(self.horizontalLayout)
 
         self.retranslateUi(Preferences)
-        self.tabWidget.setCurrentIndex(4)
+        self.tabWidget.setCurrentIndex(1)
         QtCore.QMetaObject.connectSlotsByName(Preferences)
 
     def retranslateUi(self, Preferences):
@@ -140,40 +103,29 @@ class Ui_Preferences(object):
         self.startOnStartup.setText(_translate("Preferences", "Start OSF Offline on Computer Startup"))
         self.groupBox_6.setTitle(_translate("Preferences", "Choose Folder to Place Project in "))
         self.changeFolderButton.setText(_translate("Preferences", "Change"))
-        self.containingFolderTextEdit.setHtml(_translate("Preferences",
-                                                         "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"
-                                                         "<html><head><meta name=\"qrichtext\" content=\"1\" /><style type=\"text/css\">\n"
-                                                         "p, li { white-space: pre-wrap; }\n"
-                                                         "</style></head><body style=\" font-family:\'Ubuntu\'; font-size:11pt; font-weight:400; font-style:normal;\">\n"
-                                                         "<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\">/home/himanshu/somefolder/My Project</p></body></html>"))
+        self.containingFolderTextEdit.setHtml(_translate("Preferences", "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"
+"<html><head><meta name=\"qrichtext\" content=\"1\" /><style type=\"text/css\">\n"
+"p, li { white-space: pre-wrap; }\n"
+"</style></head><body style=\" font-family:\'Ubuntu\'; font-size:11pt; font-weight:400; font-style:normal;\">\n"
+"<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\">/home/himanshu/somefolder/My Project</p></body></html>"))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab), _translate("Preferences", "General"))
         self.groupBox_2.setTitle(_translate("Preferences", "Account"))
         self.groupBox_3.setTitle(_translate("Preferences", "Account"))
         self.label.setText(_translate("Preferences", "User name"))
         self.accountLogOutButton.setText(_translate("Preferences", "Log Out"))
         self.groupBox_4.setTitle(_translate("Preferences", "Project"))
-        self.groupBox_5.setTitle(_translate("Preferences", "Choose Project to Sync With"))
-        self.radioButton.setText(_translate("Preferences", "Project A"))
-        self.radioButton_2.setText(_translate("Preferences", "Project B"))
+        self.groupBox_5.setTitle(_translate("Preferences", "Choose Projects to Sync With"))
         self.changeFolderButton_2.setText(_translate("Preferences", "Change"))
-        self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_2), _translate("Preferences", "OSF (logged in)"))
-        self.groupBox_7.setTitle(_translate("Preferences", "Log in"))
-        self.logInButton.setText(_translate("Preferences", "Log In"))
-        self.label_3.setText(_translate("Preferences", "Email"))
-        self.label_5.setText(_translate("Preferences", "Password"))
-        self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_3), _translate("Preferences", "OSF (logged out)"))
-        self.treeWidget.setSortingEnabled(False)
-        self.treeWidget.headerItem().setText(0, _translate("Preferences", "Component, Folder, or File"))
-        self.treeWidget.headerItem().setText(1, _translate("Preferences", "Priority"))
-        self.label_2.setText(_translate("Preferences", "Priority Items will be given priority when syncing"))
-        self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_4), _translate("Preferences", "Priority Syncing"))
-        self.textEdit_2.setHtml(_translate("Preferences",
-                                           "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"
-                                           "<html><head><meta name=\"qrichtext\" content=\"1\" /><style type=\"text/css\">\n"
-                                           "p, li { white-space: pre-wrap; }\n"
-                                           "</style></head><body style=\" font-family:\'Ubuntu\'; font-size:11pt; font-weight:400; font-style:normal;\">\n"
-                                           "<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\">This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. This is copyright info. </p>\n"
-                                           "<p style=\"-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><br /></p>\n"
-                                           "<p align=\"center\" style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\">© Center for Open Science</p></body></html>"))
+        self.checkBox.setText(_translate("Preferences", "CheckBox"))
+        self.checkBox_2.setText(_translate("Preferences", "CheckBox"))
+        self.checkBox_3.setText(_translate("Preferences", "CheckBox"))
+        self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_2), _translate("Preferences", "OSF"))
+        self.textEdit_2.setHtml(_translate("Preferences", "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"
+"<html><head><meta name=\"qrichtext\" content=\"1\" /><style type=\"text/css\">\n"
+"p, li { white-space: pre-wrap; }\n"
+"</style></head><body style=\" font-family:\'Ubuntu\'; font-size:11pt; font-weight:400; font-style:normal;\">\n"
+"<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\">This is OSF OFFLINE. Please go ahead and use it and make more software based off of it. Please and Thank You. </p>\n"
+"<p style=\"-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><br /></p>\n"
+"<p align=\"center\" style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\">© Center for Open Science</p></body></html>"))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_5), _translate("Preferences", "About"))
 

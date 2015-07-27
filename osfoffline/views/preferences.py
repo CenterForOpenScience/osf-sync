@@ -1,6 +1,7 @@
 from PyQt5.QtWidgets import (QAction, QDialog, QFileDialog)
 from PyQt5.QtCore import QCoreApplication
 from osfoffline.views.rsc.preferences_rc import Ui_Preferences  # REQUIRED FOR GUI
+from osfoffline.database_manager.db import DB
 
 __author__ = 'himanshu'
 
@@ -59,5 +60,11 @@ class Preferences(QDialog):
         if selected_index == self.GENERAL:
             pass
         elif selected_index == self.OSF:
-            pass
+            remote_top_level_nodes = get_remote_top_level_nodes(user_id)
 
+            self.checkBox = QtWidgets.QCheckBox(self.scrollAreaWidgetContents)
+        self.checkBox.setGeometry(QtCore.QRect(30, 0, 97, 22))
+        self.checkBox.setObjectName("checkBox")
+
+    def get_remote_top_level_nodes(self):
+        session =

@@ -122,9 +122,6 @@ class OSFController(QDialog):
             QApplication.instance().quit()
 
 
-
-
-
     def set_containing_folder_process(self):
         self.pause()
         self.set_containing_folder()
@@ -136,23 +133,26 @@ class OSFController(QDialog):
         user = None
         import threading
         print('---inside getcurrentuser-----{}----'.format(threading.current_thread()))
-        action = None
+        err = False
         try:
             user = session.query(models.User).filter(models.User.logged_in).one()
         except MultipleResultsFound:
-            # todo: multiple user screen allows you to choose which user is logged in
-            action = self.multiple_user_action
+            # log out all users and restart login screen to get a single user to log in
+            print('logging out all users.')
+            for user in session.query(models.User):
+                user.logged_in = False
+                save(session, user)
+            err = True
             session.close()
         except NoResultFound:
-            # todo: allows you to log in (creates an account in db and logs it in)
-            action = self.login_action
+            err = True
             print('no users are logged in currently. Logging in first user in db.')
             session.close()
 
-        if user:
-            return user
+        if err:
+            self.login_action.trigger()
         else:
-            action.trigger()
+            return user
 
     def start_logging(self):
         # make sure logging directory exists

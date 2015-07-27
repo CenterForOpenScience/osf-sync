@@ -2,7 +2,7 @@ __author__ = 'himanshu'
 import hashlib
 import datetime
 import os
-
+from osfoffline.database_manager.json_type import JSONEncodedDict
 from sqlalchemy import create_engine, ForeignKey, Enum
 from sqlalchemy.orm import sessionmaker, relationship, backref, scoped_session, validates
 from sqlalchemy import Column, Integer, Boolean, String, DateTime
@@ -24,6 +24,8 @@ class User(Base):
     osf_id = Column(String, unique=True, nullable=True, default=None)  # multiple things allowed to be null
 
     logged_in = Column(Boolean, default=False)
+
+    guid_for_top_level_nodes_to_sync = JSONEncodedDict(512)
 
     nodes = relationship(
         "Node",
