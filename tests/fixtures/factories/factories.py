@@ -2,7 +2,7 @@ __author__ = 'himanshu'
 from factory.alchemy import SQLAlchemyModelFactory
 from factory import Sequence
 
-from osfoffline.database_handler.models import User, Node, File
+from osfoffline.database_manager.models import User, Node, File
 from tests.fixtures.factories.common import Session
 
 

@@ -8,24 +8,18 @@ from osfoffline.filesystem_manager.sync_local_filesytem_and_db import LocalDBSyn
 from osfoffline.exceptions.local_db_sync_exceptions import LocalDBBothNone
 from tests import TEST_DIR
 from tests.fixtures.factories import common
-from tests.fixtures.factories.osfoffline import common
 from tests.fixtures.factories.factories import UserFactory, NodeFactory, FileFactory
-from osfoffline.database_handler.models import User, Node, File, Base
-
-
-
-
-
-
-
-
-
-# unit tests
-
-# first going to test the methods that make up LocalDBSync
-# these tests do NOT require the observer to be properly
-# configured thus are able to use the fake common session
-
+from osfoffline.database_manager.models import User, Node, File, Base
+from watchdog.events import (
+    DirCreatedEvent,
+    DirModifiedEvent,
+    DirMovedEvent,
+    DirDeletedEvent,
+    FileCreatedEvent,
+    FileDeletedEvent,
+    FileModifiedEvent,
+    FileMovedEvent
+)
 
 class TestLocalDBSyncUnitTests(TestCase):
 
@@ -285,34 +279,41 @@ class TestLocalDBSyncUnitTests(TestCase):
 
     def test__determine_event_type_local_None(self):
         db = self.user
+        with self.assertRaises(TypeError):
+            self.sync._determine_event_type(None, db)
+
+
     def test__determine_event_type_db_None(self):
-        db = self.user
-    def test__determine_event_type_local_top_level_node_only(self):
-        self.fail()
-    def test__determine_event_type_local_node_only(self):
-        self.fail()
-    def test__determine_event_type_local_folder_only(self):
-        self.fail()
-    def test__determine_event_type_local_file_only(self):
-        self.fail()
-    def test__determine_event_type_db_top_level_node_only(self):
-        self.fail()
-    def test__determine_event_type_db_top_level_node_only(self):
-        self.fail()
-    def test__determine_event_type_db_node_only(self):
-        self.fail()
-    def test__determine_event_type_db_file_only(self):
-        self.fail()
-    def test__determine_event_type_db_folder_only(self):
-        self.fail()
-    def test__determine_event_type_both_top_level_node_changed(self):
-        self.fail()
-    def test__determine_event_type_both_top_level_node_changed(self):
-        self.fail()
-    def test__determine_event_type_both_top_level_node_changed(self):
-        self.fail()
-    def test__determine_event_type_both_top_level_node_changed(self):
-        self.fail()
+
+        event = self.sync._determine_event_type()
+
+    # def test__determine_event_type_local_top_level_node_only(self):
+    #     self.fail()
+    # def test__determine_event_type_local_node_only(self):
+    #     self.fail()
+    # def test__determine_event_type_local_folder_only(self):
+    #     self.fail()
+    # def test__determine_event_type_local_file_only(self):
+    #     self.fail()
+    # def test__determine_event_type_db_top_level_node_only(self):
+    #     self.fail()
+    # def test__determine_event_type_db_top_level_node_only(self):
+    #     self.fail()
+    # def test__determine_event_type_db_node_only(self):
+    #     self.fail()
+    # def test__determine_event_type_db_file_only(self):
+    #     self.fail()
+    # def test__determine_event_type_db_folder_only(self):
+    #     self.fail()
+    # def test__determine_event_type_both_top_level_node_changed(self):
+    #     self.fail()
+    # def test__determine_event_type_both_top_level_node_changed(self):
+    #     self.fail()
+    # def test__determine_event_type_both_top_level_node_changed(self):
+    #     self.fail()
+    # def test__determine_event_type_both_top_level_node_changed(self):
+    #     self.fail()
+
     # def test__get_proper_path(self):
     #     self.fail()
     #

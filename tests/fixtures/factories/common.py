@@ -6,7 +6,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, scoped_session
 from appdirs import user_data_dir
 
-from osfoffline.database_handler.models import Base
+from osfoffline.database_manager.models import Base
 
 DB_DIR = user_data_dir('test-app-name','test-app-author')
 DB_FILE_PATH = os.path.join(DB_DIR,'osf.db')

@@ -45,6 +45,12 @@ class AlertHandler(object):
         cls.last_alert_time = datetime.now()
 
     @classmethod
+    def clear_queue(cls):
+        # clear the queue in a thread safe manner.
+        with cls.alert_queue.mutex:
+            cls.alert_queue.queue.clear()
+
+    @classmethod
     def info(cls, file_name, action):
         if cls.alert_icon is None or not cls.show_alerts:
             return
@@ -57,33 +63,23 @@ class AlertHandler(object):
             }
 
             text = "{} {}".format(title[action], file_name)
-            alert_tuple = (text,"- OSF Offline")
+            alert_tuple = (text, "- OSF Offline")
             if cls.alert_icon.supportsMessages():
-
+                """Idea is that if there is an alert already running, we will IGNORE the new alert.
+                   Don't want to queue them up and run them one by one because a queued alert could be outdated.
+                   Don't want to give a 'updating x files' alert because
+                """
                 if cls.alert_running():
                     cls.alert_queue.put_nowait(alert_tuple)
                 else:
                     if cls.alert_queue.empty():
                         cls.run_alert(alert_tuple[0], alert_tuple[1])
-                    else:
+                    elif datetime.now() - cls.last_alert_time < timedelta(milliseconds=cls.ALERT_TIME * 3 ) :  # last alert was recent
                         cls.run_alert('Updating {} files'.format(cls.alert_queue.qsize() + 1), "Check <a href='www.osf.io'>www.osf.io</a> for details.")
-                        # clear the queue in a thread safe manner.
-                        with cls.alert_queue.mutex:
-                            cls.alert_queue.queue.clear()
+                        cls.clear_queue()
+                    else:
+                        cls.run_alert(alert_tuple)
+                        cls.clear_queue()
+
             else:
                 cls.show_alerts = False
-
-# if __name__=="__main__":
-# app = QApplication(sys.argv)
-#
-#     if not QSystemTrayIcon.isSystemTrayAvailable():
-#         QMessageBox.critical(None, "Systray",
-#                 "Could not detect a system tray on this system")
-#         sys.exit(1)
-#
-#     QApplication.setQuitOnLastWindowClosed(False)
-#     dialog = QDialog()
-#     setup_alerts(dialog)
-#     info('hi',DOWNLOAD)
-#
-#     app.exec_()

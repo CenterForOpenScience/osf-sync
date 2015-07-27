@@ -7,6 +7,7 @@ import osfoffline.database_manager.models as models
 import osfoffline.polling_osf_manager.polling as polling
 import osfoffline.filesystem_manager.osf_event_handler as osf_event_handler
 from osfoffline.database_manager.db import DB
+from osfoffline.filesystem_manager.sync_local_filesytem_and_db import LocalDBSync
 
 
 class BackgroundWorker(threading.Thread):
@@ -108,7 +109,7 @@ class BackgroundWorker(threading.Thread):
         # attach event handler to observed events. make observer recursive
         print('schedule observer')
         self.observer.schedule(self.event_handler, self.osf_folder, recursive=True)
-        # LocalDBSync(self.user.osf_local_folder_path, self.observer, self.user).emit_new_events()
+        LocalDBSync(self.user.osf_local_folder_path, self.observer, self.user).emit_new_events()
 
         try:
             print('observer.start')

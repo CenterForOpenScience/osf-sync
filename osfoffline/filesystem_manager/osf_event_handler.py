@@ -196,7 +196,14 @@ class OSFEventHandler(FileSystemEventHandler):
                                 provider=File.DEFAULT_PROVIDER, node=node)
                     # console_log('new thing as file object',file)
                     containing_item.files.append(file)
-                    file.update_hash()
+                    try:
+                        # if we can't update the hash immediately after creating, then it is a
+                        # fake file or something of the sort. Thus, we can just delete it.
+                        file.update_hash()
+                    except FileNotFoundError:
+                        self.session.delete(file)
+                        save(self.session)
+                        return
                     save(self.session, file)
 
 
@@ -259,14 +266,19 @@ class OSFEventHandler(FileSystemEventHandler):
         """
 
         src_path = ProperPath(event.src_path, event.is_directory)
-        if 'stream' in src_path.name:
-            console_log('deleting file. check if temp file is deleted', src_path.name)
         try:
             # get item
             item = self.get_item_by_path(src_path)
 
             # put item in delete state
             item.locally_deleted = True
+
+            # if item cannot/should not be deleted online, then just delete here.. it will be recreated.
+            if isinstance(item, Node) or (isinstance(item, File) and item.is_provider):
+                self.session.delete(item)
+                save(self.session)
+
+
 
             # log
             # todo: log

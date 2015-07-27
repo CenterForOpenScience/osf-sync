@@ -135,7 +135,6 @@ class LocalDBSync(object):
 
     def _make_hash(self, local):
         assert isinstance(local, ProperPath)
-
         m = hashlib.md5()
         with open(local.full_path, "rb") as f:
             while True:
@@ -148,6 +147,10 @@ class LocalDBSync(object):
     def _determine_event_type(self, local, db):
         if not local and not db:
             raise LocalDBBothNone
+        if local and not isinstance(local, ProperPath):
+            raise TypeError
+        if db and (not (isinstance(db, Node) or isinstance(db, File))):
+            raise TypeError
 
         event = None
         if local and db:
@@ -155,19 +158,19 @@ class LocalDBSync(object):
                 raise IncorrectLocalDBMatch
             if isinstance(db, File) and db.is_file and self._make_hash(local) != db.hash:
                 event = FileModifiedEvent(self._get_proper_path(local).full_path)  # create changed event
-            # folder modified event should not happen.determine_new_events
+            # folder modified event cannot happen. It will be a create and delete event.
         elif local is None:
             db_path = self._get_proper_path(db).full_path
             if isinstance(db, File) and db.is_file:
                 event = FileDeletedEvent(db_path)  # delete event for file
             else:
-                event = DirDeletedEvent(db_path)
+                event = DirDeletedEvent(db_path)  # delete event for folder
         elif db is None:
             local_path = self._get_proper_path(local)
             if local_path.is_dir:
-                event = FileCreatedEvent(local_path.full_path)
-            else:
                 event = DirCreatedEvent(local_path.full_path)
+            else:
+                event = FileCreatedEvent(local_path.full_path)
 
         return event
 
@@ -182,6 +185,7 @@ class LocalDBSync(object):
             # observer.dispatch_events(event_queue, observer._timeout)
             emitter = next(iter(self.observer.emitters))
             emitter.queue_event(event)
+            print('EVENT EMITTED: {}'.format(event))
             # observer.emitters[0].queue_event(event)
         local_db_tuple_list = self._make_local_db_tuple_list(local, db)
         for local, db in local_db_tuple_list:

@@ -173,6 +173,9 @@ class File(Base):
         cascade="all, delete-orphan",
     )
 
+    @hybrid_property
+    def is_provider(self):
+        return self.name == self.provider
 
     @hybrid_property
     def is_file(self):
