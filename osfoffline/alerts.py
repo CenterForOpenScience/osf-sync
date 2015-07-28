@@ -78,7 +78,7 @@ class AlertHandler(object):
                         cls.run_alert('Updating {} files'.format(cls.alert_queue.qsize() + 1), "Check <a href='www.osf.io'>www.osf.io</a> for details.")
                         cls.clear_queue()
                     else:
-                        cls.run_alert(alert_tuple)
+                        cls.run_alert(alert_tuple[0], alert_tuple[1])
                         cls.clear_queue()
 
             else:

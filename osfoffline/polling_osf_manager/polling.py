@@ -183,9 +183,12 @@ class Poll(object):
 
             local_remote_top_level_nodes = self.make_local_remote_tuple_list(local_top_level_nodes, remote_top_level_nodes)
 
-
+            self.session.refresh(self.user)
+            sync_list = self.user.guid_for_top_level_nodes_to_sync
             for local, remote in local_remote_top_level_nodes:
-                yield from self.check_node(local, remote, local_parent_node=None)
+                print('sync list is: {}'.format(sync_list))
+                if remote and remote.id in sync_list:
+                    yield from self.check_node(local, remote, local_parent_node=None)
 
 
             yield from self.polling_event_queue.run()
@@ -268,7 +271,8 @@ class Poll(object):
         if local_file_folder is None:
             local_file_folder = yield from self.create_local_file_folder(remote_file_folder, local_parent_file_folder, local_node)
         elif local_file_folder.locally_created and remote_file_folder is None:
-            remote_file_folder = yield from self.create_remote_file_folder(local_file_folder, local_node)
+            if not local_file_folder.is_provider:
+                remote_file_folder = yield from self.create_remote_file_folder(local_file_folder, local_node)
             return
         elif local_file_folder.locally_created and remote_file_folder is not None:
             raise ValueError('newly created local file_folder was already on server for some reason. why? fixit!')
@@ -466,6 +470,7 @@ class Poll(object):
         old_path = local_file_folder.path
         # update model
         local_file_folder.name = remote_file_folder.name
+        local_file_folder.date_modified = remote_file_folder.last_modified
         save(self.session, local_file_folder)
 
         if local_file_folder.is_folder:
@@ -516,7 +521,7 @@ class Poll(object):
         assert isinstance(local_file_folder, File)
         assert isinstance(remote_file_folder, RemoteFileFolder)
         assert remote_file_folder.id == local_file_folder.osf_path
-        assert local_file_folder.name != remote_file_folder['name']
+        assert local_file_folder.name != remote_file_folder.name
 
         # alerts
         AlertHandler.info(local_file_folder.name, AlertHandler.MODIFYING)
@@ -595,8 +600,11 @@ class Poll(object):
         assert isinstance(local, Base)
         assert isinstance(remote, RemoteObject)
 
-        local_time = local.date_modified.replace(tzinfo=pytz.utc)
-
+        local_time = local.date_modified.replace(tzinfo=iso8601.iso8601.Utc())
+        # NOTE; waterbutler does NOT update time when a file or folder is RENAMED.
+        # thus cannot accurately determine when file/folder was renamed.
+        # thus, going to have to go with local is pretty much always newer.
+        #todo: based on above note, I think it is a better idea to go with the .locally_renamed idea.
         if isinstance(remote, RemoteFileFolder):
             remote_time = yield from remote.last_modified(local.node.osf_id, self.osf_query)
         else:

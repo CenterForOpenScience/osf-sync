@@ -200,9 +200,7 @@ class OSFController(QDialog):
                 try:
                     subprocess.Popen(['xdg-open', self.containing_folder])
                 except OSError:
-                    # er, think of something else to try
-                    # xdg-open *should* be supported by recent Gnome, KDE, Xfce
-                    pass  # todo: what to do in this case?
+                    raise NotImplementedError
         else:
             self.set_containing_folder_process()
 
@@ -212,7 +210,6 @@ class OSFController(QDialog):
         except ValueError:
             return False
 
-
     def set_containing_folder(self):
         self.containing_folder = QFileDialog.getExistingDirectory(self, "Choose folder to place OSF folder")
 
@@ -220,16 +217,16 @@ class OSFController(QDialog):
         url = "http://osf.io/dashboard"
         webbrowser.open_new_tab(url)
 
-    def currently_synching(self):
-        # todo: can use this sudo code to make proper
-        # if syncQueue.empty():
-        #     text = "Up to date"
-        # else:
-        #     text = "currently {}".format(syncQueue.top().name())
-        import datetime
-
-        text = "Up to date ({})".format(str(datetime.datetime.now()))
-        self.currently_synching_action.setText(0, text)
+    # def currently_synching(self):
+    #     # todo: can use this sudo code to make proper
+    #     # if syncQueue.empty():
+    #     #     text = "Up to date"
+    #     # else:
+    #     #     text = "currently {}".format(syncQueue.top().name())
+    #     import datetime
+    #
+    #     text = "Up to date ({})".format(str(datetime.datetime.now()))
+    #     self.currently_synching_action.setText(0, text)
 
     # def teardown(self):
     #     try:
@@ -302,10 +299,6 @@ class OSFController(QDialog):
         if not os.path.exists(data_dir):
             os.makedirs(data_dir)
         return data_dir
-
-
-
-
 
     # todo: finish this!!!!!!!!!!
     def can_skip_startup_screen(self):

@@ -1,3 +1,5 @@
+from sqlalchemy.orm.exc import MultipleResultsFound, NoResultFound
+from osfoffline.database_manager.models import User
 
 def save(session, item=None):
     if item:
@@ -8,3 +10,28 @@ def save(session, item=None):
         session.rollback()
         raise
 
+
+# def get_current_user(self, session):
+#     user = None
+#     import threading
+#     print('---inside getcurrentuser-----{}----'.format(threading.current_thread()))
+#     err = False
+#     try:
+#         user = session.query(User).filter(User.logged_in).one()
+#     except MultipleResultsFound:
+#         # log out all users and restart login screen to get a single user to log in
+#         print('logging out all users.')
+#         for user in session.query(User):
+#             user.logged_in = False
+#             save(session, user)
+#         err = True
+#         session.close()
+#     except NoResultFound:
+#         err = True
+#         print('no users are logged in currently. Logging in first user in db.')
+#         session.close()
+#
+#     if err:
+#         self.login_action.trigger()
+#     else:
+#         return user

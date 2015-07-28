@@ -92,7 +92,7 @@ class DeleteFolder(PollingEvent):
         # this works on systems that use file descriptors.
         # thus, linux, mac are supported.
         # todo: is windows supported??
-        if shutil.avoids_symlink_attacks:
+        if shutil.rmtree.avoids_symlink_attacks:
             shutil.rmtree(
                 self.path.full_path,
                 onerror=lambda a, b, c: print('local node not deleted because not exists.')

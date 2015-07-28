@@ -25,7 +25,7 @@ class User(Base):
 
     logged_in = Column(Boolean, default=False)
 
-    guid_for_top_level_nodes_to_sync = JSONEncodedDict(512)
+    guid_for_top_level_nodes_to_sync = Column(JSONEncodedDict(512), default=[])
 
     nodes = relationship(
         "Node",
@@ -74,6 +74,7 @@ class Node(Base):
     locally_created = Column(Boolean, default=False)
     locally_deleted = Column(Boolean, default=False)
 
+
     user_id = Column(Integer, ForeignKey('user.id'), nullable=False)
     parent_id = Column(Integer, ForeignKey('node.id'))
     child_nodes = relationship(
@@ -86,6 +87,10 @@ class Node(Base):
         backref=backref('node'),
         cascade="all, delete-orphan"
     )
+
+    @hybrid_property
+    def should_sync(self):
+        return self.top_level and (self.osf_id in self.user.guid_for_top_level_nodes_to_sync)
 
     @hybrid_property
     def top_level(self):
@@ -177,7 +182,7 @@ class File(Base):
 
     @hybrid_property
     def is_provider(self):
-        return self.name == self.provider
+        return (self.name == self.provider) and (self.parent is None) and (self.is_folder)
 
     @hybrid_property
     def is_file(self):

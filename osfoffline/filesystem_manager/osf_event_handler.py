@@ -26,7 +26,6 @@ class OSFEventHandler(FileSystemEventHandler):
     """
     Base file system event handler that you can override methods from.
     """
-
     def __init__(self, osf_folder, db_url, user, loop):
         super().__init__()
         self._loop = loop or asyncio.get_event_loop()
@@ -36,7 +35,6 @@ class OSFEventHandler(FileSystemEventHandler):
         self.user = user
 
         print('osf event handler created')
-
 
     def close(self):
         save(self.session)
@@ -155,6 +153,7 @@ class OSFEventHandler(FileSystemEventHandler):
                         # save
                         save(self.session, top_level_node)
                     else:
+                        #todo: can just delete the file right here and give an alert.
                         print("CREATED FILE IN PROJECT AREA.")
                         raise NotADirectoryError
 

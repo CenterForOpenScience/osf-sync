@@ -280,20 +280,19 @@ class OSFQuery(object):
     @asyncio.coroutine
     def delete_remote_file(self, remote_file):
         assert isinstance(remote_file, RemoteFile)
-        url = remote_file.delete_url
-
-        resp = yield from self.make_request(url, method="DELETE")
-        resp.close()
+        yield from self._delete_file_folder(remote_file)
 
     @asyncio.coroutine
     def delete_remote_folder(self, remote_folder):
         assert isinstance(remote_folder, RemoteFolder)
-        url = remote_folder.delete_url
+        yield from self._delete_file_folder(remote_folder)
 
-        resp = yield from self.make_request(url, method="DELETE")
+    @asyncio.coroutine
+    def _delete_file_folder(self, remote_file_folder):
+        assert isinstance(remote_file_folder, RemoteFile) or isinstance(remote_file_folder, RemoteFolder)
+        url = remote_file_folder.delete_url
+        resp = yield from self.make_request(url, method='DELETE')
         resp.close()
-
-
 
     @asyncio.coroutine
     def make_request(self, url, method='GET',params=None, expects=None, get_json=False, timeout=10, data=None):
@@ -308,7 +307,7 @@ class OSFQuery(object):
                 timeout
             )
         except aiohttp.errors.ClientTimeoutError:
-            # try again. if fail again, then raise error.
+            # internally, if a timeout occurs, aiohttp tries up to 3 times. thus we already technically have retries in.
             print('timeout. internet is bad.')
             raise
         except aiohttp.errors.BadHttpMessage:

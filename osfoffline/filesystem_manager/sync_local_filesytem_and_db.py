@@ -171,7 +171,6 @@ class LocalDBSync(object):
                 event = DirCreatedEvent(local_path.full_path)
             else:
                 event = FileCreatedEvent(local_path.full_path)
-
         return event
 
     def _emit_new_events(self, local, db):
