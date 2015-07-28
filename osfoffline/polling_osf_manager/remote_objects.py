@@ -82,7 +82,6 @@ class RemoteFileFolder(RemoteObject):
 
     @asyncio.coroutine
     def last_modified(self, node_id, osf_query):
-        import pdb;pdb.set_trace()
         remote_time_string = None
         if 'modified' in self._metadata and self._metadata['modified']:
             remote_time_string = self._metadata['modified']

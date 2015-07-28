@@ -78,6 +78,7 @@ class OSFEventHandler(FileSystemEventHandler):
                     save(self.session)
                 else:
                     item.name = dest_path.name
+                    item.locally_renamed = True
                     save(self.session, item)
             # move
             elif src_path != dest_path:
@@ -170,9 +171,9 @@ class OSFEventHandler(FileSystemEventHandler):
                                       provider=File.DEFAULT_PROVIDER, node=node)
                         containing_item.files.append(folder)
                         save(self.session, folder)
-                    else:  # component
+                    else:  # child node
 
-                        new_component = Node(
+                        new_child_node = Node(
                             title=name,
                             category=Node.COMPONENT,
                             locally_created=True,
@@ -181,8 +182,8 @@ class OSFEventHandler(FileSystemEventHandler):
 
                         parent_component = self._get_parent_item_from_path(src_path)
 
-                        parent_component.components.append(new_component)
-                        save(self.session, new_component)
+                        parent_component.child_nodes.append(new_child_node)
+                        save(self.session, new_child_node)
 
                 else:  # if file, then file.
 

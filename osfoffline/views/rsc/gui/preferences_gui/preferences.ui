@@ -159,7 +159,7 @@ p, li { white-space: pre-wrap; }
          <widget class="QPushButton" name="accountLogOutButton">
           <property name="geometry">
            <rect>
-            <x>460</x>
+            <x>440</x>
             <y>10</y>
             <width>99</width>
             <height>31</height>
@@ -197,78 +197,42 @@ p, li { white-space: pre-wrap; }
           <widget class="QPushButton" name="changeFolderButton_2">
            <property name="geometry">
             <rect>
-             <x>440</x>
-             <y>20</y>
+             <x>430</x>
+             <y>50</y>
              <width>99</width>
              <height>31</height>
             </rect>
            </property>
            <property name="text">
-            <string>Change</string>
+            <string>Update</string>
            </property>
           </widget>
-          <widget class="QScrollArea" name="scrollArea">
+          <widget class="QTreeWidget" name="treeWidget">
            <property name="geometry">
             <rect>
-             <x>0</x>
-             <y>29</y>
-             <width>281</width>
-             <height>111</height>
+             <x>10</x>
+             <y>20</y>
+             <width>311</width>
+             <height>131</height>
             </rect>
            </property>
-           <property name="widgetResizable">
-            <bool>true</bool>
+           <property name="toolTipDuration">
+            <number>-1</number>
            </property>
-           <widget class="QWidget" name="scrollAreaWidgetContents">
-            <property name="geometry">
-             <rect>
-              <x>0</x>
-              <y>0</y>
-              <width>279</width>
-              <height>109</height>
-             </rect>
+           <column>
+            <property name="text">
+             <string>Projects to Sync</string>
             </property>
-            <widget class="QCheckBox" name="checkBox">
-             <property name="geometry">
-              <rect>
-               <x>30</x>
-               <y>0</y>
-               <width>97</width>
-               <height>22</height>
-              </rect>
-             </property>
-             <property name="text">
-              <string>CheckBox</string>
-             </property>
-            </widget>
-            <widget class="QCheckBox" name="checkBox_2">
-             <property name="geometry">
-              <rect>
-               <x>30</x>
-               <y>20</y>
-               <width>97</width>
-               <height>22</height>
-              </rect>
-             </property>
-             <property name="text">
-              <string>CheckBox</string>
-             </property>
-            </widget>
-            <widget class="QCheckBox" name="checkBox_3">
-             <property name="geometry">
-              <rect>
-               <x>30</x>
-               <y>40</y>
-               <width>97</width>
-               <height>22</height>
-              </rect>
-             </property>
-             <property name="text">
-              <string>CheckBox</string>
-             </property>
-            </widget>
-           </widget>
+           </column>
+           <column>
+            <property name="text">
+             <string>Sync</string>
+            </property>
+           </column>
           </widget>
+          <zorder>changeFolderButton_2</zorder>
+          <zorder>treeWidget</zorder>
+          <zorder>accountLogOutButton_2</zorder>
          </widget>
         </widget>
        </widget>

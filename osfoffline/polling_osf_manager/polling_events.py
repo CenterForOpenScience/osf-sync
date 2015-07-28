@@ -43,23 +43,25 @@ class CreateFile(PollingEvent):
 class RenameFolder(PollingEvent):
     def __init__(self, old_path, new_path):
         super().__init__(old_path)
+        assert isinstance(old_path, str)
         assert isinstance(new_path, str)
 
-        self.old_path = self.path
+        self.old_path = ProperPath(old_path, is_dir=True)
         self.new_path = ProperPath(new_path, is_dir=True)
         assert self.old_path
         assert self.new_path
 
     @asyncio.coroutine
     def run(self):
-        _rename(self.old_path, self.new_path)
+        yield from _rename(self.old_path, self.new_path)
 
 class RenameFile(PollingEvent):
     def __init__(self, old_path, new_path):
         super().__init__(old_path)
+        assert isinstance(old_path, str)
         assert isinstance(new_path, str)
 
-        self.old_path = self.path
+        self.old_path = ProperPath(old_path, is_dir=False)
         self.new_path = ProperPath(new_path, is_dir=False)
         assert self.old_path
         assert self.new_path

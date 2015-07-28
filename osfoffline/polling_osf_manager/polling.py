@@ -277,7 +277,10 @@ class Poll(object):
         elif local_file_folder.locally_created and remote_file_folder is not None:
             raise ValueError('newly created local file_folder was already on server for some reason. why? fixit!')
         elif local_file_folder.locally_deleted and remote_file_folder is None:
-            raise ValueError('local file_folder was never on server for some reason. why? fixit!')
+            self.session.delete(local_file_folder)
+            save(self.session)
+            print('local file_folder is to be deleted, however, it was never on the server so all good.')
+            return
         elif local_file_folder.locally_deleted and remote_file_folder is not None:
             yield from self.delete_remote_file_folder(local_file_folder, remote_file_folder)
             return
@@ -440,7 +443,8 @@ class Poll(object):
         updated_remote_file_folder = None
         # this handles both files and folders being renamed
         if local_file_folder.name != remote_file_folder.name:
-            if (yield from self.local_is_newer(local_file_folder, remote_file_folder)):
+
+            if local_file_folder.locally_renamed:
                 updated_remote_file_folder = yield from self.rename_remote_file_folder(local_file_folder, remote_file_folder)
             else:
                 yield from self.rename_local_file_folder(local_file_folder,  remote_file_folder)
@@ -470,7 +474,7 @@ class Poll(object):
         old_path = local_file_folder.path
         # update model
         local_file_folder.name = remote_file_folder.name
-        local_file_folder.date_modified = remote_file_folder.last_modified
+
         save(self.session, local_file_folder)
 
         if local_file_folder.is_folder:

@@ -1,5 +1,6 @@
-from PyQt5.QtWidgets import (QAction, QDialog, QFileDialog, QCheckBox)
-from PyQt5.QtCore import QCoreApplication, QRect
+from PyQt5.QtWidgets import (QAction, QDialog, QFileDialog, QTreeWidgetItem)
+from PyQt5.QtCore import QCoreApplication, QRect, Qt
+
 from osfoffline.views.rsc.preferences_rc import Ui_Preferences  # REQUIRED FOR GUI
 from osfoffline.database_manager.db import DB
 from osfoffline.database_manager.utils import save
@@ -29,6 +30,7 @@ class Preferences(QDialog):
         self.preferences_window.setupUi(self)
         self.preferences_closed_action = QAction("preferences window closed", self)
         self.preferences_window.changeFolderButton_2.clicked.connect(self.update_sync_nodes)
+        self.check_boxes = []
 
     def setup_actions(self):
         self.set_containing_folder_action = QAction("Set where Project will be stored", self,
@@ -65,10 +67,6 @@ class Preferences(QDialog):
             self.selector(tab)
             self.show()
 
-    # def closeEvent(self):
-    #     super().closeEvent()
-    #     self.preferences_closed_action.trigger()
-
     def selector(self, selected_index):
         if selected_index == self.GENERAL:
             pass
@@ -77,19 +75,26 @@ class Preferences(QDialog):
 
     def create_checkbox_for_each_top_level_node(self):
         self.remote_top_level_nodes = self.get_remote_top_level_nodes()
+        self.check_boxes.clear()
         _translate = QCoreApplication.translate
+        # y_from_top = 0
+        # height = 22
         for node in self.remote_top_level_nodes:
-            new_checkbox = QCheckBox(self.preferences_window.scrollAreaWidgetContents)
-            new_checkbox.setGeometry(QRect(30, 0, 97, 22))
-            new_checkbox.setObjectName(node.name)
-            new_checkbox.setText(_translate("Preferences", node.name))
+            check_box = QTreeWidgetItem(self.preferences_window.treeWidget)
+            check_box.setCheckState(1, Qt.Unchecked)
+            check_box.setText(0, _translate("Preferences", node.name))
+            # new_checkbox = QCheckBox(self.preferences_window.scrollAreaWidgetContents)
+            # new_checkbox.setGeometry(QRect(30, y_from_top, 97, height))
+            # y_from_top += height+5
+            # new_checkbox.setObjectName(node.name)
+            # new_checkbox.setText(_translate("Preferences", node.name))
             session = DB.get_session()
             user = session.query(User).filter(User.logged_in).one()
             if node.id in user.guid_for_top_level_nodes_to_sync:
-                new_checkbox.checkState
-
+                check_box.setCheckState(1, Qt.Checked)
+            self.preferences_window.treeWidget.resizeColumnToContents(0)
             session.close()
-            self.preferences_window.checkBoxes.append(new_checkbox)
+            self.check_boxes.append(check_box)
 
     def get_remote_top_level_nodes(self):
         remote_top_level_nodes = []
@@ -118,10 +123,10 @@ class Preferences(QDialog):
         user = session.query(User).filter(User.logged_in).one()
         guid_list = []
 
-        for checkbox in self.preferences_window.checkBoxes:
+        for checkbox in self.check_boxes:
             for name, id in [(node.name, node.id) for node in self.remote_top_level_nodes]:
-                if name == checkbox.text():
-                    if checkbox.isChecked():
+                if name == checkbox.text(0):
+                    if checkbox.checkState(1) == Qt.Checked:
                         print('going to add something to list: {}'.format(id))
                         guid_list.append(id)
         print(guid_list)
@@ -129,8 +134,3 @@ class Preferences(QDialog):
         save(session, user)
         session.close()
 
-    # @asyncio.coroutine
-    # def query_top_level_nodes(self, loop, oauth_token, url, future):
-    #     temp_osf_query = OSFQuery(loop, oauth_token)
-    #     top_level_nodes = yield from temp_osf_query.get_top_level_nodes(url)
-    #     future.set_result(top_level_nodes)

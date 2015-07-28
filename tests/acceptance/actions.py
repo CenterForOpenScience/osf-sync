@@ -121,24 +121,30 @@ def test():
     assert os.path.isdir(os.path.join(osf_path, 'new_test_project','osfstorage','folder2','folder2.1'))
 
     #create folder2.1.1
-    subfolder = create_osf_folder('folder2.1.1', nid1, folder2_1['path'])
+    folder2_1_1 = create_osf_folder('folder2.1.1', nid1, folder2_1['path'])
     time.sleep(10)
     assert os.path.isdir(os.path.join(osf_path, 'new_test_project','osfstorage','folder2','folder2.1','folder2.1.1'))
 
-    #todo: this fails currently because renaming is not 'modified' on osf for files/folders. thus, must use .locally_renamed flag.
+
     #rename file2 to file2RENAMED
-    # rename_osf_file_folder('file2RENAMED', file2['path'], '/', nid1)
-    # time.sleep(20)
-    # assert os.path.isfile(os.path.join(osf_path, 'new_test_project','osfstorage','file2RENAMED'))
+    rename_osf_file_folder('file2RENAMED', file2['path'], '/', nid1)
+    time.sleep(20)
+    assert os.path.isfile(os.path.join(osf_path, 'new_test_project','osfstorage','file2RENAMED'))
 
-    # renaming folder ALSO fails. this is because we do not have proper response for
+    #rename folder2.1.1 to folder2.1.1RENAMED
+    rename_osf_file_folder('folder2.1.1RENAMED',folder2_1_1['path'], folder2_1['path'], nid1)
+    time.sleep(20)
+    assert os.path.isdir(os.path.join(osf_path, 'new_test_project','osfstorage','folder2','folder2.1','folder2.1.1RENAMED'))
 
 
-    #clear osfstorage for nid1
+
+
+    # clear osfstorage for nid1
+
     #delete file2
     delete_osf_file_folder(file2, nid1)
     time.sleep(30)
-    path = os.path.join(osf_path, 'new_test_project','osfstorage','file2')
+    path = os.path.join(osf_path, 'new_test_project','osfstorage','file2RENAMED')
     assert os.path.exists(path) is False
 
 

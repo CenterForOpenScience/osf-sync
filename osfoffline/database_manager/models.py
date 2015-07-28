@@ -160,6 +160,7 @@ class File(Base):
 
     locally_created = Column(Boolean, default=False)
     locally_deleted = Column(Boolean, default=False)
+    locally_renamed = Column(Boolean, default=False)
 
     user_id = Column(Integer, ForeignKey('user.id'), nullable=False)
     node_id = Column(Integer, ForeignKey('node.id'), nullable=False)
