@@ -8,7 +8,7 @@ from watchdog.events import FileSystemEventHandler, DirModifiedEvent
 
 from osfoffline.database_manager.models import Node, File
 from osfoffline.database_manager.db import DB
-from osfoffline.database_manager.utils import save
+from osfoffline.database_manager.utils import save, session_scope
 from osfoffline.utils.path import ProperPath
 from osfoffline.exceptions.event_handler_exceptions import MovedNodeUnderFile
 
@@ -31,14 +31,15 @@ class OSFEventHandler(FileSystemEventHandler):
         self._loop = loop or asyncio.get_event_loop()
         self.osf_folder = osf_folder
 
-        self.session = DB.get_session()
-        self.user = user
+
+
 
         print('osf event handler created')
 
     def close(self):
-        save(self.session)
-        self.session.close()
+        pass
+        # save(self.session)
+        # self.session.close()
 
     @asyncio.coroutine
     def on_any_event(self, event):

@@ -90,7 +90,7 @@ class Ui_Preferences(object):
         self.groupBox.setTitle(_translate("Preferences", "System"))
         self.desktopNotifications.setText(_translate("Preferences", "Show Desktop Notifications"))
         self.startOnStartup.setText(_translate("Preferences", "Start OSF Offline on Computer Startup"))
-        self.groupBox_6.setTitle(_translate("Preferences", "Choose Folder to Place Project in "))
+        self.groupBox_6.setTitle(_translate("Preferences", "Choose folder to Place OSF folder in "))
         self.changeFolderButton.setText(_translate("Preferences", "Change"))
         self.containingFolderTextEdit.setHtml(_translate("Preferences", "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"
 "<html><head><meta name=\"qrichtext\" content=\"1\" /><style type=\"text/css\">\n"
@@ -105,7 +105,7 @@ class Ui_Preferences(object):
         self.groupBox_4.setTitle(_translate("Preferences", "Project"))
         self.groupBox_5.setTitle(_translate("Preferences", "Choose Projects to Sync With"))
         self.changeFolderButton_2.setText(_translate("Preferences", "Update"))
-        self.treeWidget.headerItem().setText(0, _translate("Preferences", "Projects to Sync"))
+        self.treeWidget.headerItem().setText(0, _translate("Preferences", "Projects"))
         self.treeWidget.headerItem().setText(1, _translate("Preferences", "Sync"))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_2), _translate("Preferences", "OSF"))
         self.textEdit_2.setHtml(_translate("Preferences", "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"

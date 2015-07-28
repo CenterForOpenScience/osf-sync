@@ -80,7 +80,7 @@
           </rect>
          </property>
          <property name="title">
-          <string>Choose Folder to Place Project in </string>
+          <string>Choose folder to Place OSF folder in </string>
          </property>
          <widget class="QPushButton" name="changeFolderButton">
           <property name="geometry">
@@ -221,7 +221,7 @@ p, li { white-space: pre-wrap; }
            </property>
            <column>
             <property name="text">
-             <string>Projects to Sync</string>
+             <string>Projects</string>
             </property>
            </column>
            <column>

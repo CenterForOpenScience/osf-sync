@@ -1,6 +1,7 @@
 from sqlalchemy.orm.exc import MultipleResultsFound, NoResultFound
 from osfoffline.database_manager.models import User
-
+from contextlib import contextmanager
+from osfoffline.database_manager.db import DB
 def save(session, item=None):
     if item:
         session.add(item)
@@ -9,6 +10,25 @@ def save(session, item=None):
     except:
         session.rollback()
         raise
+
+
+@contextmanager
+def session_scope():
+    """Provide a transactional scope around a series of operations."""
+    session = DB.get_session()
+    try:
+        yield session
+        session.commit()
+    except:
+        session.rollback()
+        raise
+    finally:
+        session.close()
+
+# def close_session_safe(session):
+#     try:
+#         session.close()
+#     except:
 
 
 # def get_current_user(self, session):

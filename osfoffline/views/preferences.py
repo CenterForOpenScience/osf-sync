@@ -31,6 +31,7 @@ class Preferences(QDialog):
         self.preferences_closed_action = QAction("preferences window closed", self)
         self.preferences_window.changeFolderButton_2.clicked.connect(self.update_sync_nodes)
         self.check_boxes = []
+        self.setup_slots()
 
     def setup_actions(self):
         self.set_containing_folder_action = QAction("Set where Project will be stored", self,
@@ -52,8 +53,8 @@ class Preferences(QDialog):
 
 
     def setup_slots(self):
-        self.preferences_window.containingFolderTextEdit.setText(self._translate("Preferences", self.containing_folder))
-        self.preferences_window.changeFolderButton.clicked.connect(self.set_containing_folder)
+        # self.preferences_window.containingFolderTextEdit.setText(self._translate("Preferences", self.containing_folder))
+        # self.preferences_window.changeFolderButton.clicked.connect(self.set_containing_folder)
         self.preferences_window.tabWidget.currentChanged.connect(self.selector)
 
     def open_window(self, tab=GENERAL):
@@ -73,9 +74,13 @@ class Preferences(QDialog):
         elif selected_index == self.OSF:
             self.create_checkbox_for_each_top_level_node()
 
+    def reset_tree_widget(self):
+        self.check_boxes.clear()
+        self.preferences_window.treeWidget.clear()
+
     def create_checkbox_for_each_top_level_node(self):
         self.remote_top_level_nodes = self.get_remote_top_level_nodes()
-        self.check_boxes.clear()
+        self.reset_tree_widget()
         _translate = QCoreApplication.translate
         # y_from_top = 0
         # height = 22

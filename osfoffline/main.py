@@ -77,7 +77,7 @@ class OSFApp(QDialog):
     def open_preferences(self):
         # todo: preferences button should open general page
         # todo: make sure open_window(Prefernces.OSF) is called whenever you go to osf page.
-        self.preferences.open_window(Preferences.OSF)
+        self.preferences.open_window(Preferences.GENERAL)
 
     def start_about_screen(self):
         self.preferences.open_window(Preferences.ABOUT)

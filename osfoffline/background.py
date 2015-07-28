@@ -40,10 +40,10 @@ class BackgroundWorker(threading.Thread):
     def pause_background_tasks(self):
         print('background pause background tasks called')
         if self.running:
-            print('stop obsering osf folder')
-            self.stop_observing_osf_folder()
             print('stop polling server')
             self.stop_polling_server()
+            print('stop obsering osf folder')
+            self.stop_observing_osf_folder()
             print('stop loop')
             self.stop_loop()
 
@@ -118,6 +118,7 @@ class BackgroundWorker(threading.Thread):
             print('too many things being watched.... hmmmm, what to dooooo????')
 
     def stop_observing_osf_folder(self):
+        self.event_handler.close()
         self.observer.stop()
         self.observer.join()
 

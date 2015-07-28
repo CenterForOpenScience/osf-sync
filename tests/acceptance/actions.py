@@ -43,7 +43,7 @@ def create_osf_file(file_name, nid, parent_path=None):
     assert resp.ok
     return resp.json()
 
-def rename_osf_file_folder(rename_to, path, parent_path, nid):
+def rename_osf_file_folder(rename_to, path, nid, parent_path):
     url = wb_move_url()
     data = {
         'rename': rename_to,
@@ -64,8 +64,23 @@ def rename_osf_file_folder(rename_to, path, parent_path, nid):
     assert resp.ok
     return resp.json()
 
-def update_osf_file():
-    pass
+def update_osf_file(file,new_content_file_name, nid,parent=None):
+    if parent:
+        path = parent['path'] + file['name']
+    else:
+        path = '/{}'.format(file['name'])
+    params = {
+        'path': path,
+        'provider': 'osfstorage',
+        'nid': nid
+    }
+    files_url = wb_file_url()
+    path_to_file_with_new_content = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'files', new_content_file_name)
+    content = open(path_to_file_with_new_content, 'rb')
+    resp = requests.put(files_url, headers=headers, params=params, data=content)
+    assert resp.ok
+    return resp.json()
+
 def move_osf_folder():
     pass
 def move_osf_file():
@@ -127,22 +142,30 @@ def test():
 
 
     #rename file2 to file2RENAMED
-    rename_osf_file_folder('file2RENAMED', file2['path'], '/', nid1)
+    file2RENAMED = rename_osf_file_folder('file2RENAMED', file2['path'], nid1, '/' )
     time.sleep(20)
     assert os.path.isfile(os.path.join(osf_path, 'new_test_project','osfstorage','file2RENAMED'))
 
     #rename folder2.1.1 to folder2.1.1RENAMED
-    rename_osf_file_folder('folder2.1.1RENAMED',folder2_1_1['path'], folder2_1['path'], nid1)
+    folder_2_1_1RENAMED = rename_osf_file_folder('folder2.1.1RENAMED',folder2_1_1['path'], nid1, folder2_1['path'])
     time.sleep(20)
     assert os.path.isdir(os.path.join(osf_path, 'new_test_project','osfstorage','folder2','folder2.1','folder2.1.1RENAMED'))
 
 
-
+    # update file2RENAMED contents
+    new_content_file_name = 'NEWCONTENTS'
+    update_osf_file(file2RENAMED, new_content_file_name, nid1)
+    path_to_file2RENAMED = os.path.join(osf_path, 'new_test_project','osfstorage','file2RENAMED')
+    time.sleep(30)
+    path_to_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'files',new_content_file_name)
+    new_contents = open(path_to_file,'r+').read()
+    file2RENAMED_contents = open(path_to_file2RENAMED, 'r+').read()
+    assert new_contents == file2RENAMED_contents
 
     # clear osfstorage for nid1
 
     #delete file2
-    delete_osf_file_folder(file2, nid1)
+    delete_osf_file_folder(file2RENAMED, nid1)
     time.sleep(30)
     path = os.path.join(osf_path, 'new_test_project','osfstorage','file2RENAMED')
     assert os.path.exists(path) is False

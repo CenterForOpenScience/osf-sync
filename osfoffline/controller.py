@@ -75,7 +75,7 @@ class OSFController(QDialog):
 
     # state functions
     def start(self):
-        # self.createConfigs()
+        # todo: can use session_scope here
         session = DB.get_session()
         self.user = self.get_current_user(session)
 
@@ -115,7 +115,7 @@ class OSFController(QDialog):
             print('HERE IS THE ISSUE?????????????????????more????')
             self.background_worker.stop()
             print('HERE IS THE ISSUE??????????????more more more???????')
-            db.Session.remove()
+            DB.Session.remove()
         except:
             print('quit broke. stopping anyway')
             # quit() stops gui and then quits application
@@ -301,10 +301,10 @@ class OSFController(QDialog):
         return data_dir
 
     # todo: finish this!!!!!!!!!!
-    def can_skip_startup_screen(self):
-        session = DB.get_session()
-        try:
-            session.query(models.User).filter(models.User.logged_in).one()
-            return True
-        except (NoResultFound, MultipleResultsFound):
-            return False
+    # def can_skip_startup_screen(self):
+    #     session = DB.get_session()
+    #     try:
+    #         session.query(models.User).filter(models.User.logged_in).one()
+    #         return True
+    #     except (NoResultFound, MultipleResultsFound):
+    #         return False

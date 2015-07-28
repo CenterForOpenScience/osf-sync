@@ -64,7 +64,7 @@ class DB(object):
         """
 
         # for this application, should only lead to 2 connections in total
-        engine = create_engine(cls.URL, echo=False)
+        engine = create_engine(cls.URL, echo=True,echo_pool=True)
         session_factory = sessionmaker(bind=engine)
 
 

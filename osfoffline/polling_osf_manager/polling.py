@@ -38,6 +38,7 @@ class Poll(object):
         print('INSIDE polling.stop')
         self._keep_running = False
         try:
+
             self.session.close()
             print('just successfully closed the session')
         # except ProgrammingError:
@@ -212,8 +213,8 @@ class Poll(object):
         (local.create, remote) -> ERROR             --
         (local.delete, None) -> ERROR               --
         (local.delete, remote) - > delete remote    --
-        (local, None) -> delete local
-        (local, remote) -> check modifications
+        (local, None) -> delete local               --
+        (local, remote) -> check modifications      --
 
         """
         print('checking node')
