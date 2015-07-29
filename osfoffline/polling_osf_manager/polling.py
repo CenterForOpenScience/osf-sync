@@ -25,7 +25,12 @@ class Poll(object):
         super().__init__()
         assert isinstance(user, User)
         self._keep_running = True
+        import threading;
+        print('INSIDE POLLING. NEW')
+        print(repr(threading.local()))
+
         self.session = DB.get_session()
+        print(id(self.session))
         self.user = user
 
         self._loop = loop

@@ -76,7 +76,11 @@ class OSFController(QDialog):
     # state functions
     def start(self):
         # todo: can use session_scope here
+        import threading;
+        print('INSIDE START')
+        print(repr(threading.local()))
         session = DB.get_session()
+        print(id(session))
         self.user = self.get_current_user(session)
 
         if self.user:
@@ -118,7 +122,8 @@ class OSFController(QDialog):
             self.background_worker.stop()
             print('HERE IS THE ISSUE??????????????more more more???????')
 
-            DB.Session.remove()
+            self.background_worker.join()
+            # DB.Session.remove()
             QApplication.instance().quit()
         except:
             print('quit broke. stopping anyway')
@@ -142,6 +147,9 @@ class OSFController(QDialog):
         print('---inside getcurrentuser-----{}----'.format(threading.current_thread()))
         err = False
         try:
+            import threading;
+            print('INSIDE CONTROLLER. NEW')
+            print(repr(threading.local()))
             user = session.query(models.User).filter(models.User.logged_in).one()
         except MultipleResultsFound:
             # log out all users and restart login screen to get a single user to log in
