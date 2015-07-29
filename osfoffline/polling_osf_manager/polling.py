@@ -8,7 +8,6 @@ import pytz
 import aiohttp
 
 from osfoffline.database_manager.models import User, Node, File, Base
-from osfoffline.alerts import AlertHandler
 from osfoffline.database_manager.db import DB
 from osfoffline.database_manager.utils import save
 from osfoffline.polling_osf_manager.api_url_builder import api_user_url, wb_file_revisions, wb_file_url, api_user_nodes,wb_move_url
@@ -335,8 +334,6 @@ class Poll(object):
         )
         save(self.session, new_node)
 
-        # alert
-        AlertHandler.info(new_node.title, AlertHandler.DOWNLOAD)
 
         self.polling_event_queue.put(CreateFolder(new_node.path))
 
@@ -369,8 +366,6 @@ class Poll(object):
         )
         save(self.session, new_file_folder)
 
-        # alert
-        AlertHandler.info(new_file_folder.name, AlertHandler.DOWNLOAD)
 
         if type == File.FILE:
             event = CreateFile(
@@ -395,8 +390,6 @@ class Poll(object):
         assert isinstance(local_node, Node)
         assert local_file_folder.locally_created
 
-        # alert
-        AlertHandler.info(local_file_folder.name, AlertHandler.DOWNLOAD)
 
         if local_file_folder.is_folder:
             remote_file_folder = yield from self.osf_query.upload_folder(local_file_folder)
@@ -430,8 +423,6 @@ class Poll(object):
 
         save(self.session, local_node)
 
-        # alert
-        AlertHandler.info(local_node.title, AlertHandler.MODIFYING)
 
 
         self.polling_event_queue.put(RenameFolder(old_path, local_node.path))
@@ -469,8 +460,6 @@ class Poll(object):
         assert remote_file_folder.id == local_file_folder.osf_path
 
 
-        # alerts
-        AlertHandler.info(local_file_folder.name, AlertHandler.MODIFYING)
 
         #handle renaming local file and local folder
         old_path = local_file_folder.path
@@ -509,7 +498,6 @@ class Poll(object):
         assert isinstance(remote_file, RemoteFile)
         assert remote_file.id == local_file.osf_path
 
-        AlertHandler.info(local_file.name, AlertHandler.MODIFYING)
 
         try:
             new_remote_file = yield from self.osf_query.upload_file(local_file)
@@ -529,8 +517,6 @@ class Poll(object):
         assert remote_file_folder.id == local_file_folder.osf_path
         assert local_file_folder.name != remote_file_folder.name
 
-        # alerts
-        AlertHandler.info(local_file_folder.name, AlertHandler.MODIFYING)
 
         if local_file_folder.is_file:
             new_remote_file_folder = yield from self.osf_query.rename_remote_file(local_file_folder, remote_file_folder)
@@ -549,8 +535,6 @@ class Poll(object):
 
         path = local_node.path
 
-        # alerts
-        AlertHandler.info(local_node.title, AlertHandler.DELETING)
 
         # delete model
         self.session.delete(local_node)
@@ -569,8 +553,6 @@ class Poll(object):
         self.session.delete(local_file_folder)
         save(self.session)
 
-        # alerts
-        AlertHandler.info(local_file_folder.name, AlertHandler.DELETING)
 
         # delete from local
         if file_folder_type == File.FOLDER:
@@ -586,8 +568,6 @@ class Poll(object):
         assert local_file_folder.osf_id == self.get_id(remote_file_folder)
         assert local_file_folder.locally_deleted
 
-        # alerts
-        AlertHandler.info(local_file_folder.name, AlertHandler.DELETING)
 
         if local_file_folder.is_file:
             yield from self.osf_query.delete_remote_file(remote_file_folder)

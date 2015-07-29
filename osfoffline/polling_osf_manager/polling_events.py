@@ -3,7 +3,7 @@ from osfoffline.polling_osf_manager.osf_query import OSFQuery
 import os
 import shutil
 import asyncio
-
+from osfoffline.alerts import AlertHandler
 class PollingEvent(object):
     def __init__(self, path):
         assert isinstance(path, str)
@@ -22,6 +22,7 @@ class CreateFolder(PollingEvent):
     def run(self):
         # create local node folder on filesystem
         if not os.path.exists(self.path.full_path):
+            AlertHandler.info(self.path.name, AlertHandler.DOWNLOAD)
             os.makedirs(self.path.full_path)
 
 
@@ -37,6 +38,7 @@ class CreateFile(PollingEvent):
 
     @asyncio.coroutine
     def run(self):
+        AlertHandler.info(self.path.name, AlertHandler.DOWNLOAD)
         yield from _download_file(self.path, self.download_url, self.osf_query)
 
 
@@ -53,6 +55,7 @@ class RenameFolder(PollingEvent):
 
     @asyncio.coroutine
     def run(self):
+        AlertHandler.info(self.new_path.name, AlertHandler.MODIFYING)
         yield from _rename(self.old_path, self.new_path)
 
 class RenameFile(PollingEvent):
@@ -68,6 +71,7 @@ class RenameFile(PollingEvent):
 
     @asyncio.coroutine
     def run(self):
+        AlertHandler.info(self.new_path.name, AlertHandler.MODIFYING)
         yield from _rename(self.old_path, self.new_path)
 
 class UpdateFile(PollingEvent):
@@ -81,6 +85,7 @@ class UpdateFile(PollingEvent):
 
     @asyncio.coroutine
     def run(self):
+        AlertHandler.info(self.path.name, AlertHandler.MODIFYING)
         yield from _download_file(self.path, self.download_url, self.osf_query)
 
 
@@ -95,6 +100,7 @@ class DeleteFolder(PollingEvent):
         # thus, linux, mac are supported.
         # todo: is windows supported??
         if shutil.rmtree.avoids_symlink_attacks:
+            AlertHandler.info(self.path.name, AlertHandler.DELETING)
             shutil.rmtree(
                 self.path.full_path,
                 onerror=lambda a, b, c: print('local node not deleted because not exists.')
@@ -119,7 +125,6 @@ class DeleteFile(PollingEvent):
 def _download_file(path, url, osf_query):
     assert isinstance(path, ProperPath)
     assert isinstance(url, str)
-
     resp = yield from osf_query.make_request(url)
     with open(path.full_path, 'wb') as fd:
         while True:
@@ -134,6 +139,7 @@ def _rename(old_path, new_path):
     assert isinstance(old_path, ProperPath)
     assert isinstance(new_path, ProperPath)
     try:
+        AlertHandler.info(new_path.name, AlertHandler.MODIFYING)
         os.renames(old_path.full_path, new_path.full_path)
     except FileNotFoundError:
         print('renaming of file/folder failed because file/folder not there')

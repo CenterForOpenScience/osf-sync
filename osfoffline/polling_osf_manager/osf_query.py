@@ -6,7 +6,7 @@ from osfoffline.polling_osf_manager.remote_objects \
     import (dict_to_remote_object, RemoteUser, RemoteFolder, RemoteFile, RemoteNode, RemoteObject )
 from osfoffline.database_manager.models import File,Node,User
 from osfoffline.polling_osf_manager.api_url_builder import wb_file_url,api_file_children, wb_move_url
-
+from osfoffline.alerts import AlertHandler
 OK = 200
 CREATED = 201
 ACCEPTED = 202
@@ -86,7 +86,7 @@ class OSFQuery(object):
         }
         files_url = wb_file_url()
         resp_json = yield from self.make_request(files_url, method="POST", params=params, get_json=True)
-
+        AlertHandler.info(local_folder.name, AlertHandler.UPLOAD)
         # todo: experimental
         """
         fields that I MUST have are:
@@ -138,7 +138,7 @@ class OSFQuery(object):
         files_url = wb_file_url()
         file = open(local_file.path, 'rb')
         resp_json = yield from self.make_request(files_url, method="PUT", params=params, data=file, get_json=True)
-
+        AlertHandler.info(local_file.name, AlertHandler.UPLOAD)
         # todo: experimental
         """
         fields that I MUST have are:
@@ -188,7 +188,7 @@ class OSFQuery(object):
         assert isinstance(local_folder, File)
         assert local_folder.is_folder
         assert isinstance(local_folder, RemoteFolder)
-
+        AlertHandler.info(local_folder.name, AlertHandler.MODIFYING)
         return (yield from self._rename_remote(local_folder, remote_folder))
 
 
@@ -281,11 +281,13 @@ class OSFQuery(object):
     def delete_remote_file(self, remote_file):
         assert isinstance(remote_file, RemoteFile)
         yield from self._delete_file_folder(remote_file)
+        AlertHandler.info(remote_file.name, AlertHandler.DELETING)
 
     @asyncio.coroutine
     def delete_remote_folder(self, remote_folder):
         assert isinstance(remote_folder, RemoteFolder)
         yield from self._delete_file_folder(remote_folder)
+        AlertHandler.info(remote_folder.name, AlertHandler.DELETING)
 
     @asyncio.coroutine
     def _delete_file_folder(self, remote_file_folder):

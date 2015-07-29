@@ -88,6 +88,7 @@ class OSFEventHandler(FileSystemEventHandler):
             elif src_path != dest_path:
                 try:
 
+                    new_parent = self._get_parent_item_from_path(dest_path)
 
                     #create a dummy item in old place with .locally deleted so polling does not create new item
                     if isinstance(item, Node):
@@ -97,9 +98,6 @@ class OSFEventHandler(FileSystemEventHandler):
                     dummy.locally_deleted = True
 
                     # move item
-                    # fixme: move get_parent_item to above all this because in the time in between dummy is created and item is moved, you have duplicate in db.
-                    # fixme: duplicate created because get_parent_item_from_path queries thus flushes to db.
-                    new_parent = self._get_parent_item_from_path(dest_path)
                     if isinstance(item, Node):
                         if isinstance(new_parent, Node):
                             item.parent = new_parent
