@@ -6,7 +6,7 @@ import asyncio
 
 from watchdog.events import FileSystemEventHandler, DirModifiedEvent
 
-from osfoffline.database_manager.models import Node, File
+from osfoffline.database_manager.models import Node, File,User
 from osfoffline.database_manager.db import DB
 from osfoffline.database_manager.utils import save, session_scope
 from osfoffline.utils.path import ProperPath
@@ -31,15 +31,18 @@ class OSFEventHandler(FileSystemEventHandler):
         self._loop = loop or asyncio.get_event_loop()
         self.osf_folder = osf_folder
 
-
+        self.session = DB.get_session()
+        self.user = self.session.query(User).filter(User.logged_in).one()
 
 
         print('osf event handler created')
 
     def close(self):
-        pass
+        print('about to save and close the session inside osfeventhandler')
         # save(self.session)
+        print('just save session')
         # self.session.close()
+        print('just closed session. did it work?')
 
     @asyncio.coroutine
     def on_any_event(self, event):

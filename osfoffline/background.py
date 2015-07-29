@@ -58,8 +58,9 @@ class BackgroundWorker(threading.Thread):
         self.poller.stop()
 
 
+
     # todo: can refactor this code out to somewhere
-    # todo: when log in is working, you need to make this work with log in screen.
+
     def get_current_user(self):
         user = None
         import threading
@@ -86,7 +87,7 @@ class BackgroundWorker(threading.Thread):
 
     def stop(self):
         print('background stop called')
-        self.session.close()
+        # self.session.close()
         print('1 error')
         self.stop_polling_server()
         print('2 error')
@@ -118,6 +119,7 @@ class BackgroundWorker(threading.Thread):
             print('too many things being watched.... hmmmm, what to dooooo????')
 
     def stop_observing_osf_folder(self):
+        print('inside stop_obsering_osf_folder in background.py')
         self.event_handler.close()
         self.observer.stop()
         self.observer.join()

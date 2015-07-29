@@ -37,14 +37,15 @@ class Poll(object):
     def stop(self):
         print('INSIDE polling.stop')
         self._keep_running = False
-        try:
-
-            self.session.close()
-            print('just successfully closed the session')
-        # except ProgrammingError:
-        except:
-            print('session NOT closed properly.')
-        print('just tried to close the session')
+        self.session.close()
+        # try:
+        #
+        #     self.session.close()
+        #     print('just successfully closed the session')
+        # # except ProgrammingError:
+        # except:
+        #     print('session NOT closed properly.')
+        # print('just tried to close the session')
 
     def start(self):
         # annoying and weird way to get the remote user from the coroutine

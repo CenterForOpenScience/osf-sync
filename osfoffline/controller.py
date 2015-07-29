@@ -89,10 +89,12 @@ class OSFController(QDialog):
 
             if not os.path.isdir(self.user.osf_local_folder_path):
                 os.makedirs(self.user.osf_local_folder_path)
+
+            session.close()
+
             self.start_logging()
 
             self.start_tray_action.trigger()
-            session.close()
             self.background_worker.start()
 
 
@@ -115,7 +117,9 @@ class OSFController(QDialog):
             print('HERE IS THE ISSUE?????????????????????more????')
             self.background_worker.stop()
             print('HERE IS THE ISSUE??????????????more more more???????')
+
             DB.Session.remove()
+            QApplication.instance().quit()
         except:
             print('quit broke. stopping anyway')
             # quit() stops gui and then quits application
@@ -123,8 +127,11 @@ class OSFController(QDialog):
 
 
     def set_containing_folder_process(self):
+        print('pausing')
         self.pause()
+        print('set containing_folder')
         self.set_containing_folder()
+        print('unpausing')
         self.unpause()
 
 

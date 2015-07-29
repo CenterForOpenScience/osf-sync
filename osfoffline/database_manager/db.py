@@ -47,8 +47,8 @@ class DB(object):
             os.makedirs(cls.DB_DIR)
         engine = create_engine(
             cls.URL,
-            poolclass=SingletonThreadPool,
-            connect_args={'check_same_thread': False},
+            # poolclass=SingletonThreadPool,
+            # connect_args={'check_same_thread': False},
         )
         Base.metadata.create_all(engine)
 
@@ -64,7 +64,7 @@ class DB(object):
         """
 
         # for this application, should only lead to 2 connections in total
-        engine = create_engine(cls.URL, echo=True,echo_pool=True)
+        engine = create_engine(cls.URL, echo=False, echo_pool=True)
         session_factory = sessionmaker(bind=engine)
 
 
