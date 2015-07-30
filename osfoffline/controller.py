@@ -72,7 +72,7 @@ class OSFController(QDialog):
         self.create_configs()
 
         self.semaphore = threading.Semaphore()
-        self.background_worker = BackgroundWorker(self.semaphore)
+
 
     # state functions
     def start(self):
@@ -100,18 +100,27 @@ class OSFController(QDialog):
             self.start_logging()
 
             self.start_tray_action.trigger()
+            self.background_worker = BackgroundWorker(self.semaphore)
             self.background_worker.start()
 
 
     def unpause(self):
         print('controller unpause called')
         import threading; print(threading.current_thread())
-        self.background_worker.run_background_tasks()
+        if self.background_worker is not None and self.background_worker.is_alive():
+            self.background_worker.stop()
+            self.background_worker.join()
+        self.background_worker = BackgroundWorker(self.semaphore)
+        self.background_worker.start()
 
 
     def pause(self):
+
         print('pause called again')
-        self.background_worker.pause_background_tasks()
+        if self.background_worker is not None and self.background_worker.is_alive():
+            self.background_worker.stop()
+            self.background_worker.join()
+
         # self.semaphore.acquire()
 
 
