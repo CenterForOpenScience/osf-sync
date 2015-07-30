@@ -31,4 +31,8 @@ def api_file_self(path, nid, provider):
     return wb_file_url(path=path, nid=nid, provider=provider)
 
 
+def api_create_node():
+    base = furl(API_BASE)
+    base.path.segments = ['v2','nodes']
+    return base.url
 

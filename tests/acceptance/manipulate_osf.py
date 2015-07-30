@@ -2,7 +2,7 @@
 # usage: nosetests /path/to/manipulate_osf.py -x
 
 
-from osfoffline.polling_osf_manager.api_url_builder import wb_file_url, wb_move_url
+from tests.utils.url_builder import wb_file_url, wb_move_url, api_create_node
 import os
 import json
 import requests
@@ -120,7 +120,13 @@ def delete_osf_file_folder(file_folder, nid):
     resp.close()
 
 
-# def create_osf_node():
+def create_osf_node(title, parent=None):
+    if parent:
+        raise NotImplementedError
+    url = api_create_node()
+    resp = session.post(url, data={'title':title})
+    assert resp.ok
+    return resp.json()
 
 
 
@@ -488,8 +494,23 @@ def test_move_file_to_toplevel():
     assertFalse(os.path.exists, build_path('file1'))
 
 
-# def test_create_node():
-#     node = create_osf_node()
+def test_create_node():
+    node = create_osf_node('new_node')
+    path = os.path.join(osf_path, 'new_node')
+    assertTrue(os.path.isdir, path)
+
+    path = os.path.join(osf_path, 'new_node','osfstorage')
+    assertTrue(os.path.isdir, path)
+
+
+def test_create_node_same_name():
+    node = create_osf_node('same_name')
+    path = os.path.join(osf_path, 'same_name')
+    assertTrue(os.path.isdir, path)
+
+    node = create_osf_node('same_name')
+    path = os.path.join(osf_path, 'same_name')
+    assertTrue(os.path.isdir, path)
 
 
 
