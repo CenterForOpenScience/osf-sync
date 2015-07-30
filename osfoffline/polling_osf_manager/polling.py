@@ -8,7 +8,7 @@ import pytz
 import aiohttp
 
 from osfoffline.database_manager.models import User, Node, File, Base
-from osfoffline.database_manager.db import DB
+from osfoffline.database_manager.db import session
 from osfoffline.database_manager.utils import save
 from osfoffline.polling_osf_manager.api_url_builder import api_user_url, wb_file_revisions, wb_file_url, api_user_nodes,wb_move_url
 from osfoffline.polling_osf_manager.osf_query import OSFQuery
@@ -25,12 +25,10 @@ class Poll(object):
         super().__init__()
         assert isinstance(user, User)
         self._keep_running = True
-        import threading;
-        print('INSIDE POLLING. NEW')
-        print(repr(threading.local()))
 
-        self.session = DB.get_session()
-        print(id(self.session))
+
+
+
         self.user = user
 
         self._loop = loop
@@ -41,15 +39,7 @@ class Poll(object):
     def stop(self):
         print('INSIDE polling.stop')
         self._keep_running = False
-        self.session.close()
-        # try:
-        #
-        #     self.session.close()
-        #     print('just successfully closed the session')
-        # # except ProgrammingError:
-        # except:
-        #     print('session NOT closed properly.')
-        # print('just tried to close the session')
+
 
     def start(self):
         # annoying and weird way to get the remote user from the coroutine
@@ -71,7 +61,7 @@ class Poll(object):
     def get_remote_user(self, future):
         print("checking projects of user with id {}".format(self.user.osf_id))
         url = api_user_url(self.user.osf_id)
-        while True:
+        while self._keep_running:
             try:
                 resp = yield from self.osf_query.make_request(url, get_json=True)
                 future.set_result(resp['data'])
@@ -189,7 +179,7 @@ class Poll(object):
 
             local_remote_top_level_nodes = self.make_local_remote_tuple_list(local_top_level_nodes, remote_top_level_nodes)
 
-            self.session.refresh(self.user)
+            session.refresh(self.user)
             sync_list = self.user.guid_for_top_level_nodes_to_sync
             for local, remote in local_remote_top_level_nodes:
                 print('sync list is: {}'.format(sync_list))
@@ -204,6 +194,8 @@ class Poll(object):
             # waits till the end of a sleep to stop. thus can make numerous smaller sleeps
             for i in range(RECHECK_TIME):
                 yield from asyncio.sleep(1)
+
+
 
     @asyncio.coroutine
     def check_node(self, local_node, remote_node, local_parent_node):
@@ -283,8 +275,8 @@ class Poll(object):
         elif local_file_folder.locally_created and remote_file_folder is not None:
             raise ValueError('newly created local file_folder was already on server for some reason. why? fixit!')
         elif local_file_folder.locally_deleted and remote_file_folder is None:
-            self.session.delete(local_file_folder)
-            save(self.session)
+            session.delete(local_file_folder)
+            save(session)
             print('local file_folder is to be deleted, however, it was never on the server so all good.')
             return
         elif local_file_folder.locally_deleted and remote_file_folder is not None:
@@ -337,7 +329,7 @@ class Poll(object):
             user=self.user,
             parent=local_parent_node
         )
-        save(self.session, new_node)
+        save(session, new_node)
 
 
         self.polling_event_queue.put(CreateFolder(new_node.path))
@@ -369,7 +361,7 @@ class Poll(object):
             parent=local_parent_folder,
             node=local_node
         )
-        save(self.session, new_file_folder)
+        save(session, new_file_folder)
 
 
         if type == File.FILE:
@@ -409,7 +401,7 @@ class Poll(object):
         local_file_folder.osf_path = remote_file_folder.id
         local_file_folder.locally_created = False
 
-        save(self.session,local_file_folder)
+        save(session,local_file_folder)
 
         return remote_file_folder
 
@@ -426,7 +418,7 @@ class Poll(object):
 
         local_node.category = remote_node.category
 
-        save(self.session, local_node)
+        save(session, local_node)
 
 
 
@@ -471,7 +463,7 @@ class Poll(object):
         # update model
         local_file_folder.name = remote_file_folder.name
 
-        save(self.session, local_file_folder)
+        save(session, local_file_folder)
 
         if local_file_folder.is_folder:
             self.polling_event_queue.put(RenameFolder(old_path, local_file_folder.path))
@@ -542,8 +534,8 @@ class Poll(object):
 
 
         # delete model
-        self.session.delete(local_node)
-        save(self.session)
+        session.delete(local_node)
+        save(session)
 
         self.polling_event_queue.put(DeleteFolder(path))
 
@@ -555,8 +547,8 @@ class Poll(object):
         path = local_file_folder.path
         file_folder_type = local_file_folder.type
         # delete model
-        self.session.delete(local_file_folder)
-        save(self.session)
+        session.delete(local_file_folder)
+        save(session)
 
 
         # delete from local
@@ -580,8 +572,8 @@ class Poll(object):
             yield from self.osf_query.delete_remote_folder(remote_file_folder)
 
         local_file_folder.deleted = False
-        self.session.delete(local_file_folder)
-        save(self.session)
+        session.delete(local_file_folder)
+        save(session)
 
 
     @asyncio.coroutine

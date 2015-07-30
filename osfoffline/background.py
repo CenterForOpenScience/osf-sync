@@ -6,48 +6,52 @@ from watchdog.observers import Observer
 import osfoffline.database_manager.models as models
 import osfoffline.polling_osf_manager.polling as polling
 import osfoffline.filesystem_manager.osf_event_handler as osf_event_handler
-from osfoffline.database_manager.db import DB
+from osfoffline.database_manager.db import session
 from osfoffline.filesystem_manager.sync_local_filesytem_and_db import LocalDBSync
 
 
 class BackgroundWorker(threading.Thread):
 
-    def __init__(self):
+    def __init__(self, semaphore):
         super().__init__()
-        self.session = None
+
         self.user = None
         self.osf_folder = ''
         self.loop = None
         self.running = False
+        self.semaphore = semaphore
 
 
     def run(self):
+        self.loop = self.ensure_event_loop()
         self.run_background_tasks()
+        self.loop.run_forever()
 
     def run_background_tasks(self):
         print('starting run_background_tasks')
+        import threading; print(threading.current_thread())
+
         if not self.running:
-            self.session = DB.get_session()
-            self.loop = self.ensure_event_loop()
             self.user = self.get_current_user()
             self.osf_folder = self.user.osf_local_folder_path
             if self.user:
                 self.start_observing_osf_folder()
                 self.start_polling_server()
                 self.running = True
-                self.loop.run_forever()
+
 
     def pause_background_tasks(self):
         print('background pause background tasks called')
         if self.running:
             print('stop polling server')
-            self.stop_polling_server()
+            self.stop_polling_server()   # todo: have some way to acknowledge that the polling server is not neccessarily stopped!!!!!!
             print('stop obsering osf folder')
             self.stop_observing_osf_folder()
-            print('stop loop')
-            self.stop_loop()
+
+            # self.stop_loop() # THIS makes SURE that the polling server is stopped.
 
             self.running = False
+            # self.semaphore.release()
 
     def start_polling_server(self):
         self.poller = polling.Poll(self.user, self.loop)
@@ -66,7 +70,7 @@ class BackgroundWorker(threading.Thread):
         import threading
         print('---inside getcurrentuser-----{}----'.format(threading.current_thread()))
         try:
-            user = self.session.query(models.User).filter(models.User.logged_in).one()
+            user = session.query(models.User).filter(models.User.logged_in).one()
             print('user attained in background')
         except MultipleResultsFound:
             # todo: multiple user screen allows you to choose which user is logged in
