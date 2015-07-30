@@ -61,7 +61,7 @@ class OSFApp(QDialog):
             (self.preferences.preferences_window.desktopNotifications.stateChanged, self.alerts_changed),
             (self.preferences.preferences_window.startOnStartup.stateChanged, self.startup_changed),
             (self.preferences.preferences_window.changeFolderButton.clicked, self.controller.set_containing_folder_process),
-            (self.preferences.preferences_closed_action.triggered, self.controller.unpause),
+            (self.preferences.preferences_closed_action.triggered, self.controller.resume),
 
 
             # start screen

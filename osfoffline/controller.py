@@ -41,7 +41,7 @@ The various states the gui can be in:
 
 state changes will be:
 not started -> started ->
-    pause -> unpause -> pause (loop)
+    pause -> resume -> pause (loop)
                             -> quit
 
 
@@ -49,7 +49,7 @@ functions that define state changes:
 on_start
 on_quit
 on_pause
-on_unpause
+on_resume
 
 
 """
@@ -101,18 +101,27 @@ class OSFController(QDialog):
             self.background_worker.start()
 
 
-    def unpause(self):
-        print('controller unpause called')
+    def resume(self):
+        print('controller resume called')
         import threading; print(threading.current_thread())
 
-        self.background_worker.run_background_tasks()
+        # todo: properly pause the background thread
+        # I am recreating the background thread everytime for now.
+        # I was unable to correctly to pause the background thread
+        # thus took this route for now.
+        if self.background_worker is not None and self.background_worker.is_alive():
+            self.background_worker.stop()
+            self.background_worker.join()
+        self.background_worker = BackgroundWorker()
+        self.background_worker.start()
 
 
     def pause(self):
         print('pause called again')
-        self.background_worker.pause_background_tasks()
+        if self.background_worker is not None and self.background_worker.is_alive():
+            self.background_worker.stop()
+            self.background_worker.join()
 
-        # self.semaphore.acquire()
 
 
 
@@ -142,7 +151,7 @@ class OSFController(QDialog):
         print('set containing_folder')
         self.set_containing_folder()
         print('unpausing')
-        self.unpause()
+        self.resume()
 
 
     # todo: when log in is working, you need to make this work with log in screen.

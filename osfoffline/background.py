@@ -20,26 +20,27 @@ class BackgroundWorker(threading.Thread):
         self.loop = None
         self.paused = True  # start out paused
         self.running = False
-        self.state = threading.Condition()
+
 
 
 
 
     def run(self):
+        self.loop = self.ensure_event_loop()
         self.run_background_tasks()
+        self.loop.run_forever()
 
     def run_background_tasks(self):
         print('starting run_background_tasks')
-        with self.state:
-            if not self.running:
-                self.loop = self.ensure_event_loop()
-                self.user = self.get_current_user()
-                self.osf_folder = self.user.osf_local_folder_path
-                if self.user:
-                    self.start_observing_osf_folder()
-                    self.start_polling_server()
-                    self.running = True
-                    self.loop.run_forever()
+
+        if not self.running:
+            self.user = self.get_current_user()
+            self.osf_folder = self.user.osf_local_folder_path
+            if self.user:
+                self.start_observing_osf_folder()
+                self.start_polling_server()
+                self.running = True
+
 
     def pause_background_tasks(self):
         import threading; print(threading.current_thread())
@@ -50,7 +51,7 @@ class BackgroundWorker(threading.Thread):
             print('stop obsering osf folder')
             self.stop_observing_osf_folder()
             print('stop loop')
-            self.stop_loop()
+            # self.stop_loop()
 
             self.running = False
 
