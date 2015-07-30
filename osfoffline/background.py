@@ -19,60 +19,40 @@ class BackgroundWorker(threading.Thread):
         self.osf_folder = ''
         self.loop = None
         self.paused = True  # start out paused
+        self.running = False
         self.state = threading.Condition()
 
 
 
+
     def run(self):
-        self.loop = self.ensure_event_loop()
-        self.user = self.get_current_user()
-        self.osf_folder = self.user.osf_local_folder_path
+        self.run_background_tasks()
 
-        self.resume() # unpause self
+    def run_background_tasks(self):
+        print('starting run_background_tasks')
         with self.state:
-            if self.paused:
-                self.state.wait() # block until notified
-
-
-
-
-        self.loop.run_forever()
-
-
-    def resume(self):
-        with self.state:
-            import threading; print(threading.current_thread())
-            self.start_observing_osf_folder()
-            self.start_polling_server()
-            self.running = True
-
-            self.paused = False
-            self.state.notify()  # unblock self if waiting
-
-    def pause(self):
-        with self.state:
-            self.stop_observing_osf_folder()
-            self.stop_polling_server()
-            self.running = False
-
-            self.paused = True  # make self block and wait
-
-
-
+            if not self.running:
+                self.loop = self.ensure_event_loop()
+                self.user = self.get_current_user()
+                self.osf_folder = self.user.osf_local_folder_path
+                if self.user:
+                    self.start_observing_osf_folder()
+                    self.start_polling_server()
+                    self.running = True
+                    self.loop.run_forever()
 
     def pause_background_tasks(self):
         import threading; print(threading.current_thread())
         print('background pause background tasks called')
         if self.running:
             print('stop polling server')
-            self.stop_polling_server()   # todo: have some way to acknowledge that the polling server is not neccessarily stopped!!!!!!
+            self.stop_polling_server()
             print('stop obsering osf folder')
             self.stop_observing_osf_folder()
-
-            # self.stop_loop() # THIS makes SURE that the polling server is stopped.
+            print('stop loop')
+            self.stop_loop()
 
             self.running = False
-            # self.semaphore.release()
 
     def start_polling_server(self):
         self.poller = polling.Poll(self.user, self.loop)

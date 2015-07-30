@@ -26,9 +26,6 @@ class Poll(object):
         assert isinstance(user, User)
         self._keep_running = True
 
-
-
-
         self.user = user
 
         self._loop = loop
@@ -39,12 +36,13 @@ class Poll(object):
     def stop(self):
         print('INSIDE polling.stop')
         self._keep_running = False
+        self.osf_query.close()
 
 
     def start(self):
         # annoying and weird way to get the remote user from the coroutine
 
-        future = asyncio.Future()
+        future = asyncio.Future(loop=self._loop)
         asyncio.async(self.get_remote_user(future), loop=self._loop)
         self._loop.run_until_complete(future)
         remote_user = future.result()

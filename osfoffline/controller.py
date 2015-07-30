@@ -95,8 +95,6 @@ class OSFController(QDialog):
             if not os.path.isdir(self.user.osf_local_folder_path):
                 os.makedirs(self.user.osf_local_folder_path)
 
-            session.close()
-
             self.start_logging()
 
             self.start_tray_action.trigger()
@@ -107,12 +105,12 @@ class OSFController(QDialog):
         print('controller unpause called')
         import threading; print(threading.current_thread())
 
-        self.background_worker.resume()
+        self.background_worker.run_background_tasks()
 
 
     def pause(self):
         print('pause called again')
-        self.background_worker.pause()
+        self.background_worker.pause_background_tasks()
 
         # self.semaphore.acquire()
 

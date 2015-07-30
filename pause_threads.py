@@ -72,8 +72,8 @@ while running.condition:
   time.sleep(5)
 
   concur.pause()
-  print('user has preferences open and is doing fun stuff for 1 sec')
-  time.sleep(1)
+  print('user has preferences open and is doing fun stuff for 10 sec')
+  time.sleep(2)
 
 
 
