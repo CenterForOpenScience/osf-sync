@@ -120,6 +120,9 @@ def delete_osf_file_folder(file_folder, nid):
     resp.close()
 
 
+# def create_osf_node():
+
+
 
 def build_path(*args):
     return os.path.join(osfstorage_path, *args)
@@ -485,6 +488,8 @@ def test_move_file_to_toplevel():
     assertFalse(os.path.exists, build_path('file1'))
 
 
+# def test_create_node():
+#     node = create_osf_node()
 
 
 
@@ -500,111 +505,6 @@ def test_move_file_to_toplevel():
 
 
 
-
-
-
-
-
-
-# def test():
-#     # create online
-#     #create folder1
-#     folder1 = create_osf_folder('folder1', nid1)
-#     time.sleep(5)
-#     assert os.path.isdir(os.path.join(osf_path, 'new_test_project','osfstorage','folder1'))
-#
-#     #create file1 in folder1
-#     file1 = create_osf_file('file1', nid1, folder1['path'])
-#     time.sleep(10)
-#     assert os.path.isfile(os.path.join(osf_path, 'new_test_project','osfstorage','folder1','file1'))
-#
-#     #create folder2
-#     folder2 = create_osf_folder('folder2', nid1)
-#     time.sleep(10)
-#     assert os.path.isdir(os.path.join(osf_path, 'new_test_project','osfstorage','folder2'))
-#
-#     #create file2
-#     file2 = create_osf_file('file2', nid1)
-#     time.sleep(10)
-#     assert os.path.isfile(os.path.join(osf_path, 'new_test_project','osfstorage','file2'))
-#
-#     #create folder2.1
-#     folder2_1 = create_osf_folder('folder2.1', nid1, folder2['path'])
-#     time.sleep(10)
-#     assert os.path.isdir(os.path.join(osf_path, 'new_test_project','osfstorage','folder2','folder2.1'))
-#
-#     #create folder2.1.1
-#     folder2_1_1 = create_osf_folder('folder2.1.1', nid1, folder2_1['path'])
-#     time.sleep(10)
-#     assert os.path.isdir(os.path.join(osf_path, 'new_test_project','osfstorage','folder2','folder2.1','folder2.1.1'))
-#
-#
-#     #rename file2 to file2RENAMED
-#     file2RENAMED = rename_osf_file_folder('file2RENAMED', file2['path'], nid1, '/' )
-#     time.sleep(20)
-#     assert os.path.isfile(os.path.join(osf_path, 'new_test_project','osfstorage','file2RENAMED'))
-#
-#     #rename folder2.1.1 to folder2.1.1RENAMED
-#     folder_2_1_1RENAMED = rename_osf_file_folder('folder2.1.1RENAMED',folder2_1_1['path'], nid1, folder2_1['path'])
-#     time.sleep(20)
-#     assert os.path.isdir(os.path.join(osf_path, 'new_test_project','osfstorage','folder2','folder2.1','folder2.1.1RENAMED'))
-#
-#
-#     # update file2RENAMED contents
-#     new_content_file_name = 'NEWCONTENTS'
-#     update_osf_file(file2RENAMED, new_content_file_name, nid1)
-#     path_to_file2RENAMED = os.path.join(osf_path, 'new_test_project','osfstorage','file2RENAMED')
-#     time.sleep(30)
-#     path_to_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'files',new_content_file_name)
-#     new_contents = open(path_to_file,'r+').read()
-#     file2RENAMED_contents = open(path_to_file2RENAMED, 'r+').read()
-#     assert new_contents == file2RENAMED_contents
-#
-#
-#     # move file1 to folder2
-#     move_osf_file_folder(file1, nid1,folder2)
-#     time.sleep(30)
-#     old_path = os.path.join(osf_path, 'new_test_project','osfstorage','folder1','file1')
-#     path = os.path.join(osf_path, 'new_test_project','osfstorage','folder2','file1')
-#     assert os.path.exists(old_path) is False
-#     assert os.path.isfile(path)
-#
-#     # move folder2.1.1RENAMED to folder2
-#     move_osf_file_folder(folder_2_1_1RENAMED, nid1,folder2)
-#     time.sleep(30)
-#     old_path = os.path.join(osf_path, 'new_test_project','osfstorage','folder1','folder2.1','folder2.1.1')
-#     path = os.path.join(osf_path, 'new_test_project','osfstorage','folder2','folder2.1.1RENAMED')
-#     assert os.path.exists(old_path) is False
-#     assert os.path.isdir(path)
-#
-#     # move folder2 to folder1
-#     move_osf_file_folder(folder2, nid1, folder1)
-#     time.sleep(60)
-#     old_path = os.path.join(osf_path, 'new_test_project','osfstorage','folder2')
-#     path = os.path.join(osf_path, 'new_test_project','osfstorage','folder1','folder2')
-#     assert os.path.exists(old_path) is False
-#     assert os.path.isdir(path)
-#
-#     # clear osfstorage for nid1
-#
-#     #delete file2
-#     delete_osf_file_folder(file2RENAMED, nid1)
-#     time.sleep(30)
-#     path = os.path.join(osf_path, 'new_test_project','osfstorage','file2RENAMED')
-#     assert os.path.exists(path) is False
-#
-#
-#     #delete folder1
-#     delete_osf_file_folder(folder1, nid1)
-#     time.sleep(20)
-#     path = os.path.join(osf_path, 'new_test_project','osfstorage','folder1')
-#     assert os.path.exists(path) is False
-#
-#     #delete folder2
-#     delete_osf_file_folder(folder2, nid1)
-#     time.sleep(20)
-#     path = os.path.join(osf_path, 'new_test_project','osfstorage','folder2')
-#     assert os.path.exists(path) is False
 
 
 
