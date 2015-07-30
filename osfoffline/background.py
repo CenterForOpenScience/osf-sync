@@ -12,32 +12,52 @@ from osfoffline.filesystem_manager.sync_local_filesytem_and_db import LocalDBSyn
 
 class BackgroundWorker(threading.Thread):
 
-    def __init__(self, semaphore):
+    def __init__(self):
         super().__init__()
 
         self.user = None
         self.osf_folder = ''
         self.loop = None
-        self.running = False
-        self.semaphore = semaphore
+        self.paused = True  # start out paused
+        self.state = threading.Condition()
+
 
 
     def run(self):
+        self.loop = self.ensure_event_loop()
+        self.user = self.get_current_user()
+        self.osf_folder = self.user.osf_local_folder_path
 
-        self.run_background_tasks()
+        self.resume() # unpause self
+        with self.state:
+            if self.paused:
+                self.state.wait() # block until notified
+
+
+
+
         self.loop.run_forever()
 
-    def run_background_tasks(self):
-        print('starting run_background_tasks')
-        import threading; print(threading.current_thread())
-        self.loop = self.ensure_event_loop()
-        if not self.running:
-            self.user = self.get_current_user()
-            self.osf_folder = self.user.osf_local_folder_path
-            if self.user:
-                self.start_observing_osf_folder()
-                self.start_polling_server()
-                self.running = True
+
+    def resume(self):
+        with self.state:
+            import threading; print(threading.current_thread())
+            self.start_observing_osf_folder()
+            self.start_polling_server()
+            self.running = True
+
+            self.paused = False
+            self.state.notify()  # unblock self if waiting
+
+    def pause(self):
+        with self.state:
+            self.stop_observing_osf_folder()
+            self.stop_polling_server()
+            self.running = False
+
+            self.paused = True  # make self block and wait
+
+
 
 
     def pause_background_tasks(self):
