@@ -7,7 +7,7 @@ import asyncio
 from watchdog.events import FileSystemEventHandler, DirModifiedEvent
 
 from osfoffline.database_manager.models import Node, File,User
-from osfoffline.database_manager.db import DB
+from osfoffline.database_manager.db import session
 from osfoffline.database_manager.utils import save, session_scope
 from osfoffline.utils.path import ProperPath
 from osfoffline.exceptions.event_handler_exceptions import MovedNodeUnderFile
@@ -31,8 +31,8 @@ class OSFEventHandler(FileSystemEventHandler):
         self._loop = loop or asyncio.get_event_loop()
         self.osf_folder = osf_folder
 
-        self.session = DB.get_session()
-        self.user = self.session.query(User).filter(User.logged_in).one()
+
+        self.user = session.query(User).filter(User.logged_in).one()
 
 
         print('osf event handler created')
@@ -71,19 +71,19 @@ class OSFEventHandler(FileSystemEventHandler):
             # rename
             if isinstance(item, Node) and item.title != dest_path.name:
                 if self.already_exists(dest_path):
-                    self.session.delete(item)
-                    save(self.session)
+                    session.delete(item)
+                    save(session)
                 else:
                     item.title = dest_path.name
-                    save(self.session, item)
+                    save(session, item)
             elif isinstance(item, File) and item.name != dest_path.name:
                 if self.already_exists(dest_path):
-                    self.session.delete(item)
-                    save(self.session)
+                    session.delete(item)
+                    save(session)
                 else:
                     item.name = dest_path.name
                     item.locally_renamed = True
-                    save(self.session, item)
+                    save(session, item)
             # move
             elif src_path != dest_path:
                 try:
@@ -113,8 +113,8 @@ class OSFEventHandler(FileSystemEventHandler):
 
                     item.locally_created = True
 
-                    save(self.session, dummy)
-                    save(self.session, item)
+                    save(session, dummy)
+                    save(session, item)
                 except FileNotFoundError:
                     # todo: logging levels. make one for debug. use that instead of console_log
                     console_log('tried to move to OSF folder. cant do this.')
@@ -154,7 +154,7 @@ class OSFEventHandler(FileSystemEventHandler):
                     if event.is_directory:
                         top_level_node = Node(title=name, user=self.user, locally_created=True)
                         # save
-                        save(self.session, top_level_node)
+                        save(session, top_level_node)
                     else:
                         #todo: can just delete the file right here and give an alert.
                         print("CREATED FILE IN PROJECT AREA.")
@@ -172,7 +172,7 @@ class OSFEventHandler(FileSystemEventHandler):
                         folder = File(name=name, type=File.FOLDER, user=self.user, locally_created=True,
                                       provider=File.DEFAULT_PROVIDER, node=node)
                         containing_item.files.append(folder)
-                        save(self.session, folder)
+                        save(session, folder)
                     else:  # child node
 
                         new_child_node = Node(
@@ -185,7 +185,7 @@ class OSFEventHandler(FileSystemEventHandler):
                         parent_component = self._get_parent_item_from_path(src_path)
 
                         parent_component.child_nodes.append(new_child_node)
-                        save(self.session, new_child_node)
+                        save(session, new_child_node)
 
                 else:  # if file, then file.
 
@@ -203,10 +203,10 @@ class OSFEventHandler(FileSystemEventHandler):
                         # fake file or something of the sort. Thus, we can just delete it.
                         file.update_hash()
                     except FileNotFoundError:
-                        self.session.delete(file)
-                        save(self.session)
+                        session.delete(file)
+                        save(session)
                         return
-                    save(self.session, file)
+                    save(session, file)
 
 
                     # console_log('new thing as file object AGAIN in order to check name',file)
@@ -252,7 +252,7 @@ class OSFEventHandler(FileSystemEventHandler):
             # todo: log
 
             # save
-            save(self.session, item)
+            save(session, item)
             console_log('modifying file. check how temp file is saved back in as', item)
         except FileNotFoundError:
             print('tried to modify {} but it doesnt exist in db'.format(event.src_path))
@@ -277,8 +277,8 @@ class OSFEventHandler(FileSystemEventHandler):
 
             # if item cannot/should not be deleted online, then just delete here.. it will be recreated.
             if isinstance(item, Node) or (isinstance(item, File) and item.is_provider):
-                self.session.delete(item)
-                save(self.session)
+                session.delete(item)
+                save(session)
 
 
 
@@ -286,7 +286,7 @@ class OSFEventHandler(FileSystemEventHandler):
             # todo: log
 
             # save
-            save(self.session, item)
+            save(session, item)
         except FileNotFoundError:
             # if file does not exist in db, then do nothing.
             print('tried to delete file {} but was not in db'.format(event.src_path))
@@ -304,10 +304,10 @@ class OSFEventHandler(FileSystemEventHandler):
     # todo: figure out how you can improve this
     def get_item_by_path(self, path):
         assert isinstance(path, ProperPath)
-        for node in self.session.query(Node):
+        for node in session.query(Node):
             if ProperPath(node.path, True) == path:
                 return node
-        for file_folder in self.session.query(File):
+        for file_folder in session.query(File):
             file_path = ProperPath(file_folder.path, file_folder.is_folder)
             if file_path == path:
                 return file_folder

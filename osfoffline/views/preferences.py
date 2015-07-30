@@ -2,7 +2,7 @@ from PyQt5.QtWidgets import (QAction, QDialog, QFileDialog, QTreeWidgetItem)
 from PyQt5.QtCore import QCoreApplication, QRect, Qt
 
 from osfoffline.views.rsc.preferences_rc import Ui_Preferences  # REQUIRED FOR GUI
-from osfoffline.database_manager.db import DB
+from osfoffline.database_manager.db import session
 from osfoffline.database_manager.utils import save, session_scope
 from osfoffline.database_manager.models import User, Node
 from osfoffline.polling_osf_manager.api_url_builder import api_user_nodes
@@ -73,10 +73,10 @@ class Preferences(QDialog):
 
     def selector(self, selected_index):
         if selected_index == self.GENERAL:
-            with session_scope() as session:
-                user = session.query(User).filter(User.logged_in).one()
-                containing_folder = os.path.dirname(user.osf_local_folder_path)
-                self.preferences_window.containingFolderTextEdit.setText(self._translate("Preferences", containing_folder))
+
+            user = session.query(User).filter(User.logged_in).one()
+            containing_folder = os.path.dirname(user.osf_local_folder_path)
+            self.preferences_window.containingFolderTextEdit.setText(self._translate("Preferences", containing_folder))
         elif selected_index == self.OSF:
             self.create_tree_item_for_each_top_level_node()
 
@@ -89,23 +89,23 @@ class Preferences(QDialog):
         self.reset_tree_widget()
         _translate = QCoreApplication.translate
 
-        with session_scope() as session:
-            user = session.query(User).filter(User.logged_in).one()
-            for node in self.remote_top_level_nodes:
-                tree_item = QTreeWidgetItem(self.preferences_window.treeWidget)
-                tree_item.setCheckState(self.PROJECT_SYNC_COLUMN, Qt.Unchecked)
-                tree_item.setText(self.PROJECT_NAME_COLUMN, _translate("Preferences", node.name))
 
-                if node.id in user.guid_for_top_level_nodes_to_sync:
-                    tree_item.setCheckState(self.PROJECT_SYNC_COLUMN, Qt.Checked)
-                self.preferences_window.treeWidget.resizeColumnToContents(self.PROJECT_NAME_COLUMN)
-                session.close()
-                self.tree_items.append(tree_item)
+        user = session.query(User).filter(User.logged_in).one()
+        for node in self.remote_top_level_nodes:
+            tree_item = QTreeWidgetItem(self.preferences_window.treeWidget)
+            tree_item.setCheckState(self.PROJECT_SYNC_COLUMN, Qt.Unchecked)
+            tree_item.setText(self.PROJECT_NAME_COLUMN, _translate("Preferences", node.name))
+
+            if node.id in user.guid_for_top_level_nodes_to_sync:
+                tree_item.setCheckState(self.PROJECT_SYNC_COLUMN, Qt.Checked)
+            self.preferences_window.treeWidget.resizeColumnToContents(self.PROJECT_NAME_COLUMN)
+
+            self.tree_items.append(tree_item)
 
     def get_remote_top_level_nodes(self):
         remote_top_level_nodes = []
         try:
-            session = DB.get_session()
+
             user = session.query(User).filter(User.logged_in).one()
             if user:
                 user_nodes = []
@@ -125,16 +125,22 @@ class Preferences(QDialog):
         return remote_top_level_nodes
 
     def update_sync_nodes(self):
-        with session_scope() as session:
-            user = session.query(User).filter(User.logged_in).one()
-            guid_list = []
+        user = session.query(User).filter(User.logged_in).one()
+        guid_list = []
 
-            for tree_item in self.tree_items:
-                for name, id in [(node.name, node.id) for node in self.remote_top_level_nodes]:
-                    if name == tree_item.text(self.PROJECT_NAME_COLUMN):
-                        if tree_item.checkState(self.PROJECT_SYNC_COLUMN) == Qt.Checked:
-                            print('going to add something to list: {}'.format(id))
-                            guid_list.append(id)
-            print(guid_list)
-            user.guid_for_top_level_nodes_to_sync = guid_list
+        for tree_item in self.tree_items:
+            for name, id in [(node.name, node.id) for node in self.remote_top_level_nodes]:
+                if name == tree_item.text(self.PROJECT_NAME_COLUMN):
+                    if tree_item.checkState(self.PROJECT_SYNC_COLUMN) == Qt.Checked:
+                        print('going to add something to list: {}'.format(id))
+                        guid_list.append(id)
+        print(guid_list)
+        user.guid_for_top_level_nodes_to_sync = guid_list
 
+
+    def closeEvent(self, event):
+        print('close event called')
+        if self.isVisible():
+            self.hide()
+            event.ignore()
+            self.preferences_closed_action.trigger()

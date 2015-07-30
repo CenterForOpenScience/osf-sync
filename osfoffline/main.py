@@ -48,9 +48,8 @@ class OSFApp(QDialog):
             (self.tray.launch_osf_action.triggered, self.controller.start_osf),
             # (self.tray.currently_synching_action.triggered, self.controller.currently_synching),
             (self.tray.preferences_action.triggered, self.open_preferences),
-            # (self.tray.preferences_action.triggered, self.controller.pause),
             (self.tray.about_action.triggered, self.start_about_screen),
-            # (self.tray.about_action.triggered, self.controller.pause),
+
             (self.tray.quit_action.triggered, self.controller.quit),
 
             # controller events
@@ -62,7 +61,7 @@ class OSFApp(QDialog):
             (self.preferences.preferences_window.desktopNotifications.stateChanged, self.alerts_changed),
             (self.preferences.preferences_window.startOnStartup.stateChanged, self.startup_changed),
             (self.preferences.preferences_window.changeFolderButton.clicked, self.controller.set_containing_folder_process),
-
+            (self.preferences.preferences_closed_action.triggered, self.controller.resume),
 
 
             # start screen
@@ -77,9 +76,11 @@ class OSFApp(QDialog):
     def open_preferences(self):
         # todo: preferences button should open general page
         # todo: make sure open_window(Prefernces.OSF) is called whenever you go to osf page.
+        self.controller.pause()
         self.preferences.open_window(Preferences.GENERAL)
 
     def start_about_screen(self):
+        self.controller.pause()
         self.preferences.open_window(Preferences.ABOUT)
 
 

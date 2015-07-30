@@ -4,14 +4,14 @@ import json
 import subprocess
 import webbrowser
 import sys
-
+import threading
 from PyQt5.QtWidgets import (QApplication, QDialog, QFileDialog, QAction)
 from appdirs import user_log_dir, user_config_dir, user_data_dir
 from sqlalchemy.orm.exc import MultipleResultsFound
 from sqlalchemy.orm.exc import NoResultFound
 
 import osfoffline.database_manager.models as models
-from osfoffline.database_manager.db import DB
+from osfoffline.database_manager.db import session
 from osfoffline.database_manager.utils import save
 from osfoffline.background import BackgroundWorker
 
@@ -41,7 +41,7 @@ The various states the gui can be in:
 
 state changes will be:
 not started -> started ->
-    pause -> unpause -> pause (loop)
+    pause -> resume -> pause (loop)
                             -> quit
 
 
@@ -49,7 +49,7 @@ functions that define state changes:
 on_start
 on_quit
 on_pause
-on_unpause
+on_resume
 
 
 """
@@ -70,18 +70,19 @@ class OSFController(QDialog):
         self.containing_folder_updated_action = QAction("Containing Folder updated", self)
 
         self.create_configs()
-        self.create_db()
+
         self.background_worker = BackgroundWorker()
+
 
     # state functions
     def start(self):
         # todo: can use session_scope here
-        import threading;
+        import threading
         print('INSIDE START')
         print(repr(threading.local()))
-        session = DB.get_session()
+
         print(id(session))
-        self.user = self.get_current_user(session)
+        self.user = self.get_current_user()
 
         if self.user:
             self.containing_folder = os.path.dirname(self.user.osf_local_folder_path)
@@ -94,20 +95,33 @@ class OSFController(QDialog):
             if not os.path.isdir(self.user.osf_local_folder_path):
                 os.makedirs(self.user.osf_local_folder_path)
 
-            session.close()
-
             self.start_logging()
 
             self.start_tray_action.trigger()
             self.background_worker.start()
 
 
-    def unpause(self):
-        self.background_worker.run_background_tasks()
+    def resume(self):
+        print('controller resume called')
+        import threading; print(threading.current_thread())
+
+        # todo: properly pause the background thread
+        # I am recreating the background thread everytime for now.
+        # I was unable to correctly to pause the background thread
+        # thus took this route for now.
+        if self.background_worker is not None and self.background_worker.is_alive():
+            self.background_worker.stop()
+            self.background_worker.join()
+        self.background_worker = BackgroundWorker()
+        self.background_worker.start()
 
 
     def pause(self):
-        self.background_worker.pause_background_tasks()
+        print('pause called again')
+        if self.background_worker is not None and self.background_worker.is_alive():
+            self.background_worker.stop()
+            self.background_worker.join()
+
 
 
 
@@ -137,11 +151,11 @@ class OSFController(QDialog):
         print('set containing_folder')
         self.set_containing_folder()
         print('unpausing')
-        self.unpause()
+        self.resume()
 
 
     # todo: when log in is working, you need to make this work with log in screen.
-    def get_current_user(self, session):
+    def get_current_user(self):
         user = None
         import threading
         print('---inside getcurrentuser-----{}----'.format(threading.current_thread()))
@@ -232,34 +246,6 @@ class OSFController(QDialog):
         url = "http://osf.io/dashboard"
         webbrowser.open_new_tab(url)
 
-    # def currently_synching(self):
-    #     # todo: can use this sudo code to make proper
-    #     # if syncQueue.empty():
-    #     #     text = "Up to date"
-    #     # else:
-    #     #     text = "currently {}".format(syncQueue.top().name())
-    #     import datetime
-    #
-    #     text = "Up to date ({})".format(str(datetime.datetime.now()))
-    #     self.currently_synching_action.setText(0, text)
-
-    # def teardown(self):
-    #     try:
-    #         self.store_configs()
-    #
-    #         # stop polling the server
-    #         self.background_worker.stop()
-    #
-    #     except KeyboardInterrupt:
-    #         print('ctr-c pressed. Still going to quit app though.')
-    #         QApplication.instance().quit()
-    #         raise
-    #     except:
-    #         print('error in tear down. Still going to quit app though.')
-    #         QApplication.instance().quit()
-    #         raise
-    #     # quit the application
-    #     QApplication.instance().quit()
 
     def store_configs(self):
         # store current configs in config file
@@ -270,9 +256,8 @@ class OSFController(QDialog):
         file.write(json.dumps(self.config))
         file.close()
 
-    def create_db(self):
-        data_dir = self.ensure_data_dir()
-        DB.setup_db(data_dir)
+
+
 
     def create_configs(self):
         config_dir = self.ensure_config_dir()
@@ -308,18 +293,5 @@ class OSFController(QDialog):
             os.makedirs(config_dir)
         return config_dir
 
-    def ensure_data_dir(self):
-        # ensure data dir exists
-        data_dir = user_data_dir(appname=self.app_name, appauthor=self.app_author)
-        if not os.path.exists(data_dir):
-            os.makedirs(data_dir)
-        return data_dir
 
-    # todo: finish this!!!!!!!!!!
-    # def can_skip_startup_screen(self):
-    #     session = DB.get_session()
-    #     try:
-    #         session.query(models.User).filter(models.User.logged_in).one()
-    #         return True
-    #     except (NoResultFound, MultipleResultsFound):
-    #         return False
+

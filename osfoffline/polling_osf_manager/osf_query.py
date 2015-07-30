@@ -334,3 +334,7 @@ class OSFQuery(object):
             return json_response
         return response
 
+
+    def close(self):
+        self.request_session.close()
+
