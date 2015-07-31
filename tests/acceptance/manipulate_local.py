@@ -16,20 +16,17 @@ session = requests.Session()
 session.headers.update(headers)
 
 
-def create_local_folder(name, parent_path=None):
-    if parent_path:
-        path = os.path.join(parent_path, name)
+def create_local(*args, is_dir=True):
+    if is_dir:
+        os.makedirs(build_path(*args))
     else:
-        path = os.path.join(osfstorage_path, name)
-    os.makedirs(path)
+        dirs = args[:-1]
+        os.makedirs(build_path(dirs))
+        path = build_path(*args)
+        file = open(path, 'w+')
+        file.write('some text')
+        file.close()
 
-def create_local_file(name, parent_path=None):
-    if parent_path:
-        path = os.path.join(parent_path, name)
-    else:
-        path = os.path.join(osfstorage_path, name)
-    file = open(path, 'w+')
-    file.close()
 
 def build_path(*args):
     return os.path.join(osfstorage_path, *args)
@@ -44,31 +41,15 @@ def build_path(*args):
 class TestFail(Exception):
     pass
 
-def assertTrue(func, arg):
-    """
-    checks for condition every 5 seconds. If eventually True then good. else TestFail
-    """
-    for i in range(10):
-        if func(arg):
-            return
-        else:
-            time.sleep(5)
-    raise TestFail
-
-def assertFalse(func, arg):
-    """
-    checks for condition every 5 seconds. If eventually False then good. else TestFail
-    """
-    for i in range(10):
-        if not func(arg):
-            return
-        else:
-            time.sleep(5)
-    raise TestFail
-
 
 def teardown(self):
     shutil.rmtree(osfstorage_path)
+    for i in range(10):
+        file_folders = get_node_file_folders(nid1)
+        if len(file_folders)==0:
+            return
+    assert TestFail
+
 
 def get_node_file_folders(node_id):
     node_files_url = api_node_files(node_id)
@@ -79,6 +60,15 @@ def get_node_file_folders(node_id):
     children_resp = session.get(osf_storage_folder.child_files_url)
     assert children_resp.ok
     return [dict_to_remote_object(file_folder) for file_folder in children_resp.json()['data']]
+
+def get_children_file_folders(parent_folder):
+    assert isinstance(parent_folder, RemoteFolder)
+    url = parent_folder.child_files_url
+    resp = session.get(url)
+    assert resp.ok
+    return [dict_to_remote_object(file_folder) for file_folder in resp.json()['data']]
+
+
 
 def file_in_list(file_name, remote_object_list):
     for remote_object in remote_object_list:
@@ -95,7 +85,13 @@ def folder_in_list(folder_name, remote_object_list):
 
 def assert_contains_file(file_name, nid, parent_folder=None):
     if parent_folder:
-        raise NotImplementedError
+        for i in range(10):
+            children = get_children_file_folders(parent_folder)
+            if file_in_list(file_name, children):
+                return
+            time.sleep(5)
+        assert TestFail
+
     for i in range(10):
         file_folders = get_node_file_folders(nid)
         if file_in_list(file_name,file_folders):
@@ -105,10 +101,15 @@ def assert_contains_file(file_name, nid, parent_folder=None):
 
 def assert_contains_folder(folder_name, nid, parent_folder=None):
     if parent_folder:
-        raise NotImplementedError
+        for i in range(10):
+            children = get_children_file_folders(parent_folder)
+            if folder_in_list(folder_name, children):
+                return
+            time.sleep(5)
+        assert TestFail
     for i in range(10):
         file_folders = get_node_file_folders(nid)
-        if file_in_list(folder_name,file_folders):
+        if folder_in_list(folder_name,file_folders):
             return
         time.sleep(5)
     assert TestFail
@@ -126,7 +127,8 @@ def test_create_local_nested_folders():
     create_local_folder('f')
     assert_contains_folder('f', nid1)
 
-
+    create_local_folder('a', build_path('f'))
+    assert_contains_folder('a', nid1, )
 
 
 
