@@ -1,97 +1,168 @@
 __author__ = 'himanshu'
 import unittest
 import os
-
+import shutil
 import requests
+import time
+from tests.utils.url_builder import api_node_files, wb_file_url
+from osfoffline.polling_osf_manager.remote_objects import RemoteFile, RemoteFolder, RemoteFileFolder, dict_to_remote_object
+osf_path = '/home/himanshu/Desktop/OSF/'
+osfstorage_path = os.path.join(osf_path, 'new_test_project','osfstorage')
+user_id = '5bqt9'
+nid1 = 'dz5mg'
+# nid2 = ''
+headers = {'Authorization':'Bearer {}'.format(user_id)}
+session = requests.Session()
+session.headers.update(headers)
+
+
+def create_local_folder(name, parent_path=None):
+    if parent_path:
+        path = os.path.join(parent_path, name)
+    else:
+        path = os.path.join(osfstorage_path, name)
+    os.makedirs(path)
+
+def create_local_file(name, parent_path=None):
+    if parent_path:
+        path = os.path.join(parent_path, name)
+    else:
+        path = os.path.join(osfstorage_path, name)
+    file = open(path, 'w+')
+    file.close()
+
+def build_path(*args):
+    return os.path.join(osfstorage_path, *args)
 
 
 
-class Actions(object):
-    OSF_FOLDER_LOCATION= ''
 
-    def __init__(self, location):
-        self.OSF_FOLDER_LOCATION = location
-
-
-    def create_local_projects(self, pt_list):
-        for pt in pt_list:
-            self.create_local_project(pt)
-
-    def create_local_project(self, pt):
-        project_location = os.path.join(self.OSF_FOLDER_LOCATION, pt.project.name)
-        os.mkdir(project_location)
-        self.create_local_folders(pt.project.items, project_location)
-
-
-    def create_local_folders(self,items, path):
-        for item in items:
-            if item.kind == Item.FILE:
-                self.create_local_file(item, path)
-            else:
-                os.mkdir(os.path.join(path,item.name))
-
-    def create_local_file(self, item, path):
-        file = open(os.path.join(path, item.name), 'w+')
-        file.close()
-
-    # def clean(self):
-    #     shtils.rmtree(self.OSF_FOLDER_LOCATION)
-
-
-    #todo: create actions for osf
-
-
-class TestOSFOffline(unittest.TestCase):
-
-    def setUp(self):
-        self.pt1 = ProjectTree()
-        self.project1 = Item(kind=Item.PROJECT, name='p1', guid=Item.DEFAULT_GUID, path='', version=0)
-        self.component1 = Item(kind=Item.COMPONENT, name='c1', guid=Item.DEFAULT_GUID, path='', version=0)
-        self.component2 = Item(kind=Item.COMPONENT, name='c2', guid=Item.DEFAULT_GUID, path='', version=0)
-        self.component3 = Item(kind=Item.COMPONENT, name='c3', guid=Item.DEFAULT_GUID, path='', version=0)
-        self.pt1.project = self.project1
-        self.project1.add_items([self.component1, self.component2, self.component3])
-        self.actions = Actions('/home/himanshu/OSF-Offline/dumbdir/OSF/')
-
-        self.user_osf_id = 'p42te'
-        self.oauth_token = 'eyJhbGciOiJIUzUxMiJ9.ZXlKaGJHY2lPaUprYVhJaUxDSmxibU1pT2lKQk1USTRRMEpETFVoVE1qVTJJbjAuLmVCS25RaW1FSFUtNHFORnZSLWw5UGcuZU1FZTRlVlNaVXR2dGh1a3V4cUhXVWdsbDY5bTJsTHlUaWM5VHcwZGNvMndFU2xsZzJpR25KUGZOanprbm9mcFc5NjBLQ1JyUVMtSmNjT2JINVpYYlZ5aTdpdTRENDNDZWxhN2tWTXk0dlVtWHByekxIRTlaMHdVUFhPd1RPdEl1b0NqNEQwX0VqMmtQLVpvamF6NVhHNjk1ZVNTMEZYYXBGZGpURFcxX2FYZFdvQlVEUm0zTjJBOGd2SkxTY0ZULk9rQ1Bwd1kzS2NUeDJTaEJkcXJPbFE.FMsFG-z-eiZ0yI_7pYTVBo9DlkfJfdT7Nwocej_0aRZHA-hxjULt-XwFD8w0m5w0JGH2yi6MFlCQDHJxPwvUaQ'
-        self.headers =  {
-            'Authorization' : 'Bearer {}'.format(self.oauth_token)
-        }
-        self.user_url = 'https://staging2.osf.io/api/v2/users/{}/'.format(self.user_osf_id)
-
-    def test_create_local_project(self):
-        self.actions.create_local_projects([self.pt1])
-        self.check_in_sync([self.pt1], self.actions.OSF_FOLDER_LOCATION)
-
-
-    def check_in_sync(self, pt_list, path):
-        osf_dir = os.path.join(path, 'OSF')
-        self.assertTrue(os.path.isdir(osf_dir))
-        user = requests.get(self.user_url, headers=self.headers)
-        projects = requests.get(user['links']['nodes']['relation'], headers=self.headers)
-        temp = []
-        for remote in projects:
-            if remote['category'] == 'project':
-                temp.append(remote)
-        projects = temp
-
-        for pt in pt_list:
-            project = self.get_desired_remote_node(pt.project, projects)
-            self.check_node_in_sync(pt.project, osf_dir, projects)
-
-    def get_desired_remote_node(self, local, nodes):
-        for node in nodes:
-            if node['title'] == local.name:
-                    return node
-        return None
-
-    def check_node_in_sync(self, node,path, remote_nodes):
-        node_dir = os.path.join(path, node.name)
-        self.assertEquals(len(node.items), )
-        self.assertTrue(os.isdir(node_dir))
+# usage: nosetests /path/to/manipulate_osf.py -x
 
 
 
-        for child in node.items:
-            if child.kind ==
+class TestFail(Exception):
+    pass
+
+def assertTrue(func, arg):
+    """
+    checks for condition every 5 seconds. If eventually True then good. else TestFail
+    """
+    for i in range(10):
+        if func(arg):
+            return
+        else:
+            time.sleep(5)
+    raise TestFail
+
+def assertFalse(func, arg):
+    """
+    checks for condition every 5 seconds. If eventually False then good. else TestFail
+    """
+    for i in range(10):
+        if not func(arg):
+            return
+        else:
+            time.sleep(5)
+    raise TestFail
+
+
+def teardown(self):
+    shutil.rmtree(osfstorage_path)
+
+def get_node_file_folders(node_id):
+    node_files_url = api_node_files(node_id)
+    resp = session.get(node_files_url)
+    assert resp.ok
+    osf_storage_folder = RemoteFolder(resp.json()['data'][0])
+    assert osf_storage_folder.provider == osf_storage_folder.name
+    children_resp = session.get(osf_storage_folder.child_files_url)
+    assert children_resp.ok
+    return [dict_to_remote_object(file_folder) for file_folder in children_resp.json()['data']]
+
+def file_in_list(file_name, remote_object_list):
+    for remote_object in remote_object_list:
+        if isinstance(remote_object, RemoteFile) and remote_object.name == file_name:
+            return True
+    return False
+
+def folder_in_list(folder_name, remote_object_list):
+    for remote_object in remote_object_list:
+        if isinstance(remote_object, RemoteFolder) and remote_object.name == folder_name:
+            return True
+    return False
+
+
+def assert_contains_file(file_name, nid, parent_folder=None):
+    if parent_folder:
+        raise NotImplementedError
+    for i in range(10):
+        file_folders = get_node_file_folders(nid)
+        if file_in_list(file_name,file_folders):
+            return
+        time.sleep(5)
+    assert TestFail
+
+def assert_contains_folder(folder_name, nid, parent_folder=None):
+    if parent_folder:
+        raise NotImplementedError
+    for i in range(10):
+        file_folders = get_node_file_folders(nid)
+        if file_in_list(folder_name,file_folders):
+            return
+        time.sleep(5)
+    assert TestFail
+
+
+def test_create_local_folder():
+    create_local_folder('new_folder')
+    assert_contains_folder('new_folder', nid1)
+
+def test_create_local_file():
+    create_local_file('new_file')
+    assert_contains_file('new_file', nid1)
+
+def test_create_local_nested_folders():
+    create_local_folder('f')
+    assert_contains_folder('f', nid1)
+
+
+
+
+
+
+    # def test_create_local_project(self):
+    #     self.actions.create_local_projects([self.pt1])
+    #     self.check_in_sync([self.pt1], self.actions.OSF_FOLDER_LOCATION)
+    #
+    #
+    # def check_in_sync(self, pt_list, path):
+    #     osf_dir = os.path.join(path, 'OSF')
+    #     self.assertTrue(os.path.isdir(osf_dir))
+    #     user = requests.get(self.user_url, headers=self.headers)
+    #     projects = requests.get(user['links']['nodes']['relation'], headers=self.headers)
+    #     temp = []
+    #     for remote in projects:
+    #         if remote['category'] == 'project':
+    #             temp.append(remote)
+    #     projects = temp
+    #
+    #     for pt in pt_list:
+    #         project = self.get_desired_remote_node(pt.project, projects)
+    #         self.check_node_in_sync(pt.project, osf_dir, projects)
+    #
+    # def get_desired_remote_node(self, local, nodes):
+    #     for node in nodes:
+    #         if node['title'] == local.name:
+    #                 return node
+    #     return None
+    #
+    # def check_node_in_sync(self, node,path, remote_nodes):
+    #     node_dir = os.path.join(path, node.name)
+    #     self.assertEquals(len(node.items), )
+    #     self.assertTrue(os.isdir(node_dir))
+    #
+    #
+    #
+    #     for child in node.items:
+    #         if child.kind ==
