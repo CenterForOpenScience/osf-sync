@@ -108,6 +108,13 @@ class Node(Base):
 
             return os.path.join(self.user.osf_local_folder_path, self.title)
 
+    def locally_create_children(self):
+        self.locally_created = True
+        for node in self.child_nodes:
+            node.locally_create_children()
+        for file_folder in self.files:
+            file_folder.locally_created = True
+
     @hybrid_property
     def top_level_file_folders(self):
         file_folders = []
@@ -224,6 +231,14 @@ class File(Base):
             return os.stat(self.path).st_size
         except FileNotFoundError:  # file was deleted locally
             return 0
+
+    def locally_create_children(self):
+        self.locally_created = True
+        if self.is_folder:
+            for file_folder in self.files:
+                file_folder.locally_create_children()
+
+
 
     @validates('parent_id')
     def validate_parent_id(self, key, parent_id):

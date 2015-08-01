@@ -60,7 +60,6 @@ class OSFEventHandler(FileSystemEventHandler):
         # logging.info("Moved %s: from %s to %s", what, event.src_path,
         #              event.dest_path)
 
-        # todo: handle MOVED!!!!!!!!!!!!!!
         try:
 
             src_path = ProperPath(event.src_path, event.is_directory)
@@ -111,7 +110,7 @@ class OSFEventHandler(FileSystemEventHandler):
                             item.parent = new_parent
                             item.node = new_parent.node
 
-                    item.locally_created = True
+                    item.locally_create_children()
 
                     save(session, dummy)
                     save(session, item)

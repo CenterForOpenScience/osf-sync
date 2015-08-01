@@ -124,7 +124,6 @@ def get_children_for_folder(request, uri, headers):
 
         nid = furl(uri).path.segments[2]
 
-
         for file_folder in session.query(File):
             if not file_folder.is_file:
                 if file_folder.node.id == int(nid) and file_folder.path == folder_path:
@@ -135,3 +134,30 @@ def get_children_for_folder(request, uri, headers):
                     return (200, headers, resp)
     except:
         return (400, headers, 'cant get providers for node')
+
+@must_be_logged_in
+def create_folder(request, uri, headers):
+    folder_path = furl(uri).args['path']
+    # folder_name = folder_path.split('/')[1]
+    # provider_name = furl(uri).args['path']
+    nid = furl(uri).args['nid']
+    provider = session.query(File).filter(File.parent == None and File.node_id==nid).one()
+    new_folder = create_new_folder(provider)
+    resp = json.dumps({
+        'data':new_folder.as_dict()
+    })
+    return (200, headers, resp)
+
+@must_be_logged_in
+def create_file(request, uri, headers):
+    folder_path = furl(uri).args['path']
+    # folder_name = folder_path.split('/')[1]
+    # provider_name = furl(uri).args['path']
+    nid = furl(uri).args['nid']
+    provider = session.query(File).filter(File.parent == None and File.node_id==nid).one()
+    new_file = create_new_file(provider)
+    resp = json.dumps({
+        'data':new_file.as_dict()
+    })
+    return (200, headers, resp)
+

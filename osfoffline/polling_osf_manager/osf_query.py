@@ -187,7 +187,7 @@ class OSFQuery(object):
     def rename_remote_folder(self, local_folder, remote_folder):
         assert isinstance(local_folder, File)
         assert local_folder.is_folder
-        assert isinstance(local_folder, RemoteFolder)
+        assert isinstance(remote_folder, RemoteFolder)
         AlertHandler.info(local_folder.name, AlertHandler.MODIFYING)
         return (yield from self._rename_remote(local_folder, remote_folder))
 
