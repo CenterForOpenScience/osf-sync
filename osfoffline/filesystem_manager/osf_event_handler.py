@@ -35,14 +35,9 @@ class OSFEventHandler(FileSystemEventHandler):
         self.user = session.query(User).filter(User.logged_in).one()
 
 
-        print('osf event handler created')
 
     def close(self):
-        print('about to save and close the session inside osfeventhandler')
-        # save(self.session)
-        print('just save session')
-        # self.session.close()
-        print('just closed session. did it work?')
+        pass
 
     @asyncio.coroutine
     def on_any_event(self, event):
@@ -86,15 +81,18 @@ class OSFEventHandler(FileSystemEventHandler):
             # move
             elif src_path != dest_path:
                 try:
+                    """
+                    PLAN:
+                    will add .locally_moved flag to
+                    """
 
                     # check if file already exists in this moved location. If so, delete it.
-                    # try:
-                    #     item_to_replace = self.get_item_by_path(dest_path)
-                    #     session.delete(item_to_replace)
-                    #     save(session)
-                    # except FileNotFoundError:
-                    #     pass
-
+                    try:
+                        item_to_replace = self.get_item_by_path(dest_path)
+                        session.delete(item_to_replace)
+                        save(session)
+                    except FileNotFoundError:
+                        pass
 
                     new_parent = self._get_parent_item_from_path(dest_path)
 

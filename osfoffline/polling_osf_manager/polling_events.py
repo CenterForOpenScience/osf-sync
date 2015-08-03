@@ -3,7 +3,7 @@ from osfoffline.polling_osf_manager.osf_query import OSFQuery
 import os
 import shutil
 import asyncio
-from osfoffline.alerts import AlertHandler
+import osfoffline.alerts as AlertHandler
 class PollingEvent(object):
     def __init__(self, path):
         assert isinstance(path, str)

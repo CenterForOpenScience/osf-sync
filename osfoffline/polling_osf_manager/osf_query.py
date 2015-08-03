@@ -6,7 +6,7 @@ from osfoffline.polling_osf_manager.remote_objects \
     import (dict_to_remote_object, RemoteUser, RemoteFolder, RemoteFile, RemoteNode, RemoteObject )
 from osfoffline.database_manager.models import File,Node,User
 from osfoffline.polling_osf_manager.api_url_builder import wb_file_url,api_file_children, wb_move_url
-from osfoffline.alerts import AlertHandler
+import osfoffline.alerts as AlertHandler
 OK = 200
 CREATED = 201
 ACCEPTED = 202

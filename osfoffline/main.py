@@ -6,7 +6,7 @@ from osfoffline.views.preferences import Preferences
 from osfoffline.views.system_tray import SystemTray
 from osfoffline.controller import OSFController
 from osfoffline.views.start_screen import StartScreen
-from osfoffline.alerts import AlertHandler
+import osfoffline.alerts as AlertHandler
 import sys
 
 

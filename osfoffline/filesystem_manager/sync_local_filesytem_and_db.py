@@ -36,7 +36,6 @@ class LocalDBSync(object):
             self._emit_new_events(local, db)
 
     def _make_local_db_tuple_list(self, local, db):
-        import pdb;pdb.set_trace()
         # checks
         if local is None and db is None:
             raise LocalDBBothNone
@@ -68,7 +67,6 @@ class LocalDBSync(object):
 
         # assertions
         for local, db in out:
-            import pdb;pdb.set_trace()
             if local is not None and db is not None:
                 assert isinstance(local, ProperPath)
                 assert isinstance(db, Base)
