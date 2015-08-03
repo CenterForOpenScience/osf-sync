@@ -52,6 +52,7 @@ class AlertHandler(object):
 
     @classmethod
     def info(cls, file_name, action):
+
         if cls.alert_icon is None or not cls.show_alerts:
             return
         else:
@@ -74,7 +75,7 @@ class AlertHandler(object):
                 else:
                     if cls.alert_queue.empty():
                         cls.run_alert(alert_tuple[0], alert_tuple[1])
-                    elif datetime.now() - cls.last_alert_time < timedelta(milliseconds=cls.ALERT_TIME * 3 ) :  # last alert was recent
+                    elif datetime.now() - cls.last_alert_time < timedelta(milliseconds= (cls.ALERT_TIME * 3)) :  # last alert was recent
                         cls.run_alert('Updating {} files'.format(cls.alert_queue.qsize() + 1), "Check <a href='www.osf.io'>www.osf.io</a> for details.")
                         cls.clear_queue()
                     else:

@@ -87,13 +87,22 @@ class OSFEventHandler(FileSystemEventHandler):
             elif src_path != dest_path:
                 try:
 
+                    # check if file already exists in this moved location. If so, delete it.
+                    # try:
+                    #     item_to_replace = self.get_item_by_path(dest_path)
+                    #     session.delete(item_to_replace)
+                    #     save(session)
+                    # except FileNotFoundError:
+                    #     pass
+
+
                     new_parent = self._get_parent_item_from_path(dest_path)
 
-                    #create a dummy item in old place with .locally deleted so polling does not create new item
+                    # create a dummy item in old place with .locally deleted so polling does not create new item
                     if isinstance(item, Node):
-                        dummy = Node(title=item.title, parent=item.parent, user=item.user, category=item.category, osf_id=item.osf_id)
+                        dummy = Node(title=item.title, parent=item.parent, user=item.user, category=item.category, osf_id="DELETE{}DUMMY".format(item.osf_id))
                     elif isinstance(item, File):
-                        dummy = File(name=item.name, parent=item.parent, user=item.user, type=item.type, osf_id=item.osf_id, node=item.node)
+                        dummy = File(name=item.name, parent=item.parent, user=item.user, type=item.type, osf_id="DELETE{}DUMMY".format(item.osf_id), node=item.node)
                     dummy.locally_deleted = True
 
                     # move item
@@ -139,8 +148,8 @@ class OSFEventHandler(FileSystemEventHandler):
         :type event:
             :class:`DirCreatedEvent` or :class:`FileCreatedEvent`
         """
+        print('created a file {}'.format(event.src_path))
         try:
-            # logging.info("Created %s: %s", what, event.src_path)
 
             src_path = ProperPath(event.src_path, event.is_directory)
             name = src_path.name
@@ -198,12 +207,10 @@ class OSFEventHandler(FileSystemEventHandler):
                     # console_log('new thing as file object',file)
                     containing_item.files.append(file)
                     try:
-                        # if we can't update the hash immediately after creating, then it is a
-                        # fake file or something of the sort. Thus, we can just delete it.
+                        # if we can't update the hash immediately after creating, then it is likely a
+                        # fake file or something of the sort. Thus, we can just ignore this event.
                         file.update_hash()
                     except FileNotFoundError:
-                        session.delete(file)
-                        save(session)
                         return
                     save(session, file)
 
@@ -231,6 +238,7 @@ class OSFEventHandler(FileSystemEventHandler):
         :type event:
             :class:`DirModifiedEvent` or :class:`FileModifiedEvent`
         """
+        print('modified {}'.format(event.src_path))
         if isinstance(event, DirModifiedEvent):
             return
 
@@ -265,7 +273,7 @@ class OSFEventHandler(FileSystemEventHandler):
         :type event:
             :class:`DirDeletedEvent` or :class:`FileDeletedEvent`
         """
-
+        print('deleted {}'.format(event.src_path))
         src_path = ProperPath(event.src_path, event.is_directory)
         try:
             # get item

@@ -92,15 +92,12 @@ class BackgroundWorker(threading.Thread):
                     self.loop.close()
 
     def stop(self):
-        print('background stop called')
-        # self.session.close()
-        print('1 error')
+
+
         self.stop_polling_server()
-        print('2 error')
         self.stop_observing_osf_folder()
-        print('3 error')
         self.stop_loop(close=True)
-        print('4 error')
+
 
 
 

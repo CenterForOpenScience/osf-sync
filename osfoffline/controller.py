@@ -188,8 +188,7 @@ class OSFController(QDialog):
         log_dir = user_log_dir(self.app_name, self.app_author)
         if not os.path.exists(log_dir):  # ~/.cache/appname
             os.makedirs(log_dir)
-        if not os.path.exists(os.path.join(log_dir, 'log')):  # ~/.cache/appname/log (this is what logging uses)
-            os.makedirs(os.path.join(log_dir, 'log'))
+
 
         # make sure logging file exists
         log_file = open(os.path.join(log_dir, 'osf.log'), 'w+')
@@ -197,11 +196,13 @@ class OSFController(QDialog):
 
         # set up config. set up format of logged info. set up "level of logging"
         # which i think is just how urgent the logging thing is. probably just a tag to each event.
-        logging.basicConfig(level=logging.INFO,
-                            format='%(asctime)s - %(message)s',
-                            datefmt='%Y-%m-%d %H:%M:%S',
-                            filename=os.path.join(log_dir, 'osf.log'),
-                            filemode='w')
+        logging.basicConfig(
+            level=logging.INFO,
+            format='%(asctime)s - %(message)s',
+            datefmt='%Y-%m-%d %H:%M:%S',
+            filename=os.path.join(log_dir, 'osf.log'),
+            filemode='w'
+        )
         # define a Handler which writes INFO messages or higher to the sys.stderr
         console = logging.StreamHandler()
         console.setLevel(logging.INFO)
@@ -283,7 +284,7 @@ class OSFController(QDialog):
             self.store_configs()
         finally:
             file.close()
-        print(self.config)
+
 
     def ensure_config_dir(self):
         # check if dir has config file already in it, if so use it. if not create it.
@@ -292,6 +293,3 @@ class OSFController(QDialog):
         if not os.path.exists(config_dir):
             os.makedirs(config_dir)
         return config_dir
-
-
-
