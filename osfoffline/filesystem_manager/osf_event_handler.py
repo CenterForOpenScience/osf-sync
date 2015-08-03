@@ -5,7 +5,7 @@ storing the data into the db, and then sending a request to the remote server.
 import asyncio
 
 from watchdog.events import FileSystemEventHandler, DirModifiedEvent
-
+import logging
 from osfoffline.database_manager.models import Node, File,User
 from osfoffline.database_manager.db import session
 from osfoffline.database_manager.utils import save, session_scope
@@ -16,10 +16,6 @@ EVENT_TYPE_MOVED = 'moved'
 EVENT_TYPE_DELETED = 'deleted'
 EVENT_TYPE_CREATED = 'created'
 EVENT_TYPE_MODIFIED = 'modified'
-
-
-def console_log(variable_name, variable_value):
-    print("DEBUG: {}: {}".format(variable_name, variable_value))
 
 
 class OSFEventHandler(FileSystemEventHandler):
@@ -52,8 +48,6 @@ class OSFEventHandler(FileSystemEventHandler):
         :type event:
             :class:`DirMovedEvent` or :class:`FileMovedEvent`
         """
-        # logging.info("Moved %s: from %s to %s", what, event.src_path,
-        #              event.dest_path)
 
         try:
 
@@ -81,10 +75,6 @@ class OSFEventHandler(FileSystemEventHandler):
             # move
             elif src_path != dest_path:
                 try:
-                    """
-                    PLAN:
-                    will add .locally_moved flag to
-                    """
 
                     # check if file already exists in this moved location. If so, delete it.
                     try:
@@ -122,20 +112,17 @@ class OSFEventHandler(FileSystemEventHandler):
                     save(session, dummy)
                     save(session, item)
                 except FileNotFoundError:
-                    # todo: logging levels. make one for debug. use that instead of console_log
-                    console_log('tried to move to OSF folder. cant do this.')
+                    logging.warning('tried to move to OSF folder. cant do this.')
                     # item.parent = None
 
 
 
 
-            # todo: log
-            # logging.info(item.)
 
 
 
         except FileNotFoundError:
-            print('tried to move {} but it doesnt exist in db'.format(event.src_path))
+            logging.warning('tried to move {} but it doesnt exist in db'.format(event.src_path))
 
     @asyncio.coroutine
     def on_created(self, event):
@@ -146,15 +133,15 @@ class OSFEventHandler(FileSystemEventHandler):
         :type event:
             :class:`DirCreatedEvent` or :class:`FileCreatedEvent`
         """
-        print('created a file {}'.format(event.src_path))
+
         try:
 
             src_path = ProperPath(event.src_path, event.is_directory)
             name = src_path.name
-            # console_log('create a new thing. it is called',name)
+
             # create new model
             if not self.already_exists(src_path):
-                # console_log('new thing being created does not already exist in db',name)
+
                 # if folder and in top level OSF FOlder, then top_level_node
                 if src_path.parent == ProperPath(self.osf_folder, True):
                     if event.is_directory:
@@ -163,7 +150,7 @@ class OSFEventHandler(FileSystemEventHandler):
                         save(session, top_level_node)
                     else:
                         #todo: can just delete the file right here and give an alert.
-                        print("CREATED FILE IN PROJECT AREA.")
+                        logging.warning("CREATED FILE IN PROJECT AREA.")
                         raise NotADirectoryError
 
                 elif event.is_directory:
@@ -202,7 +189,7 @@ class OSFEventHandler(FileSystemEventHandler):
                         node = containing_item.node
                     file = File(name=name, type=File.FILE, user=self.user, locally_created=True,
                                 provider=File.DEFAULT_PROVIDER, node=node)
-                    # console_log('new thing as file object',file)
+
                     containing_item.files.append(file)
                     try:
                         # if we can't update the hash immediately after creating, then it is likely a
@@ -213,9 +200,6 @@ class OSFEventHandler(FileSystemEventHandler):
                     save(session, file)
 
 
-                    # console_log('new thing as file object AGAIN in order to check name',file)
-                    # log
-                    # todo: log
 
         except:
             raise Exception('something wrong in oncreate')
@@ -236,11 +220,11 @@ class OSFEventHandler(FileSystemEventHandler):
         :type event:
             :class:`DirModifiedEvent` or :class:`FileModifiedEvent`
         """
-        print('modified {}'.format(event.src_path))
+
         if isinstance(event, DirModifiedEvent):
             return
 
-        # logging.info("Modified %s: %s", what, event.src_path)
+
 
         src_path = ProperPath(event.src_path, event.is_directory)
         try:
@@ -253,14 +237,13 @@ class OSFEventHandler(FileSystemEventHandler):
             if isinstance(item, File) and item.is_file:
                 item.update_hash()
 
-            # log
-            # todo: log
+
 
             # save
             save(session, item)
-            console_log('modifying file. check how temp file is saved back in as', item)
+
         except FileNotFoundError:
-            print('tried to modify {} but it doesnt exist in db'.format(event.src_path))
+            logging.warning('tried to modify {} but it doesnt exist in db'.format(event.src_path))
 
     @asyncio.coroutine
     def on_deleted(self, event):
@@ -271,7 +254,7 @@ class OSFEventHandler(FileSystemEventHandler):
         :type event:
             :class:`DirDeletedEvent` or :class:`FileDeletedEvent`
         """
-        print('deleted {}'.format(event.src_path))
+
         src_path = ProperPath(event.src_path, event.is_directory)
         try:
             # get item
@@ -286,15 +269,11 @@ class OSFEventHandler(FileSystemEventHandler):
                 save(session)
 
 
-
-            # log
-            # todo: log
-
             # save
             save(session, item)
         except FileNotFoundError:
             # if file does not exist in db, then do nothing.
-            print('tried to delete file {} but was not in db'.format(event.src_path))
+            logging.warning('tried to delete file {} but was not in db'.format(event.src_path))
 
 
     def _get_parent_item_from_path(self, path):

@@ -54,6 +54,15 @@ def clear_queue():
         alert_queue.queue.clear()
 
 
+def warn(message):
+    global show_alerts
+
+    if (alert_icon is None) or (not show_alerts):
+        return
+    else:
+        if alert_icon.supportsMessages():
+            run_alert("Problems Syncing", message)
+
 def info(file_name, action):
     global show_alerts
 

@@ -53,19 +53,19 @@ class OSFApp(QDialog):
             (self.tray.quit_action.triggered, self.controller.quit),
 
             # controller events
-            (self.controller.login_action.triggered, self.start_screen.open_window),
-            (self.controller.start_tray_action.triggered, self.tray.start),
-            (self.controller.containing_folder_updated_action.triggered, self.preferences.update_containing_folder_text),
+            (self.controller.login_signal, self.start_screen.open_window),
+            (self.controller.start_tray_signal, self.tray.start),
+            (self.controller.containing_folder_updated_signal, self.preferences.update_containing_folder_text),
 
             # preferences
             (self.preferences.preferences_window.desktopNotifications.stateChanged, self.alerts_changed),
             (self.preferences.preferences_window.startOnStartup.stateChanged, self.startup_changed),
             (self.preferences.preferences_window.changeFolderButton.clicked, self.controller.set_containing_folder_process),
-            (self.preferences.preferences_closed_action.triggered, self.controller.resume),
+            (self.preferences.preferences_closed_signal.triggered, self.controller.resume),
 
 
             # start screen
-            (self.start_screen.done_logging_in_action.triggered, self.controller.start)
+
 
         ]
         for signal, slot in signal_slot_pairs:

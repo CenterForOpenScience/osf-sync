@@ -310,16 +310,16 @@ class OSFQuery(object):
             )
         except aiohttp.errors.ClientTimeoutError:
             # internally, if a timeout occurs, aiohttp tries up to 3 times. thus we already technically have retries in.
-            print('timeout. internet is bad.')
+
             raise
         except aiohttp.errors.BadHttpMessage:
-            print('failed request for url {}'.format(url))
+
             raise
         except aiohttp.errors.HttpMethodNotAllowed:
-            print('method not allowed {}'.format(method))
+
             raise
         except aiohttp.errors.ClientConnectionError:
-            print("These aren't the domains we're looking for.")
+
             raise
 
         if expects:

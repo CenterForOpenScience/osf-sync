@@ -1,6 +1,6 @@
 from PyQt5.QtWidgets import (QAction, QDialog, QFileDialog, QTreeWidgetItem)
 from PyQt5.QtCore import QCoreApplication, QRect, Qt
-
+from PyQt5.QtCore import pyqtSignal
 from osfoffline.views.rsc.preferences_rc import Ui_Preferences  # REQUIRED FOR GUI
 from osfoffline.database_manager.db import session
 from osfoffline.database_manager.utils import save, session_scope
@@ -25,13 +25,15 @@ class Preferences(QDialog):
     PROJECT_NAME_COLUMN = 0
     PROJECT_SYNC_COLUMN = 1
 
+    preferences_closed_trigger = pyqtSignal()
+
     def __init__(self, containing_folder):
         super().__init__()
         self._translate = QCoreApplication.translate
         self.containing_folder = containing_folder
         self.preferences_window = Ui_Preferences()
         self.preferences_window.setupUi(self)
-        self.preferences_closed_action = QAction("preferences window closed", self)
+
         self.preferences_window.changeFolderButton_2.clicked.connect(self.update_sync_nodes)
         self.tree_items = []
         self.setup_slots()
@@ -44,13 +46,12 @@ class Preferences(QDialog):
         self.containing_folder = QFileDialog.getExistingDirectory(self, "Choose where to place OSF folder")
 
     def set_containing_folder(self, new_containing_folder):
-        print('is this function called!!!!!!!')
+
         self.containing_folder = new_containing_folder
         self.preferences_window.containingFolderTextEdit.setText(self._translate("Preferences", self.containing_folder))
 
     def update_containing_folder_text(self, containing_folder):
-        print('update containing folder text in preferences called')
-        print('above was called with the argument containing_folder={}'.format(containing_folder))
+
         self.containing_folder = containing_folder
         self.preferences_window.containingFolderTextEdit.setText(self._translate("Preferences", self.containing_folder))
 

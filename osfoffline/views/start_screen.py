@@ -1,6 +1,6 @@
 from PyQt5.QtWidgets import (QAction, QDialog, QFileDialog)
 from sqlalchemy.orm.exc import MultipleResultsFound, NoResultFound
-
+from PyQt5.QtCore import pyqtSignal
 from osfoffline.database_manager.db import session
 from osfoffline.database_manager.utils import save
 from osfoffline.database_manager.models import User
@@ -18,9 +18,11 @@ class StartScreen(QDialog):
     OSF = 1
     ABOUT = 4
 
+    done_logging_in_signal = pyqtSignal()
+
     def __init__(self):
         super().__init__()
-        self.done_logging_in_action = QAction("done logging in user", self)
+
         self.containing_folder = ''
         self.start_screen = Ui_startscreen()
 
@@ -60,7 +62,7 @@ class StartScreen(QDialog):
             save(session, user)
             session.close()
             self.destroy()
-            self.doneLoggingInAction.trigger()
+
         except MultipleResultsFound:
             # todo: multiple user screen allows you to choose which user is logged in
             print('multiple users with same username. deleting both. restarting function.')
@@ -84,7 +86,7 @@ class StartScreen(QDialog):
             save(session, user)
             session.close()
             self.destroy()
-            self.done_logging_in_action.trigger()
+
 
 
     def setup_slots(self):

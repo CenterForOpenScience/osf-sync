@@ -186,7 +186,7 @@ class LocalDBSync(object):
             # observer.dispatch_events(event_queue, observer._timeout)
             emitter = next(iter(self.observer.emitters))
             emitter.queue_event(event)
-            print('EVENT EMITTED: {}'.format(event))
+
             # observer.emitters[0].queue_event(event)
         local_db_tuple_list = self._make_local_db_tuple_list(local, db)
         for local, db in local_db_tuple_list:

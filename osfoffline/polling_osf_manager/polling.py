@@ -16,7 +16,7 @@ from osfoffline.polling_osf_manager.remote_objects import RemoteObject, RemoteNo
 from osfoffline.polling_osf_manager.polling_event_queue import PollingEventQueue
 from osfoffline.polling_osf_manager.polling_events import CreateFile,CreateFolder,RenameFile,RenameFolder, DeleteFile,DeleteFolder,UpdateFile
 import iso8601
-
+import osfoffline.alerts as AlertHandler
 RECHECK_TIME = 5  # in seconds
 
 
@@ -34,7 +34,7 @@ class Poll(object):
 
 
     def stop(self):
-        print('INSIDE polling.stop')
+
         self._keep_running = False
         self.osf_query.close()
 
@@ -57,17 +57,15 @@ class Poll(object):
     # It blocks check_osf from running.
     @asyncio.coroutine
     def get_remote_user(self, future):
-        print("checking projects of user with id {}".format(self.user.osf_id))
+
         url = api_user_url(self.user.osf_id)
         while self._keep_running:
             try:
                 resp = yield from self.osf_query.make_request(url, get_json=True)
                 future.set_result(resp['data'])
                 break
-            except concurrent.futures._base.TimeoutError:
-                print('failed to get remote_user. trying again.')
-            except aiohttp.errors.ClientTimeoutError:
-                print('failed to get remote_user. trying again.')
+            except ( concurrent.futures._base.TimeoutError, aiohttp.errors.ClientTimeoutError):
+                AlertHandler.warn("Bad Internet Connection")
 
     def get_id(self, item):
         """
