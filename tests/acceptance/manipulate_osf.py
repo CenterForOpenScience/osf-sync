@@ -12,11 +12,12 @@ import shutil
 from unittest import TestCase
 from nose import with_setup
 osf_path = '/home/himanshu/Desktop/OSF/'
-osfstorage_path = os.path.join(osf_path, 'new_test_project','osfstorage')
-user_id = '5bqt9'
-nid1 = 'dz5mg'
+osfstorage_path = os.path.join(osf_path, 'my_new_project','osfstorage')
+user_id = 'ryv53'
+nid1 = 'e69ab'
 # nid2 = ''
-headers = {'Authorization':'Bearer {}'.format(user_id)}
+oauth_token = 'eyJhbGciOiJIUzUxMiJ9.ZXlKaGJHY2lPaUprYVhJaUxDSmxibU1pT2lKQk1USTRRMEpETFVoVE1qVTJJbjAuLjgzZDFQNnQwTkp5VUd1U0dITUZ5dWcuTE4xSzQ4Z3I1aE9UV0xMYVBZR3RUVGNiajB5MmNRS3hTZjRzaURTcFo5YXhBOEU1eG5GMDVDR0pwTmpidHVGM1ZldnRvLU1NdmJLNXZjR3BQNTRCNDdIR0xmWFF1cjBaUmstZm5EM0NlSTBVNjRlel9vMGpNNDlzRjR0SHhWUUhFUWE2TjV0MzBMRkpRaDB5bmJlcl9ra2Y0MHBDa2w4Nno1RHJGaWo0QkxfeWhkOHp1aW5qWHlXV1JFdU05cXYxLjVlQ0hlOEpCWVdXTGoyZ0hJVEQ5TVE.wpEdtHs931he-YkMDqCMZQjXGvxG8t1jgDA_YbhWywcnR2DfJZHSL6PQU58RMMnECFk857v-ZoDZ0puf1KB3IA'
+headers = {'Authorization':'Bearer {}'.format(oauth_token)}
 session = requests.Session()
 session.headers.update(headers)
 files_directory = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'files')

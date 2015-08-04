@@ -166,8 +166,16 @@ class Poll(object):
         # all_remote_nodes_url = 'https://staging2.osf.io:443/api/v2/users/{}/nodes/'.format(remote_user_id)
         all_remote_nodes_url = api_user_nodes(remote_user_id)
         while self._keep_running:
+
             # get remote top level nodes
-            remote_top_level_nodes = yield from self.osf_query.get_top_level_nodes(all_remote_nodes_url)
+            try:
+                remote_top_level_nodes = yield from self.osf_query.get_top_level_nodes(all_remote_nodes_url)
+            except (aiohttp.errors.ClientConnectionError, aiohttp.errors.ClientTimeoutError):
+                AlertHandler.warn("Bad Internet Connection")
+                # waits till the end of a sleep to stop. thus can make numerous smaller sleeps
+                for i in range(RECHECK_TIME):
+                    yield from asyncio.sleep(1)
+                continue
 
 
             # get local top level nodes
@@ -186,6 +194,8 @@ class Poll(object):
             yield from self.polling_event_queue.run()
 
             logging.info('---------SHOULD HAVE ALL OSF FILES---------')
+
+
 
             # waits till the end of a sleep to stop. thus can make numerous smaller sleeps
             for i in range(RECHECK_TIME):
@@ -224,13 +234,19 @@ class Poll(object):
                 yield from self.modify_local_node(local_node, remote_node)
 
         # handle file_folders for node
-        yield from self.check_file_folder(local_node, remote_node)
+        try:
+            yield from self.check_file_folder(local_node, remote_node)
+        except Exception as e:
+            logging.warning(e)
 
         # recursively handle node's children
         remote_children = yield from self.osf_query.get_child_nodes(remote_node)
         local_remote_nodes = self.make_local_remote_tuple_list(local_node.child_nodes, remote_children)
         for local, remote in local_remote_nodes:
-            yield from self.check_node(local, remote, local_parent_node=local_node)
+            try:
+                yield from self.check_node(local, remote, local_parent_node=local_node)
+            except Exception as e:
+                logging.warning(e)
 
     @asyncio.coroutine
     def check_file_folder(self, local_node, remote_node):
@@ -239,8 +255,16 @@ class Poll(object):
         local_remote_files = self.make_local_remote_tuple_list(local_node.top_level_file_folders, remote_node_files)
 
         for local, remote in local_remote_files:
-            yield from self._check_file_folder(local, remote, local_parent_file_folder=None,
-                                    local_node=local_node)
+            try:
+                yield from self._check_file_folder(
+                    local,
+                    remote,
+                    local_parent_file_folder=None,
+                    local_node=local_node
+                )
+            except Exception as e:
+                logging.warning(e)
+
     @asyncio.coroutine
     def _check_file_folder(self,
                            local_file_folder,

@@ -10,6 +10,7 @@ from osfoffline.polling_osf_manager.osf_query import OSFQuery
 from osfoffline.polling_osf_manager.remote_objects import RemoteNode
 import requests
 import os
+import logging
 import asyncio
 
 
@@ -141,4 +142,4 @@ class Preferences(QDialog):
         if self.isVisible():
             self.hide()
             event.ignore()
-            self.preferences_closed_action.trigger()
+            self.preferences_closed_signal.emit()

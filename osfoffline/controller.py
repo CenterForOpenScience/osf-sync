@@ -83,21 +83,22 @@ class OSFController(QDialog):
         # todo: can use session_scope here
 
         self.user = self.get_current_user()
+        if self.user:
 
-        self.containing_folder = os.path.dirname(self.user.osf_local_folder_path)
-        if not self.containing_folder_is_set():
-            self.set_containing_folder()
-        self.user.osf_local_folder_path = os.path.join(self.containing_folder, "OSF")
+            self.containing_folder = os.path.dirname(self.user.osf_local_folder_path)
+            if not self.containing_folder_is_set():
+                self.set_containing_folder()
+            self.user.osf_local_folder_path = os.path.join(self.containing_folder, "OSF")
 
-        save(session, self.user)
+            save(session, self.user)
 
-        if not os.path.isdir(self.user.osf_local_folder_path):
-            os.makedirs(self.user.osf_local_folder_path)
+            if not os.path.isdir(self.user.osf_local_folder_path):
+                os.makedirs(self.user.osf_local_folder_path)
 
-        self.start_logging()
+            self.start_logging()
 
-        self.start_tray_signal.emit()
-        self.background_worker.start()
+            self.start_tray_signal.emit()
+            self.background_worker.start()
 
 
     def resume(self):
@@ -170,7 +171,6 @@ class OSFController(QDialog):
 
         except NoResultFound:
             err = True
-
 
 
         if err:

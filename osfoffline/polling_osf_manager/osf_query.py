@@ -29,9 +29,12 @@ class OSFQuery(object):
 
 
         resp = yield from self.make_request(remote_url, get_json=True)
+
         remote_children.extend(resp['data'])
         while resp['links']['next']:
+
             resp = yield from self.make_request(resp['links']['next'], get_json=True)
+
             remote_children.extend(resp['data'])
 
         for child in remote_children:
@@ -310,7 +313,7 @@ class OSFQuery(object):
             )
         except aiohttp.errors.ClientTimeoutError:
             # internally, if a timeout occurs, aiohttp tries up to 3 times. thus we already technically have retries in.
-
+            AlertHandler.warn("Bad Internet Connection")
             raise
         except aiohttp.errors.BadHttpMessage:
 
@@ -319,7 +322,7 @@ class OSFQuery(object):
 
             raise
         except aiohttp.errors.ClientConnectionError:
-
+            AlertHandler.warn("Bad Internet Connection")
             raise
 
         if expects:

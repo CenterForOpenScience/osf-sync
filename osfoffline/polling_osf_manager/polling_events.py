@@ -5,6 +5,7 @@ import shutil
 import asyncio
 import osfoffline.alerts as AlertHandler
 import logging
+import aiohttp
 class PollingEvent(object):
     def __init__(self, path):
         assert isinstance(path, str)
@@ -87,8 +88,11 @@ class UpdateFile(PollingEvent):
     @asyncio.coroutine
     def run(self):
         AlertHandler.info(self.path.name, AlertHandler.MODIFYING)
-        yield from _download_file(self.path, self.download_url, self.osf_query)
-
+        try:
+            yield from _download_file(self.path, self.download_url, self.osf_query)
+        except Exception as e:
+            logging.warning(e)
+            # AlertHandler.warn("File unable to be updated online")
 
 class DeleteFolder(PollingEvent):
     def __init__(self, path):
@@ -126,14 +130,27 @@ class DeleteFile(PollingEvent):
 def _download_file(path, url, osf_query):
     assert isinstance(path, ProperPath)
     assert isinstance(url, str)
-    resp = yield from osf_query.make_request(url)
-    with open(path.full_path, 'wb') as fd:
-        while True:
-            chunk = yield from resp.content.read(2048)
-            if not chunk:
-                break
-            fd.write(chunk)
-    resp.close()
+    try:
+        resp = yield from osf_query.make_request(url)
+    except (aiohttp.errors.ClientConnectionError, aiohttp.errors.ClientTimeoutError):
+        AlertHandler.warn("Bad Internet Connection")
+        logging.warning("Bad Internet Connection")
+        raise
+    except (aiohttp.errors.HttpMethodNotAllowed, aiohttp.errors.BadHttpMessage):
+        AlertHandler.warn("Do not have access to file.")
+        logging.warning("Do not have access to file.")
+        raise
+    try:
+        with open(path.full_path, 'wb') as fd:
+            while True:
+                chunk = yield from resp.content.read(2048)
+                if not chunk:
+                    break
+                fd.write(chunk)
+        resp.close()
+    except OSError:
+        AlertHandler.warn("unable to open file")
+        raise
 
 @asyncio.coroutine
 def _rename(old_path, new_path):

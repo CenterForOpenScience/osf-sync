@@ -65,6 +65,7 @@ class OSFApp(QDialog):
 
 
             # start screen
+            (self.start_screen.done_logging_in_signal, self.controller.start),
 
 
         ]
