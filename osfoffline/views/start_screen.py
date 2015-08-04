@@ -49,9 +49,9 @@ class StartScreen(QDialog):
 
         # assumption: logged in user properly.
         # assumption: all the fields needed for db are set
-        full_name = 'himanshu'
-        osf_id = '5bqt9'
-        oauth_token = '5bqt9'
+        full_name = user_name
+        osf_id = user_name
+        oauth_token = password
         # check if user already exists in db
 
         try:
