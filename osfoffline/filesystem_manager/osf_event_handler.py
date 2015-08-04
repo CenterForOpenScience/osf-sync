@@ -64,6 +64,7 @@ class OSFEventHandler(FileSystemEventHandler):
                 else:
                     item.title = dest_path.name
                     save(session, item)
+                logging.info("on_moved just renamed a node")
             elif isinstance(item, File) and item.name != dest_path.name:
                 if self.already_exists(dest_path):
                     session.delete(item)
@@ -72,6 +73,7 @@ class OSFEventHandler(FileSystemEventHandler):
                     item.name = dest_path.name
                     item.locally_renamed = True
                     save(session, item)
+                logging.info("on_moved just renamed a file")
             # move
             elif src_path != dest_path:
                 try:
@@ -111,6 +113,7 @@ class OSFEventHandler(FileSystemEventHandler):
 
                     save(session, dummy)
                     save(session, item)
+                    logging.info("on_moved event completed")
                 except FileNotFoundError:
                     logging.warning('tried to move to OSF folder. cant do this.')
                     # item.parent = None
@@ -148,6 +151,7 @@ class OSFEventHandler(FileSystemEventHandler):
                         top_level_node = Node(title=name, user=self.user, locally_created=True)
                         # save
                         save(session, top_level_node)
+                        logging.info("on_created called for top level node")
                     else:
                         #todo: can just delete the file right here and give an alert.
                         logging.warning("CREATED FILE IN PROJECT AREA.")
@@ -166,6 +170,7 @@ class OSFEventHandler(FileSystemEventHandler):
                                       provider=File.DEFAULT_PROVIDER, node=node)
                         containing_item.files.append(folder)
                         save(session, folder)
+                        logging.info("on_created for folder")
                     else:  # child node
 
                         new_child_node = Node(
@@ -179,6 +184,7 @@ class OSFEventHandler(FileSystemEventHandler):
 
                         parent_component.child_nodes.append(new_child_node)
                         save(session, new_child_node)
+                        logging.info("on_created for child node")
 
                 else:  # if file, then file.
 
@@ -198,11 +204,11 @@ class OSFEventHandler(FileSystemEventHandler):
                     except FileNotFoundError:
                         return
                     save(session, file)
+                    logging.info("on_created for file")
 
 
-
-        except:
-            raise Exception('something wrong in oncreate')
+        except Exception as e:
+            logging.warning(e)
 
     def already_exists(self, path):
         try:

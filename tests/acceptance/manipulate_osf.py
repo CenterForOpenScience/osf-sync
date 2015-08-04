@@ -33,7 +33,7 @@ def create_osf_folder(folder_name, nid, parent=None):
     }
     files_url = wb_file_url()
     resp = session.post(files_url,params=params)
-    print(resp.content)
+
     assert resp.ok
     return resp.json()
 

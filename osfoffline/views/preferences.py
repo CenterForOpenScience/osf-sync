@@ -122,7 +122,7 @@ class Preferences(QDialog):
                     if verified_node.is_top_level:
                         remote_top_level_nodes.append(verified_node)
         except Exception as e:
-            print(e)
+            logging.warning(e)
         return remote_top_level_nodes
 
     def update_sync_nodes(self):
@@ -133,14 +133,11 @@ class Preferences(QDialog):
             for name, id in [(node.name, node.id) for node in self.remote_top_level_nodes]:
                 if name == tree_item.text(self.PROJECT_NAME_COLUMN):
                     if tree_item.checkState(self.PROJECT_SYNC_COLUMN) == Qt.Checked:
-                        print('going to add something to list: {}'.format(id))
                         guid_list.append(id)
-        print(guid_list)
         user.guid_for_top_level_nodes_to_sync = guid_list
 
 
     def closeEvent(self, event):
-        print('close event called')
         if self.isVisible():
             self.hide()
             event.ignore()

@@ -4,6 +4,7 @@ import os
 import shutil
 import asyncio
 import osfoffline.alerts as AlertHandler
+import logging
 class PollingEvent(object):
     def __init__(self, path):
         assert isinstance(path, str)
@@ -103,7 +104,7 @@ class DeleteFolder(PollingEvent):
             AlertHandler.info(self.path.name, AlertHandler.DELETING)
             shutil.rmtree(
                 self.path.full_path,
-                onerror=lambda a, b, c: print('local node not deleted because not exists.')
+                onerror=lambda a, b, c: logging.warning('local node not deleted because not exists.')
             )
         else:
             raise NotImplementedError
@@ -119,7 +120,7 @@ class DeleteFile(PollingEvent):
         try:
             os.remove(self.path.full_path)
         except FileNotFoundError:
-            print('file not deleted because does not exist on local filesystem. inside delete_local_file_folder (2)')
+            logging.warning('file not deleted because does not exist on local filesystem. inside delete_local_file_folder (2)')
 
 @asyncio.coroutine
 def _download_file(path, url, osf_query):
@@ -142,4 +143,4 @@ def _rename(old_path, new_path):
         AlertHandler.info(new_path.name, AlertHandler.MODIFYING)
         os.renames(old_path.full_path, new_path.full_path)
     except FileNotFoundError:
-        print('renaming of file/folder failed because file/folder not there')
+        logging.warning('renaming of file/folder failed because file/folder not there')

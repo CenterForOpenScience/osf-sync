@@ -111,7 +111,6 @@ def get_providers_for_node(request, uri, headers):
         resp = json.dumps({
             'data':resp
         })
-        print(resp)
         return (200, headers, resp)
     except:
         return (400, headers, 'cant get providers for node')
