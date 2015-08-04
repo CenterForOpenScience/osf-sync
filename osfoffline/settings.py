@@ -12,8 +12,8 @@ PROJECT_DB_PATH = user_data_dir(PROJECT_NAME, PROJECT_AUTHOR)
 # API_BASE = 'http://localhost:8000'
 # WB_BASE = 'http://localhost:7777'
 
-API_BASE = 'http://staging2.osf.io/api/'
-WB_BASE = 'http://staging2-files.osf.io'
+API_BASE = 'https://staging2.osf.io/api/'
+WB_BASE = 'https://staging2-files.osf.io'
 
 
 

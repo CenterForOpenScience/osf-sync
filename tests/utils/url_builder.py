@@ -16,14 +16,14 @@ def api_node_self(node_id):
 def api_node_children(node_id):
     # http://localhost:8000/v2/nodes/dz5mg/children/
     base = furl(API_BASE)
-    base.path.segments = ['v2','nodes',str(node_id), 'children']
+    base.path.segments = ['api','v2','nodes',str(node_id), 'children']
     return base.url
 
 # ONLY FOR TESTING
 def api_node_files(node_id):
     # http://localhost:8000/v2/nodes/dz5mg/files/
     base = furl(API_BASE)
-    base.path.segments = ['v2','nodes',str(node_id), 'files']
+    base.path.segments = ['api','v2','nodes',str(node_id), 'files']
     return base.url
 
 #ONLY FOR TESTING
@@ -33,6 +33,6 @@ def api_file_self(path, nid, provider):
 
 def api_create_node():
     base = furl(API_BASE)
-    base.path.segments = ['v2','nodes']
+    base.path.segments = ['api','v2','nodes']
     return base.url
 

@@ -8,7 +8,7 @@ import requests
 import time
 from tests.utils.url_builder import api_node_files, wb_file_url
 from osfoffline.polling_osf_manager.remote_objects import RemoteFile, RemoteFolder, RemoteFileFolder, dict_to_remote_object
-osf_path = '/home/himanshu/Desktop/OSF/'
+osf_path = '/Users/himanshu/Desktop/OSF/'
 osfstorage_path = os.path.join(osf_path, 'new_test_project','osfstorage')
 user_id = '5bqt9'
 nid1 = 'dz5mg'

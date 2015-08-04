@@ -142,4 +142,5 @@ class Preferences(QDialog):
         if self.isVisible():
             self.hide()
             event.ignore()
+            self.destroy()
             self.preferences_closed_signal.emit()

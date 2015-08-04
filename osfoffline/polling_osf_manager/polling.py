@@ -170,7 +170,7 @@ class Poll(object):
             # get remote top level nodes
             try:
                 remote_top_level_nodes = yield from self.osf_query.get_top_level_nodes(all_remote_nodes_url)
-            except (aiohttp.errors.ClientConnectionError, aiohttp.errors.ClientTimeoutError):
+            except (aiohttp.errors.ClientConnectionError, aiohttp.errors.ClientTimeoutError, concurrent.futures._base.TimeoutError):
                 AlertHandler.warn("Bad Internet Connection")
                 # waits till the end of a sleep to stop. thus can make numerous smaller sleeps
                 for i in range(RECHECK_TIME):

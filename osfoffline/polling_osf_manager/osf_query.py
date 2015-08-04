@@ -7,6 +7,8 @@ from osfoffline.polling_osf_manager.remote_objects \
 from osfoffline.database_manager.models import File,Node,User
 from osfoffline.polling_osf_manager.api_url_builder import wb_file_url,api_file_children, wb_move_url
 import osfoffline.alerts as AlertHandler
+import concurrent
+
 OK = 200
 CREATED = 201
 ACCEPTED = 202
@@ -311,7 +313,7 @@ class OSFQuery(object):
                 ),
                 timeout
             )
-        except aiohttp.errors.ClientTimeoutError:
+        except (aiohttp.errors.ClientTimeoutError, aiohttp.errors.ClientConnectionError, concurrent.futures._base.TimeoutError):
             # internally, if a timeout occurs, aiohttp tries up to 3 times. thus we already technically have retries in.
             AlertHandler.warn("Bad Internet Connection")
             raise
@@ -321,9 +323,8 @@ class OSFQuery(object):
         except aiohttp.errors.HttpMethodNotAllowed:
 
             raise
-        except aiohttp.errors.ClientConnectionError:
-            AlertHandler.warn("Bad Internet Connection")
-            raise
+
+
 
         if expects:
             if response.status not in expects:

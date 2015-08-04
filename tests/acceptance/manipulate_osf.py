@@ -1,7 +1,7 @@
 
 # usage: nosetests /path/to/manipulate_osf.py -x
 
-
+from nose.tools import set_trace;
 from tests.utils.url_builder import wb_file_url, wb_move_url, api_create_node, api_node_files
 from osfoffline.polling_osf_manager.remote_objects import RemoteFile, RemoteFolder, RemoteFileFolder, dict_to_remote_object
 import os
@@ -11,7 +11,7 @@ import time
 import shutil
 from unittest import TestCase
 from nose import with_setup
-osf_path = '/home/himanshu/Desktop/OSF/'
+osf_path = '/Users/himanshu/Desktop/OSF/'
 osfstorage_path = os.path.join(osf_path, 'my_new_project','osfstorage')
 user_id = 'ryv53'
 nid1 = 'e69ab'
@@ -33,6 +33,7 @@ def create_osf_folder(folder_name, nid, parent=None):
         'nid': nid
     }
     files_url = wb_file_url()
+
     resp = session.post(files_url,params=params)
 
     assert resp.ok
