@@ -11,6 +11,8 @@ import time
 import shutil
 from unittest import TestCase
 from nose import with_setup
+
+
 osf_path = '/Users/himanshu/Desktop/OSF/'
 osfstorage_path = os.path.join(osf_path, 'my_new_project','osfstorage')
 user_id = 'ryv53'
@@ -21,6 +23,9 @@ headers = {'Authorization':'Bearer {}'.format(oauth_token)}
 session = requests.Session()
 session.headers.update(headers)
 files_directory = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'files')
+
+
+
 
 def create_osf_folder(folder_name, nid, parent=None):
     if parent:

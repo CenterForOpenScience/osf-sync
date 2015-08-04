@@ -160,3 +160,7 @@ def create_file(request, uri, headers):
     })
     return (200, headers, resp)
 
+# @must_be_logged_in
+# def download_file(request, uri, headers):
+
+
