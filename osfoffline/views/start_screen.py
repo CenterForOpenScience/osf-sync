@@ -1,11 +1,11 @@
 from PyQt5.QtWidgets import (QAction, QDialog, QFileDialog)
 from sqlalchemy.orm.exc import MultipleResultsFound, NoResultFound
-
+from PyQt5.QtCore import pyqtSignal
 from osfoffline.database_manager.db import session
 from osfoffline.database_manager.utils import save
 from osfoffline.database_manager.models import User
 from osfoffline.views.rsc.startscreen import Ui_startscreen  # REQUIRED FOR GUI
-
+import logging
 
 __author__ = 'himanshu'
 
@@ -18,9 +18,11 @@ class StartScreen(QDialog):
     OSF = 1
     ABOUT = 4
 
+    done_logging_in_signal = pyqtSignal()
+
     def __init__(self):
         super().__init__()
-        self.done_logging_in_action = QAction("done logging in user", self)
+
         self.containing_folder = ''
         self.start_screen = Ui_startscreen()
 
@@ -44,8 +46,8 @@ class StartScreen(QDialog):
     def log_in(self):
         user_name = self.start_screen.emailEdit.text()  # himanshu@dayrep.com
         password = self.start_screen.passwordEdit.text()  # password
-        print(user_name)
-        print(password)
+        logging.info(user_name)
+        logging.info(password)
 
         # assumption: logged in user properly.
         # assumption: all the fields needed for db are set
@@ -60,10 +62,10 @@ class StartScreen(QDialog):
             save(session, user)
             session.close()
             self.destroy()
-            self.doneLoggingInAction.trigger()
+
         except MultipleResultsFound:
             # todo: multiple user screen allows you to choose which user is logged in
-            print('multiple users with same username. deleting both. restarting function.')
+            logging.warning('multiple users with same username. deleting both. restarting function.')
             for user in self.session.query(User):
                 if user.osf_login == user_name:
                     session.delete(user)
@@ -71,7 +73,7 @@ class StartScreen(QDialog):
             session.close()
             self.log_in()
         except NoResultFound:
-            print('user doesnt exist. Creating user. and logging him in.')
+            logging.warning('user doesnt exist. Creating user. and logging him in.')
             user = User(
                 full_name=full_name,
                 osf_id=osf_id,
@@ -84,7 +86,7 @@ class StartScreen(QDialog):
             save(session, user)
             session.close()
             self.destroy()
-            self.done_logging_in_action.trigger()
+
 
 
     def setup_slots(self):

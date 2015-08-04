@@ -110,6 +110,7 @@ class Node(Base):
 
     def locally_create_children(self):
         self.locally_created = True
+        self.osf_id = None
         for node in self.child_nodes:
             node.locally_create_children()
         for file_folder in self.files:

@@ -3,12 +3,13 @@ import threading
 import asyncio
 from sqlalchemy.orm.exc import MultipleResultsFound, NoResultFound
 from watchdog.observers import Observer
+from osfoffline.database_manager.utils import save
 import osfoffline.database_manager.models as models
 import osfoffline.polling_osf_manager.polling as polling
 import osfoffline.filesystem_manager.osf_event_handler as osf_event_handler
 from osfoffline.database_manager.db import session
 from osfoffline.filesystem_manager.sync_local_filesytem_and_db import LocalDBSync
-
+import logging
 
 class BackgroundWorker(threading.Thread):
 
@@ -31,7 +32,7 @@ class BackgroundWorker(threading.Thread):
         self.loop.run_forever()
 
     def run_background_tasks(self):
-        print('starting run_background_tasks')
+        logging.info('starting run_background_tasks')
 
         if not self.running:
             self.user = self.get_current_user()
@@ -43,14 +44,13 @@ class BackgroundWorker(threading.Thread):
 
 
     def pause_background_tasks(self):
-        import threading; print(threading.current_thread())
-        print('background pause background tasks called')
+
         if self.running:
-            print('stop polling server')
+
             self.stop_polling_server()
-            print('stop obsering osf folder')
+
             self.stop_observing_osf_folder()
-            print('stop loop')
+
             # self.stop_loop()
 
             self.running = False
@@ -60,7 +60,7 @@ class BackgroundWorker(threading.Thread):
         self.poller.start()
 
     def stop_polling_server(self):
-        print('ABOUT TO STOP POLLING SERVER')
+
         self.poller.stop()
 
 
@@ -68,21 +68,8 @@ class BackgroundWorker(threading.Thread):
     # todo: can refactor this code out to somewhere
 
     def get_current_user(self):
-        user = None
-        import threading
-        print('---inside getcurrentuser-----{}----'.format(threading.current_thread()))
-        try:
-            user = session.query(models.User).filter(models.User.logged_in).one()
-            print('user attained in background')
-        except MultipleResultsFound:
-            # todo: multiple user screen allows you to choose which user is logged in
+        return session.query(models.User).filter(models.User.logged_in).one()
 
-            self.multiple_user_action.trigger()
-        except NoResultFound:
-            self.login_action.trigger()
-            print('no users are logged in currently. Logging in first user in db.')
-
-        return user
 
     def stop_loop(self, close=False):
         self.loop.call_soon_threadsafe(self.loop.stop)
@@ -92,15 +79,12 @@ class BackgroundWorker(threading.Thread):
                     self.loop.close()
 
     def stop(self):
-        print('background stop called')
-        # self.session.close()
-        print('1 error')
+
+
         self.stop_polling_server()
-        print('2 error')
         self.stop_observing_osf_folder()
-        print('3 error')
         self.stop_loop(close=True)
-        print('4 error')
+
 
 
 
@@ -111,21 +95,21 @@ class BackgroundWorker(threading.Thread):
                                                                loop=self.loop)  # create event handler
         # todo: if config actually has legitimate data. use it.
         # start
-        print('starting observer for osf folder')
+
         self.observer = Observer()  # create observer. watched for events on files.
         # attach event handler to observed events. make observer recursive
-        print('schedule observer')
+
         self.observer.schedule(self.event_handler, self.osf_folder, recursive=True)
         LocalDBSync(self.user.osf_local_folder_path, self.observer, self.user).emit_new_events()
 
         try:
-            print('observer.start')
+
             self.observer.start()  # start
         except OSError:
-            print('too many things being watched.... hmmmm, what to dooooo????')
+            logging.warning('too many things being watched.... hmmmm, what to dooooo????')
 
     def stop_observing_osf_folder(self):
-        print('inside stop_obsering_osf_folder in background.py')
+
         self.event_handler.close()
         self.observer.stop()
         self.observer.join()

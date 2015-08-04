@@ -6,7 +6,7 @@ from osfoffline.polling_osf_manager.remote_objects \
     import (dict_to_remote_object, RemoteUser, RemoteFolder, RemoteFile, RemoteNode, RemoteObject )
 from osfoffline.database_manager.models import File,Node,User
 from osfoffline.polling_osf_manager.api_url_builder import wb_file_url,api_file_children, wb_move_url
-from osfoffline.alerts import AlertHandler
+import osfoffline.alerts as AlertHandler
 OK = 200
 CREATED = 201
 ACCEPTED = 202
@@ -310,16 +310,16 @@ class OSFQuery(object):
             )
         except aiohttp.errors.ClientTimeoutError:
             # internally, if a timeout occurs, aiohttp tries up to 3 times. thus we already technically have retries in.
-            print('timeout. internet is bad.')
+
             raise
         except aiohttp.errors.BadHttpMessage:
-            print('failed request for url {}'.format(url))
+
             raise
         except aiohttp.errors.HttpMethodNotAllowed:
-            print('method not allowed {}'.format(method))
+
             raise
         except aiohttp.errors.ClientConnectionError:
-            print("These aren't the domains we're looking for.")
+
             raise
 
         if expects:

@@ -5,7 +5,7 @@ storing the data into the db, and then sending a request to the remote server.
 import asyncio
 
 from watchdog.events import FileSystemEventHandler, DirModifiedEvent
-
+import logging
 from osfoffline.database_manager.models import Node, File,User
 from osfoffline.database_manager.db import session
 from osfoffline.database_manager.utils import save, session_scope
@@ -16,10 +16,6 @@ EVENT_TYPE_MOVED = 'moved'
 EVENT_TYPE_DELETED = 'deleted'
 EVENT_TYPE_CREATED = 'created'
 EVENT_TYPE_MODIFIED = 'modified'
-
-
-def console_log(variable_name, variable_value):
-    print("DEBUG: {}: {}".format(variable_name, variable_value))
 
 
 class OSFEventHandler(FileSystemEventHandler):
@@ -35,14 +31,9 @@ class OSFEventHandler(FileSystemEventHandler):
         self.user = session.query(User).filter(User.logged_in).one()
 
 
-        print('osf event handler created')
 
     def close(self):
-        print('about to save and close the session inside osfeventhandler')
-        # save(self.session)
-        print('just save session')
-        # self.session.close()
-        print('just closed session. did it work?')
+        pass
 
     @asyncio.coroutine
     def on_any_event(self, event):
@@ -57,8 +48,6 @@ class OSFEventHandler(FileSystemEventHandler):
         :type event:
             :class:`DirMovedEvent` or :class:`FileMovedEvent`
         """
-        # logging.info("Moved %s: from %s to %s", what, event.src_path,
-        #              event.dest_path)
 
         try:
 
@@ -75,6 +64,7 @@ class OSFEventHandler(FileSystemEventHandler):
                 else:
                     item.title = dest_path.name
                     save(session, item)
+                logging.info("on_moved just renamed a node")
             elif isinstance(item, File) and item.name != dest_path.name:
                 if self.already_exists(dest_path):
                     session.delete(item)
@@ -83,17 +73,26 @@ class OSFEventHandler(FileSystemEventHandler):
                     item.name = dest_path.name
                     item.locally_renamed = True
                     save(session, item)
+                logging.info("on_moved just renamed a file")
             # move
             elif src_path != dest_path:
                 try:
 
+                    # check if file already exists in this moved location. If so, delete it.
+                    try:
+                        item_to_replace = self.get_item_by_path(dest_path)
+                        session.delete(item_to_replace)
+                        save(session)
+                    except FileNotFoundError:
+                        pass
+
                     new_parent = self._get_parent_item_from_path(dest_path)
 
-                    #create a dummy item in old place with .locally deleted so polling does not create new item
+                    # create a dummy item in old place with .locally deleted so polling does not create new item
                     if isinstance(item, Node):
-                        dummy = Node(title=item.title, parent=item.parent, user=item.user, category=item.category, osf_id=item.osf_id)
+                        dummy = Node(title=item.title, parent=item.parent, user=item.user, category=item.category, osf_id="DELETE{}DUMMY".format(item.osf_id))
                     elif isinstance(item, File):
-                        dummy = File(name=item.name, parent=item.parent, user=item.user, type=item.type, osf_id=item.osf_id, node=item.node)
+                        dummy = File(name=item.name, parent=item.parent, user=item.user, type=item.type, osf_id="DELETE{}DUMMY".format(item.osf_id), node=item.node)
                     dummy.locally_deleted = True
 
                     # move item
@@ -114,21 +113,19 @@ class OSFEventHandler(FileSystemEventHandler):
 
                     save(session, dummy)
                     save(session, item)
+                    logging.info("on_moved event completed")
                 except FileNotFoundError:
-                    # todo: logging levels. make one for debug. use that instead of console_log
-                    console_log('tried to move to OSF folder. cant do this.')
+                    logging.warning('tried to move to OSF folder. cant do this.')
                     # item.parent = None
 
 
 
 
-            # todo: log
-            # logging.info(item.)
 
 
 
         except FileNotFoundError:
-            print('tried to move {} but it doesnt exist in db'.format(event.src_path))
+            logging.warning('tried to move {} but it doesnt exist in db'.format(event.src_path))
 
     @asyncio.coroutine
     def on_created(self, event):
@@ -139,24 +136,25 @@ class OSFEventHandler(FileSystemEventHandler):
         :type event:
             :class:`DirCreatedEvent` or :class:`FileCreatedEvent`
         """
+
         try:
-            # logging.info("Created %s: %s", what, event.src_path)
 
             src_path = ProperPath(event.src_path, event.is_directory)
             name = src_path.name
-            # console_log('create a new thing. it is called',name)
+
             # create new model
             if not self.already_exists(src_path):
-                # console_log('new thing being created does not already exist in db',name)
+
                 # if folder and in top level OSF FOlder, then top_level_node
                 if src_path.parent == ProperPath(self.osf_folder, True):
                     if event.is_directory:
                         top_level_node = Node(title=name, user=self.user, locally_created=True)
                         # save
                         save(session, top_level_node)
+                        logging.info("on_created called for top level node")
                     else:
                         #todo: can just delete the file right here and give an alert.
-                        print("CREATED FILE IN PROJECT AREA.")
+                        logging.warning("CREATED FILE IN PROJECT AREA.")
                         raise NotADirectoryError
 
                 elif event.is_directory:
@@ -172,6 +170,7 @@ class OSFEventHandler(FileSystemEventHandler):
                                       provider=File.DEFAULT_PROVIDER, node=node)
                         containing_item.files.append(folder)
                         save(session, folder)
+                        logging.info("on_created for folder")
                     else:  # child node
 
                         new_child_node = Node(
@@ -185,6 +184,7 @@ class OSFEventHandler(FileSystemEventHandler):
 
                         parent_component.child_nodes.append(new_child_node)
                         save(session, new_child_node)
+                        logging.info("on_created for child node")
 
                 else:  # if file, then file.
 
@@ -195,25 +195,20 @@ class OSFEventHandler(FileSystemEventHandler):
                         node = containing_item.node
                     file = File(name=name, type=File.FILE, user=self.user, locally_created=True,
                                 provider=File.DEFAULT_PROVIDER, node=node)
-                    # console_log('new thing as file object',file)
+
                     containing_item.files.append(file)
                     try:
-                        # if we can't update the hash immediately after creating, then it is a
-                        # fake file or something of the sort. Thus, we can just delete it.
+                        # if we can't update the hash immediately after creating, then it is likely a
+                        # fake file or something of the sort. Thus, we can just ignore this event.
                         file.update_hash()
                     except FileNotFoundError:
-                        session.delete(file)
-                        save(session)
                         return
                     save(session, file)
+                    logging.info("on_created for file")
 
 
-                    # console_log('new thing as file object AGAIN in order to check name',file)
-                    # log
-                    # todo: log
-
-        except:
-            raise Exception('something wrong in oncreate')
+        except Exception as e:
+            logging.warning(e)
 
     def already_exists(self, path):
         try:
@@ -231,10 +226,11 @@ class OSFEventHandler(FileSystemEventHandler):
         :type event:
             :class:`DirModifiedEvent` or :class:`FileModifiedEvent`
         """
+
         if isinstance(event, DirModifiedEvent):
             return
 
-        # logging.info("Modified %s: %s", what, event.src_path)
+
 
         src_path = ProperPath(event.src_path, event.is_directory)
         try:
@@ -247,14 +243,13 @@ class OSFEventHandler(FileSystemEventHandler):
             if isinstance(item, File) and item.is_file:
                 item.update_hash()
 
-            # log
-            # todo: log
+
 
             # save
             save(session, item)
-            console_log('modifying file. check how temp file is saved back in as', item)
+
         except FileNotFoundError:
-            print('tried to modify {} but it doesnt exist in db'.format(event.src_path))
+            logging.warning('tried to modify {} but it doesnt exist in db'.format(event.src_path))
 
     @asyncio.coroutine
     def on_deleted(self, event):
@@ -280,15 +275,11 @@ class OSFEventHandler(FileSystemEventHandler):
                 save(session)
 
 
-
-            # log
-            # todo: log
-
             # save
             save(session, item)
         except FileNotFoundError:
             # if file does not exist in db, then do nothing.
-            print('tried to delete file {} but was not in db'.format(event.src_path))
+            logging.warning('tried to delete file {} but was not in db'.format(event.src_path))
 
 
     def _get_parent_item_from_path(self, path):
