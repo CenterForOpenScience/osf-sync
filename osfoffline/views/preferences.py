@@ -25,7 +25,7 @@ class Preferences(QDialog):
     PROJECT_NAME_COLUMN = 0
     PROJECT_SYNC_COLUMN = 1
 
-    preferences_closed_trigger = pyqtSignal()
+    preferences_closed_signal = pyqtSignal()
 
     def __init__(self, containing_folder):
         super().__init__()
