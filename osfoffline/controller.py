@@ -11,7 +11,7 @@ from appdirs import user_log_dir, user_config_dir, user_data_dir
 from sqlalchemy.orm.exc import MultipleResultsFound
 from sqlalchemy.orm.exc import NoResultFound
 
-import osfoffline.database_manager.models as models
+from osfoffline.database_manager.models import User
 from osfoffline.database_manager.db import session
 from osfoffline.database_manager.utils import save
 from osfoffline.background import BackgroundWorker
@@ -69,36 +69,57 @@ class OSFController(QDialog):
         # logging.basicConfig(level=logging.DEBUG)
         self.app_name = app_name
         self.app_author = app_author
-
-        self.containing_folder = ''
-
-
         self.create_configs()
-
         self.background_worker = BackgroundWorker()
+
+
+
+
+    def _can_start_background_worker(self):
+        user = self.get_current_user()
+        if not user.logged_in:
+            return False
+        if not os.path.isdir(user.osf_local_folder_path):
+            return False
+        if not self.background_worker:
+            return False
+        if self.background_worker.is_alive():
+           return False
+
+        return True
+
+
+
+
 
 
     # state functions
     def start(self):
-        # todo: can use session_scope here
 
-        self.user = self.get_current_user()
-        if self.user:
+        try:
+            user = self.get_current_user()
+        except MultipleResultsFound:
+            self._logout_all_users()
+            self.login_signal.emit()
+            return
+        except NoResultFound:
+            self.login_signal.emit()
+            return
 
-            self.containing_folder = os.path.dirname(self.user.osf_local_folder_path)
-            if not self.containing_folder_is_set():
-                self.set_containing_folder()
-            self.user.osf_local_folder_path = os.path.join(self.containing_folder, "OSF")
+        containing_folder = os.path.dirname(user.osf_local_folder_path)
+        if not self.validate_containing_folder(containing_folder):
+            self.set_containing_folder()
+        user.osf_local_folder_path = os.path.join(self.containing_folder, "OSF")
 
-            save(session, self.user)
+        save(session, user)
 
-            if not os.path.isdir(self.user.osf_local_folder_path):
-                os.makedirs(self.user.osf_local_folder_path)
+        if not os.path.isdir(user.osf_local_folder_path):
+            os.makedirs(user.osf_local_folder_path)
 
-            self.start_logging()
+        self.start_logging()
 
-            self.start_tray_signal.emit()
-            self.background_worker.start()
+        self.start_tray_signal.emit()
+        self.background_worker.start()
 
 
     def resume(self):
@@ -106,7 +127,7 @@ class OSFController(QDialog):
 
         # todo: properly pause the background thread
         # I am recreating the background thread everytime for now.
-        # I was unable to correctly to pause the background thread
+        # I was unable to correctly pause the background thread
         # thus took this route for now.
         if self.background_worker is not None and self.background_worker.is_alive():
             self.background_worker.stop()
@@ -126,57 +147,34 @@ class OSFController(QDialog):
 
     def quit(self):
         try:
-
             self.store_configs()
 
             self.background_worker.pause_background_tasks()
-
             self.background_worker.stop()
-
-
             self.background_worker.join()
-            # DB.Session.remove()
-            QApplication.instance().quit()
-        except:
-            logging.warning('quit broke. stopping anyways.')
 
+            session.close()
+
+            QApplication.instance().quit()
+        except Exception as e:
+            logging.warning('quit broke. stopping anyways. Exception was {}'.format(e))
             # quit() stops gui and then quits application
             QApplication.instance().quit()
 
 
     def set_containing_folder_process(self):
-
-        self.pause()
-
         self.set_containing_folder()
 
-        self.resume()
 
+    def _logout_all_users(self):
+        for user in session.query(User):
+            user.logged_in = False
+            save(session, user)
 
-    # todo: when log in is working, you need to make this work with log in screen.
     def get_current_user(self):
-        user = None
-        err = False
-        try:
+        return session.query(User).filter(User.logged_in).one()
 
 
-            user = session.query(models.User).filter(models.User.logged_in).one()
-        except MultipleResultsFound:
-            # log out all users and restart login screen to get a single user to log in
-
-            for user in session.query(models.User):
-                user.logged_in = False
-                save(session, user)
-            err = True
-
-        except NoResultFound:
-            err = True
-
-
-        if err:
-            self.login_signal.emit()
-        else:
-            return user
 
     def start_logging(self):
         # make sure logging directory exists
@@ -210,28 +208,15 @@ class OSFController(QDialog):
         # logging.getLogger('sqlalchemy.engine').addHandler()
 
 
-    def close_event(self, event):
-        if self.tray_icon.isVisible():
-            self.hide()
-            event.ignore()
 
-    def open_osf_folder(self):
-        if self.containing_folder_is_set():
-            if sys.platform == 'win32':
-                os.startfile(self.containing_folder)
-            elif sys.platform == 'darwin':
-                subprocess.Popen(['open', self.containing_folder])
-            else:
-                try:
-                    subprocess.Popen(['xdg-open', self.containing_folder])
-                except OSError:
-                    raise NotImplementedError
-        else:
-            self.set_containing_folder_process()
 
-    def containing_folder_is_set(self):
+
+    def validate_containing_folder(self, containing_folder):
+        if not containing_folder or containing_folder == '':
+            return False
+
         try:
-            return os.path.isdir(self.containing_folder)
+            return os.path.isdir(containing_folder)
         except ValueError:
             return False
 
@@ -254,9 +239,10 @@ class OSFController(QDialog):
 
 
     def logout(self):
-        self.user = self.get_current_user()
-        if self.user:
-            self.user.logged_in = False
+        user = self.get_current_user()
+        if user:
+            user.logged_in = False
+            save(session, user)
             self.login_signal.emit()
 
 

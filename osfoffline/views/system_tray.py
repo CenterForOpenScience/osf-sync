@@ -3,6 +3,10 @@ from PyQt5.Qt import QIcon
 from PyQt5.QtWidgets import (QDialog, QSystemTrayIcon,
                              QAction, QMenu)
 import osfoffline.views.rsc.resources  # need this import for the logo to work properly.
+import sys
+import os
+import subprocess
+import osfoffline.alerts as AlertHandler
 
 class SystemTray(QDialog):
     def __init__(self):
@@ -40,3 +44,18 @@ class SystemTray(QDialog):
 
     def start(self):
         self.tray_icon.show()
+
+
+    def open_osf_folder(self):
+        if self.validate_containing_folder():
+            if sys.platform == 'win32':
+                os.startfile(self.containing_folder)
+            elif sys.platform == 'darwin':
+                subprocess.Popen(['open', self.containing_folder])
+            else:
+                try:
+                    subprocess.Popen(['xdg-open', self.containing_folder])
+                except OSError:
+                    raise NotImplementedError
+        else:
+            AlertHandler.w

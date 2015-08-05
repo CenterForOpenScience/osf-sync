@@ -67,7 +67,7 @@ class OSFApp(QDialog):
 
             # start screen
             (self.start_screen.done_logging_in_signal, self.controller.start),
-
+            (self.start_screen.quit_application_signal, self.controller.quit),
 
         ]
         for signal, slot in signal_slot_pairs:

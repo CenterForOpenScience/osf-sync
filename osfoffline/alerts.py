@@ -31,7 +31,9 @@ def setup_alerts(system_tray_icon):
 
 
 def alert_running():
+    global last_alert_time
     cur_time = datetime.now()
+
     if not last_alert_time:
         return False
     return cur_time - last_alert_time < timedelta(milliseconds=ALERT_TIME)
@@ -65,6 +67,7 @@ def warn(message):
 
 def info(file_name, action):
     global show_alerts
+    global last_alert_time
 
     if (alert_icon is None) or (not show_alerts):
         return

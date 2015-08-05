@@ -28,6 +28,7 @@ class Preferences(QDialog):
 
     preferences_closed_signal = pyqtSignal()
 
+
     def __init__(self, containing_folder):
         super().__init__()
         self._translate = QCoreApplication.translate
@@ -39,9 +40,19 @@ class Preferences(QDialog):
         self.tree_items = []
         self.setup_slots()
 
-    def setup_actions(self):
-        self.set_containing_folder_action = QAction("Set where Project will be stored", self,
-                                                    triggered=self.set_containing_folder)
+
+    def closedEvent(self, event):
+        self.preferences_closed_signal.emit()
+        event.accept()
+        # if self.isVisible():
+        #     self.hide()
+        #     event.ignore()
+        #     self.destroy()
+
+
+    def
+"""
+
 
     def open_containing_folder_picker(self):
         self.containing_folder = QFileDialog.getExistingDirectory(self, "Choose where to place OSF folder")
@@ -144,3 +155,5 @@ class Preferences(QDialog):
             event.ignore()
             self.destroy()
             self.preferences_closed_signal.emit()
+
+"""
