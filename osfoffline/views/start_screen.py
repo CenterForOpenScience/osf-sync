@@ -62,9 +62,9 @@ class StartScreen(QDialog):
             save(session, user)
             session.close()
             self.destroy()
+            self.done_logging_in_signal.emit()
 
         except MultipleResultsFound:
-            # todo: multiple user screen allows you to choose which user is logged in
             logging.warning('multiple users with same username. deleting both. restarting function.')
             for user in self.session.query(User):
                 if user.osf_login == user_name:
@@ -86,6 +86,7 @@ class StartScreen(QDialog):
             save(session, user)
             session.close()
             self.destroy()
+            self.done_logging_in_signal.emit()
 
 
 

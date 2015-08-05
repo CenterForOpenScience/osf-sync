@@ -253,6 +253,12 @@ class OSFController(QDialog):
         file.close()
 
 
+    def logout(self):
+        self.user = self.get_current_user()
+        if self.user:
+            self.user.logged_in = False
+            self.login_signal.emit()
+
 
 
     def create_configs(self):

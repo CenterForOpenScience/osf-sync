@@ -62,6 +62,7 @@ class OSFApp(QDialog):
             (self.preferences.preferences_window.startOnStartup.stateChanged, self.startup_changed),
             (self.preferences.preferences_window.changeFolderButton.clicked, self.controller.set_containing_folder_process),
             (self.preferences.preferences_closed_signal, self.controller.resume),
+            (self.preferences.preferences_window.accountLogOutButton.clicked, self.controller.logout),
 
 
             # start screen
@@ -107,8 +108,11 @@ def start():
     app = QApplication(sys.argv)
 
     if not QSystemTrayIcon.isSystemTrayAvailable():
-        QMessageBox.critical(None, "Systray",
-                             "Could not detect a system tray on this system")
+        QMessageBox.critical(
+            None,
+            "Systray",
+            "Could not detect a system tray on this system"
+        )
         sys.exit(1)
 
     QApplication.setQuitOnLastWindowClosed(False)

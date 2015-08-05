@@ -50,22 +50,22 @@ def register_folder_children_url(folder):
     )
 
 
-def register_wb_urls():
-    httpretty.register_uri(
-        httpretty.POST,
-        wb_file_url(),
-        body=,
-        content_type="application/json"
-    )
-    httpretty.register_uri(
-        httpretty.GET,
-        api_file_children(folder.node.id, folder.path, folder.provider),
-        body=get_children_for_folder,
-        content_type="application/json"
-    )
-    httpretty.register_uri(
-        httpretty.GET,
-        api_file_children(folder.node.id, folder.path, folder.provider),
-        body=get_children_for_folder,
-        content_type="application/json"
-    )
+# def register_wb_urls():
+#     httpretty.register_uri(
+#         httpretty.POST,
+#         wb_file_url(),
+#         body=,
+#         content_type="application/json"
+#     )
+#     httpretty.register_uri(
+#         httpretty.GET,
+#         api_file_children(folder.node.id, folder.path, folder.provider),
+#         body=get_children_for_folder,
+#         content_type="application/json"
+#     )
+#     httpretty.register_uri(
+#         httpretty.GET,
+#         api_file_children(folder.node.id, folder.path, folder.provider),
+#         body=get_children_for_folder,
+#         content_type="application/json"
+#     )
