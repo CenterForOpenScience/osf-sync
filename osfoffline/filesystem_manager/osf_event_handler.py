@@ -90,9 +90,9 @@ class OSFEventHandler(FileSystemEventHandler):
 
                     # create a dummy item in old place with .locally deleted so polling does not create new item
                     if isinstance(item, Node):
-                        dummy = Node(title=item.title, parent=item.parent, user=item.user, category=item.category, osf_id="DELETE{}DUMMY".format(item.osf_id))
+                        dummy = Node(title=item.title, parent=item.parent, user=item.user, category=item.category, osf_id=item.osf_id)
                     elif isinstance(item, File):
-                        dummy = File(name=item.name, parent=item.parent, user=item.user, type=item.type, osf_id="DELETE{}DUMMY".format(item.osf_id), node=item.node)
+                        dummy = File(name=item.name, parent=item.parent, user=item.user, type=item.type, osf_id=item.osf_id, node=item.node)
                     dummy.locally_deleted = True
 
                     # move item

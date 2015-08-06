@@ -284,7 +284,7 @@ class Poll(object):
 
         """
         assert local_file_folder or remote_file_folder  # both shouldnt be None.
-
+        logging.warning('this is called inside checking file folder internall...')
         logging.info('checking file_folder internal')
         if local_file_folder is None:
             local_file_folder = yield from self.create_local_file_folder(remote_file_folder, local_parent_file_folder, local_node)

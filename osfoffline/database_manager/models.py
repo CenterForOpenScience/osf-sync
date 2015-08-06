@@ -54,7 +54,7 @@ class User(Base):
             self.full_name, self.osf_password, self.osf_local_folder_path)
 
 
-
+# todo: make locally_created, locally_deleted enum's in a EVENTS fields rather than custom variables
 class Node(Base):
     __tablename__ = "node"
 
