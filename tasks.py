@@ -1,5 +1,3 @@
-import os
-
 from invoke import task, run
 
 # WHEELHOUSE_PATH = os.environ.get('WHEELHOUSE')
@@ -41,5 +39,5 @@ def flake():
 
 @task
 def start():
-    from osfoffline.main import start
+    from start import start
     start()

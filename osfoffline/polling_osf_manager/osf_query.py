@@ -302,7 +302,7 @@ class OSFQuery(object):
         resp.close()
 
     @asyncio.coroutine
-    def make_request(self, url, method='GET',params=None, expects=None, get_json=False, timeout=10, data=None):
+    def make_request(self, url, method='GET',params=None, expects=None, get_json=False, timeout=180, data=None):
         try:
             response = yield from asyncio.wait_for(
                 self.request_session.request(

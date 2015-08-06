@@ -263,6 +263,7 @@ class OSFEventHandler(FileSystemEventHandler):
 
         src_path = ProperPath(event.src_path, event.is_directory)
         try:
+
             # get item
             item = self.get_item_by_path(src_path)
 
@@ -276,7 +277,7 @@ class OSFEventHandler(FileSystemEventHandler):
 
 
             # save
-            save(session, item)
+            save(session)
         except FileNotFoundError:
             # if file does not exist in db, then do nothing.
             logging.warning('tried to delete file {} but was not in db'.format(event.src_path))

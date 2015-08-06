@@ -7,12 +7,15 @@ import sys
 import os
 import subprocess
 import osfoffline.alerts as AlertHandler
+import webbrowser
+from osfoffline.utils.validators import validate_containing_folder
 
 class SystemTray(QDialog):
     def __init__(self):
         super().__init__()
         self.create_actions()
         self.create_tray_icon()
+        self.containing_folder = ''
 
     def create_actions(self):
         # menu items
@@ -46,8 +49,16 @@ class SystemTray(QDialog):
         self.tray_icon.show()
 
 
+
+    def set_containing_folder(self, new_containing_folder):
+        self.containing_folder = new_containing_folder
+
+    def start_osf(self):
+        url = "http://osf.io/dashboard"
+        webbrowser.open_new_tab(url)
+
     def open_osf_folder(self):
-        if self.validate_containing_folder():
+        if validate_containing_folder(self.containing_folder):
             if sys.platform == 'win32':
                 os.startfile(self.containing_folder)
             elif sys.platform == 'darwin':
@@ -58,4 +69,8 @@ class SystemTray(QDialog):
                 except OSError:
                     raise NotImplementedError
         else:
-            AlertHandler.w
+            AlertHandler.warn('osf folder is not set')
+
+
+
+
