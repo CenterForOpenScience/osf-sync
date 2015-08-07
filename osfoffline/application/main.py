@@ -43,7 +43,7 @@ class OSFApp(QDialog):
         self.start_screen = StartScreen()
         self.tray = SystemTray()
         self.preferences = Preferences()
-        AlertHandler.setup_alerts(self.tray.tray_icon)
+        AlertHandler.setup_alerts(self.tray.tray_icon, self.tray.currently_synching_action)
 
         # connect all signal-slot pairs
         self.setup_connections()

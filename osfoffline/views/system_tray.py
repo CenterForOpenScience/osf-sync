@@ -21,8 +21,8 @@ class SystemTray(QDialog):
         # menu items
         self.open_osf_folder_action = QAction("Open OSF Folder", self)
         self.launch_osf_action = QAction("Launch OSF", self)
-        # self.currently_synching_action = QAction("Up to date", self)
-        # self.currently_synching_action.setDisabled(True)
+        self.currently_synching_action = QAction("Up to date", self)
+        self.currently_synching_action.setDisabled(True)
         self.preferences_action = QAction("Preferences", self)
         self.about_action = QAction("&About", self)
         self.quit_action = QAction("&Quit", self)
@@ -32,8 +32,8 @@ class SystemTray(QDialog):
         self.tray_icon_menu.addAction(self.open_osf_folder_action)
         self.tray_icon_menu.addAction(self.launch_osf_action)
         self.tray_icon_menu.addSeparator()
-        # self.tray_icon_menu.addAction(self.currently_synching_action)
-        # self.tray_icon_menu.addSeparator()
+        self.tray_icon_menu.addAction(self.currently_synching_action)
+        self.tray_icon_menu.addSeparator()
         self.tray_icon_menu.addAction(self.preferences_action)
         self.tray_icon_menu.addAction(self.about_action)
         self.tray_icon_menu.addSeparator()
@@ -48,7 +48,9 @@ class SystemTray(QDialog):
     def start(self):
         self.tray_icon.show()
 
-
+    # def update_currently_synching(self):
+    #     from datetime import datetime
+    #     self.currently_synching_action.setText(0, str(datetime.now()))
 
     def set_containing_folder(self, new_containing_folder):
         self.containing_folder = new_containing_folder

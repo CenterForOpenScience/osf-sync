@@ -31,12 +31,14 @@ class LocalDBSync(object):
         self.user = user
 
     def emit_new_events(self):
+
         local_db_tuple_list = self._make_local_db_tuple_list(self.osf_path, self.user)
         for local, db in local_db_tuple_list:
             self._emit_new_events(local, db)
 
     def _make_local_db_tuple_list(self, local, db):
         # checks
+        import ipdb;ipdb.set_trace()
         if local is None and db is None:
             raise LocalDBBothNone
         if local and db and self._get_proper_path(local) != self._get_proper_path(db):
@@ -188,6 +190,7 @@ class LocalDBSync(object):
             emitter.queue_event(event)
 
             # observer.emitters[0].queue_event(event)
+
         local_db_tuple_list = self._make_local_db_tuple_list(local, db)
         for local, db in local_db_tuple_list:
             self._emit_new_events(local, db)

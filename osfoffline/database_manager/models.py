@@ -259,6 +259,18 @@ class File(Base):
             assert self.files == []
         return files
 
+    @validates('osf_id')
+    def validate_osf_id(self, key, osf_id):
+        # if self is provider or self does not have an osf id then all good.
+        if (self.is_provider) or (not self.osf_id):
+            return osf_id
+        else:
+            for peer in self.parent.files:
+                if self.id != peer.id:
+                    #peers cannot have same osf_id as self
+                    assert self.osf_id != peer.osf_id
+
+
 
     def __repr__(self):
         return "<File ({}), type={}, name={}, path={}, parent_id={}>".format(
