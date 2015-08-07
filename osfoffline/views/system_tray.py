@@ -3,19 +3,26 @@ from PyQt5.Qt import QIcon
 from PyQt5.QtWidgets import (QDialog, QSystemTrayIcon,
                              QAction, QMenu)
 import osfoffline.views.rsc.resources  # need this import for the logo to work properly.
+import sys
+import os
+import subprocess
+import osfoffline.alerts as AlertHandler
+import webbrowser
+from osfoffline.utils.validators import validate_containing_folder
 
 class SystemTray(QDialog):
     def __init__(self):
         super().__init__()
         self.create_actions()
         self.create_tray_icon()
+        self.containing_folder = ''
 
     def create_actions(self):
         # menu items
         self.open_osf_folder_action = QAction("Open OSF Folder", self)
         self.launch_osf_action = QAction("Launch OSF", self)
-        # self.currently_synching_action = QAction("Up to date", self)
-        # self.currently_synching_action.setDisabled(True)
+        self.currently_synching_action = QAction("Up to date", self)
+        self.currently_synching_action.setDisabled(True)
         self.preferences_action = QAction("Preferences", self)
         self.about_action = QAction("&About", self)
         self.quit_action = QAction("&Quit", self)
@@ -25,8 +32,8 @@ class SystemTray(QDialog):
         self.tray_icon_menu.addAction(self.open_osf_folder_action)
         self.tray_icon_menu.addAction(self.launch_osf_action)
         self.tray_icon_menu.addSeparator()
-        # self.tray_icon_menu.addAction(self.currently_synching_action)
-        # self.tray_icon_menu.addSeparator()
+        self.tray_icon_menu.addAction(self.currently_synching_action)
+        self.tray_icon_menu.addSeparator()
         self.tray_icon_menu.addAction(self.preferences_action)
         self.tray_icon_menu.addAction(self.about_action)
         self.tray_icon_menu.addSeparator()
@@ -40,3 +47,32 @@ class SystemTray(QDialog):
 
     def start(self):
         self.tray_icon.show()
+
+    # def update_currently_synching(self):
+    #     from datetime import datetime
+    #     self.currently_synching_action.setText(0, str(datetime.now()))
+
+    def set_containing_folder(self, new_containing_folder):
+        self.containing_folder = new_containing_folder
+
+    def start_osf(self):
+        url = "http://osf.io/dashboard"
+        webbrowser.open_new_tab(url)
+
+    def open_osf_folder(self):
+        if validate_containing_folder(self.containing_folder):
+            if sys.platform == 'win32':
+                os.startfile(self.containing_folder)
+            elif sys.platform == 'darwin':
+                subprocess.Popen(['open', self.containing_folder])
+            else:
+                try:
+                    subprocess.Popen(['xdg-open', self.containing_folder])
+                except OSError:
+                    raise NotImplementedError
+        else:
+            AlertHandler.warn('osf folder is not set')
+
+
+
+

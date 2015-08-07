@@ -15,35 +15,41 @@ ALERT_TIME = 1000
 
 
 alert_icon = None
+alert_menu_icon = None
 
 last_alert_time = None
 alert_queue = Queue()
 
 
 
-def setup_alerts(system_tray_icon):
+def setup_alerts(system_tray_icon, currently_synching_action):
     global alert_icon
     global show_alerts
+    global alert_menu_icon
 
     alert_icon = system_tray_icon
     if not alert_icon.supportsMessages():
         show_alerts = False
+    alert_menu_icon = currently_synching_action
+
 
 
 def alert_running():
+    global last_alert_time
     cur_time = datetime.now()
+
     if not last_alert_time:
         return False
     return cur_time - last_alert_time < timedelta(milliseconds=ALERT_TIME)
 
 
 def run_alert(alert_title, alert_message):
-    alert_icon.showMessage(
-                alert_title,
-                alert_message,
-                QSystemTrayIcon.NoIcon,
-                msecs=ALERT_TIME  # fixme: currently, I have NO control over duration of alert. I think this is only for linux... hopefully.
-    )
+    # alert_icon.showMessage(
+    #             alert_title,
+    #             alert_message,
+    #             QSystemTrayIcon.NoIcon,
+    #             msecs=ALERT_TIME  # NOTE: some systems don't allow any control over this...
+    # )
 
     global last_alert_time
     last_alert_time = datetime.now()
@@ -65,7 +71,8 @@ def warn(message):
 
 def info(file_name, action):
     global show_alerts
-
+    global last_alert_time
+    alert_menu_icon.setText(0, str(datetime.now()))
     if (alert_icon is None) or (not show_alerts):
         return
     else:

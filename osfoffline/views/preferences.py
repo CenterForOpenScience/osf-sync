@@ -12,7 +12,7 @@ import requests
 import os
 import logging
 import asyncio
-
+import osfoffline.alerts as AlertHandler
 
 
 class Preferences(QDialog):
@@ -27,11 +27,12 @@ class Preferences(QDialog):
     PROJECT_SYNC_COLUMN = 1
 
     preferences_closed_signal = pyqtSignal()
+    containing_folder_updated_signal = pyqtSignal((str,))
 
-    def __init__(self, containing_folder):
+    def __init__(self):
         super().__init__()
         self._translate = QCoreApplication.translate
-        self.containing_folder = containing_folder
+        self.containing_folder = ''
         self.preferences_window = Ui_Preferences()
         self.preferences_window.setupUi(self)
 
@@ -39,28 +40,73 @@ class Preferences(QDialog):
         self.tree_items = []
         self.setup_slots()
 
-    def setup_actions(self):
-        self.set_containing_folder_action = QAction("Set where Project will be stored", self,
-                                                    triggered=self.set_containing_folder)
+    def closeEvent(self, event):
+        logging.info('closed...... preferences....')
+        self.preferences_closed_signal.emit()
+        event.accept()
+        # if self.isVisible():
+        #     self.hide()
+        #     event.ignore()
+        #     self.destroy()
 
-    def open_containing_folder_picker(self):
-        self.containing_folder = QFileDialog.getExistingDirectory(self, "Choose where to place OSF folder")
 
-    def set_containing_folder(self, new_containing_folder):
 
-        self.containing_folder = new_containing_folder
+
+    def alerts_changed(self):
+        if self.preferences_window.desktopNotifications.isChecked():
+            AlertHandler.show_alerts = True
+        else:
+            AlertHandler.show_alerts = False
+
+    def startup_changed(self):
+        # todo: probably should give notification to show that this setting has been changed.
+
+        if self.preferences_window.startOnStartup.isChecked():
+            # todo: make it so that this application starts on login
+            # self.settings = QSettings(RUN_PATH, QSettings.NativeFormat)
+            pass
+
+        else:
+            # todo: make it so that this application does NOT start on login
+            pass
+
+
+
+
+    def set_containing_folder(self):
+        new_containing_folder = QFileDialog.getExistingDirectory(self, "Choose where to place OSF folder")
+        osf_path = os.path.join(new_containing_folder, "OSF")
+
+        if new_containing_folder == "":
+            # cancel, closed, or no folder chosen
+            return
+        elif not os.path.exists(osf_path):
+            os.makedirs(osf_path)
+        elif os.path.isfile(osf_path):
+            AlertHandler.warn("An OSF file exists where you would like to create the OSF folder. Delete it, or choose a different location")
+            logging.warning("An OSF file exists where you would like to create the OSF folder.")
+            return
+
+        user = session.query(User).filter(User.logged_in).one()
+        user.osf_local_folder_path = os.path.join(osf_path)
+
         self.preferences_window.containingFolderTextEdit.setText(self._translate("Preferences", self.containing_folder))
-
-    def update_containing_folder_text(self, containing_folder):
-
-        self.containing_folder = containing_folder
-        self.preferences_window.containingFolderTextEdit.setText(self._translate("Preferences", self.containing_folder))
+        self.open_window(tab=Preferences.GENERAL) # todo: dynamically update ui????
+        self.containing_folder_updated_signal.emit(new_containing_folder)
 
 
-    def setup_slots(self):
-        # self.preferences_window.containingFolderTextEdit.setText(self._translate("Preferences", self.containing_folder))
-        # self.preferences_window.changeFolderButton.clicked.connect(self.set_containing_folder)
-        self.preferences_window.tabWidget.currentChanged.connect(self.selector)
+
+
+    def update_sync_nodes(self):
+        user = session.query(User).filter(User.logged_in).one()
+        guid_list = []
+
+        for tree_item in self.tree_items:
+            for name, id in [(node.name, node.id) for node in self.remote_top_level_nodes]:
+                if name == tree_item.text(self.PROJECT_NAME_COLUMN):
+                    if tree_item.checkState(self.PROJECT_SYNC_COLUMN) == Qt.Checked:
+                        guid_list.append(id)
+        user.guid_for_top_level_nodes_to_sync = guid_list
 
     def open_window(self, tab=GENERAL):
         if self.isVisible():
@@ -68,18 +114,17 @@ class Preferences(QDialog):
             self.selector(tab)
         else:
             self.preferences_window.tabWidget.setCurrentIndex(tab)
-            self.setup_actions()
-            # self.setupSlots()
             self.selector(tab)
             self.show()
 
     def selector(self, selected_index):
         if selected_index == self.GENERAL:
-
             user = session.query(User).filter(User.logged_in).one()
             containing_folder = os.path.dirname(user.osf_local_folder_path)
             self.preferences_window.containingFolderTextEdit.setText(self._translate("Preferences", containing_folder))
         elif selected_index == self.OSF:
+            user = session.query(User).filter(User.logged_in).one()
+            self.preferences_window.label.setText(self._translate("Preferences", user.full_name))
             self.create_tree_item_for_each_top_level_node()
 
     def reset_tree_widget(self):
@@ -126,21 +171,16 @@ class Preferences(QDialog):
             logging.warning(e)
         return remote_top_level_nodes
 
-    def update_sync_nodes(self):
-        user = session.query(User).filter(User.logged_in).one()
-        guid_list = []
 
-        for tree_item in self.tree_items:
-            for name, id in [(node.name, node.id) for node in self.remote_top_level_nodes]:
-                if name == tree_item.text(self.PROJECT_NAME_COLUMN):
-                    if tree_item.checkState(self.PROJECT_SYNC_COLUMN) == Qt.Checked:
-                        guid_list.append(id)
-        user.guid_for_top_level_nodes_to_sync = guid_list
+    def setup_slots(self):
+        self.preferences_window.tabWidget.currentChanged.connect(self.selector)
 
 
-    def closeEvent(self, event):
-        if self.isVisible():
-            self.hide()
-            event.ignore()
-            self.destroy()
-            self.preferences_closed_signal.emit()
+
+def debug_trace():
+  '''Set a tracepoint in the Python debugger that works with Qt'''
+  from PyQt5.QtCore import pyqtRemoveInputHook
+
+  from pdb import set_trace
+  pyqtRemoveInputHook()
+  set_trace()

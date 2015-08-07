@@ -54,7 +54,7 @@ class User(Base):
             self.full_name, self.osf_password, self.osf_local_folder_path)
 
 
-
+# todo: make locally_created, locally_deleted enum's in a EVENTS fields rather than custom variables
 class Node(Base):
     __tablename__ = "node"
 
@@ -258,6 +258,18 @@ class File(Base):
         if self.is_file:
             assert self.files == []
         return files
+
+    @validates('osf_id')
+    def validate_osf_id(self, key, osf_id):
+        # if self is provider or self does not have an osf id then all good.
+        if (self.is_provider) or (not self.osf_id):
+            return osf_id
+        else:
+            for peer in self.parent.files:
+                if self.id != peer.id:
+                    #peers cannot have same osf_id as self
+                    assert self.osf_id != peer.osf_id
+
 
 
     def __repr__(self):

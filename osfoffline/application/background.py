@@ -27,6 +27,7 @@ class BackgroundWorker(threading.Thread):
 
 
     def run(self):
+        logging.warning('run in background tasks called for first time.')
         self.loop = self.ensure_event_loop()
         self.run_background_tasks()
         self.loop.run_forever()

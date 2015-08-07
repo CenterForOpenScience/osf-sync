@@ -12,40 +12,20 @@ __author__ = 'himanshu'
 
 class StartScreen(QDialog):
     """
-    This class is a wrapper for the Ui_Preferences and its controls
+    This class is a wrapper for the Ui_startscreen and its controls
     """
-    GENERAL = 0
-    OSF = 1
-    ABOUT = 4
 
     done_logging_in_signal = pyqtSignal()
+    quit_application_signal = pyqtSignal()
 
     def __init__(self):
         super().__init__()
-
-        self.containing_folder = ''
         self.start_screen = Ui_startscreen()
 
-        # self._translate = QCoreApplication.translate
-        # self.containingFolder = containingFolder
-        # self.treeData = treeData
 
-    # def updateContainingFolder(self, newContainingFolder):
-    # self.containingFolder = newContainingFolder
-    #     #todo: this is a hack. should make a new event, I think.
-    #     self.preferencesWindow.containingFolderTextEdit.setText(self._translate("Preferences", self.containingFolder))
-
-    # def setupActions(self):
-    #     self.setContainingFolderAction =  QAction("Set where Project will be stored", self, triggered=self.setContainingFolder)
-    #     self.tabSelectedAction = QAction("Build Priority Tree", self, triggered=self.selector)
-
-    def open_containing_folder_picker(self):
-        self.containing_folder = QFileDialog.getExistingDirectory(self, "Choose folder to create OSF directory in")
-
-    # todo: break up this function. lots of repeated code.
     def log_in(self):
-        user_name = self.start_screen.emailEdit.text()  # himanshu@dayrep.com
-        password = self.start_screen.passwordEdit.text()  # password
+        user_name = self.start_screen.emailEdit.text()
+        password = self.start_screen.passwordEdit.text()
         logging.info(user_name)
         logging.info(password)
 
@@ -60,17 +40,16 @@ class StartScreen(QDialog):
             user = session.query(User).filter(User.osf_login == user_name).one()
             user.logged_in = True
             save(session, user)
-            session.close()
-            self.destroy()
+
+            self.close()
             self.done_logging_in_signal.emit()
 
         except MultipleResultsFound:
-            logging.warning('multiple users with same username. deleting both. restarting function.')
-            for user in self.session.query(User):
+            logging.warning('multiple users with same username. deleting all users with this username. restarting function.')
+            for user in session.query(User):
                 if user.osf_login == user_name:
                     session.delete(user)
                     save(session)
-            session.close()
             self.log_in()
         except NoResultFound:
             logging.warning('user doesnt exist. Creating user. and logging him in.')
@@ -84,10 +63,9 @@ class StartScreen(QDialog):
             )
             user.logged_in = True
             save(session, user)
-            session.close()
-            self.destroy()
-            self.done_logging_in_signal.emit()
 
+            self.close()
+            self.done_logging_in_signal.emit()
 
 
     def setup_slots(self):
@@ -96,6 +74,26 @@ class StartScreen(QDialog):
     def open_window(self):
         if not self.isVisible():
             self.start_screen.setupUi(self)
-            # self.setupActions()
             self.setup_slots()
             self.show()
+
+    def _user_logged_in(self):
+        try:
+            session.query(User).filter(User.logged_in).one()
+            return True
+        except:
+            return False
+
+    def closedEvent(self, event):
+        """ If closedEvent occured by us, then it means user is properly logged in. Thus close.
+            Else, event is by user without logging in. THUS, quit entire application.
+        """
+        if self._user_logged_in():
+            self.done_logging_in_signal.emit()
+            # self.hide()
+            # event.ignore()
+            # self.destroy()
+        else:
+            self.quit_application_signal.emit()
+
+        event.accept()

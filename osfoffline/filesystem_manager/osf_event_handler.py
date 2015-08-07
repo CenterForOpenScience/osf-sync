@@ -90,9 +90,9 @@ class OSFEventHandler(FileSystemEventHandler):
 
                     # create a dummy item in old place with .locally deleted so polling does not create new item
                     if isinstance(item, Node):
-                        dummy = Node(title=item.title, parent=item.parent, user=item.user, category=item.category, osf_id="DELETE{}DUMMY".format(item.osf_id))
+                        dummy = Node(title=item.title, parent=item.parent, user=item.user, category=item.category, osf_id=item.osf_id)
                     elif isinstance(item, File):
-                        dummy = File(name=item.name, parent=item.parent, user=item.user, type=item.type, osf_id="DELETE{}DUMMY".format(item.osf_id), node=item.node)
+                        dummy = File(name=item.name, parent=item.parent, user=item.user, type=item.type, osf_id=item.osf_id, node=item.node)
                     dummy.locally_deleted = True
 
                     # move item
@@ -263,6 +263,7 @@ class OSFEventHandler(FileSystemEventHandler):
 
         src_path = ProperPath(event.src_path, event.is_directory)
         try:
+
             # get item
             item = self.get_item_by_path(src_path)
 
@@ -276,7 +277,7 @@ class OSFEventHandler(FileSystemEventHandler):
 
 
             # save
-            save(session, item)
+            save(session)
         except FileNotFoundError:
             # if file does not exist in db, then do nothing.
             logging.warning('tried to delete file {} but was not in db'.format(event.src_path))
