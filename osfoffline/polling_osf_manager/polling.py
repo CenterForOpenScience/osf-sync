@@ -17,6 +17,9 @@ from osfoffline.polling_osf_manager.polling_event_queue import PollingEventQueue
 from osfoffline.polling_osf_manager.polling_events import CreateFile,CreateFolder,RenameFile,RenameFolder, DeleteFile,DeleteFolder,UpdateFile
 import iso8601
 import osfoffline.alerts as AlertHandler
+from osfoffline.exceptions.item_exceptions import InvalidItemType
+from sqlalchemy.orm.exc import MultipleResultsFound, NoResultFound
+
 RECHECK_TIME = 5  # in seconds
 
 
@@ -273,21 +276,33 @@ class Poll(object):
                            local_node):
         """
         VARIOUS STATES (update as neccessary):
-        (None, None) -> Error                       --
-        (None, remote) -> create local              --
-        (local.create, None) -> create remote       --
-        (local.create, remote) -> ERROR             --
-        (local.delete, None) -> ERROR               --
-        (local.delete, remote) - > delete remote    --
-        (local, None) -> delete local               --
-        (local, remote) -> check modifications      --
+        (None, None) -> Error                                     --
+        (None, remote) ->
+            if locally moved -> do nothing
+            else -> create local
+        (local.create, None) -> create remote                     --
+        (local.create, remote) -> ERROR                           --
+        (local.delete, None) -> ERROR                             --
+        (local.delete, remote) - > delete remote                  --
+        (local, None) ->
+            if locally moved -> move
+            else -> delete local
+        (local, remote) -> check modifications                    --
 
         """
         assert local_file_folder or remote_file_folder  # both shouldnt be None.
         logging.warning('this is called inside checking file folder internall...')
         logging.info('checking file_folder internal')
         if local_file_folder is None:
-            local_file_folder = yield from self.create_local_file_folder(remote_file_folder, local_parent_file_folder, local_node)
+
+            if is_locally_moved(remote_file_folder):
+                return
+            else:
+                local_file_folder = yield from self.create_local_file_folder(
+                    remote_file_folder,
+                    local_parent_file_folder,
+                    local_node
+                )
         elif local_file_folder.locally_created and remote_file_folder is None:
             if not local_file_folder.is_provider:
                 remote_file_folder = yield from self.create_remote_file_folder(local_file_folder, local_node)
@@ -303,8 +318,15 @@ class Poll(object):
             yield from self.delete_remote_file_folder(local_file_folder, remote_file_folder)
             return
         elif local_file_folder is not None and remote_file_folder is None:
-            yield from self.delete_local_file_folder(local_file_folder)
-            return
+            if local_file_folder.locally_moved:
+                # todo: we are ignoring return value for now because to start going down new tree would require
+                # todo: us to have the new node. we currently use the head node instead of dynamically determining
+                # todo: node. This is problematic. And Bad. FIX IT.
+                yield from self.move_remote_file_folder(local_file_folder)
+                return
+            else:
+                yield from self.delete_local_file_folder(local_file_folder)
+                return
         elif local_file_folder is not None and remote_file_folder is not None:
             possibly_new_remote_file_folder = yield from self.modify_file_folder_logic(local_file_folder, remote_file_folder)
             # if we do not need to modify things, remote file folder and local file folder does not change
@@ -323,10 +345,12 @@ class Poll(object):
                 remote_children = yield from self.osf_query.get_child_files(remote_file_folder)
                 local_remote_file_folders = self.make_local_remote_tuple_list(local_file_folder.files, remote_children)
                 for local, remote in local_remote_file_folders:
-                    yield from self._check_file_folder(local,
-                                            remote,
-                                            local_parent_file_folder=local_file_folder,
-                                            local_node=local_node)
+                    yield from self._check_file_folder(
+                        local,
+                        remote,
+                        local_parent_file_folder=local_file_folder,
+                        local_node=local_node
+                    )
             except ConnectionError:
                 pass
                 # if we are unable to get children, then we do not try to get and manipulate children
@@ -542,6 +566,17 @@ class Poll(object):
 
         return new_remote_file_folder
 
+    @asyncio.coroutine
+    def move_remote_file_folder(self, local_file_folder):
+        logging.info('rename_remote_file_folder.')
+        assert isinstance(local_file_folder, File)
+
+        if local_file_folder.is_file:
+            new_remote_file_folder = yield from self.osf_query.move_remote_file(local_file_folder)
+        elif local_file_folder.is_folder:
+            new_remote_file_folder = yield from self.osf_query.move_remote_folder(local_file_folder)
+
+        return new_remote_file_folder
 
     # Delete
     @asyncio.coroutine
@@ -649,3 +684,26 @@ class Poll(object):
             else:
                 return True
 
+
+    @asyncio.coroutine
+    def is_locally_moved(self, remote):
+        assert isinstance(remote, RemoteObject)
+        try:
+            local = yield from self.get_local_from_remote(remote)
+            return local.locally_moved
+        except (MultipleResultsFound, NoResultFound):
+            return False
+
+
+    @asyncio.coroutine
+    def get_local_from_remote(self, remote):
+        assert isinstance(remote, RemoteObject)
+
+        if isinstance(remote, RemoteNode):
+            cls = Node
+        elif isinstance(remote, RemoteFileFolder):
+            cls = File
+        else:
+            raise InvalidItemType
+
+        return session.query(cls).filter(cls.osf_id == remote.id).one()

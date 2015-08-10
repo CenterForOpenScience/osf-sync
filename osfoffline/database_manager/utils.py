@@ -29,6 +29,8 @@ def session_scope():
 def remove_db():
     shutil.rmtree(DB_DIR)
 
+
+
 # def close_session_safe(session):
 #     try:
 #         session.close()

@@ -73,6 +73,7 @@ class Node(Base):
 
     locally_created = Column(Boolean, default=False)
     locally_deleted = Column(Boolean, default=False)
+    locally_moved = Column(Boolean, defualt=False)
 
 
     user_id = Column(Integer, ForeignKey('user.id'), nullable=False)
@@ -88,6 +89,7 @@ class Node(Base):
         cascade="all, delete-orphan"
     )
 
+    #fixme: this feels wrong. self.top_level?? should recursively update all child nodes. then validate.
     @hybrid_property
     def should_sync(self):
         return self.top_level and (self.osf_id in self.user.guid_for_top_level_nodes_to_sync)
@@ -169,6 +171,10 @@ class File(Base):
     locally_created = Column(Boolean, default=False)
     locally_deleted = Column(Boolean, default=False)
     locally_renamed = Column(Boolean, default=False)
+    locally_moved = Column(Boolean, defualt=False)
+
+    previous_node_osf_id = Column(String, nullable=True, default=None)
+    previous_provider = Column(String, default=DEFAULT_PROVIDER)
 
     user_id = Column(Integer, ForeignKey('user.id'), nullable=False)
     node_id = Column(Integer, ForeignKey('node.id'), nullable=False)
@@ -270,6 +276,12 @@ class File(Base):
                     #peers cannot have same osf_id as self
                     assert self.osf_id != peer.osf_id
 
+    @validates('locally_moved')
+    def validate_locally_moved(self, key, locally_moved):
+        if locally_moved:
+            assert self.previous_node_osf_id
+            assert self.previous_provider
+        return locally_moved
 
 
     def __repr__(self):

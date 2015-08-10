@@ -88,12 +88,13 @@ class OSFEventHandler(FileSystemEventHandler):
 
                     new_parent = self._get_parent_item_from_path(dest_path)
 
-                    # create a dummy item in old place with .locally deleted so polling does not create new item
-                    if isinstance(item, Node):
-                        dummy = Node(title=item.title, parent=item.parent, user=item.user, category=item.category, osf_id=item.osf_id)
-                    elif isinstance(item, File):
-                        dummy = File(name=item.name, parent=item.parent, user=item.user, type=item.type, osf_id=item.osf_id, node=item.node)
-                    dummy.locally_deleted = True
+                    # # create a dummy item in old place with .locally deleted so polling does not create new item
+                    # if isinstance(item, Node):
+                    #     dummy = Node(title=item.title, parent=item.parent, user=item.user, category=item.category, osf_id=item.osf_id)
+                    # elif isinstance(item, File):
+                    #     dummy = File(name=item.name, parent=item.parent, user=item.user, type=item.type, osf_id=item.osf_id, node=item.node)
+                    # dummy.locally_deleted = True
+
 
                     # move item
                     if isinstance(item, Node):
@@ -103,17 +104,26 @@ class OSFEventHandler(FileSystemEventHandler):
                             raise MovedNodeUnderFile
                     elif isinstance(item, File):
                         if isinstance(new_parent, Node):
-                            item.parent = None
-                            item.node = new_parent.node
+                            # this should never happen, as you cannot move osfoffline
+                            # item.parent = None
+                            # item.node = new_parent.node
+                            raise ValueError("can't move osfstorage folder")
                         elif isinstance(new_parent, File):
+                            item.previous_provider = item.provider
+                            item.previous_node_osf_id = item.node.osf_id
+
                             item.parent = new_parent
                             item.node = new_parent.node
+                            item.provider = new_parent.provider
 
-                    item.locally_create_children()
+                            item.locally_moved = True
 
-                    save(session, dummy)
+
+
+
+
+                    # save(session, dummy)
                     save(session, item)
-                    logging.info("on_moved event completed")
                 except FileNotFoundError:
                     logging.warning('tried to move to OSF folder. cant do this.')
                     # item.parent = None

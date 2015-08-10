@@ -222,65 +222,65 @@ class OSFQuery(object):
         remote.name = local.name
         return remote
 
-    # @asyncio.coroutine
-    # def move_remote_file_folder(self, local_file_folder, remote_file_folder):
-    #     """
-    #     handles both moving the remote_file_folder and renaming it.
-    #     :param local_file_folder:
-    #     :param remote_file_folder:
-    #     :return:
-    #     """
-    #     print('rename_remote_file_folder.')
-    #     assert isinstance(local_file_folder, File)
-    #     assert isinstance(remote_file_folder, dict)
-    #     assert remote_file_folder['type'] == 'files'
-    #     assert remote_file_folder['path'] == local_file_folder.osf_path
-    #     assert local_file_folder.name != remote_file_folder['name'] or local_file_folder.locally_moved
-    #
-    #     # alerts
-    #     alerts.info(local_file_folder.name, alerts.MODIFYING)
-    #
-    #     new_remote_file_folder = remote_file_folder
-    #
-    #     # handle renaming for both files and folders
-    #
-    #     # OSF allows you to manually rename a folder. Use That.
-    #     # url = 'https://staging2-files.osf.io/ops/move'
-    #
-    #     url = wb_move_url()
-    #     """
-    #     current thinking is that we rename node.top_level_file_folders to node.providers.
-    #     We then add a provider boolean to File - node.providers gives you File.provider==True Files
-    #     Each File has a provider field. It points to the provider, or None (if the file itself is the provider file)
-    #
-    #     If we get an event that is trying to move the provider file, we ignore it.
-    #     """
-    #     data = {
-    #         'rename': local_file_folder.name,
-    #         'conflict': 'replace',
-    #         'source': {
-    #             'path': local_file_folder.osf_path,
-    #             'provider': local_file_folder.provider,
-    #             'nid': local_file_folder.previous_node_osf_id  # fixme: what is the old node id???
-    #         },
-    #         'destination': {
-    #             'path': local_file_folder.parent.osf_path if local_file_folder.parent else '/',  # fixme: parent could be None. in which case we use / for the provider.
-    #             'provider': local_file_folder.provider,  # fixme: add validation for moving around osfstorage provider folder. parent=None in this case.
-    #             'nid': local_file_folder.node.osf_id
-    #         }
-    #     }
-    #
-    #     resp = yield from self.make_request(url, method="POST", data=json.dumps(data))
-    #     resp.close()
-    #     # get the updated remote folder
-    #
-    #     # inner_response = requests.get(remote_file_folder['links']['self'], headers=self.headers).json()
-    #     # we know exactly what changed, so its faster to just change the remote dictionary rather than making a new api call.
-    #
-    #     new_remote_file_folder['name'] = data['rename']
-    #
-    #
-    #     return new_remote_file_folder
+    #todo: evaluate merging move code with rename code?
+
+    @asyncio.coroutine
+    def move_remote_folder(self, local_folder):
+        assert isinstance(local_folder, File)
+        assert local_folder.is_folder
+        assert local_folder.locally_moved
+        assert not local_folder.is_provider
+        AlertHandler.info(local_folder.name, AlertHandler.MOVING)
+        return (yield from self._move_remote_file_folder())
+
+    @asyncio.coroutine
+    def move_remote_file(self, local_file):
+        assert isinstance(local_file, File)
+        assert local_file.is_file
+        assert local_file.locally_moved
+        assert not local_file.is_provider
+        AlertHandler.info(local_file.name, AlertHandler.MOVING)
+        return (yield from self._move_remote_file_folder())
+
+
+    @asyncio.coroutine
+    def _move_remote_file_folder(self, local_file_folder):
+
+        url = wb_move_url()
+        data = {
+            'conflict': 'replace',
+            'source': {
+                'path': local_file_folder.osf_path,
+                'provider': local_file_folder.previous_provider,
+                'nid': local_file_folder.previous_node_osf_id
+            },
+            'destination': {
+                'path': local_file_folder.parent.osf_path ,
+                'provider': local_file_folder.parent.provider,
+                'nid': local_file_folder.parent.node.osf_id
+            }
+        }
+
+        resp = yield from self.make_request(url, method="POST", data=json.dumps(data))
+        resp.close()
+        # get the updated remote folder
+
+        # inner_response = requests.get(remote_file_folder['links']['self'], headers=self.headers).json()
+        # we know exactly what changed, so its faster to just change the remote dictionary rather than making a new api call.
+
+        #todo: can get the file folder from the osf by making request to parent file folder (local.parent.osf_id,)
+        #todo: and then searching for the correct child based on osf_id.
+
+        #todo: move can change NODE. THUS, need to REMOVE local_node=local_node in check_file_folder code...
+
+
+        #for now, just going to stop synching this things children... NOT PROPER!!!!!
+        # new_remote_file_folder = ...
+
+        return
+
+
+
 
     @asyncio.coroutine
     def delete_remote_file(self, remote_file):
