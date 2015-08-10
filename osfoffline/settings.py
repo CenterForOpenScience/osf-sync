@@ -9,11 +9,11 @@ PROJECT_AUTHOR = 'cos'
 PROJECT_CONFIG_PATH = user_config_dir(PROJECT_NAME, PROJECT_AUTHOR)
 PROJECT_DB_PATH = user_data_dir(PROJECT_NAME, PROJECT_AUTHOR)
 
-# API_BASE = 'http://localhost:8000'
-# WB_BASE = 'http://localhost:7777'
+API_BASE = 'http://localhost:8000'
+WB_BASE = 'http://localhost:7777'
 
-API_BASE = 'https://staging2.osf.io/api/'
-WB_BASE = 'https://staging2-files.osf.io'
+# API_BASE = 'https://staging2.osf.io/api/'
+# WB_BASE = 'https://staging2-files.osf.io'
 
 
 
@@ -49,37 +49,45 @@ WB_BASE = 'https://staging2-files.osf.io'
 #         'pattern': '(?<=cookie=)(.*?)(?=&|$)',
 #         'mask': '***'
 #     }
-# DEFAULT_LOGGING_CONFIG = {
-#     'version': 1,
-#     'disable_existing_loggers': False,
-#     'formatters': {
-#         'console': DEFAULT_FORMATTER,
-#     },
-#     'handlers': {
-#         'console': {
-#             'class': 'logging.StreamHandler',
-#             'level': 'INFO',
-#             'formatter': 'console'
-#         },
-#         'syslog': {
-#             'class': 'logging.handlers.SysLogHandler',
-#             'level': 'INFO'
-#         }
-#     },
-#     'loggers': {
-#         '': {
-#             'handlers': ['console'],
-#             'level': 'INFO',
-#             'propagate': False
-#         }
-#     },
-#     'root': {
-#         'level': 'INFO',
-#         'handlers': ['console']
-#     }
-# }
-#
-#
+import colorlog  # noqa
+DEFAULT_FORMATTER = {
+   '()': 'colorlog.ColoredFormatter',
+   'format': '%(cyan)s[%(asctime)s]%(log_color)s[%(levelname)s][%(name)s]: %(reset)s%(message)s'
+}
+
+
+DEFAULT_LOGGING_CONFIG = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'console': DEFAULT_FORMATTER,
+    },
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'level': 'INFO',
+            'formatter': 'console'
+        },
+        'syslog': {
+            'class': 'logging.handlers.SysLogHandler',
+            'level': 'INFO'
+        }
+    },
+    'loggers': {
+        '': {
+            'handlers': ['console'],
+            'level': 'INFO',
+            'propagate': False
+        }
+    },
+    'root': {
+        'level': 'INFO',
+        'handlers': ['console']
+    }
+}
+
+
+
 # try:
 #     config_path = os.environ['{}_CONFIG'.format(PROJECT_NAME.upper())]
 # except KeyError:
@@ -98,7 +106,8 @@ WB_BASE = 'https://staging2-files.osf.io'
 #
 # def get(key, default):
 #     return config.get(key, default)
-#
-#
+
+
 # logging_config = get('LOGGING', DEFAULT_LOGGING_CONFIG)
-# logging.config.dictConfig(logging_config)
+logging_config = DEFAULT_LOGGING_CONFIG
+logging.config.dictConfig(logging_config)

@@ -73,7 +73,7 @@ class Node(Base):
 
     locally_created = Column(Boolean, default=False)
     locally_deleted = Column(Boolean, default=False)
-    locally_moved = Column(Boolean, defualt=False)
+    locally_moved = Column(Boolean, default=False)
 
 
     user_id = Column(Integer, ForeignKey('user.id'), nullable=False)
@@ -171,7 +171,7 @@ class File(Base):
     locally_created = Column(Boolean, default=False)
     locally_deleted = Column(Boolean, default=False)
     locally_renamed = Column(Boolean, default=False)
-    locally_moved = Column(Boolean, defualt=False)
+    locally_moved = Column(Boolean, default=False)
 
     previous_node_osf_id = Column(String, nullable=True, default=None)
     previous_provider = Column(String, default=DEFAULT_PROVIDER)

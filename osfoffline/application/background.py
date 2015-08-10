@@ -27,7 +27,8 @@ class BackgroundWorker(threading.Thread):
 
 
     def run(self):
-        logging.warning('run in background tasks called for first time.')
+
+        logging.info('run in background tasks called for first time.')
         self.loop = self.ensure_event_loop()
         self.run_background_tasks()
         self.loop.run_forever()
@@ -39,7 +40,9 @@ class BackgroundWorker(threading.Thread):
             self.user = self.get_current_user()
             self.osf_folder = self.user.osf_local_folder_path
             if self.user:
+                logging.info("start observing")
                 self.start_observing_osf_folder()
+                logging.info('start polling')
                 self.start_polling_server()
                 self.running = True
 
@@ -73,7 +76,12 @@ class BackgroundWorker(threading.Thread):
 
 
     def stop_loop(self, close=False):
-        self.loop.call_soon_threadsafe(self.loop.stop)
+        logging.info('stop loop')
+        if self.loop.is_closed():
+            logging.info('loop already closed so dont care')
+            return
+        self.loop.call_soon(self.loop.stop)
+        logging.info('call_soon(loop.stop)')
         if close:
             while not self.loop.is_closed():
                 if not self.loop.is_running():
@@ -81,9 +89,11 @@ class BackgroundWorker(threading.Thread):
 
     def stop(self):
 
-
+        logging.info('stopping background worker')
         self.stop_polling_server()
+        logging.info('stop polling')
         self.stop_observing_osf_folder()
+        logging.info('stop observing')
         self.stop_loop(close=True)
 
 

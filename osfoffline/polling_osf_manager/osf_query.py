@@ -231,7 +231,7 @@ class OSFQuery(object):
         assert local_folder.locally_moved
         assert not local_folder.is_provider
         AlertHandler.info(local_folder.name, AlertHandler.MOVING)
-        return (yield from self._move_remote_file_folder())
+        return (yield from self._move_remote_file_folder(local_folder))
 
     @asyncio.coroutine
     def move_remote_file(self, local_file):
@@ -240,7 +240,7 @@ class OSFQuery(object):
         assert local_file.locally_moved
         assert not local_file.is_provider
         AlertHandler.info(local_file.name, AlertHandler.MOVING)
-        return (yield from self._move_remote_file_folder())
+        return (yield from self._move_remote_file_folder(local_file))
 
 
     @asyncio.coroutine
@@ -263,6 +263,10 @@ class OSFQuery(object):
 
         resp = yield from self.make_request(url, method="POST", data=json.dumps(data))
         resp.close()
+
+        local_file_folder.locally_moved = False
+
+
         # get the updated remote folder
 
         # inner_response = requests.get(remote_file_folder['links']['self'], headers=self.headers).json()
@@ -277,7 +281,7 @@ class OSFQuery(object):
         #for now, just going to stop synching this things children... NOT PROPER!!!!!
         # new_remote_file_folder = ...
 
-        return
+        return None
 
 
 

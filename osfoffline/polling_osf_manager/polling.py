@@ -161,6 +161,7 @@ class Poll(object):
     @asyncio.coroutine
     def check_osf(self, remote_user):
         logging.info('check_osf')
+
         assert isinstance(remote_user, dict)
         assert remote_user['type'] == 'users'
 
@@ -291,11 +292,11 @@ class Poll(object):
 
         """
         assert local_file_folder or remote_file_folder  # both shouldnt be None.
-        logging.warning('this is called inside checking file folder internall...')
         logging.info('checking file_folder internal')
         if local_file_folder is None:
 
-            if is_locally_moved(remote_file_folder):
+            locally_moved = yield from self.is_locally_moved(remote_file_folder)
+            if locally_moved:
                 return
             else:
                 local_file_folder = yield from self.create_local_file_folder(
@@ -322,7 +323,7 @@ class Poll(object):
                 # todo: we are ignoring return value for now because to start going down new tree would require
                 # todo: us to have the new node. we currently use the head node instead of dynamically determining
                 # todo: node. This is problematic. And Bad. FIX IT.
-                yield from self.move_remote_file_folder(local_file_folder)
+                remote_file_folder = yield from self.move_remote_file_folder(local_file_folder)
                 return
             else:
                 yield from self.delete_local_file_folder(local_file_folder)
@@ -568,7 +569,7 @@ class Poll(object):
 
     @asyncio.coroutine
     def move_remote_file_folder(self, local_file_folder):
-        logging.info('rename_remote_file_folder.')
+        logging.info('move_remote_file_folder.')
         assert isinstance(local_file_folder, File)
 
         if local_file_folder.is_file:

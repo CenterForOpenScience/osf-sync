@@ -90,7 +90,7 @@ class OSFApp(QDialog):
 
 
 
-    def _can_start_background_worker(self):
+    def _can_restart_background_worker(self):
         try:
             user = self.get_current_user()
         except:
@@ -145,7 +145,7 @@ class OSFApp(QDialog):
         # I am recreating the background thread everytime for now.
         # I was unable to correctly pause the background thread
         # thus took this route for now.
-        if self._can_start_background_worker():
+        if self._can_restart_background_worker():
             #stop previous
             self.background_worker.stop()
             self.background_worker.join()
@@ -160,8 +160,9 @@ class OSFApp(QDialog):
 
 
     def pause(self):
-
+        logging.info('pausing background worker')
         if self.background_worker and self.background_worker.is_alive():
+            logging.info('pausing background worker SUCCESS')
             self.background_worker.stop()
             self.background_worker.join()
 
@@ -197,6 +198,7 @@ class OSFApp(QDialog):
 
 
     def start_logging(self):
+
         # make sure logging directory exists
         log_dir = user_log_dir(self.app_name, self.app_author)
         if not os.path.exists(log_dir):  # ~/.cache/appname

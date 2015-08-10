@@ -5,7 +5,7 @@ from furl import furl
 def api_user_url(user_id):
     # http://localhost:8000/v2/users/5bqt9/
     base = furl(API_BASE)
-    base.path.segments = ['api','v2','users',str(user_id),'']
+    base.path.segments.extend(['v2','users',str(user_id),''])
     return base.url
 
 
