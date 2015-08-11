@@ -93,7 +93,7 @@ class Poll(object):
                 assert item.locally_created
                 return "FAKE{}FAKE".format(item.id)
         else:
-            raise TypeError('What the fudge did you pass in?')
+            raise InvalidItemType
 
     def make_local_remote_tuple_list(self, local_list, remote_list):
         """
@@ -197,6 +197,7 @@ class Poll(object):
 
             yield from self.polling_event_queue.run()
 
+            AlertHandler.up_to_date()
             logging.info('---------SHOULD HAVE ALL OSF FILES---------')
 
 

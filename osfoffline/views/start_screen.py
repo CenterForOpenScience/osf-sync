@@ -84,8 +84,8 @@ class StartScreen(QDialog):
         except:
             return False
 
-    def closedEvent(self, event):
-        """ If closedEvent occured by us, then it means user is properly logged in. Thus close.
+    def closeEvent(self, event):
+        """ If closeEvent occured by us, then it means user is properly logged in. Thus close.
             Else, event is by user without logging in. THUS, quit entire application.
         """
         if self._user_logged_in():
@@ -95,5 +95,4 @@ class StartScreen(QDialog):
             # self.destroy()
         else:
             self.quit_application_signal.emit()
-
         event.accept()

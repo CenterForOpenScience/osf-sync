@@ -43,7 +43,7 @@ class OSFApp(QDialog):
         self.start_screen = StartScreen()
         self.tray = SystemTray()
         self.preferences = Preferences()
-        AlertHandler.setup_alerts(self.tray.tray_icon, self.tray.currently_synching_action)
+        AlertHandler.setup_alerts(self.tray.tray_icon, self.tray.tray_alert_signal)
 
         # connect all signal-slot pairs
         self.setup_connections()
@@ -65,6 +65,7 @@ class OSFApp(QDialog):
             (self.tray.about_action.triggered, self.start_about_screen),
 
             (self.tray.quit_action.triggered, self.quit),
+            (self.tray.tray_alert_signal, self.tray.update_currently_synching),
 
             # main events
             (self.login_signal, self.start_screen.open_window),
@@ -126,9 +127,11 @@ class OSFApp(QDialog):
             logging.warning("invalid containing folder. try again.")
             AlertHandler.warn("Invalid containing folder. Please choose another.")
             containing_folder = self.set_containing_folder_initial()
-        user.osf_local_folder_path = os.path.join(containing_folder, "OSF")
 
+        user.osf_local_folder_path = os.path.join(containing_folder, "OSF")
         save(session, user)
+        self.tray.set_containing_folder(containing_folder)
+
 
         if not os.path.isdir(user.osf_local_folder_path):
             os.makedirs(user.osf_local_folder_path)

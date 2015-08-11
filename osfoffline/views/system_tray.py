@@ -9,8 +9,13 @@ import subprocess
 import osfoffline.alerts as AlertHandler
 import webbrowser
 from osfoffline.utils.validators import validate_containing_folder
+from PyQt5.QtCore import pyqtSignal
 
 class SystemTray(QDialog):
+
+    tray_alert_signal = pyqtSignal((str,))
+
+
     def __init__(self):
         super().__init__()
         self.create_actions()
@@ -48,11 +53,13 @@ class SystemTray(QDialog):
     def start(self):
         self.tray_icon.show()
 
-    # def update_currently_synching(self):
-    #     from datetime import datetime
-    #     self.currently_synching_action.setText(0, str(datetime.now()))
+    def update_currently_synching(self, val):
+        self.currently_synching_action.setText(str(val))
+        self.tray_icon.show()
 
     def set_containing_folder(self, new_containing_folder):
+        import logging
+        logging.debug("setting new containing folder is :{}".format(self.containing_folder))
         self.containing_folder = new_containing_folder
 
     def start_osf(self):
@@ -60,6 +67,9 @@ class SystemTray(QDialog):
         webbrowser.open_new_tab(url)
 
     def open_osf_folder(self):
+        # fixme: containing folder not being updated.
+        import logging
+        logging.debug("containing folder is :{}".format(self.containing_folder))
         if validate_containing_folder(self.containing_folder):
             if sys.platform == 'win32':
                 os.startfile(self.containing_folder)

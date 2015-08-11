@@ -79,13 +79,19 @@ class BackgroundWorker(threading.Thread):
         logging.info('stop loop')
         if self.loop.is_closed():
             logging.info('loop already closed so dont care')
-            return
-        self.loop.call_soon(self.loop.stop)
-        logging.info('call_soon(loop.stop)')
-        if close:
-            while not self.loop.is_closed():
-                if not self.loop.is_running():
-                    self.loop.close()
+
+        elif not self.loop.is_running():
+            logging.info('loop is stopped already. closing it')
+            self.loop.close()
+        else:
+            # stop loop when current tasks finish.
+            self.loop.call_soon(self.loop.stop)
+            logging.info('call_soon to loop.stop. will stop when polling/observing events finish.')
+            # todo: find better way?
+            if close:
+                while not self.loop.is_closed():
+                    if not self.loop.is_running():
+                        self.loop.close()
 
     def stop(self):
 
