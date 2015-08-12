@@ -20,7 +20,8 @@ from osfoffline.application.background import BackgroundWorker
 from osfoffline.utils.validators import validate_containing_folder
 from osfoffline.utils.debug import debug_trace
 
-RUN_PATH = "HKEY_CURRENT_USER\\Software\\Microsoft\\Windows\\CurrentVersion\\Run"
+
+# RUN_PATH = "HKEY_CURRENT_USER\\Software\\Microsoft\\Windows\\CurrentVersion\\Run"
 
 
 class OSFApp(QDialog):
@@ -157,7 +158,7 @@ class OSFApp(QDialog):
             self.background_worker = BackgroundWorker()
             self.background_worker.start()
         else:
-            #todo: what goes here?
+            #todo: what goes here, if anything?
             logging.info('wanted to but could not resume background worker')
 
 

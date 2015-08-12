@@ -57,16 +57,8 @@ class OSFEventHandler(FileSystemEventHandler):
             item = self.get_item_by_path(src_path)
 
             # rename
-            if isinstance(item, Node) and item.title != dest_path.name:
-                if self.already_exists(dest_path):
-                    session.delete(item)
-                    save(session)
-                else:
-                    item.title = dest_path.name
-                    save(session, item)
-                logging.info("on_moved just renamed a node")
-            elif isinstance(item, File) and item.name != dest_path.name:
-                if self.already_exists(dest_path):
+            if isinstance(item, File) and item.name != dest_path.name:
+                if self.already_exists(dest_path): 
                     session.delete(item)
                     save(session)
                 else:

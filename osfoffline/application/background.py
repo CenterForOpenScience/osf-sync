@@ -111,8 +111,8 @@ class BackgroundWorker(threading.Thread):
         self.event_handler = osf_event_handler.OSFEventHandler(self.osf_folder, self.user.osf_local_folder_path, self.user,
                                                                loop=self.loop)  # create event handler
         # todo: if config actually has legitimate data. use it.
-        # start
 
+        # start
         self.observer = Observer()  # create observer. watched for events on files.
         # attach event handler to observed events. make observer recursive
 
