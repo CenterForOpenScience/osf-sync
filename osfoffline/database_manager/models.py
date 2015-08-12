@@ -166,7 +166,7 @@ class File(Base):
     provider = Column(String, default=DEFAULT_PROVIDER)
 
     # NOTE: this is called path. It is not any type of file/folder path. Think of it just as an id.
-    osf_path = Column(String, nullable=True, default=None)
+    osf_path = Column(String, nullable=True, default=None, unique=True)
 
     locally_created = Column(Boolean, default=False)
     locally_deleted = Column(Boolean, default=False)

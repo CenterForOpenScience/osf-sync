@@ -108,8 +108,12 @@ class BackgroundWorker(threading.Thread):
     def start_observing_osf_folder(self):
         # if something inside the folder changes, log it to config dir
 
-        self.event_handler = osf_event_handler.OSFEventHandler(self.osf_folder, self.user.osf_local_folder_path, self.user,
-                                                               loop=self.loop)  # create event handler
+        # create event handler
+        self.event_handler = osf_event_handler.OSFEventHandler(
+            self.osf_folder,
+            loop=self.loop
+        )
+
         # todo: if config actually has legitimate data. use it.
 
         # start
@@ -117,7 +121,7 @@ class BackgroundWorker(threading.Thread):
         # attach event handler to observed events. make observer recursive
 
         self.observer.schedule(self.event_handler, self.osf_folder, recursive=True)
-        LocalDBSync(self.user.osf_local_folder_path, self.observer, self.user).emit_new_events()
+        # LocalDBSync(self.user.osf_local_folder_path, self.observer, self.user).emit_new_events()
 
         try:
 

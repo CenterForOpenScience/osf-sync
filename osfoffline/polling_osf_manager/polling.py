@@ -256,8 +256,21 @@ class Poll(object):
     @asyncio.coroutine
     def check_file_folder(self, local_node, remote_node):
         logging.info('checking file_folder')
+        #todo: probably can put this step into get_child_files for nodes.
+        #fixme: doesnt handle multiple providers right now...
+
         remote_node_files = yield from self.osf_query.get_child_files(remote_node)
-        local_remote_files = self.make_local_remote_tuple_list(local_node.top_level_file_folders, remote_node_files)
+        assert len(remote_node_files) == 1
+        osfstorage_folder = remote_node_files[0]
+        assert osfstorage_folder.name == 'osfstorage'
+        assert osfstorage_folder.id == '/'
+
+        remote_node_top_level_file_folders = yield from self.osf_query.get_child_files(osfstorage_folder)
+
+        local_remote_files = self.make_local_remote_tuple_list(
+            local_node.top_level_file_folders,
+            remote_node_top_level_file_folders
+        )
 
         for local, remote in local_remote_files:
             try:
