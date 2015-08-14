@@ -116,6 +116,7 @@ class OSFApp(QDialog):
         try:
             user = self.get_current_user()
         except MultipleResultsFound:
+            debug_trace()
             self._logout_all_users()
             self.login_signal.emit()
             return
@@ -137,9 +138,10 @@ class OSFApp(QDialog):
         if not os.path.isdir(user.osf_local_folder_path):
             os.makedirs(user.osf_local_folder_path)
 
-        self.start_logging()
+        # self.start_logging()
 
         self.start_tray_signal.emit()
+        logging.warning('starting background worker from main.start')
         self.background_worker.start()
 
 

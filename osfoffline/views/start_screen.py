@@ -6,6 +6,7 @@ from osfoffline.database_manager.utils import save
 from osfoffline.database_manager.models import User
 from osfoffline.views.rsc.startscreen import Ui_startscreen  # REQUIRED FOR GUI
 import logging
+from osfoffline.utils.debug import debug_trace
 
 __author__ = 'himanshu'
 
@@ -40,9 +41,8 @@ class StartScreen(QDialog):
             user = session.query(User).filter(User.osf_login == user_name).one()
             user.logged_in = True
             save(session, user)
-
             self.close()
-            self.done_logging_in_signal.emit()
+
 
         except MultipleResultsFound:
             logging.warning('multiple users with same username. deleting all users with this username. restarting function.')
@@ -65,7 +65,7 @@ class StartScreen(QDialog):
             save(session, user)
 
             self.close()
-            self.done_logging_in_signal.emit()
+
 
 
     def setup_slots(self):

@@ -24,7 +24,7 @@ class OSFEventHandler(FileSystemEventHandler):
     """
     Base file system event handler that you can override methods from.
     """
-    def __init__(self, osf_folder, db_url, user, loop):
+    def __init__(self, osf_folder, loop):
         super().__init__()
         self._loop = loop or asyncio.get_event_loop()
         self.osf_folder = ProperPath(osf_folder, True)
@@ -118,15 +118,14 @@ class OSFEventHandler(FileSystemEventHandler):
         if self._already_exists(src_path):
             return
 
-        if src_path.parent == self.osf_folder or src_path.parent.name == 'Components':
-            logging.error('tried to create node')
-            return
+
+        # assert: whats being created is a file folder
 
         containing_item = self._get_parent_item_from_path(src_path)
 
         if isinstance(containing_item, Node):
             node = containing_item
-        elif isinstance(containing_item, File):
+        else: # file
             node = containing_item.node
         new_item = File(
             name=src_path.name,
@@ -144,6 +143,7 @@ class OSFEventHandler(FileSystemEventHandler):
                 # if file doesnt exist just as we create it, then file is likely temp file. thus don't put it in db.
                 return
         save(session, new_item)
+        save(session, containing_item)
         logging.info("created new {}".format('folder' if event.is_directory else 'file'))
 
     @asyncio.coroutine
@@ -166,10 +166,13 @@ class OSFEventHandler(FileSystemEventHandler):
             item = self._get_item_by_path(src_path)
         except ItemNotInDB:
             #todo: create file folder
+            logging.error('unimplemented right now. implement bro.')
             logging.warning('file was modified but not already in db. create it in db.')
+            return #todo: remove this once above is implemented
 
         # update hash
         item.update_hash()
+
         # save
         save(session, item)
 
@@ -185,6 +188,8 @@ class OSFEventHandler(FileSystemEventHandler):
         """
         src_path = ProperPath(event.src_path, event.is_directory)
 
+        if not self._already_exists(src_path):
+            return
 
         # get item
         item = self._get_item_by_path(src_path)
@@ -203,6 +208,12 @@ class OSFEventHandler(FileSystemEventHandler):
 
 
     def dispatch(self, event):
+        #basically, ignore all events that occur for 'Components' file or folder
+        if self._event_is_for_components_file_folder(event):
+            AlertHandler.warn('Cannot have a custom file or folder named Components')
+            return
+
+
         _method_map = {
             EVENT_TYPE_MODIFIED: self.on_modified,
             EVENT_TYPE_MOVED: self.on_moved,
@@ -246,3 +257,14 @@ class OSFEventHandler(FileSystemEventHandler):
             if file_path == path:
                 return file_folder
         raise ItemNotInDB
+
+
+    def _event_is_for_components_file_folder(self, event):
+        if ProperPath(event.src_path, True).name == 'Components':
+            return True
+        try:
+            if ProperPath(event.dest_path,True).name == 'Components':
+                return True
+            return False
+        except AttributeError:
+            return False

@@ -162,11 +162,12 @@ class File(Base):
     hash = Column(String)
     type = Column(Enum(FOLDER, FILE), nullable=False)
     date_modified = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
-    osf_id = Column(String, nullable=True, default=None)  # multiple things allowed to be null
+    #todo: osf_id and osf_path act as duplicates right now. One needs to be removed.
+    osf_id = Column(String, nullable=True, default=None)  # multiple things allowed to be null. #todo: unique=True (handle moved on osf)
     provider = Column(String, default=DEFAULT_PROVIDER)
 
     # NOTE: this is called path. It is not any type of file/folder path. Think of it just as an id.
-    osf_path = Column(String, nullable=True, default=None, unique=True)
+    osf_path = Column(String, nullable=True, default=None)  #todo: unique=True. (can't right now due to duplicates when moved on osf)
 
     locally_created = Column(Boolean, default=False)
     locally_deleted = Column(Boolean, default=False)

@@ -210,7 +210,7 @@ class OSFQuery(object):
                 'nid': local.node.osf_id
             },
             'destination': {
-                'path': local.parent.osf_path,
+                'path': local.parent.osf_path if local.parent else '/',
                 'provider': local.provider,
                 'nid': local.node.osf_id
             }
@@ -255,9 +255,9 @@ class OSFQuery(object):
                 'nid': local_file_folder.previous_node_osf_id
             },
             'destination': {
-                'path': local_file_folder.parent.osf_path ,
-                'provider': local_file_folder.parent.provider,
-                'nid': local_file_folder.parent.node.osf_id
+                'path': local_file_folder.parent.osf_path if local_file_folder.parent else '/',
+                'provider': local_file_folder.parent.provider if local_file_folder.parent else File.DEFAULT_PROVIDER,
+                'nid': local_file_folder.parent.node.osf_id if local_file_folder.parent else local_file_folder.node.osf_id
             }
         }
 

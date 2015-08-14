@@ -52,7 +52,7 @@ WB_BASE = 'http://localhost:7777'
 import colorlog  # noqa
 DEFAULT_FORMATTER = {
    '()': 'colorlog.ColoredFormatter',
-   'format': '%(cyan)s[%(asctime)s]%(log_color)s[%(threadName)s][%(levelname)s][%(name)s]: %(reset)s%(message)s'
+   'format': '%(cyan)s[%(asctime)s]%(log_color)s[%(threadName)s][%(filename)s][%(levelname)s][%(name)s]: %(reset)s%(message)s'
 }
 
 

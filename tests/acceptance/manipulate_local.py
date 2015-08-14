@@ -8,10 +8,10 @@ import requests
 import time
 from tests.utils.url_builder import api_node_files, wb_file_url
 from osfoffline.polling_osf_manager.remote_objects import RemoteFile, RemoteFolder, RemoteFileFolder, dict_to_remote_object
-osf_path = '/home/himanshu/Desktop/OSF/'
-osfstorage_path = os.path.join(osf_path, 'new_test_project','osfstorage')
-user_id = '5bqt9'
-nid1 = 'bcw6f'
+osf_path = '/Users/himanshu/Desktop/OSF/'
+project_path = os.path.join(osf_path, 'new_test_project')
+user_id = 'szyrp'
+nid1 = '8ayv2'
 # nid2 = ''
 headers = {'Authorization':'Bearer {}'.format(user_id)}
 session = requests.Session()
@@ -20,7 +20,7 @@ files_dir_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'files
 
 @decorator
 def repeat_until_success(func, *args, **kwargs):
-    for i in range(10):
+    for i in range(20):
         if func(*args, **kwargs):
             return
         else:
@@ -43,7 +43,7 @@ def create_local(*args, file_name=None):
 
 
 def build_path(*args):
-    return os.path.join(osfstorage_path, *args)
+    return os.path.join(project_path, *args)
 
 
 
@@ -149,8 +149,8 @@ def get_remote(name, nid, is_dir, parent=None):
 
 
 def delete_all_local():
-    for file_folder in os.listdir(osfstorage_path):
-        path = os.path.join(osfstorage_path, file_folder)
+    for file_folder in os.listdir(project_path):
+        path = os.path.join(project_path, file_folder)
         if os.path.isdir(path):
             shutil.rmtree(path)
         else:
@@ -161,14 +161,20 @@ def assert_node_has_no_file_folders(nid):
     file_folders = get_node_file_folders(nid)
     return len(file_folders)==0
 
+@repeat_until_success
+def assert_local_has_components_folder():
+    return os.path.isdir(build_path('Components'))
 
 def setUp():
     delete_all_local()
     assert_node_has_no_file_folders(nid1)
+    assert_local_has_components_folder
+
 
 def teardown():
     delete_all_local()
     assert_node_has_no_file_folders(nid1)
+    assert_local_has_components_folder
 
 @with_setup(setUp, teardown)
 def test_create_local_folder():
@@ -458,3 +464,38 @@ def test_move_non_empty_folder_from_top_to_nonempty_subfolder():
 
     assert_folder_not_exist('a',nid1)
 
+
+@with_setup(setUp, teardown)
+def test_no_subfolder_is_called_components():
+    create_local('a','Components')
+    assert_contains_folder('a', nid1)
+    a_folder = get_remote('a', nid1, True)
+
+    assert_folder_not_exist('Components',nid1, a_folder)
+
+    create_local('a','a','Components')
+    assert_contains_folder('a', nid1, a_folder)
+    aa_folder = get_remote('a', nid1, True, a_folder)
+    assert_folder_not_exist('Components', nid1, aa_folder)
+
+
+@with_setup(setUp, teardown)
+def test_no_subfile_is_called_components():
+    create_local('a','Components')
+    assert_contains_folder('a', nid1)
+    a_folder = get_remote('a', nid1, True)
+
+    assert_file_not_exist('Components',nid1, a_folder)
+
+    create_local('a','a','Components')
+    assert_contains_folder('a', nid1, a_folder)
+    aa_folder = get_remote('a', nid1, True, a_folder)
+    assert_file_not_exist('Components', nid1, aa_folder)
+
+
+#todo: what do we do when a user creates a local FILE called Components
+#probably, just give user an alert that says Components folder must exist to sync components.
+# and then dont sync components...
+@with_setup(setUp, teardown)
+def test_what_happens_when_user_creates_local_file_called_Components():
+    pass
