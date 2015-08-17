@@ -45,19 +45,21 @@ class OSFEventHandler(FileSystemEventHandler):
         :type event:
             :class:`DirMovedEvent` or :class:`FileMovedEvent`
         """
+        import ipdb;ipdb.set_trace()
         src_path = ProperPath(event.src_path, event.is_directory)
         dest_path = ProperPath(event.dest_path, event.is_directory)
 
 
         # determine and get what moved
+        if not self._already_exists(src_path):
+            logging.warning('Tried to move item that does not exist: {}'.format(src_path.name))
+            return
+
         item = self._get_item_by_path(src_path)
 
 
         if isinstance(item, Node):
-            if src_path.name != dest_path.name:
-               pass
-            elif src_path.full_path != dest_path.full_path:
-                AlertHandler.warn('Cannot move projects and components. {} will stop syncing'.format(item.title))
+            AlertHandler.warn('Cannot manipulate components locally. {} will stop syncing'.format(item.title))
             return
 
         # File
@@ -80,24 +82,25 @@ class OSFEventHandler(FileSystemEventHandler):
                 logging.info('file does not already exist in moved destination')
 
 
-            new_parent = self._get_parent_item_from_path(dest_path)
+            new_parent_item = self._get_parent_item_from_path(dest_path)
 
 
             # move item
-            if isinstance(new_parent, Node):
-                item.parent = None
-                item.node = new_parent.node
-            elif isinstance(new_parent, File):
-                item.previous_provider = item.provider
-                item.previous_node_osf_id = item.node.osf_id
 
-                item.parent = new_parent
-                item.node = new_parent.node
-                item.provider = new_parent.provider
+            # set previous fields
+            item.previous_provider = item.provider
+            item.previous_node_osf_id = item.node.osf_id
 
-                item.locally_moved = True
+            #update parent and node fields
+            item.parent = new_parent_item if isinstance(new_parent_item, File) else None
+            item.node = new_parent_item.node if isinstance(new_parent_item, File) else new_parent_item
 
-            # save(session, dummy)
+            # basically always osfstorage. this is just meant to be extendible in the future to other providers
+            item.provider = new_parent_item.provider if isinstance(new_parent_item, File) else File.DEFAULT_PROVIDER
+
+            #flags
+            item.locally_moved = True
+
             save(session, item)
             logging.info('moved from {} to {}'.format(src_path.name, dest_path.name))
 
@@ -120,8 +123,11 @@ class OSFEventHandler(FileSystemEventHandler):
 
 
         # assert: whats being created is a file folder
-
-        containing_item = self._get_parent_item_from_path(src_path)
+        try:
+            containing_item = self._get_parent_item_from_path(src_path)
+        except ItemNotInDB:
+            logging.error('tried to create item {} for parent {} but parent does not exist'.format(src_path.name, src_path.parent.name))
+            return
 
         if isinstance(containing_item, Node):
             node = containing_item
@@ -159,7 +165,7 @@ class OSFEventHandler(FileSystemEventHandler):
         if isinstance(event, DirModifiedEvent):
             return
         src_path = ProperPath(event.src_path, event.is_directory)
-        # update model
+
 
         # get item
         try:

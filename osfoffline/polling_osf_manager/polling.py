@@ -248,10 +248,15 @@ class Poll(object):
             AlertHandler.warn('Bad Internet Connection')
 
         # ensure that local node has Components folder
-        self.ensure_components_folder(local_node)
+        self._ensure_components_folder(local_node)
 
         # recursively handle node's children
-        remote_children = yield from self.osf_query.get_child_nodes(remote_node)
+        try:
+            remote_children = yield from self.osf_query.get_child_nodes(remote_node)
+        except (aiohttp.errors.ClientConnectionError, aiohttp.errors.ClientTimeoutError, concurrent.futures._base.TimeoutError):
+            AlertHandler.warn('Bad Internet Connection')
+            return
+
         local_remote_nodes = self.make_local_remote_tuple_list(local_node.child_nodes, remote_children)
         for local, remote in local_remote_nodes:
             try:
@@ -270,6 +275,10 @@ class Poll(object):
         except (aiohttp.errors.ClientConnectionError, aiohttp.errors.ClientTimeoutError, concurrent.futures._base.TimeoutError):
             AlertHandler.warn('Bad Internet Connection')
             return
+        except aiohttp.errors.HttpBadRequest:
+            AlertHandler.warn('could not access files for node {}. Node might have been deleted.'.format(remote_node.name))
+            return
+
 
         assert len(remote_node_files) == 1
         osfstorage_folder = remote_node_files[0]
@@ -280,6 +289,9 @@ class Poll(object):
             remote_node_top_level_file_folders = yield from self.osf_query.get_child_files(osfstorage_folder)
         except (aiohttp.errors.ClientConnectionError, aiohttp.errors.ClientTimeoutError, concurrent.futures._base.TimeoutError):
             AlertHandler.warn('Bad Internet Connection')
+            return
+        except aiohttp.errors.HttpBadRequest:
+            AlertHandler.warn('could not access files for node {}. Node might have been deleted.'.format(remote_node.name))
             return
 
         local_remote_files = self.make_local_remote_tuple_list(
@@ -323,7 +335,7 @@ class Poll(object):
         assert local_file_folder or remote_file_folder  # both shouldnt be None.
         logging.info('checking file_folder internal')
         if local_file_folder is None:
-
+            import ipdb;ipdb.set_trace()
             locally_moved = yield from self.is_locally_moved(remote_file_folder)
             if locally_moved:
                 return
@@ -348,6 +360,7 @@ class Poll(object):
             yield from self.delete_remote_file_folder(local_file_folder, remote_file_folder)
             return
         elif local_file_folder is not None and remote_file_folder is None:
+            import ipdb;ipdb.set_trace()
             if local_file_folder.locally_moved:
                 # todo: we are ignoring return value for now because to start going down new tree would require
                 # todo: us to have the new node. we currently use the head node instead of dynamically determining
@@ -414,8 +427,10 @@ class Poll(object):
         save(session, new_node)
 
 
+        if local_parent_node:
+            self._ensure_components_folder(local_parent_node)
         self.polling_event_queue.put(CreateFolder(new_node.path))
-        self.ensure_components_folder(new_node)
+        self._ensure_components_folder(new_node)
 
         assert local_parent_node is None or (new_node in local_parent_node.child_nodes)
         return new_node
@@ -582,7 +597,7 @@ class Poll(object):
         try:
             new_remote_file = yield from self.osf_query.upload_file(local_file)
         except FileNotFoundError:
-            logging.warning('file not created on remote server because does not exist locally. inside create_remote_file_folder')
+            logging.warning('file not reuploaded on remote server because does not exist locally. inside create_remote_file_folder')
             return remote_file
 
 
@@ -748,9 +763,10 @@ class Poll(object):
         return session.query(cls).filter(cls.osf_id == remote.id).one()
 
 
-    def ensure_components_folder(self, node):
+    def _ensure_components_folder(self, local_node):
+        assert isinstance(local_node, Node)
         self.polling_event_queue.put(
             CreateFolder(
-                os.path.join(node.path, 'Components')
+                os.path.join(local_node.path, 'Components')
             )
         )

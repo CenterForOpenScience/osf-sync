@@ -8,7 +8,7 @@ from osfoffline.database_manager.models import File,Node,User
 from osfoffline.polling_osf_manager.api_url_builder import wb_file_url,api_file_children, wb_move_url
 import osfoffline.alerts as AlertHandler
 import concurrent
-
+import logging
 OK = 200
 CREATED = 201
 ACCEPTED = 202
@@ -332,10 +332,12 @@ class OSFQuery(object):
 
         if expects:
             if response.status not in expects:
-                raise ConnectionError('failed because of wrong response status. url: {}, expected status: {}, actual status: {}'.format(url, expects, response.status))
+                raise aiohttp.errors.BadStatusLine(response.status)
         elif 400 <= response.status < 600:
             content = yield from response.read()
-            raise ConnectionError('failed {} request {} with expected response code(s) {}. response.content={}'.format(method, url, expects,content ))
+            error_message = '[status code: {}]:: {}'.format(str(response.status),str(content))
+            logging.error(error_message)
+            raise aiohttp.errors.HttpBadRequest(error_message)
 
         if get_json:
             json_response = yield from response.json()

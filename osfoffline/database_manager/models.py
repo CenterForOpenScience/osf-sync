@@ -105,7 +105,7 @@ class Node(Base):
         # +os.path.sep+ instead of os.path.join: http://stackoverflow.com/a/14504695
 
         if self.parent:
-            return os.path.join(self.parent.path, self.title)
+            return os.path.join(self.parent.path,'Components', self.title)
         else:
 
             return os.path.join(self.user.osf_local_folder_path, self.title)
