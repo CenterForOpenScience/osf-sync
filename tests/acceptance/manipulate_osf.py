@@ -16,7 +16,7 @@ from furl import furl
 osf_path = '/Users/himanshu/Desktop/OSF/'
 project_path = os.path.join(osf_path, 'new_test_project')
 user_id = 'szyrp'
-nid1 = '8ayv2'
+nid1 = '3ubsw'
 # nid2 = ''
 # oauth_token = 'eyJhbGciOiJIUzUxMiJ9.ZXlKaGJHY2lPaUprYVhJaUxDSmxibU1pT2lKQk1USTRRMEpETFVoVE1qVTJJbjAuLjgzZDFQNnQwTkp5VUd1U0dITUZ5dWcuTE4xSzQ4Z3I1aE9UV0xMYVBZR3RUVGNiajB5MmNRS3hTZjRzaURTcFo5YXhBOEU1eG5GMDVDR0pwTmpidHVGM1ZldnRvLU1NdmJLNXZjR3BQNTRCNDdIR0xmWFF1cjBaUmstZm5EM0NlSTBVNjRlel9vMGpNNDlzRjR0SHhWUUhFUWE2TjV0MzBMRkpRaDB5bmJlcl9ra2Y0MHBDa2w4Nno1RHJGaWo0QkxfeWhkOHp1aW5qWHlXV1JFdU05cXYxLjVlQ0hlOEpCWVdXTGoyZ0hJVEQ5TVE.wpEdtHs931he-YkMDqCMZQjXGvxG8t1jgDA_YbhWywcnR2DfJZHSL6PQU58RMMnECFk857v-ZoDZ0puf1KB3IA'
 oauth_token = user_id
@@ -220,359 +220,359 @@ def teardown():
     assertTrue(os.path.isdir, build_path('Components'))
 
 
-# @with_setup(setup, teardown)
-# def test_create_folder():
-#     folder = create_osf_folder('folder1', nid1)
-#     assertTrue(os.path.isdir, build_path('folder1') )
+@with_setup(setup, teardown)
+def test_create_folder():
+    folder = create_osf_folder('folder1', nid1)
+    assertTrue(os.path.isdir, build_path('folder1') )
+
+    delete_osf_file_folder(folder, nid1)
+    assertFalse(os.path.exists, build_path('folder1'))
+
+@with_setup(setup, teardown)
+def test_create_file():
+    file = create_osf_file('file1', nid1)
+    assertTrue(os.path.isfile, build_path('file1'))
+
+    delete_osf_file_folder(file, nid1)
+    assertFalse(os.path.exists, build_path('file1'))
+
+@with_setup(setup, teardown)
+def test_create_nested_folders_with_same_name():
+    folder1 = create_osf_folder('folder', nid1)
+    assertTrue(os.path.isdir, build_path('folder') )
+
+    folder1_1 = create_osf_folder('folder', nid1, folder1)
+    assertTrue(os.path.isdir, build_path('folder','folder'))
+
+    folder1_1_1 = create_osf_folder('folder', nid1, folder1_1)
+    assertTrue(os.path.isdir, build_path('folder','folder','folder'))
+
+    delete_osf_file_folder(folder1, nid1)
+    assertFalse(os.path.exists, build_path('folder'))
+
+@with_setup(setup, teardown)
+def test_create_nested_file():
+    folder1 = create_osf_folder('folder1', nid1)
+    assertTrue(os.path.isdir, build_path('folder1') )
+
+    file = create_osf_file('file1', nid1, folder1)
+    assertTrue(os.path.isfile, build_path('folder1','file1'))
+
+    folder1_1 = create_osf_folder('folder1.1', nid1, folder1)
+    assertTrue(os.path.isdir, build_path('folder1', 'folder1.1'))
+
+    file2 = create_osf_file('file2', nid1, folder1_1)
+    assertTrue(os.path.isfile, build_path('folder1','folder1.1','file2'))
+
+    delete_osf_file_folder(folder1, nid1)
+    assertFalse(os.path.exists, build_path('folder1'))
+
+#fails
+# def test_file_folder_with_same_name():
+#     file = create_osf_folder('file1', nid1)
+#     assertTrue(os.path.isdir, build_path('file1'))
 #
-#     delete_osf_file_folder(folder, nid1)
-#     assertFalse(os.path.exists, build_path('folder1'))
-#
-# @with_setup(setup, teardown)
-# def test_create_file():
-#     file = create_osf_file('file1', nid1)
+#     folder=create_osf_file('file1', nid1)
 #     assertTrue(os.path.isfile, build_path('file1'))
 #
 #     delete_osf_file_folder(file, nid1)
+#     delete_osf_file_folder(folder, nid1)
 #     assertFalse(os.path.exists, build_path('file1'))
-#
-# @with_setup(setup, teardown)
-# def test_create_nested_folders_with_same_name():
-#     folder1 = create_osf_folder('folder', nid1)
-#     assertTrue(os.path.isdir, build_path('folder') )
-#
-#     folder1_1 = create_osf_folder('folder', nid1, folder1)
-#     assertTrue(os.path.isdir, build_path('folder','folder'))
-#
-#     folder1_1_1 = create_osf_folder('folder', nid1, folder1_1)
-#     assertTrue(os.path.isdir, build_path('folder','folder','folder'))
-#
-#     delete_osf_file_folder(folder1, nid1)
-#     assertFalse(os.path.exists, build_path('folder'))
-#
-# @with_setup(setup, teardown)
-# def test_create_nested_file():
-#     folder1 = create_osf_folder('folder1', nid1)
-#     assertTrue(os.path.isdir, build_path('folder1') )
-#
-#     file = create_osf_file('file1', nid1, folder1)
-#     assertTrue(os.path.isfile, build_path('folder1','file1'))
-#
-#     folder1_1 = create_osf_folder('folder1.1', nid1, folder1)
-#     assertTrue(os.path.isdir, build_path('folder1', 'folder1.1'))
-#
-#     file2 = create_osf_file('file2', nid1, folder1_1)
-#     assertTrue(os.path.isfile, build_path('folder1','folder1.1','file2'))
-#
-#     delete_osf_file_folder(folder1, nid1)
-#     assertFalse(os.path.exists, build_path('folder1'))
-#
-# #fails
-# # def test_file_folder_with_same_name():
-# #     file = create_osf_folder('file1', nid1)
-# #     assertTrue(os.path.isdir, build_path('file1'))
-# #
-# #     folder=create_osf_file('file1', nid1)
-# #     assertTrue(os.path.isfile, build_path('file1'))
-# #
-# #     delete_osf_file_folder(file, nid1)
-# #     delete_osf_file_folder(folder, nid1)
-# #     assertFalse(os.path.exists, build_path('file1'))
-#
-# @with_setup(setup, teardown)
-# def test_nested_file_with_same_name_as_containing_folder():
-#     folder = create_osf_folder('file1', nid1)
-#     assertTrue(os.path.isdir, build_path('file1'))
-#
-#     create_osf_file('file1', nid1, folder)
-#     assertTrue(os.path.isfile, build_path('file1','file1'))
-#
-#     delete_osf_file_folder(folder,nid1)
-#     assertFalse(os.path.exists, build_path('file1'))
-# @with_setup(setup, teardown)
-# def test_renaming_folder():
-#     folder = create_osf_folder('f1', nid1)
-#     assertTrue(os.path.isdir, build_path('f1'))
-#
-#     rename_osf_file_folder('f2', folder['path'], nid1)
-#     assertTrue(os.path.isdir, build_path('f2'))
-#
-#     delete_osf_file_folder(folder,nid1)
-#     assertFalse(os.path.exists, build_path('f2'))
-#     assertFalse(os.path.exists, build_path('f1'))
-# @with_setup(setup, teardown)
-# def test_renaming_folder_with_stuff_in_it():
-#     folder = create_osf_folder('f1', nid1)
-#     assertTrue(os.path.isdir, build_path('f1'))
-#
-#     subfolder = create_osf_folder('ff1', nid1, folder)
-#     assertTrue(os.path.isdir, build_path('f1','ff1'))
-#
-#     subfile = create_osf_file('file2', nid1, folder)
-#     assertTrue(os.path.isfile, build_path('f1','file2'))
-#
-#     rename_osf_file_folder('f2', folder['path'], nid1)
-#     assertTrue(os.path.isdir, build_path('f2'))
-#     assertTrue(os.path.isdir, build_path('f2','ff1'))
-#     assertTrue(os.path.isfile, build_path('f2','file2'))
-#
-#
-#     delete_osf_file_folder(folder,nid1)
-#     assertFalse(os.path.exists, build_path('f2'))
-#
-# @with_setup(setup, teardown)
-# def test_rename_file():
-#     file = create_osf_file('file1',nid1)
-#     assertTrue(os.path.isfile, build_path('file1'))
-#
-#     rename_osf_file_folder('renamed_file', file['path'], nid1)
-#     assertTrue(os.path.isfile, build_path('renamed_file'))
-#
-#     delete_osf_file_folder(file,nid1)
-#     assertFalse(os.path.exists, build_path('renamed_file'))
-#
-# @with_setup(setup, teardown)
-# def test_update_file():
-#     file = create_osf_file('file1', nid1)
-#     assertTrue(os.path.isfile, build_path('file1'))
-#
-#     new_contents_file_path = os.path.join(files_directory, 'NEWCONTENTS')
-#     should_be_contents = open(new_contents_file_path,'r+').read()
-#     update_osf_file(file,'NEWCONTENTS', nid1)
-#     def same_contents(should_be_contents):
-#         new_contents = open(build_path('file1'),'r+').read()
-#         return new_contents == should_be_contents
-#     assertTrue(same_contents, should_be_contents)
-#
-#     delete_osf_file_folder(file,nid1)
-#     assertFalse(os.path.exists, build_path('file1'))
-# @with_setup(setup, teardown)
-# def test_update_nested_file():
-#     folder = create_osf_folder('myfolder', nid1)
-#     assertTrue(os.path.isdir, build_path('myfolder'))
-#
-#     file = create_osf_file('file1', nid1, folder)
-#     assertTrue(os.path.isfile, build_path('myfolder','file1'))
-#
-#     path_to_file = os.path.join(files_directory,'NEWCONTENTS')
-#     should_be_contents = open(path_to_file,'r+').read()
-#     update_osf_file(file,'NEWCONTENTS', nid1)
-#     def same_contents(should_be_contents):
-#         new_contents = open(build_path('myfolder','file1'),'r+').read()
-#         return new_contents == should_be_contents
-#     assertTrue(same_contents, should_be_contents)
-#
-#     delete_osf_file_folder(folder,nid1)
-#     assertFalse(os.path.exists, build_path('myfolder'))
-#
-#
-#
-# @with_setup(setup, teardown)
-# def test_move_file_from_top_to_folder():
-#     folder1 = create_osf_folder('f1', nid1)
-#     assertTrue(os.path.isdir, build_path('f1'))
-#
-#     file = create_osf_file('file1', nid1)
-#     assertTrue(os.path.isfile, build_path('file1'))
-#
-#     move_osf_file_folder(file, nid1, folder1)
-#     assertTrue(os.path.isfile, build_path('f1','file1'))
-#     assertFalse(os.path.exists, build_path('file1'))
-#
-#     delete_osf_file_folder(folder1,nid1)
-#     assertFalse(os.path.exists, build_path('f1'))
-#
-# @with_setup(setup, teardown)
-# def test_move_file_from_folder1_to_folder2():
-#     folder1 = create_osf_folder('f1', nid1)
-#     assertTrue(os.path.isdir, build_path('f1'))
-#
-#     file = create_osf_file('file1', nid1, folder1)
-#     assertTrue(os.path.isfile, build_path('f1','file1'))
-#
-#     folder2 = create_osf_folder('f2', nid1)
-#     assertTrue(os.path.isdir, build_path('f2'))
-#
-#     move_osf_file_folder(file,nid1, folder2 )
-#     assertTrue(os.path.isfile, build_path('f2','file1'))
-#     assertFalse(os.path.exists, build_path('f1','file1'))
-#
-#     delete_osf_file_folder(folder1,nid1)
-#     assertFalse(os.path.exists, build_path('f1'))
-#
-#     delete_osf_file_folder(folder2,nid1)
-#     assertFalse(os.path.exists, build_path('f2'))
-#
-# @with_setup(setup, teardown)
-# def test_move_folder1_under_folder2():
-#     folder1 = create_osf_folder('f1', nid1)
-#     assertTrue(os.path.isdir, build_path('f1'))
-#
-#     folder2 = create_osf_folder('f2', nid1)
-#     assertTrue(os.path.isdir, build_path('f2'))
-#
-#     move_osf_file_folder(folder1,nid1, folder2 )
-#     assertTrue(os.path.isdir, build_path('f2','f1'))
-#     assertFalse(os.path.exists, build_path('f1'))
-#
-#     delete_osf_file_folder(folder2,nid1)
-#     assertFalse(os.path.exists, build_path('f2'))
-#
-# @with_setup(setup, teardown)
-# def test_move_folder1_with_stuff_in_it_under_folder2():
-#     folder1 = create_osf_folder('f1', nid1)
-#     assertTrue(os.path.isdir, build_path('f1'))
-#
-#     afolder = create_osf_folder('afolder',nid1, folder1)
-#     assertTrue(os.path.isdir, build_path('f1','afolder'))
-#
-#     afile = create_osf_file('file2',nid1, folder1)
-#     assertTrue(os.path.isfile, build_path('f1','file2'))
-#
-#
-#     folder2 = create_osf_folder('f2', nid1)
-#     assertTrue(os.path.isdir, build_path('f2'))
-#
-#     move_osf_file_folder(folder1,nid1, folder2 )
-#     assertTrue(os.path.isdir, build_path('f2','f1'))
-#     assertTrue(os.path.isdir, build_path('f2','f1','afolder'))
-#     assertTrue(os.path.isfile, build_path('f2','f1','file2'))
-#     assertFalse(os.path.exists, build_path('f1'))
-#
-#     delete_osf_file_folder(folder2, nid1)
-#     assertFalse(os.path.exists, build_path('f2'))
-#
-# @with_setup(setup, teardown)
-# def test_move_folder1_under_folder2_with_stuff_in_it():
-#     folder1 = create_osf_folder('f1', nid1)
-#     assertTrue(os.path.isdir, build_path('f1'))
-#
-#
-#     folder2 = create_osf_folder('f2', nid1)
-#     assertTrue(os.path.isdir, build_path('f2'))
-#
-#     afolder = create_osf_folder('afolder',nid1, folder2)
-#     assertTrue(os.path.isdir, build_path('f2','afolder'))
-#
-#     afile = create_osf_file('file2',nid1, folder2)
-#     assertTrue(os.path.isfile, build_path('f2','file2'))
-#
-#
-#     move_osf_file_folder(folder1,nid1, folder2 )
-#     assertTrue(os.path.isdir, build_path('f2','f1'))
-#     assertTrue(os.path.isdir, build_path('f2','afolder'))
-#     assertTrue(os.path.isfile, build_path('f2','file2'))
-#     assertFalse(os.path.exists, build_path('f1'))
-#
-#     delete_osf_file_folder(folder2,nid1)
-#     assertFalse(os.path.exists, build_path('f2'))
-#
-# @with_setup(setup, teardown)
-# def test_move_folder1_with_stuff_under_folder2_with_stuff():
-#     folder1 = create_osf_folder('f1', nid1)
-#     assertTrue(os.path.isdir, build_path('f1'))
-#
-#     folder2 = create_osf_folder('f2', nid1)
-#     assertTrue(os.path.isdir, build_path('f2'))
-#
-#     junkfolder1 = create_osf_folder('junkfolder1',nid1, folder1)
-#     assertTrue(os.path.isdir, build_path('f1','junkfolder1'))
-#
-#     junkfile1 = create_osf_file('file1',nid1, folder1)
-#     assertTrue(os.path.isfile, build_path('f1','file1'))
-#
-#     junkfolder2 = create_osf_folder('junkfolder2',nid1, folder2)
-#     assertTrue(os.path.isdir, build_path('f2','junkfolder2'))
-#
-#     junkfile2 = create_osf_file('file2',nid1, folder2)
-#     assertTrue(os.path.isfile, build_path('f2','file2'))
-#
-#     move_osf_file_folder(folder1,nid1, folder2 )
-#     assertTrue(os.path.isdir, build_path('f2','f1'))
-#     assertTrue(os.path.isdir, build_path('f2','junkfolder2'))
-#     assertTrue(os.path.isfile, build_path('f2','file2'))
-#     assertTrue(os.path.isdir, build_path('f2', 'f1','junkfolder1'))
-#     assertTrue(os.path.isfile, build_path('f2', 'f1','file1'))
-#     assertFalse(os.path.exists, build_path('f1'))
-#
-#     delete_osf_file_folder(folder2,nid1)
-#     assertFalse(os.path.exists, build_path('f2'))
-#
-# @with_setup(setup, teardown)
-# def test_move_folder_to_toplevel():
-#     folder1 = create_osf_folder('f1', nid1)
-#     assertTrue(os.path.isdir, build_path('f1'))
-#
-#     folder1_1 = create_osf_folder('f1.1', nid1, folder1)
-#     assertTrue(os.path.isdir, build_path('f1','f1.1'))
-#
-#     move_osf_file_folder(folder1_1, nid1)
-#     assertTrue(os.path.isdir, build_path('f1'))
-#     assertTrue(os.path.isdir, build_path('f1.1'))
-#     assertFalse(os.path.exists, build_path('f1','f1.1'))
-#
-#     delete_osf_file_folder(folder1,nid1)
-#     assertFalse(os.path.exists, build_path('f1'))
-#
-#     delete_osf_file_folder(folder1_1,nid1)
-#     assertFalse(os.path.exists, build_path('f1.1'))
-#
-# @with_setup(setup, teardown)
-# def test_move_folder_with_stuff_in_it_to_toplevel():
-#     folder1 = create_osf_folder('f1', nid1)
-#     assertTrue(os.path.isdir, build_path('f1'))
-#
-#     folder1_1 = create_osf_folder('f1.1', nid1, folder1)
-#     assertTrue(os.path.isdir, build_path('f1','f1.1'))
-#
-#     folder1_1_junk = create_osf_folder('junk', nid1, folder1_1)
-#     assertTrue(os.path.isdir, build_path('f1','f1.1','junk'))
-#
-#     file1_1_junk = create_osf_file('file1', nid1, folder1_1)
-#     assertTrue(os.path.isfile, build_path('f1','f1.1','file1'))
-#
-#     move_osf_file_folder(folder1_1, nid1)
-#     assertTrue(os.path.isdir, build_path('f1'))
-#     assertTrue(os.path.isdir, build_path('f1.1'))
-#     assertFalse(os.path.exists, build_path('f1','f1.1'))
-#     assertTrue(os.path.isdir, build_path('f1.1','junk'))
-#     assertTrue(os.path.isfile, build_path('f1.1','file1'))
-#
-#     delete_osf_file_folder(folder1,nid1)
-#     assertFalse(os.path.exists, build_path('f1'))
-#
-#     delete_osf_file_folder(folder1_1,nid1)
-#     assertFalse(os.path.exists, build_path('f1.1'))
-#
-# @with_setup(setup, teardown)
-# def test_move_file_to_toplevel():
-#     folder1 = create_osf_folder('myfolder', nid1)
-#     assertTrue(os.path.isdir, build_path('myfolder'))
-#
-#     file = create_osf_file('file1', nid1, folder1)
-#     assertTrue(os.path.isfile, build_path('myfolder','file1'))
-#
-#     move_osf_file_folder(file, nid1)
-#     assertTrue(os.path.isdir, build_path('myfolder'))
-#     assertTrue(os.path.isfile, build_path('file1'))
-#     assertFalse(os.path.exists, build_path('myfolder','file1'))
-#
-#     delete_osf_file_folder(folder1,nid1)
-#     assertFalse(os.path.exists, build_path('myfolder'))
-#
-#     delete_osf_file_folder(file,nid1)
-#     assertFalse(os.path.exists, build_path('file1'))
-#
-# @with_setup(setup, teardown)
-# def test_cant_sync_osf_components_folder():
-#     components_folder = create_osf_folder('Components', nid1)
-#     assertTrue(os.path.isdir, build_path('Components'))
-#
-#     create_osf_folder('a_folder', nid1, components_folder)
-#     assertFalse(os.path.exists, build_path('Components', 'a_folder'))
-#
-#     create_osf_file('file1', nid1, components_folder)
-#     assertFalse(os.path.exists, build_path('Components', 'file1'))
+
+@with_setup(setup, teardown)
+def test_nested_file_with_same_name_as_containing_folder():
+    folder = create_osf_folder('file1', nid1)
+    assertTrue(os.path.isdir, build_path('file1'))
+
+    create_osf_file('file1', nid1, folder)
+    assertTrue(os.path.isfile, build_path('file1','file1'))
+
+    delete_osf_file_folder(folder,nid1)
+    assertFalse(os.path.exists, build_path('file1'))
+@with_setup(setup, teardown)
+def test_renaming_folder():
+    folder = create_osf_folder('f1', nid1)
+    assertTrue(os.path.isdir, build_path('f1'))
+
+    rename_osf_file_folder('f2', folder['path'], nid1)
+    assertTrue(os.path.isdir, build_path('f2'))
+
+    delete_osf_file_folder(folder,nid1)
+    assertFalse(os.path.exists, build_path('f2'))
+    assertFalse(os.path.exists, build_path('f1'))
+@with_setup(setup, teardown)
+def test_renaming_folder_with_stuff_in_it():
+    folder = create_osf_folder('f1', nid1)
+    assertTrue(os.path.isdir, build_path('f1'))
+
+    subfolder = create_osf_folder('ff1', nid1, folder)
+    assertTrue(os.path.isdir, build_path('f1','ff1'))
+
+    subfile = create_osf_file('file2', nid1, folder)
+    assertTrue(os.path.isfile, build_path('f1','file2'))
+
+    rename_osf_file_folder('f2', folder['path'], nid1)
+    assertTrue(os.path.isdir, build_path('f2'))
+    assertTrue(os.path.isdir, build_path('f2','ff1'))
+    assertTrue(os.path.isfile, build_path('f2','file2'))
+
+
+    delete_osf_file_folder(folder,nid1)
+    assertFalse(os.path.exists, build_path('f2'))
+
+@with_setup(setup, teardown)
+def test_rename_file():
+    file = create_osf_file('file1',nid1)
+    assertTrue(os.path.isfile, build_path('file1'))
+
+    rename_osf_file_folder('renamed_file', file['path'], nid1)
+    assertTrue(os.path.isfile, build_path('renamed_file'))
+
+    delete_osf_file_folder(file,nid1)
+    assertFalse(os.path.exists, build_path('renamed_file'))
+
+@with_setup(setup, teardown)
+def test_update_file():
+    file = create_osf_file('file1', nid1)
+    assertTrue(os.path.isfile, build_path('file1'))
+
+    new_contents_file_path = os.path.join(files_directory, 'NEWCONTENTS')
+    should_be_contents = open(new_contents_file_path,'r+').read()
+    update_osf_file(file,'NEWCONTENTS', nid1)
+    def same_contents(should_be_contents):
+        new_contents = open(build_path('file1'),'r+').read()
+        return new_contents == should_be_contents
+    assertTrue(same_contents, should_be_contents)
+
+    delete_osf_file_folder(file,nid1)
+    assertFalse(os.path.exists, build_path('file1'))
+@with_setup(setup, teardown)
+def test_update_nested_file():
+    folder = create_osf_folder('myfolder', nid1)
+    assertTrue(os.path.isdir, build_path('myfolder'))
+
+    file = create_osf_file('file1', nid1, folder)
+    assertTrue(os.path.isfile, build_path('myfolder','file1'))
+
+    path_to_file = os.path.join(files_directory,'NEWCONTENTS')
+    should_be_contents = open(path_to_file,'r+').read()
+    update_osf_file(file,'NEWCONTENTS', nid1)
+    def same_contents(should_be_contents):
+        new_contents = open(build_path('myfolder','file1'),'r+').read()
+        return new_contents == should_be_contents
+    assertTrue(same_contents, should_be_contents)
+
+    delete_osf_file_folder(folder,nid1)
+    assertFalse(os.path.exists, build_path('myfolder'))
+
+
+
+@with_setup(setup, teardown)
+def test_move_file_from_top_to_folder():
+    folder1 = create_osf_folder('f1', nid1)
+    assertTrue(os.path.isdir, build_path('f1'))
+
+    file = create_osf_file('file1', nid1)
+    assertTrue(os.path.isfile, build_path('file1'))
+
+    move_osf_file_folder(file, nid1, folder1)
+    assertTrue(os.path.isfile, build_path('f1','file1'))
+    assertFalse(os.path.exists, build_path('file1'))
+
+    delete_osf_file_folder(folder1,nid1)
+    assertFalse(os.path.exists, build_path('f1'))
+
+@with_setup(setup, teardown)
+def test_move_file_from_folder1_to_folder2():
+    folder1 = create_osf_folder('f1', nid1)
+    assertTrue(os.path.isdir, build_path('f1'))
+
+    file = create_osf_file('file1', nid1, folder1)
+    assertTrue(os.path.isfile, build_path('f1','file1'))
+
+    folder2 = create_osf_folder('f2', nid1)
+    assertTrue(os.path.isdir, build_path('f2'))
+
+    move_osf_file_folder(file,nid1, folder2 )
+    assertTrue(os.path.isfile, build_path('f2','file1'))
+    assertFalse(os.path.exists, build_path('f1','file1'))
+
+    delete_osf_file_folder(folder1,nid1)
+    assertFalse(os.path.exists, build_path('f1'))
+
+    delete_osf_file_folder(folder2,nid1)
+    assertFalse(os.path.exists, build_path('f2'))
+
+@with_setup(setup, teardown)
+def test_move_folder1_under_folder2():
+    folder1 = create_osf_folder('f1', nid1)
+    assertTrue(os.path.isdir, build_path('f1'))
+
+    folder2 = create_osf_folder('f2', nid1)
+    assertTrue(os.path.isdir, build_path('f2'))
+
+    move_osf_file_folder(folder1,nid1, folder2 )
+    assertTrue(os.path.isdir, build_path('f2','f1'))
+    assertFalse(os.path.exists, build_path('f1'))
+
+    delete_osf_file_folder(folder2,nid1)
+    assertFalse(os.path.exists, build_path('f2'))
+
+@with_setup(setup, teardown)
+def test_move_folder1_with_stuff_in_it_under_folder2():
+    folder1 = create_osf_folder('f1', nid1)
+    assertTrue(os.path.isdir, build_path('f1'))
+
+    afolder = create_osf_folder('afolder',nid1, folder1)
+    assertTrue(os.path.isdir, build_path('f1','afolder'))
+
+    afile = create_osf_file('file2',nid1, folder1)
+    assertTrue(os.path.isfile, build_path('f1','file2'))
+
+
+    folder2 = create_osf_folder('f2', nid1)
+    assertTrue(os.path.isdir, build_path('f2'))
+
+    move_osf_file_folder(folder1,nid1, folder2 )
+    assertTrue(os.path.isdir, build_path('f2','f1'))
+    assertTrue(os.path.isdir, build_path('f2','f1','afolder'))
+    assertTrue(os.path.isfile, build_path('f2','f1','file2'))
+    assertFalse(os.path.exists, build_path('f1'))
+
+    delete_osf_file_folder(folder2, nid1)
+    assertFalse(os.path.exists, build_path('f2'))
+
+@with_setup(setup, teardown)
+def test_move_folder1_under_folder2_with_stuff_in_it():
+    folder1 = create_osf_folder('f1', nid1)
+    assertTrue(os.path.isdir, build_path('f1'))
+
+
+    folder2 = create_osf_folder('f2', nid1)
+    assertTrue(os.path.isdir, build_path('f2'))
+
+    afolder = create_osf_folder('afolder',nid1, folder2)
+    assertTrue(os.path.isdir, build_path('f2','afolder'))
+
+    afile = create_osf_file('file2',nid1, folder2)
+    assertTrue(os.path.isfile, build_path('f2','file2'))
+
+
+    move_osf_file_folder(folder1,nid1, folder2 )
+    assertTrue(os.path.isdir, build_path('f2','f1'))
+    assertTrue(os.path.isdir, build_path('f2','afolder'))
+    assertTrue(os.path.isfile, build_path('f2','file2'))
+    assertFalse(os.path.exists, build_path('f1'))
+
+    delete_osf_file_folder(folder2,nid1)
+    assertFalse(os.path.exists, build_path('f2'))
+
+@with_setup(setup, teardown)
+def test_move_folder1_with_stuff_under_folder2_with_stuff():
+    folder1 = create_osf_folder('f1', nid1)
+    assertTrue(os.path.isdir, build_path('f1'))
+
+    folder2 = create_osf_folder('f2', nid1)
+    assertTrue(os.path.isdir, build_path('f2'))
+
+    junkfolder1 = create_osf_folder('junkfolder1',nid1, folder1)
+    assertTrue(os.path.isdir, build_path('f1','junkfolder1'))
+
+    junkfile1 = create_osf_file('file1',nid1, folder1)
+    assertTrue(os.path.isfile, build_path('f1','file1'))
+
+    junkfolder2 = create_osf_folder('junkfolder2',nid1, folder2)
+    assertTrue(os.path.isdir, build_path('f2','junkfolder2'))
+
+    junkfile2 = create_osf_file('file2',nid1, folder2)
+    assertTrue(os.path.isfile, build_path('f2','file2'))
+
+    move_osf_file_folder(folder1,nid1, folder2 )
+    assertTrue(os.path.isdir, build_path('f2','f1'))
+    assertTrue(os.path.isdir, build_path('f2','junkfolder2'))
+    assertTrue(os.path.isfile, build_path('f2','file2'))
+    assertTrue(os.path.isdir, build_path('f2', 'f1','junkfolder1'))
+    assertTrue(os.path.isfile, build_path('f2', 'f1','file1'))
+    assertFalse(os.path.exists, build_path('f1'))
+
+    delete_osf_file_folder(folder2,nid1)
+    assertFalse(os.path.exists, build_path('f2'))
+
+@with_setup(setup, teardown)
+def test_move_folder_to_toplevel():
+    folder1 = create_osf_folder('f1', nid1)
+    assertTrue(os.path.isdir, build_path('f1'))
+
+    folder1_1 = create_osf_folder('f1.1', nid1, folder1)
+    assertTrue(os.path.isdir, build_path('f1','f1.1'))
+
+    move_osf_file_folder(folder1_1, nid1)
+    assertTrue(os.path.isdir, build_path('f1'))
+    assertTrue(os.path.isdir, build_path('f1.1'))
+    assertFalse(os.path.exists, build_path('f1','f1.1'))
+
+    delete_osf_file_folder(folder1,nid1)
+    assertFalse(os.path.exists, build_path('f1'))
+
+    delete_osf_file_folder(folder1_1,nid1)
+    assertFalse(os.path.exists, build_path('f1.1'))
+
+@with_setup(setup, teardown)
+def test_move_folder_with_stuff_in_it_to_toplevel():
+    folder1 = create_osf_folder('f1', nid1)
+    assertTrue(os.path.isdir, build_path('f1'))
+
+    folder1_1 = create_osf_folder('f1.1', nid1, folder1)
+    assertTrue(os.path.isdir, build_path('f1','f1.1'))
+
+    folder1_1_junk = create_osf_folder('junk', nid1, folder1_1)
+    assertTrue(os.path.isdir, build_path('f1','f1.1','junk'))
+
+    file1_1_junk = create_osf_file('file1', nid1, folder1_1)
+    assertTrue(os.path.isfile, build_path('f1','f1.1','file1'))
+
+    move_osf_file_folder(folder1_1, nid1)
+    assertTrue(os.path.isdir, build_path('f1'))
+    assertTrue(os.path.isdir, build_path('f1.1'))
+    assertFalse(os.path.exists, build_path('f1','f1.1'))
+    assertTrue(os.path.isdir, build_path('f1.1','junk'))
+    assertTrue(os.path.isfile, build_path('f1.1','file1'))
+
+    delete_osf_file_folder(folder1,nid1)
+    assertFalse(os.path.exists, build_path('f1'))
+
+    delete_osf_file_folder(folder1_1,nid1)
+    assertFalse(os.path.exists, build_path('f1.1'))
+
+@with_setup(setup, teardown)
+def test_move_file_to_toplevel():
+    folder1 = create_osf_folder('myfolder', nid1)
+    assertTrue(os.path.isdir, build_path('myfolder'))
+
+    file = create_osf_file('file1', nid1, folder1)
+    assertTrue(os.path.isfile, build_path('myfolder','file1'))
+
+    move_osf_file_folder(file, nid1)
+    assertTrue(os.path.isdir, build_path('myfolder'))
+    assertTrue(os.path.isfile, build_path('file1'))
+    assertFalse(os.path.exists, build_path('myfolder','file1'))
+
+    delete_osf_file_folder(folder1,nid1)
+    assertFalse(os.path.exists, build_path('myfolder'))
+
+    delete_osf_file_folder(file,nid1)
+    assertFalse(os.path.exists, build_path('file1'))
+
+@with_setup(setup, teardown)
+def test_cant_sync_osf_components_folder():
+    components_folder = create_osf_folder('Components', nid1)
+    assertTrue(os.path.isdir, build_path('Components'))
+
+    create_osf_folder('a_folder', nid1, components_folder)
+    assertFalse(os.path.exists, build_path('Components', 'a_folder'))
+
+    create_osf_file('file1', nid1, components_folder)
+    assertFalse(os.path.exists, build_path('Components', 'file1'))
 
 
 

@@ -81,7 +81,7 @@ class Node(Base):
     child_nodes = relationship(
         "Node",
         backref=backref('parent', remote_side=[id]),
-        cascade="all, delete-orphan"
+        cascade="all"
     )
     files = relationship(
         "File",
@@ -162,7 +162,7 @@ class File(Base):
     hash = Column(String)
     type = Column(Enum(FOLDER, FILE), nullable=False)
     date_modified = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
-    #todo: osf_id and osf_path act as duplicates right now. One needs to be removed.
+    #todo: osf_id and osf_path are duplicates right now. One needs to be removed.
     osf_id = Column(String, nullable=True, default=None)  # multiple things allowed to be null. #todo: unique=True (handle moved on osf)
     provider = Column(String, default=DEFAULT_PROVIDER)
 
@@ -193,7 +193,7 @@ class File(Base):
     files = relationship(
         "File",
         backref=backref('parent', remote_side=[id]),
-        cascade="all, delete-orphan",
+        cascade="all",
     )
 
     @hybrid_property

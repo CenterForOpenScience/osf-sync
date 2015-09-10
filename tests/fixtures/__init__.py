@@ -1,1 +1,1 @@
-__author__ = 'himanshu'
+from tests.fixtures.mock_osf_api_server import *

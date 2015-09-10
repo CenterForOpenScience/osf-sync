@@ -18,6 +18,8 @@ from osfoffline.utils.path import ProperPath
 
 
 class LocalDBSync(object):
+    COMPONENTS_FOLDER_NAME = 'Components'
+
     def __init__(self, absolute_osf_dir_path, observer, user):
         if not isinstance(observer, Observer):
             raise TypeError
@@ -96,7 +98,13 @@ class LocalDBSync(object):
                     child_item_path = os.path.join(item.full_path, child)
                     is_dir = os.path.isdir(child_item_path)
                     child_item = ProperPath(child_item_path, is_dir)
-                    children.append(child_item)
+
+                    # handle the components folder
+                    if child_item.name == LocalDBSync.COMPONENTS_FOLDER_NAME:
+                        node_paths = os.path.join(item.full_path, child)
+
+                    else:
+                        children.append(child_item)
                 return children
         # db
         else:
@@ -180,15 +188,11 @@ class LocalDBSync(object):
         assert local or db
         event = self._determine_event_type(local, db)
         if event:
-            # print(event.key)
 
-            # event_queue = observer._event_queue
-            # event_queue.put(event)
-            # observer.dispatch_events(event_queue, observer._timeout)
             emitter = next(iter(self.observer.emitters))
             emitter.queue_event(event)
 
-            # observer.emitters[0].queue_event(event)
+
 
         local_db_tuple_list = self._make_local_db_tuple_list(local, db)
         for local, db in local_db_tuple_list:

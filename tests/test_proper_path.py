@@ -2,7 +2,7 @@ __author__ = 'himanshu'
 from unittest import TestCase
 
 from osfoffline.utils.path import ProperPath
-from osfoffline.exceptions import InvalidPathError
+from osfoffline.exceptions.path_exceptions import InvalidPathError
 
 
 __author__ = 'himanshu'
@@ -98,3 +98,10 @@ class TestValidation(TestCase):
             resp = ProperPath('../',True)
         with self.assertRaises(InvalidPathError):
             resp = ProperPath('/..',True)
+
+    def test_should_expand_tilde(self):
+        with self.assertRaises(InvalidPathError):
+            resp = ProperPath('~/mydir/', True)
+        with self.assertRaises(InvalidPathError):
+            resp = ProperPath('~/mydir', False)
+

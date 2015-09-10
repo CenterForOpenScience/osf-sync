@@ -2,7 +2,13 @@ from osfoffline.settings import API_BASE, WB_BASE
 from furl import furl
 
 #from osfoffline
-from osfoffline.polling_osf_manager.api_url_builder import api_file_children, api_user_nodes,api_user_url,wb_file_url,wb_move_url,wb_file_revisions
+from osfoffline.polling_osf_manager.api_url_builder import (
+    api_file_children,
+    api_user_nodes,
+    api_user_url,
+    wb_file_url,
+    wb_move_url,
+    wb_file_revisions)
 
 # ONLY FOR TESTING
 def api_node_self(node_id):
@@ -42,3 +48,14 @@ def api_create_node(parent_node_id=None):
     return base.url
 
 
+def api_next_child_nodes(parent_node_id):
+    # http://localhost:8000/v2/users/szyrp/nodes/?page=2
+    base = furl(API_BASE)
+    base.path.segments.extend(['v2','users',str(parent_node_id), 'nodes'])
+    return base.url
+
+
+def api_create_user_url():
+    base = furl(API_BASE)
+    base.path.segments.extend(['v2','users'])
+    return base.url

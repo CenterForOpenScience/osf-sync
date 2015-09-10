@@ -335,7 +335,6 @@ class Poll(object):
         assert local_file_folder or remote_file_folder  # both shouldnt be None.
         logging.info('checking file_folder internal')
         if local_file_folder is None:
-            import ipdb;ipdb.set_trace()
             locally_moved = yield from self.is_locally_moved(remote_file_folder)
             if locally_moved:
                 return
@@ -360,7 +359,6 @@ class Poll(object):
             yield from self.delete_remote_file_folder(local_file_folder, remote_file_folder)
             return
         elif local_file_folder is not None and remote_file_folder is None:
-            import ipdb;ipdb.set_trace()
             if local_file_folder.locally_moved:
                 # todo: we are ignoring return value for now because to start going down new tree would require
                 # todo: us to have the new node. we currently use the head node instead of dynamically determining
@@ -368,6 +366,7 @@ class Poll(object):
                 remote_file_folder = yield from self.move_remote_file_folder(local_file_folder)
                 return
             else:
+                logging.warning('delete_local_file_folder called on {}'.format(local_file_folder.name))
                 yield from self.delete_local_file_folder(local_file_folder)
                 return
         elif local_file_folder is not None and remote_file_folder is not None:
@@ -492,7 +491,7 @@ class Poll(object):
             try:
                 remote_file_folder = yield from self.osf_query.upload_file(local_file_folder)
             except FileNotFoundError:
-                logging.warning('file not created on remote server because does not exist locally. inside create_remote_file_folder')
+                logging.warning('file not created on remote server because does not exist locally: {}'.format(local_file_folder.name))
                 return
 
         local_file_folder.osf_id = remote_file_folder.id
@@ -654,14 +653,14 @@ class Poll(object):
         assert isinstance(local_file_folder, File)
 
         path = local_file_folder.path
-        file_folder_type = local_file_folder.type
+        is_folder = local_file_folder.is_folder
         # delete model
         session.delete(local_file_folder)
         save(session)
 
 
         # delete from local
-        if file_folder_type == File.FOLDER:
+        if is_folder:
             self.polling_event_queue.put(DeleteFolder(path))
         else:
             self.polling_event_queue.put(DeleteFile(path))

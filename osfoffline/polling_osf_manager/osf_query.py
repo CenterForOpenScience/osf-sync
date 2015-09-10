@@ -92,7 +92,7 @@ class OSFQuery(object):
         files_url = wb_file_url()
         resp_json = yield from self.make_request(files_url, method="POST", params=params, get_json=True)
         AlertHandler.info(local_folder.name, AlertHandler.UPLOAD)
-        # todo: experimental
+        # todo: the below is experimental. It will be replaced with the creation of the files endpoints on the api
         """
         fields that I MUST have are:
             path                                                --already exists in response
@@ -144,7 +144,7 @@ class OSFQuery(object):
         file = open(local_file.path, 'rb')
         resp_json = yield from self.make_request(files_url, method="PUT", params=params, data=file, get_json=True)
         AlertHandler.info(local_file.name, AlertHandler.UPLOAD)
-        # todo: experimental
+        # todo: the below is experimental. It will be replaced with the creation of the files endpoints on the api
         """
         fields that I MUST have are:
             path                                                --already exists in response

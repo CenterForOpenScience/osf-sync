@@ -284,11 +284,12 @@ class TestLocalDBSyncUnitTests(TestCase):
 
 
     def test__determine_event_type_db_None(self):
+        dir = os.path.join(self.osf_dir,"test_project_normal")
+        with self.assertRaises(TypeError):
+            event = self.sync._determine_event_type(dir,None)
 
-        event = self.sync._determine_event_type()
+    def test__determine_event_type_local_top_level_node_only(self):
 
-    # def test__determine_event_type_local_top_level_node_only(self):
-    #     self.fail()
     # def test__determine_event_type_local_node_only(self):
     #     self.fail()
     # def test__determine_event_type_local_folder_only(self):

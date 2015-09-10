@@ -41,3 +41,8 @@ def flake():
 def start():
     from start import start
     start()
+
+@task
+def mock_osf_api_server():
+    from tests.fixtures.mock_osf_api_server.osf import app
+    app.run(port=8000, debug=True)

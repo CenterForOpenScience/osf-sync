@@ -45,7 +45,7 @@ class OSFEventHandler(FileSystemEventHandler):
         :type event:
             :class:`DirMovedEvent` or :class:`FileMovedEvent`
         """
-        import ipdb;ipdb.set_trace()
+
         src_path = ProperPath(event.src_path, event.is_directory)
         dest_path = ProperPath(event.dest_path, event.is_directory)
 
@@ -69,21 +69,19 @@ class OSFEventHandler(FileSystemEventHandler):
             item.name = dest_path.name
             item.locally_renamed = True
             save(session, item)
-            logging.info("renamed a file")
+            logging.info("renamed a file {}".format(dest_path.full_path))
         # move
         elif src_path != dest_path:
-
             # check if file already exists in this moved location. If so, delete it from db.
             try:
                 item_to_replace = self._get_item_by_path(dest_path)
                 session.delete(item_to_replace)
                 save(session)
             except ItemNotInDB:
-                logging.info('file does not already exist in moved destination')
+                logging.info('file does not already exist in moved destination: {}'.format(dest_path.full_path))
 
 
             new_parent_item = self._get_parent_item_from_path(dest_path)
-
 
             # move item
 
@@ -92,8 +90,11 @@ class OSFEventHandler(FileSystemEventHandler):
             item.previous_node_osf_id = item.node.osf_id
 
             #update parent and node fields
+            #NOTE: this line makes it so the file no longer exists in the database.
+            #NOTE: item at this point is stale. Unclear why it matters though.
+            #NOTE: fix is above: session.refresh(item)
             item.parent = new_parent_item if isinstance(new_parent_item, File) else None
-            item.node = new_parent_item.node if isinstance(new_parent_item, File) else new_parent_item
+            item.node = new_parent_item if isinstance(new_parent_item, Node) else new_parent_item.node
 
             # basically always osfstorage. this is just meant to be extendible in the future to other providers
             item.provider = new_parent_item.provider if isinstance(new_parent_item, File) else File.DEFAULT_PROVIDER
@@ -102,7 +103,7 @@ class OSFEventHandler(FileSystemEventHandler):
             item.locally_moved = True
 
             save(session, item)
-            logging.info('moved from {} to {}'.format(src_path.name, dest_path.name))
+            logging.info('moved from {} to {}'.format(src_path.full_path, dest_path.full_path))
 
 
     @asyncio.coroutine
@@ -126,7 +127,7 @@ class OSFEventHandler(FileSystemEventHandler):
         try:
             containing_item = self._get_parent_item_from_path(src_path)
         except ItemNotInDB:
-            logging.error('tried to create item {} for parent {} but parent does not exist'.format(src_path.name, src_path.parent.name))
+            logging.error('tried to create item {} for parent {} but parent does not exist'.format(src_path.full_path, src_path.parent.full_path))
             return
 
         if isinstance(containing_item, Node):
@@ -148,9 +149,8 @@ class OSFEventHandler(FileSystemEventHandler):
             except FileNotFoundError:
                 # if file doesnt exist just as we create it, then file is likely temp file. thus don't put it in db.
                 return
-        save(session, new_item)
-        save(session, containing_item)
-        logging.info("created new {}".format('folder' if event.is_directory else 'file'))
+        save(session, new_item, containing_item)
+        logging.info("created new {} {}".format('folder' if event.is_directory else 'file', src_path.full_path))
 
     @asyncio.coroutine
     def on_modified(self, event):
@@ -211,6 +211,8 @@ class OSFEventHandler(FileSystemEventHandler):
 
         save(session, item)
 
+        logging.info('{} set to be deleted'.format(src_path.full_path))
+
 
 
     def dispatch(self, event):
@@ -229,6 +231,8 @@ class OSFEventHandler(FileSystemEventHandler):
 
         handlers = [self.on_any_event, _method_map[event.event_type]]
         for handler in handlers:
+            # todo: could put items in asyncio.Queue right here.
+            # todo: unclear how to make the Queue work with the parent thread....????
             self._loop.call_soon_threadsafe(
                 asyncio.async,
                 handler(event)
@@ -248,7 +252,7 @@ class OSFEventHandler(FileSystemEventHandler):
         containing_folder_path = path.parent
 
         if containing_folder_path == self.osf_folder:
-            raise ItemNotInDB
+            raise ItemNotInDB('item has path: {}'.format(path.full_path))
 
         return self._get_item_by_path(containing_folder_path)
 
@@ -262,7 +266,7 @@ class OSFEventHandler(FileSystemEventHandler):
             file_path = ProperPath(file_folder.path, file_folder.is_folder)
             if file_path == path:
                 return file_folder
-        raise ItemNotInDB
+        raise ItemNotInDB('item has path: {}'.format(path.full_path))
 
 
     def _event_is_for_components_file_folder(self, event):
