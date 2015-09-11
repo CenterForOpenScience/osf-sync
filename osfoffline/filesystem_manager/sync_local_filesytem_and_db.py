@@ -101,8 +101,13 @@ class LocalDBSync(object):
 
                     # handle the components folder
                     if child_item.name == LocalDBSync.COMPONENTS_FOLDER_NAME:
-                        node_paths = os.path.join(item.full_path, child)
-
+                        for component in os.listdir(child_item_path):
+                            component_path = os.path.join(child_item_path, component)
+                            component_is_dir = os.path.isdir(component_path)
+                            # NOTE: making a concious decision here to ignore invalid file in components folder
+                            # NOTE: this means the user is not getting an alert in this case
+                            if component_is_dir:
+                                children.append(ProperPath(component_path, component_is_dir))
                     else:
                         children.append(child_item)
                 return children

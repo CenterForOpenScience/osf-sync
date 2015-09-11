@@ -21,15 +21,35 @@ from watchdog.events import (
     FileMovedEvent
 )
 
+#todo: probably a good idea to have it so that the desired folder structure is dynamically created and then deleted after the function call...
+
 class TestLocalDBSyncUnitTests(TestCase):
 
-    def assertContains(self, alist, aitem):
-        if aitem in alist:
+    def assertContains(self, a_list, a_item):
+        if a_item in a_list:
             return
         else:
-            msg = "{aitem} not found inside list".format(aitem=aitem)
+            msg = "{a_item} not found inside list".format(aitem=a_item)
             raise self.failureException(msg)
 
+    def assert_get_children_folder_equals_local(self, folder_name):
+        project_folder = os.path.join(self.osf_dir,folder_name)
+        project_folder_proper = ProperPath(project_folder,True)
+        children = self.sync._get_children(project_folder_proper)
+        for_sure_children = []
+        for file_folder in os.listdir(project_folder_proper.full_path):
+            path_to_child = os.path.join(project_folder_proper.full_path, file_folder)
+            # handle Components Folder
+            if file_folder == LocalDBSync.COMPONENTS_FOLDER_NAME:
+                for component in os.listdir(path_to_child):
+                    component_path = os.path.join(path_to_child, component)
+                    is_dir = os.path.isdir(component_path)
+                    if is_dir:
+                       for_sure_children += [ProperPath(component_path, is_dir)]
+            else:
+                is_dir = os.path.isdir(path_to_child)
+                for_sure_children += [ProperPath(path_to_child, is_dir)]
+        self.assertEquals(set(children),set(for_sure_children))
 
     def setUp(self):
         self.session = common.Session()
@@ -67,7 +87,6 @@ class TestLocalDBSyncUnitTests(TestCase):
         # self.evil_path4 = os.path.join('///','<<>>')
         # self.evil_path5 = os.path.join('rocko','c://')
 
-
     def tearDown(self):
         self.session.rollback()
         self.session.query(User).delete()
@@ -76,6 +95,13 @@ class TestLocalDBSyncUnitTests(TestCase):
         common.Session.remove()
 
     # todo: check edge case of 1
+    # todo: check make_local_db_tuple_list with only files (no Components folder)
+    # todo: check make_local_db_tuple_list with files and empty Components Folder
+    # todo: check make_local_db_tuple_list with files and non-empty Components Folder
+    # todo: check make_local_db_tuple_list with only empty Components Folder
+    # todo: check make_local_db_tuple_list with only non-empty Components Folder
+
+
     def test__make_local_db_tuple_list_both_None(self):
         local = None
         db = None
@@ -160,8 +186,20 @@ class TestLocalDBSyncUnitTests(TestCase):
         self.check_local_db_list(local_db)
 
 
-    # # def test__make_local_db_tuple_list_db_with_files(self):
-    # #     self.fail()
+    def test__make_local_db_tuple_list_db_with_files(self):
+        local = ProperPath(self.osf_dir,True)
+        local_dirs = [os.path.join(self.osf_dir, dir) for dir in os.listdir(self.osf_dir)]
+
+        NodeFactory(user=self.user, title=local_dirs[0])
+        db = self.user
+
+        local_db = self.sync._make_local_db_tuple_list(local, db)
+
+        db_top_level_nodes = self.user.top_level_nodes
+
+        self.assertEqual(len(local_dirs) + len(db_top_level_nodes) - 1, len(local_db))
+        self.check_local_db_list(local_db)
+
     # """
     # test with:
     #     files
@@ -185,8 +223,6 @@ class TestLocalDBSyncUnitTests(TestCase):
                 self.assertTrue(isinstance(db, Base))
             else:
                 self.fail("both are None")
-
-
 
     def test__get_children_None(self):
         self.assertEqual([], self.sync._get_children(None))
@@ -224,7 +260,34 @@ class TestLocalDBSyncUnitTests(TestCase):
         self.assertEqual([], self.sync._get_children(model_file2))
 
 
-    def test__get_children_folder(self):
+
+
+    # tetodo: get_children_local_folder more tests with more varying combinations of adjacent file folders and components
+
+    def test__get_children_local_for_empty_folder(self):
+        self.assert_get_children_folder_equals_local('empty_project')
+
+    def test__get_children_local_for_folder_with_file(self):
+        self.assert_get_children_folder_equals_local('contains_single_file')
+
+    def test__get_children_local_for_folder_with_file_and_folder(self):
+        self.assert_get_children_folder_equals_local('file_and_folder')
+
+    def test__get_children_local_for_folder_with_nonempty_folder_and_file(self):
+        self.assert_get_children_folder_equals_local('nonempty_folder_and_file')
+
+    def test__get_children_local_for_folder_with_nonempty_components_folder(self):
+        self.assert_get_children_folder_equals_local('nonempty_components_folder')
+
+    def test__get_children_local_for_folder_with_empty_components_folder(self):
+        self.assert_get_children_folder_equals_local('empty_components_folder')
+
+    def test__get_children_local_for_folder_with_nonempty_components_folder_and_adjacent_file_folders(self):
+        self.assert_get_children_folder_equals_local('nonempty_components_folder_with_adjacent_file_folders')
+
+
+
+    def test__get_children_local_folder_normal(self):
         project_folder = os.path.join(self.osf_dir,"test_project_normal")
         children = self.sync._get_children(ProperPath(project_folder,True))
         local_dirs = [os.path.join(project_folder, dir) for dir in os.listdir(project_folder)]
@@ -232,7 +295,6 @@ class TestLocalDBSyncUnitTests(TestCase):
         self.assertEqual(len(local_dirs), len(children))
         for child in children:
             self.assertContains(proper_local_dirs, child)
-
 
     def test__get_children_model_file(self):
         children = self.sync._get_children(self.file1)
@@ -271,8 +333,6 @@ class TestLocalDBSyncUnitTests(TestCase):
         for child in children:
             self.assertTrue(child in for_sure_children)
 
-
-
     def test__determine_event_type_both_None(self):
         with self.assertRaises(LocalDBBothNone):
             self.sync._determine_event_type(None, None)
@@ -282,13 +342,14 @@ class TestLocalDBSyncUnitTests(TestCase):
         with self.assertRaises(TypeError):
             self.sync._determine_event_type(None, db)
 
-
     def test__determine_event_type_db_None(self):
         dir = os.path.join(self.osf_dir,"test_project_normal")
         with self.assertRaises(TypeError):
             event = self.sync._determine_event_type(dir,None)
 
     def test__determine_event_type_local_top_level_node_only(self):
+        #todo: implement me!
+        pass
 
     # def test__determine_event_type_local_node_only(self):
     #     self.fail()
