@@ -40,26 +40,29 @@ class User(Base):
 
     def as_dict(self):
         return {
-                "id": self.id,
+            "id": str(self.id),
+            "type": "users",
+            "attributes": {
                 "fullname": self.fullname,
-                "given_name": self.fullname,
-                "middle_name": "",
+                "given_name": "",
+                "middle_names": "",
                 "family_name": "",
                 "suffix": "",
-                "date_registered": "2015-07-06T17:51:22.833000",
-                "gravatar_url": "https://secure.gravatar.com/avatar/7241b93c02e7d393e5f118511880734a?d=identicon&size=40",
-                "employment_institutions": [],
-                "educational_institutions": [],
-                "social_accounts": {},
-                "links": {
-                    "nodes": {
-                        "relation": 'http://localhost:8000/v2/users/{}/nodes/'.format(self.id)
-                    },
-                    "html": 'http://localhost:5000/5bqt9/',
-                    "self": api_user_url(self.id)
-                },
-                "type": "users"
+                "date_registered": "2015-09-11T18:19:01.860000",
+                "profile_image_url": "https://secure.gravatar.com/avatar/2b40121791d6946b6cdd805dc2ea4b7c?d=identicon"
+            },
+            "relationships": {
+                "nodes": {
+                    "links": {
+                        "related": "http://localhost:5000/v2/users/{}/nodes/".format(self.id)
+                    }
+                }
+            },
+            "links": {
+                "self": "http://localhost:5000/v2/users/{}/".format(self.id),
+                "html": "https://staging2.osf.io/m5e83/"
             }
+        }
 
 
 
@@ -109,50 +112,77 @@ class Node(Base):
         return file_folders
 
     def as_dict(self):
-        return {
+         return {
             "id": str(self.id),
-            "title": self.title,
-            "description": "",
-            "category": self.category,
-            "date_created": str(self.date_modified),
-            "date_modified": str(self.date_modified),
-            "tags": {
-                "system": [],
-                "user": []
+            "type": "nodes",
+            "attributes": {
+                "title": self.title,
+                "description": None,
+                "category": self.category,
+                "date_created": "2015-07-24T14:52:22.359000",
+                "date_modified": "2015-08-26T15:44:49.395000",
+                "tags": [],
+                "registration": True,  # todo
+                "collection": False,  # todo
+                "dashboard": False,  # todo
+                "public": True  # todo
             },
-            "links": {
-                "files": {
-                    "related":'http://localhost:8000/v2/nodes/{}/files/'.format(self.id)
-                },
-                "parent": {
-                    "self": None
+            "relationships": {
+                "children": {
+                    "links": {
+                        "related": {
+                            "href": "http://localhost:5000/v2/nodes/{}/children/".format(self.id),
+                            "meta": {
+                                "count": len(self.child_nodes)
+                            }
+                        }
+                    }
                 },
                 "contributors": {
-                    "count": 1,
-                    "related": "http://localhost:8000/v2/nodes/dz5mg/contributors/"
+                    "links": {
+                        "related": {
+                            "href": "https://staging2-api.osf.io/v2/nodes/243u7/contributors/",
+                            "meta": {
+                                "count": 1
+                            }
+                        }
+                    }
                 },
-                "pointers": {
-                    "count": 0,
-                    "related": "http://localhost:8000/v2/nodes/dz5mg/pointers/"
+                "files": {
+                    "links": {
+                        "related": "http://localhost:5000/v2/nodes/{}/files/".format(self.id)
+                    }
+                },
+                "node_links": {
+                    "links": {
+                        "related": {
+                            "href": "https://staging2-api.osf.io/v2/nodes/243u7/node_links/",
+                            "meta": {
+                                "count": 0
+                            }
+                        }
+                    }
+                },
+                "parent": {
+                    "links": {
+                        "self": 'http://localhost:5000/v2/nodes/{}/'.format(self.parent_id)
+                    }
                 },
                 "registrations": {
-                    "count": 0,
-                    "related": "http://localhost:8000/v2/nodes/dz5mg/registrations/"
-                },
-                "self": "http://localhost:8000/v2/nodes/dz5mg/",
-                "html": "http://localhost:5000/dz5mg/",
-                "children": {
-                    "count": 0,
-                    "related": 'http://localhost:8000/v2/nodes/{}/children/'.format(self.id)
+                    "links": {
+                        "related": {
+                            "href": "http://localhost:5000/v2/nodes/{}/registrations/".format(self.id),
+                            "meta": {
+                                "count": 0
+                            }
+                        }
+                    }
                 }
             },
-            "properties": {
-                "dashboard": False,
-                "collection": False,
-                "registration": False
-            },
-            "public": False,
-            "type": "nodes"
+            "links": {
+                "self": "http://localhost:5000/v2/nodes/{}/".format(self.id),
+                "html": "https://staging2.osf.io/243u7/"
+            }
         }
 
     def __repr__(self):
@@ -176,8 +206,7 @@ class File(Base):
     date_modified = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
 
     provider = Column(String, default=DEFAULT_PROVIDER)
-    path = Column(String, default='/')
-
+    checked_out = Column(Boolean, default = False)
 
 
     user_id = Column(Integer, ForeignKey('user.id'), nullable=False)
@@ -196,9 +225,20 @@ class File(Base):
     @hybrid_property
     def is_file(self):
         return self.type == File.FILE
+
     @hybrid_property
     def is_folder(self):
         return self.type == File.FOLDER
+
+    @hybrid_property
+    def path(self):
+        if self.has_parent:
+            temp = '/{}'.format(self.id)
+            if self.is_folder:
+                temp += '/'
+            return temp
+        else:
+            return '/'
 
     @hybrid_property
     def has_parent(self):
@@ -232,34 +272,43 @@ class File(Base):
     def as_dict(self):
 
         resp = {
-                "provider": self.provider,
+            "id": str(self.id),
+            "type": 'files',
+            "attributes": {
+                "name": str(self.name),
+                "kind": 'file' if self.is_file else 'folder',
                 "path": self.path,
-                "item_type": self.type,
-                "name": self.name,
-                "metadata": {},
-                "links": {
-                    "self_methods": [
-                        "POST"
-                    ],
-                    "self": 'http://localhost:7777/file?path={}&nid={}&provider={}'.format(self.path,self.node.id, self.provider),
-                    "related": 'http://localhost:8000/v2/nodes/{}/files/?path={}/&provider={}'.format(self.node.id, self.path, self.provider)
-                },
-                "type": "files"
-            }
-        if self.is_file:
-            metadata =  {
-                "size": 12,
-                "modified": None,
-                "content_type": None,
-                "extra": {
-                    "downloads": 5,
-                    "version": 2
-                }
-            }
-            resp['metadata'] = metadata
-            resp['links']['self_methods'].append('GET')
-            resp['links']['self_methods'].append('DELETE')
+                "provider": "osfstorage",
+                "last_touched": None,
 
+            },
+            "relationships": {
+                "checkout": {
+                    "links": {
+                        "related": None # todo: handle checkouts
+                    }
+                },
+                "files": {
+                    "links": {
+                        "related": "http://localhost:5000/v2/nodes/{node_id}/files/osfstorage{file_path}/".format(node_id=self.node.id, file_path=self.path)
+                    }
+                },
+                "versions": {
+                    "links": {
+                        "related": None # todo: handle versions
+                    }
+                }
+            },
+            "links": {
+                "info": "http://localhost:5000/v2/files/{}/".format(self.id),
+                "download": "http://localhost:5000/v1/resources/{}/providers/{}/{}".format(self.node_id, self.provider, self.id) if self.is_file else None,
+                "move": "http://localhost:5000/v1/resources/{}/providers/{}/{}".format(self.node_id, self.provider, self.id),
+                "upload": "http://localhost:5000/v1/resources/{}/providers/{}/{}".format(self.node_id, self.provider, self.id),
+                "new_folder": 'http://localhost:5000/v1/resources/{}/providers/{}/?kind=folder'.format(self.node_id, self.provider) if self.is_folder else None
+            }
+        }
+        if not self.has_parent:
+            resp['attributes']['node'] = str(self.node_id)
         return resp
 
     def __repr__(self):
