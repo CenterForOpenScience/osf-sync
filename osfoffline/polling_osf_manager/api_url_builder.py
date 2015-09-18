@@ -1,49 +1,34 @@
-from osfoffline.settings import API_BASE, WB_BASE
+from osfoffline.settings import API_BASE
 from furl import furl
 
 
-def api_user_url(user_id):
-    # http://localhost:8000/v2/users/5bqt9/
+#todo: can make a api_url_for function that makes things potentially simpler...?
+USERS = 'users'
+NODES = 'nodes'
+FILES = 'files'
+APPLICATIONS = 'applications'
+CHILDREN = 'children'
+def api_url_for(endpoint_type, related_type=None, **kwargs):
     base = furl(API_BASE)
-    base.path.segments.extend(['v2','users',str(user_id),''])
-    return base.url
+    assert endpoint_type in [USERS, NODES, FILES, APPLICATIONS]
 
-
-def api_user_nodes(user_id):
-    # http://localhost:8000/v2/users/5bqt9/nodes/
-    base = furl(API_BASE)
-    base.path.segments.extend(['v2','users', str(user_id), 'nodes', ''])
-    return base.url
-
-def api_file_children(node_id, path, provider):
-    # http://localhost:8000/v2/nodes/hacxp/files/?path=/55b055e04122ea42921d913b/&provider=osfstorage
-    base = furl(API_BASE)
-    base.path.segments.extend(['v2', 'nodes', str(node_id), 'files'])
-    base.args['path'] = path
-    base.args['provider'] = provider
-    return base.url
-
-
-
-
-def wb_file_url(**kwargs):
-    base = furl(WB_BASE)
-    base.path.segments.extend(['file'])
-    base.args = kwargs
-    return base.url
-
-def wb_file_revisions():
-    base = furl(WB_BASE)
-    base.path.segments.extend(['revisions'])
-    return base.url
-
-
-def wb_move_url():
-    base = furl(WB_BASE)
-    base.path.segments.extend(['ops','move'])
-    return base.url
-
-
-
-
-
+    if endpoint_type == USERS:
+        assert 'user_id' in kwargs.keys()
+        base.path.segments.extend(['v2',USERS,str(kwargs['user_id'])])
+        if related_type:
+            assert related_type in [NODES]
+            base.path.segments.extend([related_type])
+        return base.url
+    elif endpoint_type == NODES:
+        assert 'node_id' in kwargs.keys()
+        base.path.segments.extend(['v2',NODES,str(kwargs['node_id'])])
+        if related_type:
+            assert related_type in [FILES, CHILDREN]
+            base.path.segments.extend([related_type])
+            if 'provider' in kwargs and 'file_id' in kwargs:
+                base.path.segments.extend([kwargs['provider'], str(kwargs['file_id'])])
+        return base.url
+    elif endpoint_type == FILES:
+        assert 'file_id' in kwargs.keys()
+        base.path.segments.extend(['v2',FILES,str(kwargs['file_id'])])
+        return base.url

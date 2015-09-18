@@ -29,8 +29,8 @@ class RemoteUser(RemoteObject):
         super().__init__(remote_dict)
         assert remote_dict['type'] == 'users'
         self.id = remote_dict['id']
-        self.name = remote_dict['fullname']
-        self.child_nodes_url = remote_dict['links']['nodes']['relation']
+        self.name = remote_dict['attributes']['fullname']
+        self.child_nodes_url = remote_dict['relationships']['nodes']['links']['related']
 
         self.validate()
 
@@ -40,19 +40,16 @@ class RemoteNode(RemoteObject):
         super().__init__(remote_dict)
         assert remote_dict['type'] == 'nodes'
         self.id = remote_dict['id']
-        self.name = remote_dict['title']
-        self.category = remote_dict['category'] if remote_dict['category'] else 'other'
-        self.child_files_url = remote_dict['links']['files']['related']
-        self.is_top_level = remote_dict['links']['parent']['self'] is None
-        self.child_nodes_url = remote_dict['links']['children']['related']
-
-        self._date_modified = remote_dict['date_modified']
+        self.name = remote_dict['attributes']['title']
+        self.category = remote_dict['category']
+        self.child_files_url = remote_dict['relationships']['files']['links']['related']
+        self.is_top_level = remote_dict['relationships']['parents']['links']['self'] is None
+        self.child_nodes_url = remote_dict['relationships']['children']['links']['related']['href']
+        self.num_child_nodes = remote_dict['relationships']['children']['links']['related']['meta']['count']
+        self.last_modified = remote_to_local_datetime(remote_dict['attributes']['date_modified'])
 
         self.validate()
 
-    @property
-    def last_modified(self):
-        return remote_to_local_datetime(self._date_modified)
 
     def validate(self):
         super().validate()
@@ -61,102 +58,89 @@ class RemoteNode(RemoteObject):
         assert self.is_top_level is not None
         assert self.child_nodes_url
         assert self.last_modified
+        assert self.num_child_nodes
 
 
 class RemoteFileFolder(RemoteObject):
     def __init__(self, remote_dict):
         super().__init__(remote_dict)
         assert remote_dict['type'] == 'files'
-        self.id = remote_dict['path']
-        self.name = remote_dict['name']
-        self.provider = remote_dict['provider']
-        self._metadata = remote_dict['metadata']
+        self.id = remote_dict['id']
+        self.name = remote_dict['attributes']['name']
+        self.provider = remote_dict['attributes']['provider']
+        self.move_url = remote_dict['links']['move']
+        self.delete_url = remote_dict['links']['delete']
+
+
 
 
 
     def validate(self):
         super().validate()
         assert self.provider
-        assert self._metadata is not None
+        assert self.move_url
+        assert self.delete_url
 
-
-    @asyncio.coroutine
-    def last_modified(self, node_id, osf_query):
-        remote_time_string = None
-        if 'modified' in self._metadata and self._metadata['modified']:
-            remote_time_string = self._metadata['modified']
-        # times from online are None
-        elif node_id and osf_query:
-                url = wb_file_revisions()
-                params = {
-                    'path': self.id,
-                    'provider': self.provider,
-                    'nid': node_id,
-                }
-                resp = yield from osf_query.make_request(url, params=params, get_json=True)
-                remote_time_string = resp['data'][0]['modified']
-                for revision in resp['data']:
-                    assert remote_to_local_datetime(remote_time_string) \
-                        >=\
-                        remote_to_local_datetime(revision['modified'])
-        return remote_to_local_datetime(remote_time_string)
 
 
 class RemoteFolder(RemoteFileFolder):
     def __init__(self, remote_dict):
 
         super().__init__(remote_dict)
-        assert remote_dict['item_type'] == 'folder'
+        assert remote_dict['attributes']['kind'] == 'folder'
 
-        self.child_files_url = remote_dict['links']['related']
-        self.delete_url = remote_dict['links']['self']
-        self.has_write_privileges = 'POST' in remote_dict['links']['self_methods']
+        self.child_files_url = remote_dict['relationships']['files']['links']['related']
+        self.upload_file_url = remote_dict['links']['upload']
+        self.upload_folder_url = remote_dict['links']['new_folder']
+
+        # self.has_write_privileges = 'POST' in remote_dict['links']['self_methods'] #todo: await decision. can use OPTION
 
         self.validate()
 
     def validate(self):
         super().validate()
         assert self.child_files_url
-        assert self.delete_url
-        assert self.has_write_privileges is not None
+        assert self.upload_file_url
+        assert self.upload_folder_url
+        # assert self.has_write_privileges is not None
 
 
 class RemoteFile(RemoteFileFolder):
     def __init__(self, remote_dict):
         super().__init__(remote_dict)
-        assert remote_dict['item_type'] == 'file'
+        assert remote_dict['attributes']['kind'] == 'file'
 
-        # todo: if something is rented, do i even have access to view it??????
-        assert 'GET' in remote_dict['links']['self_methods']
 
-        self.download_url = remote_dict['links']['self']
-        self.delete_url = self.download_url
+        self.download_url = remote_dict['links']['download']
+        self.overwrite_url = remote_dict['links']['upload']
         # self.hash = remote_dict['metadata']['extra']['hash']
         # self.rented = remote_dict['metadata']['extra']['rented']
-        self.size = remote_dict['metadata']['size']
-
-        self._write_privileges = 'POST' in remote_dict['links']['self_methods']
+        self.size = remote_dict['attributes']['size']
+        self.last_modified = remote_to_local_datetime(remote_dict['attributes']['date_modified'])
+        # self._write_privileges = 'POST' in remote_dict['links']['self_methods']
 
         self.validate()
 
-    @property
-    def has_write_privileges(self):
-        # if self.rented:
-        #     return False
-        return self._write_privileges
+    # @property
+    # def has_write_privileges(self):
+    #     # if self.rented:
+    #     #     return False
+    #     return self._write_privileges
 
     def validate(self):
         super().validate()
         assert self.download_url
         assert self.delete_url
         assert self.size >= 0
-        assert self.has_write_privileges is not None
+        assert self.overwrite_url
+        assert self.last_modified
+        # assert self.has_write_privileges is not None
 
 
 def dict_to_remote_object(remote_dict):
     assert isinstance(remote_dict, dict)
     if remote_dict['type'] == 'files':
-        if remote_dict['item_type'] == 'file':
+        if remote_dict['attributes']['kind'] == 'file':
             return RemoteFile(remote_dict)
         else:
             return RemoteFolder(remote_dict)
