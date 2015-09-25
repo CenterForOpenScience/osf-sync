@@ -5,7 +5,7 @@ import json
 from osfoffline.polling_osf_manager.remote_objects \
     import (dict_to_remote_object, RemoteUser, RemoteFolder, RemoteFile, RemoteNode, RemoteObject )
 from osfoffline.database_manager.models import File,Node,User
-from osfoffline.polling_osf_manager.api_url_builder import wb_file_url,api_file_children, wb_move_url
+from osfoffline.polling_osf_manager.api_url_builder import api_url_for
 import osfoffline.alerts as AlertHandler
 import concurrent
 import logging

@@ -6,7 +6,7 @@ import os
 import shutil
 import requests
 import time
-from tests.utils.url_builder import api_node_files, wb_file_url
+from tests.utils.url_builder import api_node_files
 from osfoffline.polling_osf_manager.remote_objects import RemoteFile, RemoteFolder, RemoteFileFolder, dict_to_remote_object
 osf_path = '/Users/himanshu/Desktop/OSF/'
 project_path = os.path.join(osf_path, 'new_test_project')

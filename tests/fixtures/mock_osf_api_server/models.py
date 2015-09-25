@@ -2,7 +2,6 @@ __author__ = 'himanshu'
 import hashlib
 import datetime
 import os
-from tests.utils.url_builder import api_user_nodes, api_user_url, api_file_children, api_node_children, api_node_files, api_file_self
 from sqlalchemy import create_engine, ForeignKey, Enum
 from sqlalchemy.orm import sessionmaker, relationship, backref, scoped_session, validates
 from sqlalchemy import Column, Integer, Boolean, String, DateTime
@@ -206,7 +205,7 @@ class File(Base):
     date_modified = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
 
     provider = Column(String, default=DEFAULT_PROVIDER)
-    checked_out = Column(Boolean, default = False)
+    checked_out = Column(Boolean, default=False)
 
 
     user_id = Column(Integer, ForeignKey('user.id'), nullable=False)
@@ -280,6 +279,7 @@ class File(Base):
                 "path": self.path,
                 "provider": "osfstorage",
                 "last_touched": None,
+                "size": len(self.contents) if self.is_file else None
 
             },
             "relationships": {
@@ -290,7 +290,10 @@ class File(Base):
                 },
                 "files": {
                     "links": {
-                        "related": "http://localhost:5000/v2/nodes/{node_id}/files/osfstorage{file_path}/".format(node_id=self.node.id, file_path=self.path)
+                        "related": {
+                            'href': "http://localhost:5000/v2/nodes/{node_id}/files/osfstorage{file_path}".format(node_id=self.node.id, file_path=self.path),
+                            'meta':{}
+                        }
                     }
                 },
                 "versions": {
@@ -301,10 +304,11 @@ class File(Base):
             },
             "links": {
                 "info": "http://localhost:5000/v2/files/{}/".format(self.id),
-                "download": "http://localhost:5000/v1/resources/{}/providers/{}/{}".format(self.node_id, self.provider, self.id) if self.is_file else None,
-                "move": "http://localhost:5000/v1/resources/{}/providers/{}/{}".format(self.node_id, self.provider, self.id),
-                "upload": "http://localhost:5000/v1/resources/{}/providers/{}/{}".format(self.node_id, self.provider, self.id),
-                "new_folder": 'http://localhost:5000/v1/resources/{}/providers/{}/?kind=folder'.format(self.node_id, self.provider) if self.is_folder else None
+                "download": "http://localhost:5000/v1/resources/{}/providers/{}/{}/".format(self.node_id, self.provider, self.id) if self.is_file else None,
+                "delete": "http://localhost:5000/v1/resources/{}/providers/{}/{}/".format(self.node_id, self.provider, self.id),
+                "move": "http://localhost:5000/v1/resources/{}/providers/{}/{}/".format(self.node_id, self.provider, self.id),
+                "upload": "http://localhost:5000/v1/resources/{}/providers/{}/{}/".format(self.node_id, self.provider, self.id),
+                "new_folder": 'http://localhost:5000/v1/resources/{}/providers/{}/{}/?kind=folder'.format(self.node_id, self.provider, self.id) if self.is_folder else None
             }
         }
         if not self.has_parent:

@@ -45,4 +45,4 @@ def start():
 @task
 def mock_osf_api_server():
     from tests.fixtures.mock_osf_api_server.osf import app
-    app.run(port=8000, debug=True)
+    app.run(debug=True)

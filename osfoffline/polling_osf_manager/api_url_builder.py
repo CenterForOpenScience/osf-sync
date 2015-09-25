@@ -8,27 +8,34 @@ NODES = 'nodes'
 FILES = 'files'
 APPLICATIONS = 'applications'
 CHILDREN = 'children'
+def _ensure_trailing_slash(url):
+    url.rstrip('/')
+    return url+'/'
+
 def api_url_for(endpoint_type, related_type=None, **kwargs):
     base = furl(API_BASE)
     assert endpoint_type in [USERS, NODES, FILES, APPLICATIONS]
 
     if endpoint_type == USERS:
-        assert 'user_id' in kwargs.keys()
-        base.path.segments.extend(['v2',USERS,str(kwargs['user_id'])])
+        base.path.segments.extend(['v2',USERS])
+        if 'user_id' in kwargs:
+            base.path.segments.append(str(kwargs['user_id']))
         if related_type:
             assert related_type in [NODES]
-            base.path.segments.extend([related_type])
-        return base.url
+            base.path.segments.append(related_type)
     elif endpoint_type == NODES:
-        assert 'node_id' in kwargs.keys()
-        base.path.segments.extend(['v2',NODES,str(kwargs['node_id'])])
+
+        base.path.segments.extend(['v2',NODES])
+        if 'node_id' in kwargs:
+            base.path.segments.append(str(kwargs['node_id']))
         if related_type:
             assert related_type in [FILES, CHILDREN]
-            base.path.segments.extend([related_type])
+            base.path.segments.append(related_type)
             if 'provider' in kwargs and 'file_id' in kwargs:
                 base.path.segments.extend([kwargs['provider'], str(kwargs['file_id'])])
-        return base.url
     elif endpoint_type == FILES:
-        assert 'file_id' in kwargs.keys()
-        base.path.segments.extend(['v2',FILES,str(kwargs['file_id'])])
-        return base.url
+        base.path.segments.extend(['v2',FILES])
+        if 'file_id' in kwargs:
+            base.path.segments.append(str(kwargs['file_id']))
+
+    return _ensure_trailing_slash(base.url)

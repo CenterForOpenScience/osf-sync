@@ -7,9 +7,7 @@ Things to validate:
     4) check if each remote thing exist. IF NOT, then raise error (done automatically so i guess thats good)
 
 """
-import asyncio
 import iso8601
-from osfoffline.polling_osf_manager.api_url_builder import wb_file_revisions
 
 
 class RemoteObject(object):
@@ -41,9 +39,9 @@ class RemoteNode(RemoteObject):
         assert remote_dict['type'] == 'nodes'
         self.id = remote_dict['id']
         self.name = remote_dict['attributes']['title']
-        self.category = remote_dict['category']
+        self.category = remote_dict['attributes']['category']
         self.child_files_url = remote_dict['relationships']['files']['links']['related']
-        self.is_top_level = remote_dict['relationships']['parents']['links']['self'] is None
+        self.is_top_level = remote_dict['relationships']['parent']['links']['self'] is None
         self.child_nodes_url = remote_dict['relationships']['children']['links']['related']['href']
         self.num_child_nodes = remote_dict['relationships']['children']['links']['related']['meta']['count']
         self.last_modified = remote_to_local_datetime(remote_dict['attributes']['date_modified'])
@@ -58,7 +56,7 @@ class RemoteNode(RemoteObject):
         assert self.is_top_level is not None
         assert self.child_nodes_url
         assert self.last_modified
-        assert self.num_child_nodes
+        assert self.num_child_nodes >= 0
 
 
 class RemoteFileFolder(RemoteObject):
@@ -116,7 +114,7 @@ class RemoteFile(RemoteFileFolder):
         # self.hash = remote_dict['metadata']['extra']['hash']
         # self.rented = remote_dict['metadata']['extra']['rented']
         self.size = remote_dict['attributes']['size']
-        self.last_modified = remote_to_local_datetime(remote_dict['attributes']['date_modified'])
+        # self.last_modified = remote_to_local_datetime(remote_dict['attributes']['date_modified']) #todo: IS THIS ON ACTUAL SERVER YET? Chris said it would be up there soon.
         # self._write_privileges = 'POST' in remote_dict['links']['self_methods']
 
         self.validate()
@@ -133,7 +131,7 @@ class RemoteFile(RemoteFileFolder):
         assert self.delete_url
         assert self.size >= 0
         assert self.overwrite_url
-        assert self.last_modified
+        # assert self.last_modified
         # assert self.has_write_privileges is not None
 
 

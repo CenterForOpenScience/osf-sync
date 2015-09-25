@@ -1,4 +1,4 @@
-from osfoffline.settings import API_BASE, WB_BASE
+from osfoffline.settings import API_BASE
 from furl import furl
 
 #from osfoffline

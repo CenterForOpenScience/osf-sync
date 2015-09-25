@@ -10,11 +10,12 @@ session = Session()
 @decorator
 def must_be_logged_in(func, *args, **kwargs):
     try:
-
         get_user()
-        return func(*args, **kwargs)
     except:
+        print('user not logged in: {}'.format(request.headers.get('Authorization','NO AUTHORIZATION HEADER')))
         return jsonify({'FAIL':'user not logged in'})
+
+    return func(*args, **kwargs)
 
 def save(item=None):
     if item is not None:
