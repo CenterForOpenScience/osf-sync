@@ -5,7 +5,7 @@ import json
 from osfoffline.polling_osf_manager.remote_objects \
     import (dict_to_remote_object, RemoteUser, RemoteFolder, RemoteFile, RemoteNode, RemoteObject )
 from osfoffline.database_manager.models import File,Node,User
-from osfoffline.polling_osf_manager.api_url_builder import api_url_for
+from osfoffline.polling_osf_manager.api_url_builder import api_url_for, FILES, RESOURCES
 import osfoffline.alerts as AlertHandler
 import concurrent
 import logging
@@ -51,7 +51,7 @@ class OSFQuery(object):
         all_remote_nodes = yield from self._get_all_paginated_members(url)
         remote_top_level_nodes = []
         for remote in all_remote_nodes:
-            if remote['links']['parent']['self'] is None:
+            if remote['relationships']['parent']['links']['self'] is None:
                 remote_top_level_nodes.append(RemoteNode(remote))
         for node in remote_top_level_nodes:
             assert node.is_top_level
@@ -79,46 +79,14 @@ class OSFQuery(object):
     def upload_folder(self, local_folder):
         assert isinstance(local_folder, File)
         assert local_folder.is_folder
-
-        if local_folder.parent:
-            path = local_folder.parent.osf_path + local_folder.name
-        else:
-            path = '/{}'.format(local_folder.name)
+        # PUT /v1/resources/6/providers/osfstorage/21/?kind=folder&name=FUN_FOLDER HTTP/1.1" 200 -
         params = {
-            'path': path,
-            'provider': local_folder.provider,
-            'nid': local_folder.node.osf_id
+            'kind': 'file' if local_folder.is_file else 'folder',
+            'name': local_folder.name,
         }
-        files_url = wb_file_url()
-        resp_json = yield from self.make_request(files_url, method="POST", params=params, get_json=True)
+        files_url = api_url_for(RESOURCES, node_id=local_folder.node_id,provider=local_folder.provider)
+        resp_json = yield from self.make_request(files_url, method="PUT", params=params, get_json=True)
         AlertHandler.info(local_folder.name, AlertHandler.UPLOAD)
-        # todo: the below is experimental. It will be replaced with the creation of the files endpoints on the api
-        """
-        fields that I MUST have are:
-            path                                                --already exists in response
-            name                                                --use local folder
-            provider                                            --user local folder
-            item_type                                           --folder
-            type                                                --files
-            ['links']['related']                                --api_file_children(local_folder.user.osf_id, resp_json['path'], local_folder.provider)
-            ['links']['self']                                   --wb_file_url()
-            'POST' in remote_dict['links']['self_methods']      --can create this. make POST in there. make this true
-            metadata
-                modified                                        --CHECK THIS...
-
-        """
-
-        # path exist aleady
-        resp_json['name'] = local_folder.name
-        resp_json['provider'] = local_folder.provider
-        resp_json['item_type'] = 'folder'
-        resp_json['type'] = 'files'
-        resp_json['links'] = {}
-        resp_json['links']['self'] = wb_file_url(path=resp_json['path'], nid=local_folder.node.id, provider=local_folder.provider)
-        resp_json['links']['related'] = api_file_children(local_folder.user.osf_id, resp_json['path'], local_folder.provider)
-        resp_json['links']['self_methods'] = ['POST']
-        resp_json['metadata'] = {}
-        resp_json['metadata']['modified'] = 'FAKE TIME. I THINK THIS ALREADY EXISTS IN RESP_JSON'
 
         return RemoteFolder(resp_json)
 
@@ -131,51 +99,16 @@ class OSFQuery(object):
         """
         assert isinstance(local_file, File)
         assert local_file.is_file
-        if local_file.parent:
-            path = local_file.parent.osf_path + local_file.name
-        else:
-            path = '/{}'.format(local_file.name)
+        # /v1/resources/6/providers/osfstorage/21/?kind=file&name=FUN_FILE HTTP/1.1" 200 -
         params = {
-            'path': path,
             'provider': local_file.provider,
-            'nid': local_file.node.osf_id
+            'name': local_file.name
         }
-        files_url = wb_file_url()
+        files_url = api_url_for(RESOURCES, node_id=local_file.node_id,provider=local_file.provider)
         file = open(local_file.path, 'rb')
         resp_json = yield from self.make_request(files_url, method="PUT", params=params, data=file, get_json=True)
         AlertHandler.info(local_file.name, AlertHandler.UPLOAD)
-        # todo: the below is experimental. It will be replaced with the creation of the files endpoints on the api
-        """
-        fields that I MUST have are:
-            path                                                --already exists in response
-            name                                                --use local folder
-            provider                                            --user local folder
-            item_type                                           --file
-            type                                                --files
-            ['links']['self']                                   --wb_file_url(local_folder.user.osf_id, resp_json['path'], local_folder.provider)
-            'POST' in remote_dict['links']['self_methods']      --can create this. make POST in there. make this true
-            metadata
-                modified                                        --CHECK THIS...
-                size
-                extra
-                    hash
-                    rented
-        """
 
-        # path exist aleady
-        resp_json['name'] = local_file.name
-        resp_json['provider'] = local_file.provider
-        resp_json['item_type'] = 'file'
-        resp_json['type'] = 'files'
-        resp_json['links'] = {}
-        resp_json['links']['self'] = wb_file_url(path=resp_json['path'], nid=local_file.node.id, provider=local_file.provider)
-        resp_json['links']['self_methods'] = ['POST', 'GET']
-        resp_json['metadata'] = {}
-        resp_json['metadata']['modified'] = 'FAKE TIME. I THINK THIS ALREADY EXISTS IN RESP_JSON'
-        resp_json['metadata']['size'] = resp_json['size']
-        # resp_json['metadata']['extra'] = {}
-        # resp_json['metadata']['extra']['hash'] = 'NOT INCLUDED YET
-        # resp_json['metadata']['extra']['rented'] = 'NOT INCLUDED YET'
         return RemoteFile(resp_json)
 
 
@@ -199,21 +132,12 @@ class OSFQuery(object):
 
     @asyncio.coroutine
     def _rename_remote(self, local, remote):
-        url = wb_move_url()
+        url = remote.move_url
 
         data = {
-            'rename': local.name,
-            'conflict': 'replace',
-            'source': {
-                'path': local.osf_path,
-                'provider': local.provider,
-                'nid': local.node.osf_id
-            },
-            'destination': {
-                'path': local.parent.osf_path if local.parent else '/',
-                'provider': local.provider,
-                'nid': local.node.osf_id
-            }
+            'action': 'move',
+            'path': local.parent.osf_path if local.parent else '{}:{}'.format(local.node_id, local.provider),
+            'rename':local.name
         }
 
         resp = yield from self.make_request(url, method="POST", data=json.dumps(data))
@@ -246,19 +170,12 @@ class OSFQuery(object):
     @asyncio.coroutine
     def _move_remote_file_folder(self, local_file_folder):
 
-        url = wb_move_url()
+        url = api_url_for(RESOURCES, node_id=local_file_folder.node.osf_id, provider=local_file_folder.provider, file_id=local_file_folder.osf_id)
+
         data = {
-            'conflict': 'replace',
-            'source': {
-                'path': local_file_folder.osf_path,
-                'provider': local_file_folder.previous_provider,
-                'nid': local_file_folder.previous_node_osf_id
-            },
-            'destination': {
-                'path': local_file_folder.parent.osf_path if local_file_folder.parent else '/',
-                'provider': local_file_folder.parent.provider if local_file_folder.parent else File.DEFAULT_PROVIDER,
-                'nid': local_file_folder.parent.node.osf_id if local_file_folder.parent else local_file_folder.node.osf_id
-            }
+            'action': 'move',
+            'path': local_file_folder.parent.osf_path if local_file_folder.parent else '{}:{}'.format(local_file_folder.node_id, local_file_folder.provider),
+            'rename':local_file_folder.name
         }
 
         resp = yield from self.make_request(url, method="POST", data=json.dumps(data))
