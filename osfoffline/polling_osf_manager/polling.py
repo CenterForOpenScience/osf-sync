@@ -10,7 +10,7 @@ import logging
 from osfoffline.database_manager.models import User, Node, File, Base
 from osfoffline.database_manager.db import session
 from osfoffline.database_manager.utils import save
-from osfoffline.polling_osf_manager.api_url_builder import api_user_url, wb_file_revisions, wb_file_url, api_user_nodes,wb_move_url
+from osfoffline.polling_osf_manager.api_url_builder import api_url_for, USERS, NODES
 from osfoffline.polling_osf_manager.osf_query import OSFQuery
 from osfoffline.polling_osf_manager.remote_objects import RemoteObject, RemoteNode, RemoteFile, RemoteFolder,RemoteFileFolder
 from osfoffline.polling_osf_manager.polling_event_queue import PollingEventQueue
@@ -61,7 +61,7 @@ class Poll(object):
     @asyncio.coroutine
     def get_remote_user(self, future):
 
-        url = api_user_url(self.user.osf_id)
+        url = api_url_for(USERS, user_id=self.user.osf_id)
         while self._keep_running:
             try:
                 resp = yield from self.osf_query.make_request(url, get_json=True)
@@ -168,7 +168,7 @@ class Poll(object):
         remote_user_id = remote_user['id']
 
         # all_remote_nodes_url = 'https://staging2.osf.io:443/api/v2/users/{}/nodes/'.format(remote_user_id)
-        all_remote_nodes_url = api_user_nodes(remote_user_id)
+        all_remote_nodes_url = api_url_for(USERS, related_type=NODES, user_id=remote_user_id)
         while self._keep_running:
 
             # get remote top level nodes
