@@ -61,8 +61,8 @@ class BackgroundWorker(threading.Thread):
         self.poller.start()
 
     def stop_polling_server(self):
-
-        self.poller.stop()
+        if self.poller:
+            self.poller.stop()
 
 
 

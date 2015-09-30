@@ -38,7 +38,7 @@ class LocalDBSync(object):
 
     def _make_local_db_tuple_list(self, local, db):
         # checks
-        import ipdb;ipdb.set_trace()
+
         if local is None and db is None:
             raise LocalDBBothNone
         if local and db and self._get_proper_path(local) != self._get_proper_path(db):
