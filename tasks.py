@@ -1,5 +1,5 @@
 from invoke import task, run
-
+import os
 # WHEELHOUSE_PATH = os.environ.get('WHEELHOUSE')
 
 
@@ -46,3 +46,8 @@ def start():
 def mock_osf_api_server():
     from tests.fixtures.mock_osf_api_server.osf import app
     app.run(debug=True)
+
+
+@task
+def reset_mock_osf_api_server():
+    os.remove('./tests/fixtures/mock_osf_api_server/db_dir/mock_osf_api.db')

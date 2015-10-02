@@ -246,7 +246,6 @@ class OSFQuery(object):
             raise
 
 
-
         if expects:
             if response.status not in expects:
                 raise aiohttp.errors.BadStatusLine(response.status)

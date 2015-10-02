@@ -49,7 +49,6 @@ class OSFApp(QDialog):
         # connect all signal-slot pairs
         self.setup_connections()
 
-
         self.background_worker = BackgroundWorker()
 
 
@@ -238,9 +237,6 @@ class OSFApp(QDialog):
 
     def set_containing_folder_initial(self):
         return QFileDialog.getExistingDirectory(self, "Choose where to place OSF folder")
-
-
-
 
     def logout(self):
         user = self.get_current_user()
