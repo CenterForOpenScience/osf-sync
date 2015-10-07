@@ -47,10 +47,11 @@ def user(user_id=None):
 
 
 @app.route("/v2/nodes/", methods=['POST']) # create node
-@app.route("/v2/nodes/<node_id>", methods=['GET']) # get a node
+@app.route("/v2/nodes/<node_id>/", methods=['GET']) # get a node
 @must_be_logged_in
 def node(node_id=None):
     if request.method == 'POST':
+        import ipdb;ipdb.set_trace()
         user = get_user()
         title = request.form['title']
         node = Node(title=title, user=user)
