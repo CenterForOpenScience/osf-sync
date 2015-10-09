@@ -51,8 +51,9 @@ class OSFQuery(object):
         all_remote_nodes = yield from self._get_all_paginated_members(url)
         remote_top_level_nodes = []
         for remote in all_remote_nodes:
-            if remote['relationships']['parent']['links']['self'] is None:
-                remote_top_level_nodes.append(RemoteNode(remote))
+            as_remote_node = RemoteNode(remote)
+            if as_remote_node.is_top_level:
+                remote_top_level_nodes.append(as_remote_node)
         for node in remote_top_level_nodes:
             assert node.is_top_level
         return remote_top_level_nodes

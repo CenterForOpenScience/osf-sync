@@ -164,7 +164,10 @@ class Node(Base):
                 },
                 "parent": {
                     "links": {
-                        "self": 'http://localhost:5000/v2/nodes/{}/'.format(self.parent_id)
+                        "related":{
+                            'href': None if self.top_level else 'http://localhost:5000/v2/nodes/{}/'.format(self.parent_id),
+                            'meta':{}
+                        }
                     }
                 },
                 "registrations": {
@@ -291,7 +294,7 @@ class File(Base):
                 "files": {
                     "links": {
                         "related": {
-                            'href': "http://localhost:5000/v2/nodes/{node_id}/files/osfstorage{file_path}".format(node_id=self.node.id, file_path=self.path),
+                            'href': "http://localhost:5000/v2/nodes/{node_id}/files/osfstorage{file_path}".format(node_id=self.node.id, file_path=self.path) if self.is_folder else None,
                             'meta':{}
                         }
                     }

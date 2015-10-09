@@ -283,7 +283,7 @@ class Poll(object):
         assert len(remote_node_files) == 1
         osfstorage_folder = remote_node_files[0]
         assert osfstorage_folder.name == 'osfstorage'
-        assert osfstorage_folder.id == '/'
+
 
         try:
             remote_node_top_level_file_folders = yield from self.osf_query.get_child_files(osfstorage_folder)

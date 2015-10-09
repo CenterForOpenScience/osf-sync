@@ -12,9 +12,9 @@ from osfoffline.polling_osf_manager.remote_objects import RemoteFile, RemoteFold
 osf_path = '/Users/himanshu/Desktop/OSF/'
 base_project_name = 'new_test_project'
 project_path = os.path.join(osf_path, base_project_name)
-user_id = RemoteUser().id
+USER_ID = 1 # SET ME
 
-headers = {'Authorization':'Bearer {}'.format(user_id)}
+headers = {'Authorization':'Bearer {}'.format(USER_ID)}
 session = requests.Session()
 session.headers.update(headers)
 files_dir_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'files')
@@ -175,9 +175,13 @@ def assert_node_has_no_file_folders(nid):
 def assert_local_has_components_folder():
     return os.path.isdir(build_path('Components'))
 
+def assert_contains_project():
+    if not os.path.isdir(project_path):
+        assert TestFail
+
 def setUp():
+    assert_contains_project()
     delete_all_local()
-    create_new_node(base_project_name)
     assert_node_has_no_file_folders(nid1)
     assert_local_has_components_folder()
 

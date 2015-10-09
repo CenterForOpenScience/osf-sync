@@ -18,7 +18,7 @@ def paginate_response(data):
     :return:
     """
     return jsonify({
-        'data':data,
+        "data":data,
         "links": {
             "first": None,
             "last": None,
@@ -57,7 +57,7 @@ def node(node_id=None):
         node = Node(title=title, user=user)
         session.refresh(user)
         save(node)
-        provider = File(type=File.FOLDER, user=user, node=node)
+        provider = File(name=File.DEFAULT_PROVIDER, type=File.FOLDER, user=user, node=node)
         node.files.append(provider)
         save(node)
         session.refresh(node)
@@ -75,6 +75,7 @@ def user_nodes(user_id):
         assert str(user_id) == str(user.id)
         users_nodes = session.query(Node).filter(Node.user == user).all()
 
+
         return paginate_response([node.as_dict() for node in users_nodes])
 
 @app.route("/v2/nodes/<node_id>/files/", methods=['GET'])  # node's files
@@ -90,17 +91,14 @@ def node_files(node_id, provider=None, file_id=None):
             return paginate_response([file_folder.as_dict() for file_folder in node.files])
         elif file_id is None:
             assert provider
-            files = session.query(File).filter(Node.id==node_id and File.provider==provider).all()
-            return paginate_response([file_folder.as_dict() for file_folder in files])
+            model_provider = session.query(File).filter(File.has_parent == False).one()
+            return paginate_response([file_folder.as_dict() for file_folder in model_provider.files])
         else:
-            #ISSUE IS THAT /provider/file_id is supposed to list all child file folders. you are just giving the input file foder
             assert provider
             assert file_id is not None
             file_folder = session.query(File).filter(File.id==file_id and File.user==get_user()).one()
-            if file_folder.is_folder:
-                ret = [child.as_dict() for child in file_folder.files]
-            else:
-                ret = file_folder.as_dict()
+            assert file_folder.is_folder
+            ret = [child.as_dict() for child in file_folder.files]
             return paginate_response(ret)
     elif request.method=='DELETE':
         # deletes everything with given file id and given user.
@@ -108,12 +106,14 @@ def node_files(node_id, provider=None, file_id=None):
         #todo: unclear what to return in this case right now.
         return jsonify({'success':'true'})
 
-@app.route("/v2/files/<file_id>", methods=['GET', 'PUT','PATCH'])  # files
+@app.route("/v2/files/<file_id>/", methods=['GET', 'PUT','PATCH'])  # files
 @must_be_logged_in
 def files(file_id):
     file_folder = session.query(Node).filter(File.user==get_user() and File.id==file_id).one()
     if request.method=='GET':
-        pass
+        assert file_folder.is_folder
+        children = [child.as_dict() for child in file_folder.files]
+        return paginate_response(children)
     #todo: this code for put and patch files deals with file checkout. it does NOT match with what api does. understand and fix.
     elif request.method == 'PUT':
         file_folder.checked_out = True

@@ -169,6 +169,7 @@ class Preferences(QDialog):
                         remote_top_level_nodes.append(verified_node)
         except Exception as e:
             logging.warning(e)
+
         return remote_top_level_nodes
 
 

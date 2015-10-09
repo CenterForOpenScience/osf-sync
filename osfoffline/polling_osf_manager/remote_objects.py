@@ -41,7 +41,7 @@ class RemoteNode(RemoteObject):
         self.name = remote_dict['attributes']['title']
         self.category = remote_dict['attributes']['category']
         self.child_files_url = remote_dict['relationships']['files']['links']['related']
-        self.is_top_level = remote_dict['relationships']['parent']['links']['self'] is None
+        self.is_top_level = remote_dict['relationships']['parent']['links']['related']['href'] is None
         self.child_nodes_url = remote_dict['relationships']['children']['links']['related']['href']
         self.num_child_nodes = remote_dict['relationships']['children']['links']['related']['meta']['count']
         self.last_modified = remote_to_local_datetime(remote_dict['attributes']['date_modified'])
@@ -87,7 +87,7 @@ class RemoteFolder(RemoteFileFolder):
         super().__init__(remote_dict)
         assert remote_dict['attributes']['kind'] == 'folder'
 
-        self.child_files_url = remote_dict['relationships']['files']['links']['related']
+        self.child_files_url = remote_dict['relationships']['files']['links']['related']['href']
         self.upload_file_url = remote_dict['links']['upload']
         self.upload_folder_url = remote_dict['links']['new_folder']
 
