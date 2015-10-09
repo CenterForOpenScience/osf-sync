@@ -3,6 +3,7 @@ from decorator import decorator
 import unittest
 from nose import with_setup
 import os
+import json
 import shutil
 import requests
 import time
@@ -11,7 +12,7 @@ from osfoffline.polling_osf_manager.remote_objects import RemoteFile, RemoteFold
 osf_path = '/Users/himanshu/Desktop/OSF/'
 base_project_name = 'new_test_project'
 project_path = os.path.join(osf_path, base_project_name)
-user_id = RemoteUser(requests.post(api_url_for(USERS), data={'fullname':"new_test_user"}).json()['data']).id
+user_id = RemoteUser().id
 
 headers = {'Authorization':'Bearer {}'.format(user_id)}
 session = requests.Session()
@@ -28,9 +29,12 @@ def create_new_node(title, parent=None):
                 }
             }
     }
-    import json
+
+    headers['Content-Type']='application/json'
+    headers['Accept']='application/json'
     ret = requests.post(api_url_for(NODES), data=json.dumps(body), headers=headers)
-    return RemoteNode(ret).id
+    return RemoteNode(ret.json()['data']).id
+
 nid1 = create_new_node(base_project_name)
 
 @decorator

@@ -51,3 +51,16 @@ def mock_osf_api_server():
 @task
 def reset_mock_osf_api_server():
     os.remove('./tests/fixtures/mock_osf_api_server/db_dir/mock_osf_api.db')
+
+@task
+def create_test_user():
+    import requests
+    from osfoffline.polling_osf_manager.api_url_builder import api_url_for, USERS
+    ret = requests.post(
+        api_url_for(USERS),
+        data={
+            'fullname':"new_test_user"
+        })
+    assert ret.status_code==200
+    print('test user created. Open OSF-Offline to start testing. Use the following credentials:\nEmail:{email}\nPassword:{password}',
+          email=ret.json()['data']['attributes']['full_name'])

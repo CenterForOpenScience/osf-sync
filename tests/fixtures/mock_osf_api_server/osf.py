@@ -51,9 +51,9 @@ def user(user_id=None):
 @must_be_logged_in
 def node(node_id=None):
     if request.method == 'POST':
-        import ipdb;ipdb.set_trace()
+
         user = get_user()
-        title = request.form['title']
+        title = request.get_json()['data']['attributes']['title']
         node = Node(title=title, user=user)
         session.refresh(user)
         save(node)

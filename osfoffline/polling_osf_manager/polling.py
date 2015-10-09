@@ -67,7 +67,7 @@ class Poll(object):
                 resp = yield from self.osf_query.make_request(url, get_json=True)
                 future.set_result(resp['data'])
                 break
-            except ( concurrent.futures._base.TimeoutError, aiohttp.errors.ClientTimeoutError):
+            except (concurrent.futures._base.TimeoutError, aiohttp.errors.ClientTimeoutError):
                 AlertHandler.warn("Bad Internet Connection")
 
     def get_id(self, item):

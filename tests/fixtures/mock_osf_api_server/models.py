@@ -42,7 +42,7 @@ class User(Base):
             "id": str(self.id),
             "type": "users",
             "attributes": {
-                "fullname": self.fullname,
+                "full_name": self.fullname,
                 "given_name": "",
                 "middle_names": "",
                 "family_name": "",

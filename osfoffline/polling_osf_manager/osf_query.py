@@ -251,7 +251,7 @@ class OSFQuery(object):
                 raise aiohttp.errors.BadStatusLine(response.status)
         elif 400 <= response.status < 600:
             content = yield from response.read()
-            error_message = '[status code: {}]:: {}'.format(str(response.status),str(content))
+            error_message = '[status code: {}]:: {} @url '.format(str(response.status),str(content), str(url))
             logging.error(error_message)
             raise aiohttp.errors.HttpBadRequest(error_message)
 

@@ -27,7 +27,7 @@ class RemoteUser(RemoteObject):
         super().__init__(remote_dict)
         assert remote_dict['type'] == 'users'
         self.id = remote_dict['id']
-        self.name = remote_dict['attributes']['fullname']
+        self.name = remote_dict['attributes']['full_name']
         self.child_nodes_url = remote_dict['relationships']['nodes']['links']['related']
 
         self.validate()
