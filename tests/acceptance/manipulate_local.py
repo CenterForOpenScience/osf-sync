@@ -84,7 +84,6 @@ def get_node_file_folders(node_id):
     return [dict_to_remote_object(file_folder) for file_folder in children_resp.json()['data']]
 
 def get_children_file_folders(parent_folder):
-    import ipdb;ipdb.set_trace()
     assert isinstance(parent_folder, RemoteFolder)
     url = parent_folder.child_files_url
     resp = session.get(url)
@@ -194,19 +193,18 @@ def teardown():
     assert_node_has_no_file_folders(nid1)
     assert_local_has_components_folder()
 
-# @with_setup(setUp, teardown)
-# def test_create_local_folder():
-#     create_local('new_folder')
-#     assert_contains_folder('new_folder', nid1)
-#
-# @with_setup(setUp, teardown)
-# def test_create_local_file():
-#     contents = create_local(file_name='new_file')
-#     assert_contains_file('new_file', contents, nid1)
+@with_setup(setUp, teardown)
+def test_create_local_folder():
+    create_local('new_folder')
+    assert_contains_folder('new_folder', nid1)
+
+@with_setup(setUp, teardown)
+def test_create_local_file():
+    contents = create_local(file_name='new_file')
+    assert_contains_file('new_file', contents, nid1)
 
 @with_setup(setUp, teardown)
 def test_create_local_nested_folders():
-    import ipdb;ipdb.set_trace()
     create_local('f')
     assert_contains_folder('f', nid1)
     f_folder = get_remote('f', nid1, is_dir=True)
@@ -221,21 +219,22 @@ def test_create_local_nested_folders():
 
     create_local('f','a','a','a')
     assert_contains_folder('a', nid1, f_a_a_folder)
-# @with_setup(setUp, teardown)
-# def test_create_nested_file():
-#     create_local('folder')
-#     assert_contains_folder('folder', nid1)
-#     folder = get_remote('folder',nid1, True)
-#     contents = create_local('folder',file_name='rock')
-#     assert_contains_file('rock',contents,nid1,folder)
-#
-#
-# # def test_create_folder_and_file():
-# #     create_local('something')
-# #     assert_contains_folder('something', nid1)
-# #     contents = create_local(file_name='something')
-# #     assert_contains_file('something', contents, nid1)
-#
+
+@with_setup(setUp, teardown)
+def test_create_nested_file():
+    create_local('folder')
+    assert_contains_folder('folder', nid1)
+    folder = get_remote('folder',nid1, True)
+    contents = create_local('folder',file_name='rock')
+    assert_contains_file('rock', contents, nid1, folder)
+
+
+def test_create_folder_and_file():
+    create_local('something')
+    assert_contains_folder('something', nid1)
+    contents = create_local(file_name='something')
+    assert_contains_file('something', contents, nid1)
+
 # @with_setup(setUp, teardown)
 # def test_rename_folder():
 #     create_local('original')

@@ -127,7 +127,10 @@ class OSFQuery(object):
             'provider': local_file.provider,
             'name': local_file.name
         }
-        files_url = api_url_for(RESOURCES, node_id=local_file.node_id,provider=local_file.provider)
+
+
+        parent_osf_id = local_file.parent.osf_id if not local_file.has_parent else None
+        files_url = api_url_for(RESOURCES, node_id=local_file.node.osf_id, provider=local_file.provider, file_id=parent_osf_id)
         file = open(local_file.path, 'rb')
         resp_json = yield from self.make_request(files_url, method="PUT", params=params, data=file, get_json=True)
         AlertHandler.info(local_file.name, AlertHandler.UPLOAD)

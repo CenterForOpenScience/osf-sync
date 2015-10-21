@@ -334,7 +334,7 @@ class Poll(object):
         (local, remote) -> check modifications                    --
 
         """
-        import ipdb;ipdb.set_trace()
+
         assert local_file_folder or remote_file_folder  # both shouldnt be None.
         logging.info('checking file_folder internal')
         if local_file_folder is None:
@@ -386,6 +386,7 @@ class Poll(object):
 
         # recursively handle folder's children
         if local_file_folder.is_folder:
+
             try:
                 remote_children = yield from self.osf_query.get_child_files(remote_file_folder)
             except (aiohttp.errors.ClientConnectionError, aiohttp.errors.ClientTimeoutError, concurrent.futures._base.TimeoutError):
