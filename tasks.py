@@ -45,6 +45,7 @@ def start():
 @task
 def start_for_tests():
     import appdirs
+    import shutil
     from osfoffline.settings import PROJECT_NAME, PROJECT_AUTHOR
 
 
@@ -53,7 +54,10 @@ def start_for_tests():
     if os.path.exists(DB_FILE_PATH):
         os.remove(DB_FILE_PATH)
 
-    from start import start
+    OSF_DIR = '~/Desktop/OSF'
+    if os.path.exists(OSF_DIR):
+        shutil.rmtree(OSF_DIR)
+
     start()
 
 

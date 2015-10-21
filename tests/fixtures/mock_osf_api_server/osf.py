@@ -46,6 +46,13 @@ def user(user_id=None):
     return paginate_response(user.as_dict())
 
 
+@app.route("/v2/nodes/<node_id>/children/", methods=['GET']) # get a node's child nodes
+@must_be_logged_in
+def node_children(node_id):
+    cur_node = session.query(Node).filter(Node.id==node_id).one()
+    return paginate_response([node.as_dict() for node in cur_node.child_nodes])
+
+
 @app.route("/v2/nodes/", methods=['POST']) # create node
 @app.route("/v2/nodes/<node_id>/", methods=['GET']) # get a node
 @must_be_logged_in
@@ -60,10 +67,12 @@ def node(node_id=None):
         provider = File(name=File.DEFAULT_PROVIDER, type=File.FOLDER, user=user, node=node)
         node.files.append(provider)
         save(node)
+        save(provider)
         session.refresh(node)
     elif request.method =='GET':
-        node = session.query(Node).filter(user=get_user() and id==node_id).one()
+        node = session.query(Node).filter(Node.user==get_user() and Node.id==node_id).one()
     return paginate_response(node.as_dict())
+
 
 
 @app.route("/v2/users/<user_id>/nodes/", methods=['GET'])  # user's nodes
@@ -74,8 +83,6 @@ def user_nodes(user_id):
         user = get_user()
         assert str(user_id) == str(user.id)
         users_nodes = session.query(Node).filter(Node.user == user).all()
-
-
         return paginate_response([node.as_dict() for node in users_nodes])
 
 @app.route("/v2/nodes/<node_id>/files/", methods=['GET'])  # node's files
@@ -86,17 +93,26 @@ def node_files(node_id, provider=None, file_id=None):
     if request.method=='GET':
         if provider is None:
             user = get_user()
-            node = session.query(Node).filter(Node.user==user and Node.id==node_id).one()
-
-            return paginate_response([file_folder.as_dict() for file_folder in node.files])
+            all_files = session.query(File).filter(File.user==user and File.node_id==node_id).all()
+            for file in all_files:
+                if file.is_provider:
+                    provider_model = file
+                    return paginate_response([provider_model.as_dict()])
+            assert False # failed because provider model is null
         elif file_id is None:
             assert provider
-            model_provider = session.query(File).filter(File.has_parent == False).one()
-            return paginate_response([file_folder.as_dict() for file_folder in model_provider.files])
+            user=get_user()
+            all_files = session.query(File).filter(File.user==user and File.node_id==node_id).all()
+            for file in all_files:
+                if file.is_provider:
+                    provider_model = file
+                    return paginate_response([file_folder.as_dict() for file_folder in provider_model.files])
+            assert False # failed because provider model is null
+
         else:
             assert provider
             assert file_id is not None
-            file_folder = session.query(File).filter(File.id==file_id and File.user==get_user()).one()
+            file_folder = session.query(File).filter(File.id == file_id).one()
             assert file_folder.is_folder
             ret = [child.as_dict() for child in file_folder.files]
             return paginate_response(ret)
@@ -105,6 +121,7 @@ def node_files(node_id, provider=None, file_id=None):
         file = session.query(File).filter(File.id==file_id and File.user==get_user()).delete()
         #todo: unclear what to return in this case right now.
         return jsonify({'success':'true'})
+
 
 @app.route("/v2/files/<file_id>/", methods=['GET', 'PUT','PATCH'])  # files
 @must_be_logged_in
@@ -124,7 +141,7 @@ def files(file_id):
     return paginate_response(file_folder.as_dict())
 
 @app.route("/v1/resources/<node_id>/providers/<provider>/", methods=['GET','PUT']) # get list of things in provider folder, upload to provider folder
-@app.route("/v1/resources/<node_id>/providers/<provider>/<file_id>/", methods=['PUT','POST', 'GET'])  # download file, update existing file, move/rename file/folder
+@app.route("/v1/resources/<node_id>/providers/<provider>/<file_id>/", methods=['PUT','POST', 'GET', 'DELETE'])  # download file, update existing file, move/rename file/folder
 @must_be_logged_in
 def resources(node_id, provider, file_id=None):
     if file_id is None:
@@ -186,3 +203,12 @@ def resources(node_id, provider, file_id=None):
         session.query(File).filter(File.id==file_id and File.user==get_user()).delete()
         #todo: unclear what to return in this case right now.
         return jsonify({'success':'true'})
+
+
+
+
+
+
+
+
+

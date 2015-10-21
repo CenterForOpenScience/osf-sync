@@ -25,8 +25,8 @@ class StartScreen(QDialog):
 
 
     def log_in(self):
-        user_name = self.start_screen.emailEdit.text()
-        password = self.start_screen.passwordEdit.text()
+        user_name = self.start_screen.emailEdit.text().strip()
+        password = self.start_screen.passwordEdit.text().strip()
         logging.info(user_name)
         logging.info(password)
 

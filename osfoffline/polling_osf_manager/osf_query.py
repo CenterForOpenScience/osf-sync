@@ -5,7 +5,7 @@ import json
 from osfoffline.polling_osf_manager.remote_objects \
     import (dict_to_remote_object, RemoteUser, RemoteFolder, RemoteFile, RemoteNode, RemoteObject )
 from osfoffline.database_manager.models import File,Node,User
-from osfoffline.polling_osf_manager.api_url_builder import api_url_for, FILES, RESOURCES
+from osfoffline.polling_osf_manager.api_url_builder import api_url_for, NODES, RESOURCES, FILES
 import osfoffline.alerts as AlertHandler
 import concurrent
 import logging
@@ -17,7 +17,8 @@ ACCEPTED = 202
 class OSFQuery(object):
     def __init__(self, loop, oauth_token):
         self.headers = {
-            'Authorization': 'Bearer {}'.format(oauth_token)
+            # 'Authorization': 'Bearer {}'.format(oauth_token),
+            'Cookie':'osf_staging=55fc5f29029bdb53541b5cda.wTLtvhA3IyD-UGpB3pr7YXIWHvc'
         }
         self.request_session = aiohttp.ClientSession(loop=loop, headers=self.headers)
 
@@ -81,15 +82,36 @@ class OSFQuery(object):
         assert isinstance(local_folder, File)
         assert local_folder.is_folder
         # PUT /v1/resources/6/providers/osfstorage/21/?kind=folder&name=FUN_FOLDER HTTP/1.1" 200 -
+
         params = {
-            'kind': 'file' if local_folder.is_file else 'folder',
+            'kind': 'folder',
             'name': local_folder.name,
         }
-        files_url = api_url_for(RESOURCES, node_id=local_folder.node_id,provider=local_folder.provider)
+        files_url = api_url_for(
+            RESOURCES,
+            node_id=local_folder.node.osf_id,
+            provider=local_folder.provider,
+            file_id=local_folder.parent.osf_id if local_folder.has_parent else None
+        )
         resp_json = yield from self.make_request(files_url, method="PUT", params=params, get_json=True)
         AlertHandler.info(local_folder.name, AlertHandler.UPLOAD)
 
-        return RemoteFolder(resp_json)
+        #todo: determine whether uploaded folder will contain api url for its children
+        new_file_id = resp_json['data']['id'].split('/')[1]
+        children_url = api_url_for(NODES,related_type=FILES, node_id=local_folder.node.osf_id, provider=local_folder.provider, file_id=new_file_id)
+        resp_json['data']['relationships'] = {
+            'files':{
+                'links':{
+                    'related':{
+                        'href':children_url
+                    }
+                }
+            }
+        }
+        # https://staging-api.osf.io/v2/nodes/4e6k8/files/osfstorage/562134f1029bdb6c230f2874/
+        # ['relationships']['files']['links']['related']['href']
+
+        return dict_to_remote_object(resp_json['data'])
 
     @asyncio.coroutine
     def upload_file(self, local_file):
@@ -110,7 +132,7 @@ class OSFQuery(object):
         resp_json = yield from self.make_request(files_url, method="PUT", params=params, data=file, get_json=True)
         AlertHandler.info(local_file.name, AlertHandler.UPLOAD)
 
-        return RemoteFile(resp_json)
+        return RemoteFile(resp_json['data'])
 
 
     @asyncio.coroutine
@@ -224,12 +246,14 @@ class OSFQuery(object):
         resp.close()
 
     @asyncio.coroutine
-    def make_request(self, url, method='GET',params=None, expects=None, get_json=False, timeout=180, data=None):
+    def make_request(self, url, method=None,params=None, expects=None, get_json=False, timeout=180, data=None):
+        if method is None:
+            method = 'GET'
         try:
             response = yield from asyncio.wait_for(
                 self.request_session.request(
                     url=url,
-                    method=method.capitalize(),
+                    method=method.upper(),
                     params=params,
                     data=data
                 ),

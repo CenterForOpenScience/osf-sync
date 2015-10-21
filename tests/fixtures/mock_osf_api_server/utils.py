@@ -12,7 +12,9 @@ def must_be_logged_in(func, *args, **kwargs):
     try:
         get_user()
     except:
-        print('user not logged in: {}'.format(request.headers.get('Authorization','NO AUTHORIZATION HEADER')))
+        auth_header = request.headers['Authorization'].split(' ') if 'Authorization' in request.headers else 'NO AUTHORIZATION HEADER'
+        user_id = auth_header[1] if len(auth_header)==2 else None
+        print('user {} not logged in. header: {}'.format(user_id, auth_header))
         return jsonify({'FAIL':'user not logged in'})
 
     return func(*args, **kwargs)

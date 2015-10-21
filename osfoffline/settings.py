@@ -9,9 +9,9 @@ PROJECT_AUTHOR = 'cos'
 PROJECT_CONFIG_PATH = user_config_dir(PROJECT_NAME, PROJECT_AUTHOR)
 PROJECT_DB_PATH = user_data_dir(PROJECT_NAME, PROJECT_AUTHOR)
 
-API_BASE = 'http://localhost:5000'
-# API_BASE = 'https://staging2.osf.io/api/'
-
+# API_BASE = 'http://localhost:5000'
+API_BASE = 'https://staging-api.osf.io'
+FILE_BASE = 'https://staging-files.osf.io'
 
 
 

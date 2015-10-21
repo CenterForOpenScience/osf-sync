@@ -62,6 +62,7 @@ class Poll(object):
     def get_remote_user(self, future):
 
         url = api_url_for(USERS, user_id=self.user.osf_id)
+        logging.info(url)
         while self._keep_running:
             try:
                 resp = yield from self.osf_query.make_request(url, get_json=True)
@@ -272,6 +273,7 @@ class Poll(object):
 
         try:
             remote_node_files = yield from self.osf_query.get_child_files(remote_node)
+
         except (aiohttp.errors.ClientConnectionError, aiohttp.errors.ClientTimeoutError, concurrent.futures._base.TimeoutError):
             AlertHandler.warn('Bad Internet Connection')
             return
@@ -332,6 +334,7 @@ class Poll(object):
         (local, remote) -> check modifications                    --
 
         """
+        import ipdb;ipdb.set_trace()
         assert local_file_folder or remote_file_folder  # both shouldnt be None.
         logging.info('checking file_folder internal')
         if local_file_folder is None:

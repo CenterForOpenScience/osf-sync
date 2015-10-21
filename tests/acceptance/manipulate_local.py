@@ -12,9 +12,10 @@ from osfoffline.polling_osf_manager.remote_objects import RemoteFile, RemoteFold
 osf_path = '/Users/himanshu/Desktop/OSF/'
 base_project_name = 'new_test_project'
 project_path = os.path.join(osf_path, base_project_name)
-USER_ID = 1 # SET ME
+USER_ID = 'k92s7' # SET ME
 
-headers = {'Authorization':'Bearer {}'.format(USER_ID)}
+# headers = {'Authorization':'Bearer {}'.format(USER_ID)}
+headers={'Cookie':'osf_staging=55fc5f29029bdb53541b5cda.wTLtvhA3IyD-UGpB3pr7YXIWHvc;'}
 session = requests.Session()
 session.headers.update(headers)
 files_dir_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'files')
@@ -32,10 +33,11 @@ def create_new_node(title, parent=None):
 
     headers['Content-Type']='application/json'
     headers['Accept']='application/json'
+    headers['Cookie']='osf_staging=55fc5f29029bdb53541b5cda.wTLtvhA3IyD-UGpB3pr7YXIWHvc;'
     ret = requests.post(api_url_for(NODES), data=json.dumps(body), headers=headers)
     return RemoteNode(ret.json()['data']).id
 
-nid1 = create_new_node(base_project_name)
+nid1 = '4e6k8' #create_new_node(base_project_name)
 
 @decorator
 def repeat_until_success(func, *args, **kwargs):
@@ -82,6 +84,7 @@ def get_node_file_folders(node_id):
     return [dict_to_remote_object(file_folder) for file_folder in children_resp.json()['data']]
 
 def get_children_file_folders(parent_folder):
+    import ipdb;ipdb.set_trace()
     assert isinstance(parent_folder, RemoteFolder)
     url = parent_folder.child_files_url
     resp = session.get(url)
@@ -191,31 +194,33 @@ def teardown():
     assert_node_has_no_file_folders(nid1)
     assert_local_has_components_folder()
 
-@with_setup(setUp, teardown)
-def test_create_local_folder():
-    create_local('new_folder')
-    assert_contains_folder('new_folder', nid1)
-
+# @with_setup(setUp, teardown)
+# def test_create_local_folder():
+#     create_local('new_folder')
+#     assert_contains_folder('new_folder', nid1)
+#
 # @with_setup(setUp, teardown)
 # def test_create_local_file():
 #     contents = create_local(file_name='new_file')
 #     assert_contains_file('new_file', contents, nid1)
-# @with_setup(setUp, teardown)
-# def test_create_local_nested_folders():
-#     create_local('f')
-#     assert_contains_folder('f', nid1)
-#     f_folder = get_remote('f', nid1, is_dir=True)
-#
-#     create_local('f','a')
-#     assert_contains_folder('a', nid1, f_folder)
-#     f_a_folder = get_remote('a', nid1,True,parent=f_folder)
-#
-#     create_local('f','a','a')
-#     assert_contains_folder('a', nid1, f_a_folder)
-#     f_a_a_folder = get_remote('a', nid1,True,parent=f_a_folder)
-#
-#     create_local('f','a','a','a')
-#     assert_contains_folder('a', nid1, f_a_a_folder)
+
+@with_setup(setUp, teardown)
+def test_create_local_nested_folders():
+    import ipdb;ipdb.set_trace()
+    create_local('f')
+    assert_contains_folder('f', nid1)
+    f_folder = get_remote('f', nid1, is_dir=True)
+
+    create_local('f','a')
+    assert_contains_folder('a', nid1, f_folder)
+    f_a_folder = get_remote('a', nid1,True,parent=f_folder)
+
+    create_local('f','a','a')
+    assert_contains_folder('a', nid1, f_a_folder)
+    f_a_a_folder = get_remote('a', nid1,True,parent=f_a_folder)
+
+    create_local('f','a','a','a')
+    assert_contains_folder('a', nid1, f_a_a_folder)
 # @with_setup(setUp, teardown)
 # def test_create_nested_file():
 #     create_local('folder')

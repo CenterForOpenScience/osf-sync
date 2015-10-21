@@ -40,10 +40,10 @@ class RemoteNode(RemoteObject):
         self.id = remote_dict['id']
         self.name = remote_dict['attributes']['title']
         self.category = remote_dict['attributes']['category']
-        self.child_files_url = remote_dict['relationships']['files']['links']['related']
+        self.child_files_url = remote_dict['relationships']['files']['links']['related']['href']
         self.is_top_level = remote_dict['relationships']['parent']['links']['related']['href'] is None
         self.child_nodes_url = remote_dict['relationships']['children']['links']['related']['href']
-        self.num_child_nodes = remote_dict['relationships']['children']['links']['related']['meta']['count']
+        # self.num_child_nodes = remote_dict['relationships']['children']['links']['related']['meta']['count']
         self.last_modified = remote_to_local_datetime(remote_dict['attributes']['date_modified'])
 
         self.validate()
@@ -56,7 +56,7 @@ class RemoteNode(RemoteObject):
         assert self.is_top_level is not None
         assert self.child_nodes_url
         assert self.last_modified
-        assert self.num_child_nodes >= 0
+        # assert self.num_child_nodes >= 0
 
 
 class RemoteFileFolder(RemoteObject):
@@ -64,10 +64,12 @@ class RemoteFileFolder(RemoteObject):
         super().__init__(remote_dict)
         assert remote_dict['type'] == 'files'
         self.id = remote_dict['id']
+        if '/' in self.id:
+            self.id = self.id.split('/')[1]
         self.name = remote_dict['attributes']['name']
         self.provider = remote_dict['attributes']['provider']
-        self.move_url = remote_dict['links']['move']
-        self.delete_url = remote_dict['links']['delete']
+        self.move_url = remote_dict['links']['move'] if 'move' in remote_dict['links'] else None
+        self.delete_url = remote_dict['links']['delete'] if 'delete' in remote_dict['links'] else None
 
 
 
@@ -76,8 +78,8 @@ class RemoteFileFolder(RemoteObject):
     def validate(self):
         super().validate()
         assert self.provider
-        assert self.move_url
-        assert self.delete_url
+        assert self.move_url if self.name!='osfstorage' else True
+        assert self.delete_url if self.name!='osfstorage' else True
 
 
 

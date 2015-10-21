@@ -246,6 +246,9 @@ class File(Base):
     def has_parent(self):
         return self.parent is not None
 
+    @hybrid_property
+    def is_provider(self):
+        return self.is_folder and not self.has_parent
 
     @validates('parent_id')
     def validate_parent_id(self, key, parent_id):
