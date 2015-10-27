@@ -18,7 +18,7 @@ class OSFQuery(object):
     def __init__(self, loop, oauth_token):
         self.headers = {
             # 'Authorization': 'Bearer {}'.format(oauth_token),
-            'Cookie':'osf_staging=55fc5f29029bdb53541b5cda.wTLtvhA3IyD-UGpB3pr7YXIWHvc'
+            'Cookie':'osf_staging={}'.format(oauth_token)
         }
         self.request_session = aiohttp.ClientSession(loop=loop, headers=self.headers)
 
