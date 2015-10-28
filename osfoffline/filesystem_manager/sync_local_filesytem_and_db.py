@@ -18,6 +18,8 @@ from osfoffline.utils.path import ProperPath
 
 
 class LocalDBSync(object):
+    COMPONENTS_FOLDER_NAME = 'Components'
+
     def __init__(self, absolute_osf_dir_path, observer, user):
         if not isinstance(observer, Observer):
             raise TypeError
@@ -96,7 +98,18 @@ class LocalDBSync(object):
                     child_item_path = os.path.join(item.full_path, child)
                     is_dir = os.path.isdir(child_item_path)
                     child_item = ProperPath(child_item_path, is_dir)
-                    children.append(child_item)
+
+                    # handle the components folder
+                    if child_item.name == LocalDBSync.COMPONENTS_FOLDER_NAME:
+                        for component in os.listdir(child_item_path):
+                            component_path = os.path.join(child_item_path, component)
+                            component_is_dir = os.path.isdir(component_path)
+                            # NOTE: making a concious decision here to ignore invalid file in components folder
+                            # NOTE: this means the user is not getting an alert in this case
+                            if component_is_dir:
+                                children.append(ProperPath(component_path, component_is_dir))
+                    else:
+                        children.append(child_item)
                 return children
         # db
         else:
@@ -180,15 +193,11 @@ class LocalDBSync(object):
         assert local or db
         event = self._determine_event_type(local, db)
         if event:
-            # print(event.key)
 
-            # event_queue = observer._event_queue
-            # event_queue.put(event)
-            # observer.dispatch_events(event_queue, observer._timeout)
             emitter = next(iter(self.observer.emitters))
             emitter.queue_event(event)
 
-            # observer.emitters[0].queue_event(event)
+
 
         local_db_tuple_list = self._make_local_db_tuple_list(local, db)
         for local, db in local_db_tuple_list:

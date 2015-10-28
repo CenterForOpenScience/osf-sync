@@ -81,7 +81,7 @@ class Node(Base):
     child_nodes = relationship(
         "Node",
         backref=backref('parent', remote_side=[id]),
-        cascade="all, delete-orphan"
+        cascade="all"
     )
     files = relationship(
         "File",
@@ -105,7 +105,7 @@ class Node(Base):
         # +os.path.sep+ instead of os.path.join: http://stackoverflow.com/a/14504695
 
         if self.parent:
-            return os.path.join(self.parent.path, self.title)
+            return os.path.join(self.parent.path,'Components', self.title)
         else:
 
             return os.path.join(self.user.osf_local_folder_path, self.title)
@@ -162,11 +162,12 @@ class File(Base):
     hash = Column(String)
     type = Column(Enum(FOLDER, FILE), nullable=False)
     date_modified = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
-    osf_id = Column(String, nullable=True, default=None)  # multiple things allowed to be null
+    #todo: osf_id and osf_path are duplicates right now. One needs to be removed.
+    osf_id = Column(String, nullable=True, default=None)  # multiple things allowed to be null. #todo: unique=True (handle moved on osf)
     provider = Column(String, default=DEFAULT_PROVIDER)
 
     # NOTE: this is called path. It is not any type of file/folder path. Think of it just as an id.
-    osf_path = Column(String, nullable=True, default=None)
+    osf_path = Column(String, nullable=True, default=None)  #todo: unique=True. (can't right now due to duplicates when moved on osf)
 
     locally_created = Column(Boolean, default=False)
     locally_deleted = Column(Boolean, default=False)
@@ -192,7 +193,7 @@ class File(Base):
     files = relationship(
         "File",
         backref=backref('parent', remote_side=[id]),
-        cascade="all, delete-orphan",
+        cascade="all",
     )
 
     @hybrid_property

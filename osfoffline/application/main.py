@@ -20,7 +20,8 @@ from osfoffline.application.background import BackgroundWorker
 from osfoffline.utils.validators import validate_containing_folder
 from osfoffline.utils.debug import debug_trace
 
-RUN_PATH = "HKEY_CURRENT_USER\\Software\\Microsoft\\Windows\\CurrentVersion\\Run"
+
+# RUN_PATH = "HKEY_CURRENT_USER\\Software\\Microsoft\\Windows\\CurrentVersion\\Run"
 
 
 class OSFApp(QDialog):
@@ -47,7 +48,6 @@ class OSFApp(QDialog):
 
         # connect all signal-slot pairs
         self.setup_connections()
-
 
         self.background_worker = BackgroundWorker()
 
@@ -115,6 +115,7 @@ class OSFApp(QDialog):
         try:
             user = self.get_current_user()
         except MultipleResultsFound:
+            debug_trace()
             self._logout_all_users()
             self.login_signal.emit()
             return
@@ -136,9 +137,10 @@ class OSFApp(QDialog):
         if not os.path.isdir(user.osf_local_folder_path):
             os.makedirs(user.osf_local_folder_path)
 
-        self.start_logging()
+        # self.start_logging()
 
         self.start_tray_signal.emit()
+        logging.warning('starting background worker from main.start')
         self.background_worker.start()
 
 
@@ -157,7 +159,7 @@ class OSFApp(QDialog):
             self.background_worker = BackgroundWorker()
             self.background_worker.start()
         else:
-            #todo: what goes here?
+            #todo: what goes here, if anything?
             logging.info('wanted to but could not resume background worker')
 
 
@@ -235,9 +237,6 @@ class OSFApp(QDialog):
 
     def set_containing_folder_initial(self):
         return QFileDialog.getExistingDirectory(self, "Choose where to place OSF folder")
-
-
-
 
     def logout(self):
         user = self.get_current_user()

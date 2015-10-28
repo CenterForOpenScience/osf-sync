@@ -15,10 +15,8 @@ class User(Base):
     __tablename__ = 'user'
 
     id = Column(Integer, primary_key=True)
+    fullname = Column(String)
 
-    @hybrid_property
-    def full_name(self):
-        return 'User {}'.format(self.id)
 
     nodes = relationship(
         "Node",
@@ -43,8 +41,8 @@ class User(Base):
     def as_dict(self):
         return {
                 "id": self.id,
-                "fullname": self.full_name,
-                "given_name": self.full_name,
+                "fullname": self.fullname,
+                "given_name": self.fullname,
                 "middle_name": "",
                 "family_name": "",
                 "suffix": "",
@@ -55,7 +53,7 @@ class User(Base):
                 "social_accounts": {},
                 "links": {
                     "nodes": {
-                        "relation": api_user_nodes(self.id)
+                        "relation": 'http://localhost:8000/v2/users/{}/nodes/'.format(self.id)
                     },
                     "html": 'http://localhost:5000/5bqt9/',
                     "self": api_user_url(self.id)
@@ -78,9 +76,7 @@ class Node(Base):
     COMPONENT = 'component'
 
     id = Column(Integer, primary_key=True)
-    @hybrid_property
-    def title(self):
-        return 'Node {}'.format(self.id)
+    title = Column(String)
 
     category = Column(Enum(PROJECT, COMPONENT), default=COMPONENT)
     date_modified = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
@@ -108,7 +104,7 @@ class Node(Base):
     def providers(self):
         file_folders = []
         for file_folder in self.files:
-            if file_folder.parent is None:
+            if file_folder.parent is None and file_folder.is_folder:
                 file_folders.append(file_folder)
         return file_folders
 
@@ -126,7 +122,7 @@ class Node(Base):
             },
             "links": {
                 "files": {
-                    "related":api_node_files(self.id)
+                    "related":'http://localhost:8000/v2/nodes/{}/files/'.format(self.id)
                 },
                 "parent": {
                     "self": None
@@ -147,7 +143,7 @@ class Node(Base):
                 "html": "http://localhost:5000/dz5mg/",
                 "children": {
                     "count": 0,
-                    "related": api_node_children(self.id)
+                    "related": 'http://localhost:8000/v2/nodes/{}/children/'.format(self.id)
                 }
             },
             "properties": {
@@ -174,31 +170,20 @@ class File(Base):
     DEFAULT_PROVIDER = 'osfstorage'
 
     id = Column(Integer, primary_key=True)
-
-    @hybrid_property
-    def name(self):
-        if self.has_parent:
-            return 'FILE_{}'.format(self.id)
-        else:
-            return self.provider
+    name = Column(String)
 
     type = Column(Enum(FOLDER, FILE), nullable=False)
     date_modified = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
 
     provider = Column(String, default=DEFAULT_PROVIDER)
-
-    @hybrid_property
-    def path(self):
-        if self.name == self.provider:
-            return '/'
-        else:
-            return '/PATH_{}'.format(self.id)
+    path = Column(String, default='/')
 
 
 
     user_id = Column(Integer, ForeignKey('user.id'), nullable=False)
     node_id = Column(Integer, ForeignKey('node.id'), nullable=False)
     parent_id = Column(Integer, ForeignKey('file.id'))
+    contents = Column(String)
 
 
     files = relationship(
@@ -211,6 +196,9 @@ class File(Base):
     @hybrid_property
     def is_file(self):
         return self.type == File.FILE
+    @hybrid_property
+    def is_folder(self):
+        return self.type == File.FOLDER
 
     @hybrid_property
     def has_parent(self):
@@ -235,6 +223,12 @@ class File(Base):
             assert self.files == []
         return files
 
+    @validates('contents')
+    def validate_contents(self, key, contents):
+        if self.is_folder:
+            assert self.contents is None
+        return contents
+
     def as_dict(self):
 
         resp = {
@@ -247,8 +241,8 @@ class File(Base):
                     "self_methods": [
                         "POST"
                     ],
-                    "self": api_file_self(self.path,self.node.id, self.provider),
-                    "related": api_file_children(self.node.id, self.path, self.provider)
+                    "self": 'http://localhost:7777/file?path={}&nid={}&provider={}'(self.path,self.node.id, self.provider),
+                    "related": 'http://localhost:8000/v2/nodes/{}/files/?path={}/&provider={}'(self.node.id, self.path, self.provider)
                 },
                 "type": "files"
             }

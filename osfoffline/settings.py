@@ -9,11 +9,9 @@ PROJECT_AUTHOR = 'cos'
 PROJECT_CONFIG_PATH = user_config_dir(PROJECT_NAME, PROJECT_AUTHOR)
 PROJECT_DB_PATH = user_data_dir(PROJECT_NAME, PROJECT_AUTHOR)
 
-API_BASE = 'http://localhost:8000'
-WB_BASE = 'http://localhost:7777'
-
-# API_BASE = 'https://staging2.osf.io/api/'
-# WB_BASE = 'https://staging2-files.osf.io'
+# API_BASE = 'http://localhost:5000'
+API_BASE = 'https://staging-api.osf.io'
+FILE_BASE = 'https://staging-files.osf.io'
 
 
 
@@ -52,7 +50,7 @@ WB_BASE = 'http://localhost:7777'
 import colorlog  # noqa
 DEFAULT_FORMATTER = {
    '()': 'colorlog.ColoredFormatter',
-   'format': '%(cyan)s[%(asctime)s]%(log_color)s[%(threadName)s][%(levelname)s][%(name)s]: %(reset)s%(message)s'
+   'format': '%(cyan)s[%(asctime)s]%(log_color)s[%(threadName)s][%(filename)s][%(levelname)s][%(name)s]: %(reset)s%(message)s'
 }
 
 

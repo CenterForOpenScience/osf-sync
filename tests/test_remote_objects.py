@@ -7,7 +7,7 @@ import requests
 from tests.utils.url_builder import api_user_url, api_user_nodes, api_file_children,api_node_files
 from osfoffline.polling_osf_manager.remote_objects import RemoteFile,RemoteFileFolder,RemoteObject,RemoteFolder,RemoteNode,RemoteUser
 
-from tests.fixtures.mock_responses.osf_api import (
+from tests.fixtures.mock_httpretty_responses.osf_api import (
     create_new_user,
     create_new_top_level_node,
     get_user, get_user_nodes,
