@@ -282,9 +282,11 @@ class Poll(object):
             return
 
 
-        assert len(remote_node_files) == 1
-        osfstorage_folder = remote_node_files[0]
-        assert osfstorage_folder.name == 'osfstorage'
+        assert len(remote_node_files) >= 1
+        for node_file in remote_node_files:
+            if node_file.name ==  'osfstorage':
+                osfstorage_folder = node_file
+        assert osfstorage_folder
 
 
         try:

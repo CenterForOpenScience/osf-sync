@@ -51,7 +51,6 @@ class RemoteNode(RemoteObject):
 
     def validate(self):
         super().validate()
-        assert self.category
         assert self.child_files_url
         assert self.is_top_level is not None
         assert self.child_nodes_url
@@ -78,8 +77,8 @@ class RemoteFileFolder(RemoteObject):
     def validate(self):
         super().validate()
         assert self.provider
-        assert self.move_url if self.name!='osfstorage' else True
-        assert self.delete_url if self.name!='osfstorage' else True
+        assert self.move_url if not self.id  else True
+        assert self.delete_url if not self.id else True
 
 
 

@@ -53,6 +53,7 @@ class OSFQuery(object):
         remote_top_level_nodes = []
         for remote in all_remote_nodes:
             as_remote_node = RemoteNode(remote)
+
             if as_remote_node.is_top_level:
                 remote_top_level_nodes.append(as_remote_node)
         for node in remote_top_level_nodes:
@@ -129,7 +130,7 @@ class OSFQuery(object):
         }
 
 
-        parent_osf_id = local_file.parent.osf_id if not local_file.has_parent else None
+        parent_osf_id = local_file.parent.osf_id if local_file.has_parent else None
         files_url = api_url_for(RESOURCES, node_id=local_file.node.osf_id, provider=local_file.provider, file_id=parent_osf_id)
         file = open(local_file.path, 'rb')
         resp_json = yield from self.make_request(files_url, method="PUT", params=params, data=file, get_json=True)
