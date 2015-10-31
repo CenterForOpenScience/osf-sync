@@ -4,8 +4,8 @@ from contextlib import contextmanager
 from osfoffline.database_manager.db import session, DB_DIR
 
 import shutil
-def save(session, item=None):
-    if item:
+def save(session, *items_to_save):
+    for item in items_to_save:
         session.add(item)
     try:
         session.commit()
@@ -28,6 +28,8 @@ def session_scope():
 
 def remove_db():
     shutil.rmtree(DB_DIR)
+
+
 
 # def close_session_safe(session):
 #     try:

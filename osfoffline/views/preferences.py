@@ -5,7 +5,7 @@ from osfoffline.views.rsc.preferences_rc import Ui_Preferences  # REQUIRED FOR G
 from osfoffline.database_manager.db import session
 from osfoffline.database_manager.utils import save, session_scope
 from osfoffline.database_manager.models import User, Node
-from osfoffline.polling_osf_manager.api_url_builder import api_user_nodes
+from osfoffline.polling_osf_manager.api_url_builder import api_url_for, NODES, USERS
 from osfoffline.polling_osf_manager.osf_query import OSFQuery
 from osfoffline.polling_osf_manager.remote_objects import RemoteNode
 import requests
@@ -156,9 +156,11 @@ class Preferences(QDialog):
             user = session.query(User).filter(User.logged_in).one()
             if user:
                 user_nodes = []
-                url = api_user_nodes(user.osf_id)
-                headers={'Authorization': 'Bearer {}'.format(user.oauth_token)}
+                url = api_url_for(USERS, related_type=NODES, user_id=user.osf_id)
+                # headers={'Authorization': 'Bearer {}'.format(user.oauth_token)}
+                headers={'Cookie':'osf_staging={}'.format(user.oauth_token)}
                 resp = requests.get(url, headers=headers).json()
+                logging.warning(resp)
                 user_nodes.extend(resp['data'])
                 while resp['links']['next']:
                     resp = requests.get(resp['links']['next'], headers=headers).json()
@@ -169,6 +171,7 @@ class Preferences(QDialog):
                         remote_top_level_nodes.append(verified_node)
         except Exception as e:
             logging.warning(e)
+
         return remote_top_level_nodes
 
 

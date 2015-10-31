@@ -26,15 +26,16 @@ class ProperPath(object):
             raise InvalidPathError('Invalid path \'{}\' specified'.format(path))
 
         # don't allow shortcuts
-        absolute_path = os.path.abspath(path)
+        expanded_absolute_path = os.path.expanduser(os.path.abspath(path))
+
         if self.is_dir:
-            if self.full_path != os.path.join(absolute_path, ''):
-                raise InvalidPathError('Invalid path \'{}\' specified'.format(absolute_path))
+            if self.full_path != os.path.join(expanded_absolute_path, ''):
+                raise InvalidPathError('Invalid path \'{}\' specified'.format(path))
         else:
             if self.is_root:
-                raise InvalidPathError('Invalid path \'{}\' specified'.format(absolute_path))
-            if self.full_path != absolute_path:
-                raise InvalidPathError('Invalid path \'{}\' specified'.format(absolute_path))
+                raise InvalidPathError('Invalid path \'{}\' specified'.format(path))
+            if self.full_path != expanded_absolute_path:
+                raise InvalidPathError('Invalid path \'{}\' specified'.format(path))
 
         if self.is_file and path.endswith(os.sep):
             raise InvalidPathError('file ends with slash')
@@ -105,6 +106,9 @@ class ProperPath(object):
 
     def __eq__(self, other):
         return isinstance(other, self.__class__) and self.is_dir == other.is_dir and str(self) == str(other)
+
+    def __hash__(self):
+        return hash(self.is_dir) + hash(str(self))
 
     def __ne__(self, other):
         return not self.__eq__(other)

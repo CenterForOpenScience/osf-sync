@@ -20,7 +20,8 @@ from osfoffline.application.background import BackgroundWorker
 from osfoffline.utils.validators import validate_containing_folder
 from osfoffline.utils.debug import debug_trace
 
-RUN_PATH = "HKEY_CURRENT_USER\\Software\\Microsoft\\Windows\\CurrentVersion\\Run"
+
+# RUN_PATH = "HKEY_CURRENT_USER\\Software\\Microsoft\\Windows\\CurrentVersion\\Run"
 
 
 class OSFApp(QDialog):
@@ -43,11 +44,10 @@ class OSFApp(QDialog):
         self.start_screen = StartScreen()
         self.tray = SystemTray()
         self.preferences = Preferences()
-        AlertHandler.setup_alerts(self.tray.tray_icon, self.tray.currently_synching_action)
+        AlertHandler.setup_alerts(self.tray.tray_icon, self.tray.tray_alert_signal)
 
         # connect all signal-slot pairs
         self.setup_connections()
-
 
         self.background_worker = BackgroundWorker()
 
@@ -65,6 +65,7 @@ class OSFApp(QDialog):
             (self.tray.about_action.triggered, self.start_about_screen),
 
             (self.tray.quit_action.triggered, self.quit),
+            (self.tray.tray_alert_signal, self.tray.update_currently_synching),
 
             # main events
             (self.login_signal, self.start_screen.open_window),
@@ -90,7 +91,7 @@ class OSFApp(QDialog):
 
 
 
-    def _can_start_background_worker(self):
+    def _can_restart_background_worker(self):
         try:
             user = self.get_current_user()
         except:
@@ -114,6 +115,7 @@ class OSFApp(QDialog):
         try:
             user = self.get_current_user()
         except MultipleResultsFound:
+            debug_trace()
             self._logout_all_users()
             self.login_signal.emit()
             return
@@ -125,17 +127,21 @@ class OSFApp(QDialog):
         while not validate_containing_folder(containing_folder):
             logging.warning("invalid containing folder. try again.")
             AlertHandler.warn("Invalid containing folder. Please choose another.")
-            containing_folder = self.set_containing_folder_initial()
-        user.osf_local_folder_path = os.path.join(containing_folder, "OSF")
+            containing_folder = os.path.abspath(self.set_containing_folder_initial())
 
+        user.osf_local_folder_path = os.path.join(containing_folder, "OSF")
+       
         save(session, user)
+        self.tray.set_containing_folder(containing_folder)
+
 
         if not os.path.isdir(user.osf_local_folder_path):
             os.makedirs(user.osf_local_folder_path)
 
-        self.start_logging()
+        # self.start_logging()
 
         self.start_tray_signal.emit()
+        logging.warning('starting background worker from main.start')
         self.background_worker.start()
 
 
@@ -145,7 +151,7 @@ class OSFApp(QDialog):
         # I am recreating the background thread everytime for now.
         # I was unable to correctly pause the background thread
         # thus took this route for now.
-        if self._can_start_background_worker():
+        if self._can_restart_background_worker():
             #stop previous
             self.background_worker.stop()
             self.background_worker.join()
@@ -154,14 +160,15 @@ class OSFApp(QDialog):
             self.background_worker = BackgroundWorker()
             self.background_worker.start()
         else:
-            #todo: what goes here?
+            #todo: what goes here, if anything?
             logging.info('wanted to but could not resume background worker')
 
 
 
     def pause(self):
-
+        logging.info('pausing background worker')
         if self.background_worker and self.background_worker.is_alive():
+            logging.info('pausing background worker SUCCESS')
             self.background_worker.stop()
             self.background_worker.join()
 
@@ -197,6 +204,7 @@ class OSFApp(QDialog):
 
 
     def start_logging(self):
+
         # make sure logging directory exists
         log_dir = user_log_dir(self.app_name, self.app_author)
         if not os.path.exists(log_dir):  # ~/.cache/appname
@@ -230,9 +238,6 @@ class OSFApp(QDialog):
 
     def set_containing_folder_initial(self):
         return QFileDialog.getExistingDirectory(self, "Choose where to place OSF folder")
-
-
-
 
     def logout(self):
         user = self.get_current_user()

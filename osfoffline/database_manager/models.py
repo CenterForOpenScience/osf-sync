@@ -73,6 +73,7 @@ class Node(Base):
 
     locally_created = Column(Boolean, default=False)
     locally_deleted = Column(Boolean, default=False)
+    locally_moved = Column(Boolean, default=False)
 
 
     user_id = Column(Integer, ForeignKey('user.id'), nullable=False)
@@ -80,7 +81,7 @@ class Node(Base):
     child_nodes = relationship(
         "Node",
         backref=backref('parent', remote_side=[id]),
-        cascade="all, delete-orphan"
+        cascade="all"
     )
     files = relationship(
         "File",
@@ -88,6 +89,7 @@ class Node(Base):
         cascade="all, delete-orphan"
     )
 
+    #fixme: this feels wrong. self.top_level?? should recursively update all child nodes. then validate.
     @hybrid_property
     def should_sync(self):
         return self.top_level and (self.osf_id in self.user.guid_for_top_level_nodes_to_sync)
@@ -103,7 +105,7 @@ class Node(Base):
         # +os.path.sep+ instead of os.path.join: http://stackoverflow.com/a/14504695
 
         if self.parent:
-            return os.path.join(self.parent.path, self.title)
+            return os.path.join(self.parent.path,'Components', self.title)
         else:
 
             return os.path.join(self.user.osf_local_folder_path, self.title)
@@ -160,15 +162,20 @@ class File(Base):
     hash = Column(String)
     type = Column(Enum(FOLDER, FILE), nullable=False)
     date_modified = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
-    osf_id = Column(String, nullable=True, default=None)  # multiple things allowed to be null
+    #todo: osf_id and osf_path are duplicates right now. One needs to be removed.
+    osf_id = Column(String, nullable=True, default=None)  # multiple things allowed to be null. #todo: unique=True (handle moved on osf)
     provider = Column(String, default=DEFAULT_PROVIDER)
 
     # NOTE: this is called path. It is not any type of file/folder path. Think of it just as an id.
-    osf_path = Column(String, nullable=True, default=None)
+    osf_path = Column(String, nullable=True, default=None)  #todo: unique=True. (can't right now due to duplicates when moved on osf)
 
     locally_created = Column(Boolean, default=False)
     locally_deleted = Column(Boolean, default=False)
     locally_renamed = Column(Boolean, default=False)
+    locally_moved = Column(Boolean, default=False)
+
+    previous_node_osf_id = Column(String, nullable=True, default=None)
+    previous_provider = Column(String, default=DEFAULT_PROVIDER)
 
     user_id = Column(Integer, ForeignKey('user.id'), nullable=False)
     node_id = Column(Integer, ForeignKey('node.id'), nullable=False)
@@ -186,7 +193,7 @@ class File(Base):
     files = relationship(
         "File",
         backref=backref('parent', remote_side=[id]),
-        cascade="all, delete-orphan",
+        cascade="all",
     )
 
     @hybrid_property
@@ -270,6 +277,12 @@ class File(Base):
                     #peers cannot have same osf_id as self
                     assert self.osf_id != peer.osf_id
 
+    @validates('locally_moved')
+    def validate_locally_moved(self, key, locally_moved):
+        if locally_moved:
+            assert self.previous_node_osf_id
+            assert self.previous_provider
+        return locally_moved
 
 
     def __repr__(self):

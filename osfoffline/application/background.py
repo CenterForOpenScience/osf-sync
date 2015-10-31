@@ -21,13 +21,15 @@ class BackgroundWorker(threading.Thread):
         self.loop = None
         self.paused = True  # start out paused
         self.running = False
+        self.poller = None
 
 
 
 
 
     def run(self):
-        logging.warning('run in background tasks called for first time.')
+
+        logging.info('run in background tasks called for first time.')
         self.loop = self.ensure_event_loop()
         self.run_background_tasks()
         self.loop.run_forever()
@@ -38,10 +40,12 @@ class BackgroundWorker(threading.Thread):
         if not self.running:
             self.user = self.get_current_user()
             self.osf_folder = self.user.osf_local_folder_path
-            if self.user:
-                self.start_observing_osf_folder()
-                self.start_polling_server()
-                self.running = True
+
+            logging.info("start observing")
+            self.start_observing_osf_folder()
+            logging.info('start polling')
+            self.start_polling_server()
+            self.running = True
 
 
     def pause_background_tasks(self):
@@ -73,17 +77,30 @@ class BackgroundWorker(threading.Thread):
 
 
     def stop_loop(self, close=False):
-        self.loop.call_soon_threadsafe(self.loop.stop)
-        if close:
-            while not self.loop.is_closed():
-                if not self.loop.is_running():
-                    self.loop.close()
+        logging.info('stop loop')
+        if self.loop.is_closed():
+            logging.info('loop already closed so dont care')
+
+        elif not self.loop.is_running():
+            logging.info('loop is stopped already. closing it')
+            self.loop.close()
+        else:
+            # stop loop when current tasks finish.
+            self.loop.call_soon(self.loop.stop)
+            logging.info('call_soon to loop.stop. will stop when polling/observing events finish.')
+            # todo: find better way?
+            if close:
+                while not self.loop.is_closed():
+                    if not self.loop.is_running():
+                        self.loop.close()
 
     def stop(self):
 
-
+        logging.info('stopping background worker')
         self.stop_polling_server()
+        logging.info('stop polling')
         self.stop_observing_osf_folder()
+        logging.info('stop observing')
         self.stop_loop(close=True)
 
 
@@ -92,16 +109,19 @@ class BackgroundWorker(threading.Thread):
     def start_observing_osf_folder(self):
         # if something inside the folder changes, log it to config dir
 
-        self.event_handler = osf_event_handler.OSFEventHandler(self.osf_folder, self.user.osf_local_folder_path, self.user,
-                                                               loop=self.loop)  # create event handler
-        # todo: if config actually has legitimate data. use it.
-        # start
+        # create event handler
+        self.event_handler = osf_event_handler.OSFEventHandler(
+            self.osf_folder,
+            loop=self.loop
+        )
 
+        # todo: if config actually has legitimate data. use it.
+
+        # start
         self.observer = Observer()  # create observer. watched for events on files.
         # attach event handler to observed events. make observer recursive
-
         self.observer.schedule(self.event_handler, self.osf_folder, recursive=True)
-        LocalDBSync(self.user.osf_local_folder_path, self.observer, self.user).emit_new_events()
+        # LocalDBSync(self.user.osf_local_folder_path, self.observer, self.user).emit_new_events()
 
         try:
 
@@ -110,8 +130,6 @@ class BackgroundWorker(threading.Thread):
             logging.warning('too many things being watched.... hmmmm, what to dooooo????')
 
     def stop_observing_osf_folder(self):
-
-        self.event_handler.close()
         self.observer.stop()
         self.observer.join()
 
