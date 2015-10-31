@@ -130,13 +130,7 @@ class OSFApp(QDialog):
             containing_folder = os.path.abspath(self.set_containing_folder_initial())
 
         user.osf_local_folder_path = os.path.join(containing_folder, "OSF")
-        print("osf local folder path:", user.osf_local_folder_path)
-        print(os.sep)
-        print(os.environ)
-        import sys
-        print(sys.platform)
-        # import ipdb;ipdb.set_trace()
-        assert False
+       
         save(session, user)
         self.tray.set_containing_folder(containing_folder)
 
