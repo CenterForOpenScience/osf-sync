@@ -127,7 +127,7 @@ class OSFApp(QDialog):
         while not validate_containing_folder(containing_folder):
             logging.warning("invalid containing folder. try again.")
             AlertHandler.warn("Invalid containing folder. Please choose another.")
-            containing_folder = self.set_containing_folder_initial()
+            containing_folder = os.path.abspath(self.set_containing_folder_initial())
 
         user.osf_local_folder_path = os.path.join(containing_folder, "OSF")
         print("osf local folder path:", user.osf_local_folder_path)
