@@ -172,7 +172,6 @@ class OSFEventHandler(FileSystemEventHandler):
             item = self._get_item_by_path(src_path)
         except ItemNotInDB:
             #todo: create file folder
-            logging.error('unimplemented right now. implement bro.')
             logging.warning('file was modified but not already in db. create it in db.')
             return #todo: remove this once above is implemented
 

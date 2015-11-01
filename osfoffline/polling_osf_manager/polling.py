@@ -134,7 +134,7 @@ class Poll(object):
                 elif isinstance(sorted_combined_list[i], Base):  # local
                     new_tuple = (sorted_combined_list[i], sorted_combined_list[i + 1])
                 else:
-                    raise TypeError('what the fudge did you pass in')
+                    raise TypeError('invalid type: {}'.format(type(sorted_combined_list[i])))
 
                 # add an extra 1 because both values should be added to tuple list
                 i += 1
@@ -354,11 +354,11 @@ class Poll(object):
                 remote_file_folder = yield from self.create_remote_file_folder(local_file_folder, local_node)
             return
         elif local_file_folder.locally_created and remote_file_folder is not None:
-            raise ValueError('newly created local file_folder was already on server for some reason. why? fixit!')
+            raise ValueError('newly created local file_folder was already on server')
         elif local_file_folder.locally_deleted and remote_file_folder is None:
             session.delete(local_file_folder)
             save(session)
-            logging.warning('local file_folder is to be deleted, however, it was never on the server so all good.')
+            logging.warning('local file_folder is to be deleted, however, it was never on the server.')
             return
         elif local_file_folder.locally_deleted and remote_file_folder is not None:
             yield from self.delete_remote_file_folder(local_file_folder, remote_file_folder)

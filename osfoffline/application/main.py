@@ -125,7 +125,7 @@ class OSFApp(QDialog):
 
         containing_folder = os.path.dirname(user.osf_local_folder_path)
         while not validate_containing_folder(containing_folder):
-            logging.warning("invalid containing folder. try again.")
+            logging.warning("invalid containing folder")
             AlertHandler.warn("Invalid containing folder. Please choose another.")
             containing_folder = os.path.abspath(self.set_containing_folder_initial())
 
@@ -168,7 +168,7 @@ class OSFApp(QDialog):
     def pause(self):
         logging.info('pausing background worker')
         if self.background_worker and self.background_worker.is_alive():
-            logging.info('pausing background worker SUCCESS')
+            logging.info('pausing background worker')
             self.background_worker.stop()
             self.background_worker.join()
 

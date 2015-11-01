@@ -6,9 +6,50 @@ from osfoffline.database_manager.utils import save
 from osfoffline.database_manager.models import User
 from osfoffline.views.rsc.startscreen import Ui_startscreen  # REQUIRED FOR GUI
 import logging
+import furl
+from requests_oauthlib import OAuth2Session
 from osfoffline.utils.debug import debug_trace
 
 __author__ = 'himanshu'
+CLIENT_ID = 'eb53366f1ef347e3a7dde94cae4896be'
+CLIENT_SECRET = 'iUny91itQg8hBneJZfU5yLLnvKdQfBYjdPLjvpLX'
+REDIRECT_URI = 'http://localhost:5001/oauth_callback/'
+
+
+API_BASE_URL = 'https://staging-api.osf.io/v2'
+AUTH_BASE_URL = 'https://staging-accounts.osf.io/oauth2/authorize'
+TOKEN_REQUEST_URL = 'https://staging-accounts.osf.io/oauth2/token'
+TOKEN_REFRESH_URL = TOKEN_REQUEST_URL
+
+STATE = 'RandomState'
+
+from flask import Flask, request
+app = Flask(__name__)
+
+def shutdown_server():
+    func = request.environ.get('werkzeug.server.shutdown')
+    if func is None:
+        raise RuntimeError('Not running with the Werkzeug Server')
+    func()
+
+@app.route('/oauth_callback/', methods=['GET'])
+def callback():
+    """The oauth app redirects the user here; perform logic to fetch access token and redirect to a target url"""
+    osf = OAuth2Session(CLIENT_ID, redirect_uri=REDIRECT_URI, state=STATE)
+    auth_response = request.url
+
+    # TODO: The token request fails (with CAS errors) when redirect_uri is not specified; is this a CAS bug?
+    token = osf.fetch_token(TOKEN_REQUEST_URL,
+                            client_secret=CLIENT_SECRET,
+                            authorization_response=auth_response,
+                            verify=False)
+
+    shutdown_server()
+    return token
+
+
+
+
 
 
 class StartScreen(QDialog):
@@ -23,12 +64,28 @@ class StartScreen(QDialog):
         super().__init__()
         self.start_screen = Ui_startscreen()
 
+    def log_user_in(self):
+        base = furl.furl('http://staging-accounts.osf.io/oauth2/authorize')
+        base.args['response_type'] = 'token'
+        base.args['client_id'] = CLIENT_ID
+        base.args['redirect_uri'] = REDIRECT_URI
+        base.args['scope'] = 'user.profile'
+        base.args['state'] = STATE
+        base.args['access_type'] = 'offline'
+        base.args['approval_prompt'] = 'force'
+
+        import webbrowser
+        webbrowser.open_new_tab(base.url)
+
+
+
+
+
 
     def log_in(self):
         user_name = self.start_screen.emailEdit.text().strip()
         password = self.start_screen.passwordEdit.text().strip()
-        logging.info(user_name)
-        logging.info(password)
+
 
         # assumption: logged in user properly.
         # assumption: all the fields needed for db are set
@@ -42,8 +99,6 @@ class StartScreen(QDialog):
             user.logged_in = True
             save(session, user)
             self.close()
-
-
         except MultipleResultsFound:
             logging.warning('multiple users with same username. deleting all users with this username. restarting function.')
             for user in session.query(User):
@@ -52,7 +107,7 @@ class StartScreen(QDialog):
                     save(session)
             self.log_in()
         except NoResultFound:
-            logging.warning('user doesnt exist. Creating user. and logging him in.')
+            logging.warning('user doesnt exist. Creating user. and logging them in.')
             user = User(
                 full_name=full_name,
                 osf_id=osf_id,

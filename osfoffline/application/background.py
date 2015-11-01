@@ -79,7 +79,7 @@ class BackgroundWorker(threading.Thread):
     def stop_loop(self, close=False):
         logging.info('stop loop')
         if self.loop.is_closed():
-            logging.info('loop already closed so dont care')
+            logging.info('loop already closed')
 
         elif not self.loop.is_running():
             logging.info('loop is stopped already. closing it')
@@ -127,7 +127,7 @@ class BackgroundWorker(threading.Thread):
 
             self.observer.start()  # start
         except OSError:
-            logging.warning('too many things being watched.... hmmmm, what to dooooo????')
+            logging.warning('limit of watched items reached')
 
     def stop_observing_osf_folder(self):
         self.observer.stop()
