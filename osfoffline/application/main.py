@@ -45,7 +45,6 @@ class OSFApp(QDialog):
 
         # connect all signal-slot pairs
         self.setup_connections()
-
         self.background_worker = BackgroundWorker()
 
     def setup_connections(self):
@@ -132,6 +131,11 @@ class OSFApp(QDialog):
 
         self.start_tray_signal.emit()
         logging.warning('starting background worker from main.start')
+        # fix the multithreading problem
+        try:
+            self.background_worker = BackgroundWorker()
+        except AttributeError:
+            pass
         self.background_worker.start()
 
     def resume(self):

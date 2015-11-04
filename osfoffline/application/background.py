@@ -13,7 +13,6 @@ from osfoffline.database_manager.db import session
 class BackgroundWorker(threading.Thread):
     def __init__(self):
         super().__init__()
-
         self.user = None
         self.osf_folder = ''
         self.loop = None
