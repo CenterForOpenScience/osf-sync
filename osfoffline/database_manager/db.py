@@ -1,12 +1,10 @@
-import shutil
 import os
+
 from appdirs import user_data_dir
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, scoped_session
-from sqlalchemy.pool import SingletonThreadPool
 from osfoffline.database_manager.models import Base
 from osfoffline.settings import PROJECT_NAME, PROJECT_AUTHOR
-
 
 DB_DIR = user_data_dir(PROJECT_NAME, PROJECT_AUTHOR)
 DB_FILE_PATH = os.path.join(DB_DIR, 'osf.db')
@@ -26,6 +24,4 @@ Base.metadata.create_all(engine)
 session_factory = sessionmaker(bind=engine)
 Session = scoped_session(session_factory)
 
-
 session = Session()
-

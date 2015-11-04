@@ -1,10 +1,14 @@
 __author__ = 'himanshu'
+
+
 # Items
 class ItemError(Exception):
     pass
 
+
 class InvalidItemType(Exception):
     pass
+
 
 class ItemNotInDB(ItemError):
     pass
@@ -36,4 +40,3 @@ class FolderNotInFileSystem(ItemNotInFileSystem):
 
 class NodeNotInFileSystem(ItemNotInFileSystem):
     pass
-

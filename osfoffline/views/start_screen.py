@@ -1,12 +1,12 @@
-from PyQt5.QtWidgets import (QAction, QDialog, QFileDialog)
+import logging
+
+from PyQt5.QtWidgets import (QDialog)
 from sqlalchemy.orm.exc import MultipleResultsFound, NoResultFound
 from PyQt5.QtCore import pyqtSignal
 from osfoffline.database_manager.db import session
 from osfoffline.database_manager.utils import save
 from osfoffline.database_manager.models import User
 from osfoffline.views.rsc.startscreen import Ui_startscreen  # REQUIRED FOR GUI
-import logging
-import furl
 
 
 class StartScreen(QDialog):
@@ -20,7 +20,6 @@ class StartScreen(QDialog):
     def __init__(self):
         super().__init__()
         self.start_screen = Ui_startscreen()
-
 
     def log_in(self):
         user_name = self.start_screen.emailEdit.text().strip()
@@ -40,7 +39,8 @@ class StartScreen(QDialog):
             save(session, user)
             self.close()
         except MultipleResultsFound:
-            logging.warning('multiple users with same username. deleting all users with this username. restarting function.')
+            logging.warning(
+                'multiple users with same username. deleting all users with this username. restarting function.')
             for user in session.query(User):
                 if user.osf_login == user_name:
                     session.delete(user)
@@ -60,8 +60,6 @@ class StartScreen(QDialog):
             save(session, user)
 
             self.close()
-
-
 
     def setup_slots(self):
         self.start_screen.logInButton.clicked.connect(self.log_in)

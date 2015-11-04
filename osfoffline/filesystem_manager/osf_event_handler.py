@@ -3,14 +3,13 @@ This is the most important file in the system. OSFEventHandler is responsible fo
 storing the data into the db, and then sending a request to the remote server.
 """
 import asyncio
+import logging
 
 from watchdog.events import FileSystemEventHandler, DirModifiedEvent
-import logging
-from osfoffline.database_manager.models import Node, File,User
+from osfoffline.database_manager.models import Node, File, User
 from osfoffline.database_manager.db import session
-from osfoffline.database_manager.utils import save, session_scope
+from osfoffline.database_manager.utils import save
 from osfoffline.utils.path import ProperPath
-from osfoffline.exceptions.event_handler_exceptions import MovedNodeUnderFile
 from osfoffline.exceptions.item_exceptions import ItemNotInDB
 import osfoffline.alerts as AlertHandler
 
@@ -24,13 +23,12 @@ class OSFEventHandler(FileSystemEventHandler):
     """
     Base file system event handler that you can override methods from.
     """
+
     def __init__(self, osf_folder, loop):
         super().__init__()
         self._loop = loop or asyncio.get_event_loop()
         self.osf_folder = ProperPath(osf_folder, True)
         self.user = session.query(User).filter(User.logged_in).one()
-
-
 
     @asyncio.coroutine
     def on_any_event(self, event):
@@ -57,7 +55,6 @@ class OSFEventHandler(FileSystemEventHandler):
 
         item = self._get_item_by_path(src_path)
 
-
         if isinstance(item, Node):
             AlertHandler.warn('Cannot manipulate components locally. {} will stop syncing'.format(item.title))
             return
@@ -80,7 +77,6 @@ class OSFEventHandler(FileSystemEventHandler):
             except ItemNotInDB:
                 logging.info('file does not already exist in moved destination: {}'.format(dest_path.full_path))
 
-
             new_parent_item = self._get_parent_item_from_path(dest_path)
 
             # move item
@@ -89,22 +85,21 @@ class OSFEventHandler(FileSystemEventHandler):
             item.previous_provider = item.provider
             item.previous_node_osf_id = item.node.osf_id
 
-            #update parent and node fields
-            #NOTE: this line makes it so the file no longer exists in the database.
-            #NOTE: item at this point is stale. Unclear why it matters though.
-            #NOTE: fix is above: session.refresh(item)
+            # update parent and node fields
+            # NOTE: this line makes it so the file no longer exists in the database.
+            # NOTE: item at this point is stale. Unclear why it matters though.
+            # NOTE: fix is above: session.refresh(item)
             item.parent = new_parent_item if isinstance(new_parent_item, File) else None
             item.node = new_parent_item if isinstance(new_parent_item, Node) else new_parent_item.node
 
             # basically always osfstorage. this is just meant to be extendible in the future to other providers
             item.provider = new_parent_item.provider if isinstance(new_parent_item, File) else File.DEFAULT_PROVIDER
 
-            #flags
+            # flags
             item.locally_moved = True
 
             save(session, item)
             logging.info('moved from {} to {}'.format(src_path.full_path, dest_path.full_path))
-
 
     @asyncio.coroutine
     def on_created(self, event):
@@ -127,12 +122,13 @@ class OSFEventHandler(FileSystemEventHandler):
         try:
             containing_item = self._get_parent_item_from_path(src_path)
         except ItemNotInDB:
-            logging.error('tried to create item {} for parent {} but parent does not exist'.format(src_path.full_path, src_path.parent.full_path))
+            logging.error('tried to create item {} for parent {} but parent does not exist'.format(src_path.full_path,
+                                                                                                   src_path.parent.full_path))
             return
 
         if isinstance(containing_item, Node):
             node = containing_item
-        else: # file
+        else:  # file
             node = containing_item.node
         new_item = File(
             name=src_path.name,
@@ -171,16 +167,15 @@ class OSFEventHandler(FileSystemEventHandler):
         try:
             item = self._get_item_by_path(src_path)
         except ItemNotInDB:
-            #todo: create file folder
+            # todo: create file folder
             logging.warning('file was modified but not already in db. create it in db.')
-            return #todo: remove this once above is implemented
+            return  # todo: remove this once above is implemented
 
         # update hash
         item.update_hash()
 
         # save
         save(session, item)
-
 
     @asyncio.coroutine
     def on_deleted(self, event):
@@ -212,14 +207,11 @@ class OSFEventHandler(FileSystemEventHandler):
 
         logging.info('{} set to be deleted'.format(src_path.full_path))
 
-
-
     def dispatch(self, event):
-        #basically, ignore all events that occur for 'Components' file or folder
+        # basically, ignore all events that occur for 'Components' file or folder
         if self._event_is_for_components_file_folder(event):
             AlertHandler.warn('Cannot have a custom file or folder named Components')
             return
-
 
         _method_map = {
             EVENT_TYPE_MODIFIED: self.on_modified,
@@ -237,14 +229,12 @@ class OSFEventHandler(FileSystemEventHandler):
                 handler(event)
             )
 
-
     def _already_exists(self, path):
         try:
             self._get_item_by_path(path)
             return True
         except ItemNotInDB:
             return False
-
 
     def _get_parent_item_from_path(self, path):
         assert isinstance(path, ProperPath)
@@ -267,12 +257,11 @@ class OSFEventHandler(FileSystemEventHandler):
                 return file_folder
         raise ItemNotInDB('item has path: {}'.format(path.full_path))
 
-
     def _event_is_for_components_file_folder(self, event):
         if ProperPath(event.src_path, True).name == 'Components':
             return True
         try:
-            if ProperPath(event.dest_path,True).name == 'Components':
+            if ProperPath(event.dest_path, True).name == 'Components':
                 return True
             return False
         except AttributeError:

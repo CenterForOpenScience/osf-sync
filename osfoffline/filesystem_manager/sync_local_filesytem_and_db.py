@@ -1,4 +1,4 @@
-__author__ = 'himanshu'
+# -*- coding: utf-8 -*-
 import os
 import hashlib
 
@@ -10,7 +10,6 @@ from watchdog.events import (
     DirCreatedEvent,
 )
 from watchdog.observers import Observer
-
 from osfoffline.database_manager.models import User, Node, File, Base
 from osfoffline.exceptions.item_exceptions import InvalidItemType, FolderNotInFileSystem
 from osfoffline.exceptions.local_db_sync_exceptions import LocalDBBothNone, IncorrectLocalDBMatch
@@ -56,15 +55,15 @@ class LocalDBSync(object):
         while i < len(children):
             if self._represent_same_values(children, i):
                 if isinstance(children[i], Base):
-                    to_add = (children[i+1], children[i])
+                    to_add = (children[i + 1], children[i])
                 else:
-                    to_add = (children[i], children[i+1])
+                    to_add = (children[i], children[i + 1])
                 # add an extra 1 because skipping next value
                 i += 1
             elif isinstance(children[i], Base):
-                to_add = (None,children[i])
+                to_add = (None, children[i])
             else:
-                to_add = (children[i],None)
+                to_add = (children[i], None)
             out.append(to_add)
             i += 1
 
@@ -125,7 +124,6 @@ class LocalDBSync(object):
                                       'ype '
                                       '{item_type}'.format(item_type=type(item)))
 
-
     def _get_proper_path(self, item):
         if isinstance(item, ProperPath):
             return item
@@ -140,12 +138,12 @@ class LocalDBSync(object):
             return ProperPath(absolute, os.path.isdir(absolute))
         else:
             raise InvalidItemType('LocalDBSync._get_proper_path does '
-                                      'not handle items of type '
-                                      '{item_type}'.format(item_type=type(item)))
+                                  'not handle items of type '
+                                  '{item_type}'.format(item_type=type(item)))
 
     def _represent_same_values(self, children, i):
-        if i+1 < len(children):
-            return self._get_proper_path(children[i]) == self._get_proper_path(children[i+1])
+        if i + 1 < len(children):
+            return self._get_proper_path(children[i]) == self._get_proper_path(children[i + 1])
         else:
             return False
 
@@ -174,7 +172,7 @@ class LocalDBSync(object):
                 raise IncorrectLocalDBMatch
             if isinstance(db, File) and db.is_file and self._make_hash(local) != db.hash:
                 event = FileModifiedEvent(self._get_proper_path(local).full_path)  # create changed event
-            # folder modified event cannot happen. It will be a create and delete event.
+                # folder modified event cannot happen. It will be a create and delete event.
         elif local is None:
             db_path = self._get_proper_path(db).full_path
             if isinstance(db, File) and db.is_file:
@@ -193,15 +191,13 @@ class LocalDBSync(object):
         assert local or db
         event = self._determine_event_type(local, db)
         if event:
-
             emitter = next(iter(self.observer.emitters))
             emitter.queue_event(event)
-
-
 
         local_db_tuple_list = self._make_local_db_tuple_list(local, db)
         for local, db in local_db_tuple_list:
             self._emit_new_events(local, db)
+
 
 # observer = Observer()  # create observer. watched for events on files.
 

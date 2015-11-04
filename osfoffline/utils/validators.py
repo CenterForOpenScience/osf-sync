@@ -1,10 +1,9 @@
 import os
 
-def validate_containing_folder(containing_folder):
 
+def validate_containing_folder(containing_folder):
     if (not containing_folder) or (containing_folder == ''):
         return False
-
 
     try:
         if os.path.isdir(containing_folder):
