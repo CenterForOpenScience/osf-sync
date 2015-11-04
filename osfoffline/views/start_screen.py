@@ -4,7 +4,12 @@ from PyQt5.QtCore import pyqtSignal
 from osfoffline.database_manager.db import session
 from osfoffline.database_manager.utils import save
 from osfoffline.database_manager.models import User
+from osfoffline.polling_osf_manager.osf_query import OSFQuery
 from osfoffline.views.rsc.startscreen import Ui_startscreen  # REQUIRED FOR GUI
+from osfoffline.exceptions.osf_exceptions import OSFAuthError
+import aiohttp
+import asyncio
+import concurrent
 import logging
 import furl
 from requests_oauthlib import OAuth2Session
@@ -48,10 +53,6 @@ def callback():
     return token
 
 
-
-
-
-
 class StartScreen(QDialog):
     """
     This class is a wrapper for the Ui_startscreen and its controls
@@ -77,53 +78,59 @@ class StartScreen(QDialog):
         import webbrowser
         webbrowser.open_new_tab(base.url)
 
-
-
-
-
-
     def log_in(self):
-        user_name = self.start_screen.emailEdit.text().strip()
-        password = self.start_screen.passwordEdit.text().strip()
-
-
-        # assumption: logged in user properly.
-        # assumption: all the fields needed for db are set
-        full_name = user_name
-        osf_id = user_name
-        oauth_token = password
-        # check if user already exists in db
-
+        logging.info('attempting to log in')
+        personal_access_token = self.start_screen.personalAccessTokenEdit.text().strip()
+        url = API_BASE_URL + '/users/me/'
+        loop = asyncio.get_event_loop()
+        osf = OSFQuery(loop, personal_access_token)
         try:
-            user = session.query(User).filter(User.osf_login == user_name).one()
-            user.logged_in = True
-            save(session, user)
-            self.close()
-        except MultipleResultsFound:
-            logging.warning('multiple users with same username. deleting all users with this username. restarting function.')
-            for user in session.query(User):
-                if user.osf_login == user_name:
-                    session.delete(user)
-                    save(session)
-            self.log_in()
-        except NoResultFound:
-            logging.warning('user doesnt exist. Creating user. and logging them in.')
-            user = User(
-                full_name=full_name,
-                osf_id=osf_id,
-                osf_login=user_name,
-                osf_local_folder_path='',
-                oauth_token=oauth_token,
-                osf_password=password
-            )
-            user.logged_in = True
-            save(session, user)
+            resp = yield from osf.make_request(url)
+        except (aiohttp.errors.ClientTimeoutError, aiohttp.errors.ClientConnectionError, concurrent.futures._base.TimeoutError):
+            # No internet connection
+            # TODO: Pretend user has logged in and retry when connection has been established
+            raise
 
-            self.close()
+        if resp.code == 200:
+            loop.close()
+            json_resp = resp.json()
+            full_name = json_resp['data']['attribues']['full_name']     # Use one of these later to "Welcome {user}"
+            given_name = json_resp['data']['attribues']['given_name']   # Use one of these later to "Welcome {user}"
+            osf_id = json_resp['data']['id']
 
+            try:
+                user = session.query(User).filter(User.osf_login == osf_id).one()
+                user.logged_in = True
+                save(session, user)
+                self.close()
+            except MultipleResultsFound:
+                logging.warning('multiple users with same username. deleting all users with this username. restarting function.')
+                for user in session.query(User):
+                    if user.osf_login == osf_id:
+                        session.delete(user)
+                        save(session)
+                self.log_in()
+            except NoResultFound:
+                logging.warning('user doesnt exist. Creating user. and logging them in.')
+                user = User(
+                    full_name=full_name,
+                    osf_id=osf_id,
+                    osf_login='',  # TODO: email goes here when more auth methods are added, not currently returned by APIv2
+                    osf_local_folder_path='',
+                    oauth_token=personal_access_token,
+                )
+                user.logged_in = True
+                save(session, user)
 
+                self.close()
+        else:
+            # Authentication failed, user has likely provided an invalid token
+            raise OSFAuthError('Invalid auth response: {}'.format(resp.status))
+
+        loop.close()
 
     def setup_slots(self):
+        logging.info('setting up start_screen slots')
         self.start_screen.logInButton.clicked.connect(self.log_in)
 
     def open_window(self):

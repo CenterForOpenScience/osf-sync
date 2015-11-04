@@ -17,8 +17,8 @@ ACCEPTED = 202
 class OSFQuery(object):
     def __init__(self, loop, oauth_token):
         self.headers = {
-            # 'Authorization': 'Bearer {}'.format(oauth_token),
-            'Cookie':'osf_staging={}'.format(oauth_token)
+            'Authorization': 'Bearer {}'.format(oauth_token),
+            # 'Cookie':'osf_staging={}'.format(oauth_token)
         }
         self.request_session = aiohttp.ClientSession(loop=loop, headers=self.headers)
 
