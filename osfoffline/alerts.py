@@ -1,8 +1,11 @@
 # -*- coding: utf-8 -*-
-from queue import Queue
 from datetime import datetime, timedelta
+from queue import Queue
 
 from PyQt5.QtWidgets import QSystemTrayIcon
+
+from osfoffline.settings import ALERT_TIME
+
 
 show_alerts = True
 
@@ -12,7 +15,6 @@ MODIFYING = 2
 DELETING = 3
 MOVING = 4
 
-ALERT_TIME = 1000
 
 alert_icon = None
 tray_alert_signal = None

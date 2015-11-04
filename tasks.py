@@ -48,12 +48,9 @@ def start():
 
 @task
 def start_for_tests():
-    import appdirs
     import shutil
-    from osfoffline.settings import PROJECT_NAME, PROJECT_AUTHOR
+    from osfoffline.settings import DB_FILE_PATH
 
-    DB_DIR = appdirs.user_data_dir(PROJECT_NAME, PROJECT_AUTHOR)
-    DB_FILE_PATH = os.path.join(DB_DIR, 'osf.db')
     if os.path.exists(DB_FILE_PATH):
         os.remove(DB_FILE_PATH)
 

@@ -45,11 +45,8 @@ class BackgroundWorker(threading.Thread):
 
         if self.running:
             self.stop_polling_server()
-
             self.stop_observing_osf_folder()
-
             # self.stop_loop()
-
             self.running = False
 
     def start_polling_server(self):
@@ -110,9 +107,10 @@ class BackgroundWorker(threading.Thread):
         # LocalDBSync(self.user.osf_local_folder_path, self.observer, self.user).emit_new_events()
 
         try:
-
             self.observer.start()  # start
         except OSError:
+            # FIXME: Document these limits and provide better user notification.
+            #    See http://pythonhosted.org/watchdog/installation.html for limits.
             logging.warning('limit of watched items reached')
 
     def stop_observing_osf_folder(self):
@@ -137,23 +135,16 @@ class BackgroundWorker(threading.Thread):
         return asyncio.get_event_loop()
 
 
-"""
-HOW DOES LOGIN/LOGOUT WORK?
-
-previously logged in:
-when you first open osf offline, you go to main.py which sets up views, connections, and controller.
-controller sets up db, logs, and determines which user is logged in.
-when all is good, controller starts background worker.
-background worker polls api and observer osf folder
-
-not logged in:
-when you first open osf offline, you go to main.py which sets up views, connections, and controller.
-controller sets up db, logs, and opens create user screen. user logs in. then get user from db.
-when all is good, controller starts background worker.
-background worker polls api and observer osf folder
-
-
-
-
-
-"""
+# HOW DOES LOGIN/LOGOUT WORK?
+#
+# previously logged in:
+# when you first open osf offline, you go to main.py which sets up views, connections, and controller.
+# controller sets up db, logs, and determines which user is logged in.
+# when all is good, controller starts background worker.
+# background worker polls api and observer osf folder
+#
+# not logged in:
+# when you first open osf offline, you go to main.py which sets up views, connections, and controller.
+# controller sets up db, logs, and opens create user screen. user logs in. then get user from db.
+# when all is good, controller starts background worker.
+# background worker polls api and observer osf folder
