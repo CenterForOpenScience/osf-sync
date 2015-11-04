@@ -1,14 +1,16 @@
 import asyncio
-
-import aiohttp
 import json
-from osfoffline.polling_osf_manager.remote_objects \
-    import (dict_to_remote_object, RemoteUser, RemoteFolder, RemoteFile, RemoteNode, RemoteObject )
-from osfoffline.database_manager.models import File,Node,User
-from osfoffline.polling_osf_manager.api_url_builder import api_url_for, NODES, RESOURCES, FILES
-import osfoffline.alerts as AlertHandler
 import concurrent
 import logging
+
+import aiohttp
+
+from osfoffline.polling_osf_manager.remote_objects \
+    import (dict_to_remote_object, RemoteFolder, RemoteFile, RemoteNode)
+from osfoffline.database_manager.models import File
+from osfoffline.polling_osf_manager.api_url_builder import api_url_for, NODES, RESOURCES, FILES
+import osfoffline.alerts as AlertHandler
+
 OK = 200
 CREATED = 201
 ACCEPTED = 202
@@ -18,7 +20,7 @@ class OSFQuery(object):
     def __init__(self, loop, oauth_token):
         self.headers = {
             # 'Authorization': 'Bearer {}'.format(oauth_token),
-            'Cookie':'osf_staging={}'.format(oauth_token)
+            'Cookie': 'osf_staging={}'.format(oauth_token)
         }
         self.request_session = aiohttp.ClientSession(loop=loop, headers=self.headers)
 
@@ -30,12 +32,10 @@ class OSFQuery(object):
         if remote_url is None:
             return remote_children
 
-
         resp = yield from self.make_request(remote_url, get_json=True)
 
         remote_children.extend(resp['data'])
         while resp['links']['next']:
-
             resp = yield from self.make_request(resp['links']['next'], get_json=True)
 
             remote_children.extend(resp['data'])
@@ -44,7 +44,6 @@ class OSFQuery(object):
             assert isinstance(child, dict)
 
         return remote_children
-
 
     @asyncio.coroutine
     def get_top_level_nodes(self, url):
@@ -97,14 +96,15 @@ class OSFQuery(object):
         resp_json = yield from self.make_request(files_url, method="PUT", params=params, get_json=True)
         AlertHandler.info(local_folder.name, AlertHandler.UPLOAD)
 
-        #todo: determine whether uploaded folder will contain api url for its children
+        # todo: determine whether uploaded folder will contain api url for its children
         new_file_id = resp_json['data']['id'].split('/')[1]
-        children_url = api_url_for(NODES,related_type=FILES, node_id=local_folder.node.osf_id, provider=local_folder.provider, file_id=new_file_id)
+        children_url = api_url_for(NODES, related_type=FILES, node_id=local_folder.node.osf_id,
+                                   provider=local_folder.provider, file_id=new_file_id)
         resp_json['data']['relationships'] = {
-            'files':{
-                'links':{
-                    'related':{
-                        'href':children_url
+            'files': {
+                'links': {
+                    'related': {
+                        'href': children_url
                     }
                 }
             }
@@ -129,15 +129,14 @@ class OSFQuery(object):
             'name': local_file.name
         }
 
-
         parent_osf_id = local_file.parent.osf_id if local_file.has_parent else None
-        files_url = api_url_for(RESOURCES, node_id=local_file.node.osf_id, provider=local_file.provider, file_id=parent_osf_id)
+        files_url = api_url_for(RESOURCES, node_id=local_file.node.osf_id, provider=local_file.provider,
+                                file_id=parent_osf_id)
         file = open(local_file.path, 'rb')
         resp_json = yield from self.make_request(files_url, method="PUT", params=params, data=file, get_json=True)
         AlertHandler.info(local_file.name, AlertHandler.UPLOAD)
 
         return RemoteFile(resp_json['data'])
-
 
     @asyncio.coroutine
     def rename_remote_file(self, local_file, remote_file):
@@ -147,7 +146,6 @@ class OSFQuery(object):
 
         return (yield from self._rename_remote(local_file, remote_file))
 
-
     @asyncio.coroutine
     def rename_remote_folder(self, local_folder, remote_folder):
         assert isinstance(local_folder, File)
@@ -156,7 +154,6 @@ class OSFQuery(object):
         AlertHandler.info(local_folder.name, AlertHandler.MODIFYING)
         return (yield from self._rename_remote(local_folder, remote_folder))
 
-
     @asyncio.coroutine
     def _rename_remote(self, local, remote):
         url = remote.move_url
@@ -164,7 +161,7 @@ class OSFQuery(object):
         data = {
             'action': 'move',
             'path': local.parent.osf_path if local.parent else '{}:{}'.format(local.node_id, local.provider),
-            'rename':local.name
+            'rename': local.name
         }
 
         resp = yield from self.make_request(url, method="POST", data=json.dumps(data))
@@ -173,7 +170,7 @@ class OSFQuery(object):
         remote.name = local.name
         return remote
 
-    #todo: evaluate merging move code with rename code?
+    # todo: evaluate merging move code with rename code?
 
     @asyncio.coroutine
     def move_remote_folder(self, local_folder):
@@ -193,16 +190,17 @@ class OSFQuery(object):
         AlertHandler.info(local_file.name, AlertHandler.MOVING)
         return (yield from self._move_remote_file_folder(local_file))
 
-
     @asyncio.coroutine
     def _move_remote_file_folder(self, local_file_folder):
 
-        url = api_url_for(RESOURCES, node_id=local_file_folder.node.osf_id, provider=local_file_folder.provider, file_id=local_file_folder.osf_id)
+        url = api_url_for(RESOURCES, node_id=local_file_folder.node.osf_id, provider=local_file_folder.provider,
+                          file_id=local_file_folder.osf_id)
 
         data = {
             'action': 'move',
-            'path': local_file_folder.parent.osf_path if local_file_folder.parent else '{}:{}'.format(local_file_folder.node_id, local_file_folder.provider),
-            'rename':local_file_folder.name
+            'path': local_file_folder.parent.osf_path if local_file_folder.parent else '{}:{}'.format(
+                local_file_folder.node_id, local_file_folder.provider),
+            'rename': local_file_folder.name
         }
 
         resp = yield from self.make_request(url, method="POST", data=json.dumps(data))
@@ -216,19 +214,16 @@ class OSFQuery(object):
         # inner_response = requests.get(remote_file_folder['links']['self'], headers=self.headers).json()
         # we know exactly what changed, so its faster to just change the remote dictionary rather than making a new api call.
 
-        #todo: can get the file folder from the osf by making request to parent file folder (local.parent.osf_id,)
-        #todo: and then searching for the correct child based on osf_id.
+        # todo: can get the file folder from the osf by making request to parent file folder (local.parent.osf_id,)
+        # todo: and then searching for the correct child based on osf_id.
 
-        #todo: move can change NODE. THUS, need to REMOVE local_node=local_node in check_file_folder code...
+        # todo: move can change NODE. THUS, need to REMOVE local_node=local_node in check_file_folder code...
 
 
-        #for now, just going to stop synching this things children... NOT PROPER!!!!!
+        # for now, just going to stop synching this things children... NOT PROPER!!!!!
         # new_remote_file_folder = ...
 
         return None
-
-
-
 
     @asyncio.coroutine
     def delete_remote_file(self, remote_file):
@@ -250,7 +245,7 @@ class OSFQuery(object):
         resp.close()
 
     @asyncio.coroutine
-    def make_request(self, url, method=None,params=None, expects=None, get_json=False, timeout=180, data=None):
+    def make_request(self, url, method=None, params=None, expects=None, get_json=False, timeout=180, data=None):
         if method is None:
             method = 'GET'
         try:
@@ -263,7 +258,9 @@ class OSFQuery(object):
                 ),
                 timeout
             )
-        except (aiohttp.errors.ClientTimeoutError, aiohttp.errors.ClientConnectionError, concurrent.futures._base.TimeoutError):
+        except (
+                aiohttp.errors.ClientTimeoutError, aiohttp.errors.ClientConnectionError,
+                concurrent.futures._base.TimeoutError):
             # internally, if a timeout occurs, aiohttp tries up to 3 times. thus we already technically have retries in.
             AlertHandler.warn("Bad Internet Connection")
             raise
@@ -274,13 +271,12 @@ class OSFQuery(object):
 
             raise
 
-
         if expects:
             if response.status not in expects:
                 raise aiohttp.errors.BadStatusLine(response.status)
         elif 400 <= response.status < 600:
             content = yield from response.read()
-            error_message = '[status code: {}]:: {} @url '.format(str(response.status),str(content), str(url))
+            error_message = '[status code: {}]:: {} @url '.format(str(response.status), str(content), str(url))
             logging.error(error_message)
             raise aiohttp.errors.HttpBadRequest(error_message)
 
@@ -289,7 +285,5 @@ class OSFQuery(object):
             return json_response
         return response
 
-
     def close(self):
         self.request_session.close()
-

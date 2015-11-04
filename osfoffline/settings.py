@@ -1,9 +1,8 @@
-import os
-import json
 import logging
 import logging.config
+
 from appdirs import user_config_dir, user_data_dir
-import furl
+
 PROJECT_NAME = 'osf-offline'
 PROJECT_AUTHOR = 'cos'
 PROJECT_CONFIG_PATH = user_config_dir(PROJECT_NAME, PROJECT_AUTHOR)
@@ -47,12 +46,10 @@ FILE_BASE = 'https://staging-files.osf.io'
 #         'pattern': '(?<=cookie=)(.*?)(?=&|$)',
 #         'mask': '***'
 #     }
-import colorlog  # noqa
 DEFAULT_FORMATTER = {
-   '()': 'colorlog.ColoredFormatter',
-   'format': '%(cyan)s[%(asctime)s]%(log_color)s[%(threadName)s][%(filename)s][%(levelname)s][%(name)s]: %(reset)s%(message)s'
+    '()': 'colorlog.ColoredFormatter',
+    'format': '%(cyan)s[%(asctime)s]%(log_color)s[%(threadName)s][%(filename)s][%(levelname)s][%(name)s]: %(reset)s%(message)s'
 }
-
 
 DEFAULT_LOGGING_CONFIG = {
     'version': 1,

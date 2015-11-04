@@ -1,12 +1,9 @@
-from PyQt5.QtWidgets import (QApplication, QDialog, QMessageBox, QSystemTrayIcon)
-from PyQt5.QtCore import QSettings
-from osfoffline.views.preferences import Preferences
-from osfoffline.views.system_tray import SystemTray
-
-from osfoffline.views.start_screen import StartScreen
-import osfoffline.alerts as AlertHandler
 import sys
+
+from PyQt5.QtWidgets import (QApplication, QMessageBox, QSystemTrayIcon)
 from osfoffline.application.main import OSFApp
+
+
 def start():
     app = QApplication(sys.argv)
 
@@ -26,5 +23,6 @@ def start():
     osf.hide()
     app.exec_()
 
-if __name__=="__main__":
+
+if __name__ == "__main__":
     start()

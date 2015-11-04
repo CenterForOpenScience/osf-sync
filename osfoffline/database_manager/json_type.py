@@ -1,8 +1,10 @@
 """
 This is sample code from sqlalchemy website.
 """
-from sqlalchemy.types import TypeDecorator, VARCHAR
 import json
+
+from sqlalchemy.types import TypeDecorator, VARCHAR
+
 
 class JSONEncodedDict(TypeDecorator):
     """Represents an immutable structure as a json-encoded string.

@@ -1,18 +1,16 @@
-__author__ = 'himanshu'
+# -*- coding: utf-8 -*-
 import threading
 import asyncio
-from sqlalchemy.orm.exc import MultipleResultsFound, NoResultFound
+import logging
+
 from watchdog.observers import Observer
-from osfoffline.database_manager.utils import save
 import osfoffline.database_manager.models as models
 import osfoffline.polling_osf_manager.polling as polling
 import osfoffline.filesystem_manager.osf_event_handler as osf_event_handler
 from osfoffline.database_manager.db import session
-from osfoffline.filesystem_manager.sync_local_filesytem_and_db import LocalDBSync
-import logging
+
 
 class BackgroundWorker(threading.Thread):
-
     def __init__(self):
         super().__init__()
 
@@ -22,10 +20,6 @@ class BackgroundWorker(threading.Thread):
         self.paused = True  # start out paused
         self.running = False
         self.poller = None
-
-
-
-
 
     def run(self):
 
@@ -47,11 +41,9 @@ class BackgroundWorker(threading.Thread):
             self.start_polling_server()
             self.running = True
 
-
     def pause_background_tasks(self):
 
         if self.running:
-
             self.stop_polling_server()
 
             self.stop_observing_osf_folder()
@@ -68,13 +60,10 @@ class BackgroundWorker(threading.Thread):
         if self.poller:
             self.poller.stop()
 
-
-
     # todo: can refactor this code out to somewhere
 
     def get_current_user(self):
         return session.query(models.User).filter(models.User.logged_in).one()
-
 
     def stop_loop(self, close=False):
         logging.info('stop loop')
@@ -103,9 +92,6 @@ class BackgroundWorker(threading.Thread):
         logging.info('stop observing')
         self.stop_loop(close=True)
 
-
-
-
     def start_observing_osf_folder(self):
         # if something inside the folder changes, log it to config dir
 
@@ -133,7 +119,6 @@ class BackgroundWorker(threading.Thread):
         self.observer.stop()
         self.observer.join()
 
-
     # courtesy of waterbutler
     def ensure_event_loop(self):
         """Ensure the existance of an eventloop
@@ -150,7 +135,6 @@ class BackgroundWorker(threading.Thread):
         # Note: No clever tricks are used here to dry up code
         # This avoids an infinite loop if settings the event loop ever fails
         return asyncio.get_event_loop()
-
 
 
 """
