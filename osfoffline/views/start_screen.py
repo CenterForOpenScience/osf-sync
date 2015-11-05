@@ -91,7 +91,7 @@ class StartScreen(QDialog):
             self.close()
 
     def setup_slots(self):
-        logging.info('setting up start_screen slots')
+        logging.debug('setting up start_screen slots')
         self.start_screen.logInButton.clicked.connect(lambda: asyncio.get_event_loop().run_until_complete(self.log_in()))
 
     def open_window(self):
