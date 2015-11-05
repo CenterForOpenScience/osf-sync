@@ -156,20 +156,18 @@ class OSFApp(QDialog):
             logging.info('wanted to but could not resume background worker')
 
     def pause(self):
-        logging.info('pausing')
+        logging.debug('pausing')
         if self.background_worker and self.background_worker.is_alive():
-            logging.info('pausing background worker')
+            logging.debug('pausing background worker')
             self.background_worker.stop()
-            logging.info('background worker stopped')
+            logging.debug('background worker stopped')
             self.background_worker.join()
-            logging.info('paused background worker')
+            logging.debug('paused background worker')
 
     def quit(self):
         try:
-
             self.background_worker.pause_background_tasks()
             self.background_worker.stop()
-            self.background_worker.join()
 
             session.close()
 
@@ -231,9 +229,9 @@ class OSFApp(QDialog):
         self.login_signal.emit()
 
     def open_preferences(self):
-        logging.info('pausing for preference modification')
+        logging.debug('pausing for preference modification')
         self.pause()
-        logging.info('opening preferences')
+        logging.debug('opening preferences')
         self.preferences.open_window(Preferences.GENERAL)
 
     def start_about_screen(self):

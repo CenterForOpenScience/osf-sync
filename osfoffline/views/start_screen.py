@@ -33,12 +33,12 @@ class StartScreen(QDialog):
 
     @asyncio.coroutine
     def log_in(self):
-        logging.info('attempting to log in')
+        logging.debug('attempting to log in')
         personal_access_token = self.start_screen.personalAccessTokenEdit.text().strip()
         url = settings.API_BASE + '/v2/users/me/'
         loop = asyncio.get_event_loop()
         osf = OSFQuery(loop, personal_access_token)
-        logging.info('url: {}'.format(url))
+        logging.debug('url: {}'.format(url))
         try:
             resp = yield from osf.make_request(url)
         except (aiohttp.errors.ClientTimeoutError, aiohttp.errors.ClientConnectionError, concurrent.futures._base.TimeoutError):
@@ -48,8 +48,6 @@ class StartScreen(QDialog):
                 "Log in Failed",
                 "Unable to connect to server. Check your internet connection or try again later."
             )
-            self.hide()
-            self.open_window()
         except aiohttp.errors.HttpBadRequest:
             # Invalid credentials
             QMessageBox.warning(
@@ -57,8 +55,6 @@ class StartScreen(QDialog):
                 "Log in Failed",
                 "Invalid login credentials."
             )
-            self.hide()
-            self.open_window()
         else:
             if resp.status == 200:
                 json_resp = yield from resp.json()
@@ -78,7 +74,7 @@ class StartScreen(QDialog):
                             save(session)
                     self.log_in()
                 except NoResultFound:
-                    logging.warning('user doesnt exist. Creating user. and logging them in.')
+                    logging.debug('user doesnt exist. Creating user. and logging them in.')
                     user = User(
                         full_name=full_name,
                         osf_id=osf_id,

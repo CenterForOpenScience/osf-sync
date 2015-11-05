@@ -147,7 +147,6 @@ class Preferences(QDialog):
                 user_nodes = []
                 url = api_url_for(USERS, related_type=NODES, user_id=user.osf_id)
                 headers = {'Authorization': 'Bearer {}'.format(user.oauth_token)}
-                #headers = {'Cookie':'osf_staging={}'.format(user.oauth_token)}
                 resp = requests.get(url, headers=headers).json()
                 logging.warning(resp)
                 user_nodes.extend(resp['data'])

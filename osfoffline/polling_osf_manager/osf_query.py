@@ -20,7 +20,6 @@ class OSFQuery(object):
     def __init__(self, loop, oauth_token):
         self.headers = {
             'Authorization': 'Bearer {}'.format(oauth_token),
-            # 'Cookie':'osf_staging={}'.format(oauth_token)
         }
         self.request_session = aiohttp.ClientSession(loop=loop, headers=self.headers)
 
@@ -275,8 +274,9 @@ class OSFQuery(object):
                 raise aiohttp.errors.BadStatusLine(response.status)
         elif 400 <= response.status < 600:
             content = yield from response.read()
-            error_message = '[status code: {}]:: {} @url '.format(str(response.status), str(content), str(url))
+            error_message = '[status code: {}]:: {} @url {}'.format(str(response.status), str(content), str(url))
             logging.error(error_message)
+            self.close()
             raise aiohttp.errors.HttpBadRequest(error_message)
 
         if get_json:
