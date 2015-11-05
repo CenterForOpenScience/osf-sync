@@ -4,27 +4,25 @@ import concurrent
 import logging
 
 import aiohttp
+import iso8601
+from sqlalchemy.orm.exc import MultipleResultsFound, NoResultFound
 
+import osfoffline.alerts as AlertHandler
 from osfoffline.database_manager.models import User, Node, File, Base
 from osfoffline.database_manager.db import session
 from osfoffline.database_manager.utils import save
+from osfoffline.exceptions.item_exceptions import InvalidItemType
 from osfoffline.polling_osf_manager.api_url_builder import api_url_for, USERS, NODES
 from osfoffline.polling_osf_manager.osf_query import OSFQuery
 from osfoffline.polling_osf_manager.remote_objects import RemoteObject, RemoteNode, RemoteFile, RemoteFileFolder
 from osfoffline.polling_osf_manager.polling_event_queue import PollingEventQueue
-from osfoffline.polling_osf_manager.polling_events import CreateFile, CreateFolder, RenameFile, RenameFolder, \
-    DeleteFile, DeleteFolder, UpdateFile
-import iso8601
-import osfoffline.alerts as AlertHandler
-from osfoffline.exceptions.item_exceptions import InvalidItemType
-from sqlalchemy.orm.exc import MultipleResultsFound, NoResultFound
-
-RECHECK_TIME = 5  # seconds
+from osfoffline.polling_osf_manager.polling_events import (CreateFile, CreateFolder, RenameFile, RenameFolder,
+                                                           DeleteFile, DeleteFolder, UpdateFile)
+from osfoffline.settings import POLL_DELAY
 
 
 class Poll(object):
     def __init__(self, user, loop):
-        super().__init__()
         assert isinstance(user, User)
         self._keep_running = True
 
@@ -176,7 +174,7 @@ class Poll(object):
                 # NOTE: can't work with partial list! That would suggest that nodes were created online.
                 AlertHandler.warn("Bad Internet Connection")
                 # waits till the end of a sleep to stop. thus can make numerous smaller sleeps
-                for i in range(RECHECK_TIME):
+                for i in range(POLL_DELAY):
                     yield from asyncio.sleep(1)
                 continue
 
@@ -206,7 +204,7 @@ class Poll(object):
 
 
             # waits till the end of a sleep to stop. thus can make numerous smaller sleeps
-            for i in range(RECHECK_TIME):
+            for i in range(POLL_DELAY):
                 yield from asyncio.sleep(1)
 
     @asyncio.coroutine
