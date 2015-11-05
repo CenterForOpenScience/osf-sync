@@ -247,16 +247,15 @@ class OSFQuery(object):
     def make_request(self, url, method=None, params=None, expects=None, get_json=False, timeout=180, data=None):
         if method is None:
             method = 'GET'
+
+        request = self.request_session.request(
+            url=url,
+            method=method.upper(),
+            params=params,
+            data=data
+        )
         try:
-            response = yield from asyncio.wait_for(
-                self.request_session.request(
-                    url=url,
-                    method=method.upper(),
-                    params=params,
-                    data=data
-                ),
-                timeout
-            )
+            response = yield from asyncio.wait_for(request, timeout)
         except (
                 aiohttp.errors.ClientTimeoutError, aiohttp.errors.ClientConnectionError,
                 concurrent.futures._base.TimeoutError):
@@ -269,6 +268,11 @@ class OSFQuery(object):
         except aiohttp.errors.HttpMethodNotAllowed:
 
             raise
+        except aiohttp.errors.TimeoutError:
+            print('here')
+            request.cancel()
+            return
+
 
         if expects:
             if response.status not in expects:
