@@ -19,6 +19,7 @@ class BackgroundWorker(threading.Thread):
         self.paused = True  # start out paused
         self.running = False
         self.poller = None
+        self.observer = None
 
     def run(self):
 
@@ -64,20 +65,27 @@ class BackgroundWorker(threading.Thread):
     def stop_loop(self, close=False):
         """ WARNING: Only pass in 'close' if you plan on creating an entirely new loop afterwards
         """
-        logging.info('stop loop')
-        if self.loop.is_closed():
-            logging.info('loop already stopped')
+        logging.debug('stop loop')
+        if not self.loop:
+            logging.debug('loop never initialized')
+            return
+
+        if not self.loop.is_running():
+            logging.debug('loop already stopped')
             if close:
-                logging.info('closing loop')
-
-        logging.info('calling loop.stop. will stop when polling/observing events finish.')
-        self.loop.stop()
-
-        if close:
-            while not self.loop.is_closed():
-                if not self.loop.is_running():
-                    logging.info('closing loop')
+                if self.loop.is_closed():
+                    logging.debug('loop already closed')
+                else:
+                    logging.debug('closing loop')
                     self.loop.close()
+        else:
+            logging.debug('calling loop.stop(). will stop when polling/observing events finish.')
+            self.loop.stop()
+            if close:
+                while not self.loop.is_closed():
+                    if not self.loop.is_running():
+                        logging.debug('closing loop')
+                        self.loop.close()
 
     def stop(self):
         logging.info('stopping background worker')
@@ -85,7 +93,7 @@ class BackgroundWorker(threading.Thread):
         logging.info('stop polling')
         self.stop_observing_osf_folder()
         logging.info('stop observing')
-        self.stop_loop(close=False)
+        self.stop_loop(close=True)
 
     def start_observing_osf_folder(self):
         # if something inside the folder changes, log it to config dir
@@ -112,8 +120,9 @@ class BackgroundWorker(threading.Thread):
             logging.warning('limit of watched items reached')
 
     def stop_observing_osf_folder(self):
-        self.observer.stop()
-        self.observer.join()
+        if self.observer:
+            self.observer.stop()
+            self.observer.join()
 
     # courtesy of waterbutler
     def ensure_event_loop(self):
