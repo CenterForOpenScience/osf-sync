@@ -62,7 +62,7 @@ class SystemTray(QDialog):
         self.containing_folder = new_containing_folder
 
     def start_osf(self):
-        url = "http://osf.io/dashboard"
+        url = "http://osf.io/"
         webbrowser.open_new_tab(url)
 
     def open_osf_folder(self):
