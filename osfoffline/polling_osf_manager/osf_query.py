@@ -268,8 +268,7 @@ class OSFQuery(object):
         except aiohttp.errors.HttpMethodNotAllowed:
 
             raise
-        except aiohttp.errors.TimeoutError:
-            print('here')
+        except asyncio.TimeoutError:
             request.cancel()
             return
 
