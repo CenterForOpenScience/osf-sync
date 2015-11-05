@@ -53,10 +53,9 @@ class StartScreen(QDialog):
             osf_id = json_resp['data']['id']
 
             try:
-                user = session.query(User).filter(User.osf_login == osf_id).one()
+                user = session.query(User).filter(User.osf_id == osf_id).one()
                 user.logged_in = True
                 save(session, user)
-                self.close()
             except MultipleResultsFound:
                 logging.warning('multiple users with same username. deleting all users with this username. restarting function.')
                 for user in session.query(User):
