@@ -115,7 +115,7 @@ class Poll(object):
 
         for local in local_list:
             assert isinstance(local, Base)
-            local_files[local.id] = local
+            local_files[local.osf_id] = local
 
         for remote in remote_list:
             assert isinstance(remote, RemoteObject)
@@ -125,8 +125,6 @@ class Poll(object):
             (local_files.get(fid), remote_files.get(fid))
             for fid in set(list(local_files.keys()) + list(remote_files.keys()))
         ]
-
-    
 
     @asyncio.coroutine
     def check_osf(self, remote_user):
@@ -153,7 +151,6 @@ class Poll(object):
                     yield from asyncio.sleep(1)
                 continue
 
-
             # get local top level nodes
             local_top_level_nodes = self.user.top_level_nodes
 
@@ -175,8 +172,6 @@ class Poll(object):
 
             AlertHandler.up_to_date()
             logging.info('---------SHOULD HAVE ALL OSF FILES---------')
-
-
 
             # waits till the end of a sleep to stop. thus can make numerous smaller sleeps
             for i in range(POLL_DELAY):
@@ -534,8 +529,6 @@ class Poll(object):
         assert isinstance(remote_file_folder, RemoteFileFolder)
         assert remote_file_folder.id == local_file_folder.osf_path
 
-
-
         # handle renaming local file and local folder
         old_path = local_file_folder.path
         # update model
@@ -553,7 +546,6 @@ class Poll(object):
         assert isinstance(local_file, File)
         assert isinstance(remote_file, RemoteFile)
         assert remote_file.id == local_file.osf_path
-
 
         # update model
         # nothing to update. size, hash are all updated internally as the event occurs.
@@ -618,7 +610,6 @@ class Poll(object):
 
         path = local_node.path
 
-
         # delete model
         session.delete(local_node)
         save(session)
@@ -635,7 +626,6 @@ class Poll(object):
         # delete model
         session.delete(local_file_folder)
         save(session)
-
 
         # delete from local
         if is_folder:
