@@ -116,3 +116,9 @@ class ProperPath(object):
 
     def __repr__(self):
         return self.full_path
+
+
+def ensure_folders(path):
+    """Ensure that the specified folder (and all folders in path) exists"""
+    if not os.path.exists(path):
+        os.makedirs(path)
