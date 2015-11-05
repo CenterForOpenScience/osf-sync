@@ -112,11 +112,9 @@ class OSFEventHandler(FileSystemEventHandler):
         """
         src_path = ProperPath(event.src_path, event.is_directory)
 
-
         # create new model
         if self._already_exists(src_path):
             return
-
 
         # assert: whats being created is a file folder
         try:

@@ -22,21 +22,21 @@ class BackgroundWorker(threading.Thread):
 
     def run(self):
 
-        logging.info('run in background tasks called for first time.')
+        logging.debug('run in background tasks called for first time.')
         self.loop = self.ensure_event_loop()
         self.run_background_tasks()
         self.loop.run_forever()
 
     def run_background_tasks(self):
-        logging.info('starting run_background_tasks')
+        logging.debug('starting run_background_tasks')
 
         if not self.running:
             self.user = self.get_current_user()
             self.osf_folder = self.user.osf_local_folder_path
 
-            logging.info("start observing")
+            logging.debug("start observing")
             self.start_observing_osf_folder()
-            logging.info('start polling')
+            logging.debug('start polling')
             self.start_polling_server()
             self.running = True
 
@@ -62,17 +62,17 @@ class BackgroundWorker(threading.Thread):
         return session.query(models.User).filter(models.User.logged_in).one()
 
     def stop_loop(self, close=False):
-        logging.info('stop loop')
+        logging.debug('stop loop')
         if self.loop.is_closed():
-            logging.info('loop already closed')
+            logging.debug('loop already closed')
 
         elif not self.loop.is_running():
-            logging.info('loop is stopped already. closing it')
+            logging.debug('loop is stopped already. closing it')
             self.loop.close()
         else:
             # stop loop when current tasks finish.
             self.loop.call_soon(self.loop.stop)
-            logging.info('call_soon to loop.stop. will stop when polling/observing events finish.')
+            logging.debug('call_soon to loop.stop. will stop when polling/observing events finish.')
             # todo: find better way?
             if close:
                 while not self.loop.is_closed():
@@ -81,11 +81,11 @@ class BackgroundWorker(threading.Thread):
 
     def stop(self):
 
-        logging.info('stopping background worker')
+        logging.debug('stopping background worker')
         self.stop_polling_server()
-        logging.info('stop polling')
+        logging.debug('stop polling')
         self.stop_observing_osf_folder()
-        logging.info('stop observing')
+        logging.debug('stop observing')
         self.stop_loop(close=True)
 
     def start_observing_osf_folder(self):

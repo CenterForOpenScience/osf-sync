@@ -99,7 +99,7 @@ class OSFApp(QDialog):
         return True
 
     def start(self):
-        logging.warning('start in main called.')
+        logging.debug('start in main called.')
 
         # todo: HANDLE LOGIN FAILED
         try:
@@ -115,7 +115,7 @@ class OSFApp(QDialog):
 
         containing_folder = os.path.dirname(user.osf_local_folder_path)
         while not validate_containing_folder(containing_folder):
-            logging.warning("invalid containing folder")
+            logging.warning("Invalid containing folder: {}".format(containing_folder))
             AlertHandler.warn("Invalid containing folder. Please choose another.")
             containing_folder = os.path.abspath(self.set_containing_folder_initial())
 
@@ -127,10 +127,8 @@ class OSFApp(QDialog):
         if not os.path.isdir(user.osf_local_folder_path):
             os.makedirs(user.osf_local_folder_path)
 
-        # self.start_logging()
-
         self.start_tray_signal.emit()
-        logging.warning('starting background worker from main.start')
+        logging.debug('starting background worker from main.start')
         # fix the multithreading problem
         try:
             self.background_worker = BackgroundWorker()
@@ -139,7 +137,7 @@ class OSFApp(QDialog):
         self.background_worker.start()
 
     def resume(self):
-        logging.info("resuming")
+        logging.debug("resuming")
         # todo: properly pause the background thread
         # I am recreating the background thread everytime for now.
         # I was unable to correctly pause the background thread
@@ -157,15 +155,14 @@ class OSFApp(QDialog):
             logging.info('wanted to but could not resume background worker')
 
     def pause(self):
-        logging.info('pausing background worker')
+        logging.debug('pausing background worker')
         if self.background_worker and self.background_worker.is_alive():
-            logging.info('pausing background worker')
+            logging.debug('pausing background worker')
             self.background_worker.stop()
             self.background_worker.join()
 
     def quit(self):
         try:
-
             self.background_worker.pause_background_tasks()
             self.background_worker.stop()
             self.background_worker.join()
@@ -174,6 +171,7 @@ class OSFApp(QDialog):
 
             QApplication.instance().quit()
         except Exception as e:
+            # FIXME: Address this issue
             logging.warning('quit broke. stopping anyways. Exception was {}'.format(e))
             # quit() stops gui and then quits application
             QApplication.instance().quit()
@@ -185,38 +183,6 @@ class OSFApp(QDialog):
 
     def get_current_user(self):
         return session.query(User).filter(User.logged_in).one()
-
-    def start_logging(self):
-
-        # make sure logging directory exists
-        log_dir = user_log_dir(self.app_name, self.app_author)
-        if not os.path.exists(log_dir):  # ~/.cache/appname
-            os.makedirs(log_dir)
-
-
-        # make sure logging file exists
-        log_file = open(os.path.join(log_dir, 'osf.log'), 'w+')
-        log_file.close()
-
-        # set up config. set up format of logged info. set up "level of logging"
-        # which i think is just how urgent the logging thing is. probably just a tag to each event.
-        logging.basicConfig(
-            level=logging.INFO,
-            format='%(asctime)s - %(message)s',
-            datefmt='%Y-%m-%d %H:%M:%S',
-            filename=os.path.join(log_dir, 'osf.log'),
-            filemode='w'
-        )
-        # define a Handler which writes INFO messages or higher to the sys.stderr
-        console = logging.StreamHandler()
-        console.setLevel(logging.INFO)
-        # set a format which is simpler for console use
-        formatter = logging.Formatter('%(asctime)s - %(message)s')
-        # tell the handler to use this format
-        console.setFormatter(formatter)
-        # add the handler to the root logger
-        logging.getLogger('').addHandler(console)
-        # logging.getLogger('sqlalchemy.engine').addHandler()
 
     def set_containing_folder_initial(self):
         return QFileDialog.getExistingDirectory(self, "Choose where to place OSF folder")
@@ -232,7 +198,7 @@ class OSFApp(QDialog):
 
     def open_preferences(self):
         self.pause()
-        logging.info('opening preferences')
+        logging.debug('opening preferences')
         self.preferences.open_window(Preferences.GENERAL)
 
     def start_about_screen(self):
