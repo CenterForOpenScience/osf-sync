@@ -57,7 +57,7 @@ class Poll(object):
     def get_remote_user(self, future):
 
         url = api_url_for(USERS, user_id=self.user.osf_id)
-        logging.info(url)
+        logging.debug(url)
         while self._keep_running:
             try:
                 resp = yield from self.osf_query.make_request(url, get_json=True)
@@ -155,7 +155,7 @@ class Poll(object):
 
     @asyncio.coroutine
     def check_osf(self, remote_user):
-        logging.info('check_osf')
+        logging.debug('check_osf')
 
         assert isinstance(remote_user, dict)
         assert remote_user['type'] == 'users'
@@ -188,7 +188,7 @@ class Poll(object):
             session.refresh(self.user)
             sync_list = self.user.guid_for_top_level_nodes_to_sync
             for local, remote in local_remote_top_level_nodes:
-                logging.info('sync list is: {}'.format(sync_list))
+                logging.debug('sync list is: {}'.format(sync_list))
                 if remote and remote.id in sync_list:
                     try:
                         yield from self.check_node(local, remote, local_parent_node=None)
@@ -199,7 +199,7 @@ class Poll(object):
             yield from self.polling_event_queue.run()
 
             AlertHandler.up_to_date()
-            logging.info('---------SHOULD HAVE ALL OSF FILES---------')
+            logging.debug('---------SHOULD HAVE ALL OSF FILES---------')
 
             # waits till the end of a sleep to stop. thus can make numerous smaller sleeps
             for i in range(POLL_DELAY):
@@ -222,7 +222,7 @@ class Poll(object):
         (local, remote) -> check modifications      --
 
         """
-        logging.info('checking node')
+        logging.debug('checking node')
         assert (local_node is not None) or (remote_node is not None)  # both shouldnt be none.
         assert (local_parent_node is None) or isinstance(local_parent_node, Node)
 
@@ -265,7 +265,7 @@ class Poll(object):
 
     @asyncio.coroutine
     def check_file_folder(self, local_node, remote_node):
-        logging.info('checking file_folder')
+        logging.debug('checking file_folder')
         # todo: probably can put this step into get_child_files for nodes.
         # fixme: doesnt handle multiple providers right now...
 
@@ -341,7 +341,7 @@ class Poll(object):
         """
 
         assert local_file_folder or remote_file_folder  # both shouldnt be None.
-        logging.info('checking file_folder internal')
+        logging.debug('checking file_folder internal')
         if local_file_folder is None:
             locally_moved = yield from self.is_locally_moved(remote_file_folder)
             if locally_moved:
@@ -419,7 +419,7 @@ class Poll(object):
     # Create
     @asyncio.coroutine
     def create_local_node(self, remote_node, local_parent_node):
-        logging.info('create_local_node')
+        logging.debug('create_local_node')
         assert isinstance(remote_node, RemoteNode)
         assert isinstance(local_parent_node, Node) or local_parent_node is None
 
@@ -444,7 +444,7 @@ class Poll(object):
 
     @asyncio.coroutine
     def create_local_file_folder(self, remote_file_folder, local_parent_folder, local_node):
-        logging.info('creating local file folder')
+        logging.debug('creating local file folder')
         assert remote_file_folder is not None
         assert isinstance(remote_file_folder, RemoteFileFolder)
         assert isinstance(local_parent_folder, File) or local_parent_folder is None
@@ -483,7 +483,7 @@ class Poll(object):
 
     @asyncio.coroutine
     def create_remote_file_folder(self, local_file_folder, local_node):
-        logging.info('create_remote_file_folder')
+        logging.debug('create_remote_file_folder')
         assert local_file_folder is not None
         assert isinstance(local_file_folder, File)
         assert local_node is not None
@@ -511,7 +511,7 @@ class Poll(object):
     # Modify
     @asyncio.coroutine
     def modify_local_node(self, local_node, remote_node):
-        logging.info('modify_local_node')
+        logging.debug('modify_local_node')
         assert isinstance(local_node, Node)
         assert isinstance(remote_node, RemoteNode)
         assert remote_node.id == local_node.osf_id
@@ -552,7 +552,7 @@ class Poll(object):
 
     @asyncio.coroutine
     def rename_local_file_folder(self, local_file_folder, remote_file_folder):
-        logging.info('rename_local_file_folder')
+        logging.debug('rename_local_file_folder')
         assert isinstance(local_file_folder, File)
         assert isinstance(remote_file_folder, RemoteFileFolder)
         assert remote_file_folder.id == local_file_folder.osf_path
@@ -588,7 +588,7 @@ class Poll(object):
 
     @asyncio.coroutine
     def update_remote_file(self, local_file, remote_file):
-        logging.info('update_remote_file')
+        logging.debug('update_remote_file')
         assert isinstance(local_file, File)
         assert isinstance(remote_file, RemoteFile)
         assert remote_file.id == local_file.osf_path
@@ -604,7 +604,7 @@ class Poll(object):
 
     @asyncio.coroutine
     def rename_remote_file_folder(self, local_file_folder, remote_file_folder):
-        logging.info('rename_remote_file_folder.')
+        logging.debug('rename_remote_file_folder.')
         assert isinstance(local_file_folder, File)
         assert isinstance(remote_file_folder, RemoteFileFolder)
         assert remote_file_folder.id == local_file_folder.osf_path
@@ -620,7 +620,7 @@ class Poll(object):
 
     @asyncio.coroutine
     def move_remote_file_folder(self, local_file_folder):
-        logging.info('move_remote_file_folder.')
+        logging.debug('move_remote_file_folder.')
         assert isinstance(local_file_folder, File)
 
         if local_file_folder.is_file:
@@ -633,7 +633,7 @@ class Poll(object):
     # Delete
     @asyncio.coroutine
     def delete_local_node(self, local_node):
-        logging.info('delete_local_node')
+        logging.debug('delete_local_node')
         assert isinstance(local_node, Node)
 
         path = local_node.path
@@ -646,7 +646,7 @@ class Poll(object):
 
     @asyncio.coroutine
     def delete_local_file_folder(self, local_file_folder):
-        logging.info('delete_local_file_folder')
+        logging.debug('delete_local_file_folder')
         assert isinstance(local_file_folder, File)
 
         path = local_file_folder.path
@@ -663,7 +663,7 @@ class Poll(object):
 
     @asyncio.coroutine
     def delete_remote_file_folder(self, local_file_folder, remote_file_folder):
-        logging.info('delete_remote_file_folder')
+        logging.debug('delete_remote_file_folder')
         assert local_file_folder is not None
         assert remote_file_folder is not None
         assert local_file_folder.osf_id == self.get_id(remote_file_folder)

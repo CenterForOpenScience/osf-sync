@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
-import sys
+import logging
 import os
 import subprocess
+import sys
 import webbrowser
 
 from PyQt5.Qt import QIcon
@@ -57,7 +58,6 @@ class SystemTray(QDialog):
         self.tray_icon.show()
 
     def set_containing_folder(self, new_containing_folder):
-        import logging
         logging.debug("setting new containing folder is :{}".format(self.containing_folder))
         self.containing_folder = new_containing_folder
 
