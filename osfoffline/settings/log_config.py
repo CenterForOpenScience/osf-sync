@@ -63,12 +63,8 @@ DEFAULT_LOGGING_CONFIG = {
     }
 }
 
-logging_config = DEFAULT_LOGGING_CONFIG
-logging.config.dictConfig(logging_config)
-
 
 def capture_exceptions(exc_type, exc_value, tb):
     """Ensure that uncaught exceptions are logged"""
     logging.exception('Uncaught exception: ', exc_info=(exc_type, exc_value, tb))
 
-sys.excepthook = capture_exceptions
