@@ -41,13 +41,21 @@ class StartScreen(QDialog):
         logging.info('url: {}'.format(url))
         try:
             resp = yield from osf.make_request(url)
-        except (aiohttp.errors.ClientTimeoutError, aiohttp.errors.ClientConnectionError, aiohttp.errors.HttpBadRequest, concurrent.futures._base.TimeoutError):
+        except (aiohttp.errors.ClientTimeoutError, aiohttp.errors.ClientConnectionError, concurrent.futures._base.TimeoutError):
             # No internet connection
-            # TODO: Pretend user has logged in and retry when connection has been established
             QMessageBox.warning(
                 None,
                 "Log in Failed",
-                "Invalid login credentials"
+                "Unable to connect to server. Check your internet connection or try again later."
+            )
+            self.hide()
+            self.open_window()
+        except aiohttp.errors.HttpBadRequest:
+            # Invalid credentials
+            QMessageBox.warning(
+                None,
+                "Log in Failed",
+                "Invalid login credentials."
             )
             self.hide()
             self.open_window()
@@ -82,7 +90,6 @@ class StartScreen(QDialog):
                     save(session, user)
 
             else:
-                # Authentication failed, user has likely provided an invalid token
                 raise OSFAuthError('Invalid auth response: {}'.format(resp.status))
 
             self.close()
