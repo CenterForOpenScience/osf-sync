@@ -233,6 +233,7 @@ class OSFApp(QDialog):
         self.login_signal.emit()
 
     def open_preferences(self):
+        logging.info('pausing for preference modification')
         self.pause()
         logging.info('opening preferences')
         self.preferences.open_window(Preferences.GENERAL)
