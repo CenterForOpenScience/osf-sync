@@ -36,7 +36,6 @@ class OSFApp(QDialog):
         self.app_name = "OSFOffline"
         self.app_author = "COS"
 
-
         # views
         self.start_screen = StartScreen()
         self.tray = SystemTray()

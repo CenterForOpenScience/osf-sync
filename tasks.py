@@ -1,7 +1,14 @@
+import json
 import os
+import requests
+import shutil
 
 from invoke import task, run
+from osfoffline.polling_osf_manager.remote_objects import RemoteNode
+from osfoffline.polling_osf_manager.api_url_builder import api_url_for, NODES, USERS
+from osfoffline import settings
 
+from tests.fixtures.mock_osf_api_server.osf import app
 
 # WHEELHOUSE_PATH = os.environ.get('WHEELHOUSE')
 
@@ -53,11 +60,7 @@ def start_for_tests(dropdb=True, droplog=False):
 
     :param bool dropdb: Whether to delete the database. Defaults to True
     :param bool droplog: Whether to delete pre-existing shared error log. Defaults to False.
-    :param bool dev: Whether to run in "dev" mode with specified local settings
     """
-    import shutil
-    from osfoffline import settings
-
     if dropdb and os.path.exists(settings.PROJECT_DB_FILE):
         os.remove(settings.PROJECT_DB_FILE)
 
@@ -74,7 +77,6 @@ def start_for_tests(dropdb=True, droplog=False):
 
 @task
 def mock_osf_api_server():
-    from tests.fixtures.mock_osf_api_server.osf import app
     app.run(debug=True)  # debug=None because we do not want auto restart
 
 
@@ -87,8 +89,6 @@ def clean_mock_osf_api_server():
 
 @task
 def create_test_user():
-    import requests
-    from osfoffline.polling_osf_manager.api_url_builder import api_url_for, USERS
     ret = requests.post(
         api_url_for(USERS),
         data={
@@ -107,10 +107,6 @@ def create_test_user():
 
 @task
 def create_new_project(user_id):
-    import requests
-    from osfoffline.polling_osf_manager.remote_objects import RemoteNode
-    from osfoffline.polling_osf_manager.api_url_builder import api_url_for, NODES
-    import json
     body = {
         "data": {
             "type": "nodes",  # required
