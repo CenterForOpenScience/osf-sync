@@ -6,7 +6,7 @@ import concurrent
 from flask import request
 
 from PyQt5.QtCore import pyqtSignal
-from PyQt5.QtWidgets import QDialog
+from PyQt5.QtWidgets import QDialog, QMessageBox
 from sqlalchemy.orm.exc import MultipleResultsFound, NoResultFound
 
 from osfoffline import settings
@@ -41,45 +41,51 @@ class StartScreen(QDialog):
         logging.info('url: {}'.format(url))
         try:
             resp = yield from osf.make_request(url)
-        except (aiohttp.errors.ClientTimeoutError, aiohttp.errors.ClientConnectionError, concurrent.futures._base.TimeoutError):
+        except (aiohttp.errors.ClientTimeoutError, aiohttp.errors.ClientConnectionError, aiohttp.errors.HttpBadRequest, concurrent.futures._base.TimeoutError):
             # No internet connection
             # TODO: Pretend user has logged in and retry when connection has been established
-            raise
-
-        if resp.status == 200:
-            json_resp = yield from resp.json()
-            full_name = json_resp['data']['attributes']['full_name']     # Use one of these later to "Welcome {user}"
-            given_name = json_resp['data']['attributes']['given_name']   # Use one of these later to "Welcome {user}"
-            osf_id = json_resp['data']['id']
-
-            try:
-                user = session.query(User).filter(User.osf_id == osf_id).one()
-                user.logged_in = True
-                save(session, user)
-            except MultipleResultsFound:
-                logging.warning('multiple users with same username. deleting all users with this username. restarting function.')
-                for user in session.query(User):
-                    if user.osf_login == osf_id:
-                        session.delete(user)
-                        save(session)
-                self.log_in()
-            except NoResultFound:
-                logging.warning('user doesnt exist. Creating user. and logging them in.')
-                user = User(
-                    full_name=full_name,
-                    osf_id=osf_id,
-                    osf_login='',  # TODO: email goes here when more auth methods are added, not currently returned by APIv2
-                    osf_local_folder_path='',
-                    oauth_token=personal_access_token,
-                )
-                user.logged_in = True
-                save(session, user)
-
+            QMessageBox.warning(
+                None,
+                "Log in Failed",
+                "Invalid login credentials"
+            )
+            self.hide()
+            self.open_window()
         else:
-            # Authentication failed, user has likely provided an invalid token
-            raise OSFAuthError('Invalid auth response: {}'.format(resp.status))
+            if resp.status == 200:
+                json_resp = yield from resp.json()
+                full_name = json_resp['data']['attributes']['full_name']     # Use one of these later to "Welcome {user}"
+                given_name = json_resp['data']['attributes']['given_name']   # Use one of these later to "Welcome {user}"
+                osf_id = json_resp['data']['id']
 
-        self.close()
+                try:
+                    user = session.query(User).filter(User.osf_id == osf_id).one()
+                    user.logged_in = True
+                    save(session, user)
+                except MultipleResultsFound:
+                    logging.warning('multiple users with same username. deleting all users with this username. restarting function.')
+                    for user in session.query(User):
+                        if user.osf_login == osf_id:
+                            session.delete(user)
+                            save(session)
+                    self.log_in()
+                except NoResultFound:
+                    logging.warning('user doesnt exist. Creating user. and logging them in.')
+                    user = User(
+                        full_name=full_name,
+                        osf_id=osf_id,
+                        osf_login='',  # TODO: email goes here when more auth methods are added, not currently returned by APIv2
+                        osf_local_folder_path='',
+                        oauth_token=personal_access_token,
+                    )
+                    user.logged_in = True
+                    save(session, user)
+
+            else:
+                # Authentication failed, user has likely provided an invalid token
+                raise OSFAuthError('Invalid auth response: {}'.format(resp.status))
+
+            self.close()
 
     def setup_slots(self):
         logging.info('setting up start_screen slots')
