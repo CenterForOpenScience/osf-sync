@@ -47,7 +47,6 @@ class OSFEventHandler(FileSystemEventHandler):
         src_path = ProperPath(event.src_path, event.is_directory)
         dest_path = ProperPath(event.dest_path, event.is_directory)
 
-
         # determine and get what moved
         if not self._already_exists(src_path):
             logging.warning('Tried to move item that does not exist: {}'.format(src_path.name))
@@ -112,11 +111,9 @@ class OSFEventHandler(FileSystemEventHandler):
         """
         src_path = ProperPath(event.src_path, event.is_directory)
 
-
         # create new model
         if self._already_exists(src_path):
             return
-
 
         # assert: whats being created is a file folder
         try:
@@ -161,7 +158,6 @@ class OSFEventHandler(FileSystemEventHandler):
         if isinstance(event, DirModifiedEvent):
             return
         src_path = ProperPath(event.src_path, event.is_directory)
-
 
         # get item
         try:
