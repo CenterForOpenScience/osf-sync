@@ -10,9 +10,8 @@ PROJECT_NAME = 'osf-offline'
 PROJECT_AUTHOR = 'cos'
 
 ### Variables used to control where application config data is stored
-PROJECT_CONFIG_PATH = user_config_dir(appname=PROJECT_NAME, appauthor=PROJECT_AUTHOR)
-PROJECT_DB_PATH = user_data_dir(appname=PROJECT_NAME, appauthor=PROJECT_AUTHOR)
-DB_FILE_PATH = os.path.join(PROJECT_DB_PATH, 'osf.db')
+PROJECT_DB_DIR = user_data_dir(appname=PROJECT_NAME, appauthor=PROJECT_AUTHOR)
+PROJECT_DB_FILE = os.path.join(PROJECT_DB_DIR, 'osf.db')
 
 
 ### Base URL for API server; used to fetch data

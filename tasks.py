@@ -47,16 +47,27 @@ def start():
 
 
 @task
-def start_for_tests():
+def start_for_tests(dropdb=True, droplog=False):
+    """
+    Start the OSF offline client in a clean configuration suitable for testing
+
+    :param bool dropdb: Whether to delete the database. Defaults to True
+    :param bool droplog: Whether to delete pre-existing shared error log. Defaults to False.
+    :param bool dev: Whether to run in "dev" mode with specified local settings
+    """
     import shutil
-    from osfoffline.settings import DB_FILE_PATH
+    from osfoffline import settings
 
-    if os.path.exists(DB_FILE_PATH):
-        os.remove(DB_FILE_PATH)
+    if dropdb and os.path.exists(settings.PROJECT_DB_FILE):
+        os.remove(settings.PROJECT_DB_FILE)
 
-    OSF_DIR = '~/Desktop/OSF'
-    if os.path.exists(OSF_DIR):
-        shutil.rmtree(OSF_DIR)
+    # FIXME Don't delete log file while in use; this causes bad stuff. Create start_logging function to call when app starts.
+    # if droplog and os.path.exists(settings.PROJECT_LOG_FILE):
+    #     os.remove(settings.PROJECT_LOG_FILE)
+
+    osf_dir = '~/Desktop/OSF'
+    if os.path.exists(osf_dir):
+        shutil.rmtree(osf_dir)
 
     start()
 

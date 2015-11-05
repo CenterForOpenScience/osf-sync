@@ -2,7 +2,7 @@ from contextlib import contextmanager
 import shutil
 
 from osfoffline.database_manager.db import session
-from osfoffline.settings import PROJECT_DB_PATH
+from osfoffline.settings import PROJECT_DB_DIR
 
 
 def save(session, *items_to_save):
@@ -29,7 +29,7 @@ def session_scope():
 
 
 def remove_db():
-    shutil.rmtree(PROJECT_DB_PATH)
+    shutil.rmtree(PROJECT_DB_DIR)
 
 
 
