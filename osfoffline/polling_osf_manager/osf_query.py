@@ -208,17 +208,16 @@ class OSFQuery(object):
 
         local_file_folder.locally_moved = False
 
-
         # get the updated remote folder
 
         # inner_response = requests.get(remote_file_folder['links']['self'], headers=self.headers).json()
-        # we know exactly what changed, so its faster to just change the remote dictionary rather than making a new api call.
+        # we know exactly what changed, so its faster to just change the remote dictionary rather
+        # than making a new api call.
 
         # todo: can get the file folder from the osf by making request to parent file folder (local.parent.osf_id,)
         # todo: and then searching for the correct child based on osf_id.
 
         # todo: move can change NODE. THUS, need to REMOVE local_node=local_node in check_file_folder code...
-
 
         # for now, just going to stop synching this things children... NOT PROPER!!!!!
         # new_remote_file_folder = ...

@@ -426,10 +426,10 @@ class Poll(object):
         # NOTE: develop is not letting me download files. dont know why.
 
         # create local file folder in db
-        type = File.FILE if isinstance(remote_file_folder, RemoteFile) else File.FOLDER
+        file_type = File.FILE if isinstance(remote_file_folder, RemoteFile) else File.FOLDER
         new_file_folder = File(
             name=remote_file_folder.name,
-            type=type,
+            type=file_type,
             osf_id=remote_file_folder.id,
             provider=remote_file_folder.provider,
             osf_path=remote_file_folder.id,
@@ -439,14 +439,14 @@ class Poll(object):
         )
         save(session, new_file_folder)
 
-        if type == File.FILE:
+        if file_type == File.FILE:
             event = CreateFile(
                 path=new_file_folder.path,
                 download_url=remote_file_folder.download_url,
                 osf_query=self.osf_query
             )
             self.polling_event_queue.put(event)
-        elif type == File.FOLDER:
+        elif file_type == File.FOLDER:
             self.polling_event_queue.put(CreateFolder(new_file_folder.path))
         else:
             raise ValueError('file type is unknown')

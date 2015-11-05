@@ -1,7 +1,13 @@
 import os
+import requests
+import json
+import shutil
 
 from invoke import task, run
-
+from osfoffline.polling_osf_manager.remote_objects import RemoteNode
+from osfoffline.polling_osf_manager.api_url_builder import api_url_for, NODES, USERS
+from tests.fixtures.mock_osf_api_server.osf import app
+from osfoffline.settings import DB_FILE_PATH
 
 # WHEELHOUSE_PATH = os.environ.get('WHEELHOUSE')
 
@@ -48,9 +54,6 @@ def start():
 
 @task
 def start_for_tests():
-    import shutil
-    from osfoffline.settings import DB_FILE_PATH
-
     if os.path.exists(DB_FILE_PATH):
         os.remove(DB_FILE_PATH)
 
@@ -63,7 +66,6 @@ def start_for_tests():
 
 @task
 def mock_osf_api_server():
-    from tests.fixtures.mock_osf_api_server.osf import app
     app.run(debug=True)  # debug=None because we do not want auto restart
 
 
@@ -76,8 +78,6 @@ def clean_mock_osf_api_server():
 
 @task
 def create_test_user():
-    import requests
-    from osfoffline.polling_osf_manager.api_url_builder import api_url_for, USERS
     ret = requests.post(
         api_url_for(USERS),
         data={
@@ -96,10 +96,6 @@ def create_test_user():
 
 @task
 def create_new_project(user_id):
-    import requests
-    from osfoffline.polling_osf_manager.remote_objects import RemoteNode
-    from osfoffline.polling_osf_manager.api_url_builder import api_url_for, NODES
-    import json
     body = {
         "data": {
             "type": "nodes",  # required

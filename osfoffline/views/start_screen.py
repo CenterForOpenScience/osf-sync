@@ -44,7 +44,6 @@ class StartScreen(QDialog):
         except (aiohttp.errors.ClientTimeoutError, aiohttp.errors.ClientConnectionError, concurrent.futures._base.TimeoutError):
             # No internet connection
             # TODO: Pretend user has logged in and retry when connection has been established
-
             raise
 
         if resp.status == 200:

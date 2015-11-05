@@ -85,8 +85,8 @@ class RemoteFolder(RemoteFileFolder):
         self.upload_file_url = remote_dict['links']['upload']
         self.upload_folder_url = remote_dict['links']['new_folder']
 
-        # self.has_write_privileges = 'POST' in remote_dict['links']['self_methods'] #todo: await decision. can use OPTION
-
+        # self.has_write_privileges = 'POST' in remote_dict['links']['self_methods']
+        # #todo: await decision. can use OPTION
         self.validate()
 
     def validate(self):
@@ -107,7 +107,8 @@ class RemoteFile(RemoteFileFolder):
         # self.hash = remote_dict['metadata']['extra']['hash']
         # self.rented = remote_dict['metadata']['extra']['rented']
         self.size = remote_dict['attributes']['size']
-        # self.last_modified = remote_to_local_datetime(remote_dict['attributes']['date_modified']) #todo: IS THIS ON ACTUAL SERVER YET? Chris said it would be up there soon.
+        # self.last_modified = remote_to_local_datetime(remote_dict['attributes']['date_modified'])
+        # #todo: IS THIS ON ACTUAL SERVER YET? Chris said it would be up there soon.
         # self._write_privileges = 'POST' in remote_dict['links']['self_methods']
 
         self.validate()

@@ -3,7 +3,6 @@ from furl import furl
 from osfoffline.settings import API_BASE, FILE_BASE
 
 
-
 # todo: can make a api_url_for function that makes things potentially simpler...?
 USERS = 'users'
 NODES = 'nodes'
