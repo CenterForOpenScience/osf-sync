@@ -99,6 +99,7 @@ class UpdateFile(PollingEvent):
             yield from _download_file(self.path, self.download_url, self.osf_query)
         except Exception as e:
             logging.warning(e)
+            # FIXME: Improve message to user here
             # AlertHandler.warn("File unable to be updated online")
 
 
@@ -143,6 +144,7 @@ def _download_file(path, url, osf_query):
     try:
         resp = yield from osf_query.make_request(url)
     except (aiohttp.errors.ClientConnectionError, aiohttp.errors.ClientTimeoutError):
+        # FIXME: Consolidate redundant messages
         AlertHandler.warn("Bad Internet Connection")
         logging.warning("Bad Internet Connection")
         raise

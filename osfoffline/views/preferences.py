@@ -39,7 +39,7 @@ class Preferences(QDialog):
         self.setup_slots()
 
     def closeEvent(self, event):
-        logging.info('closed...... preferences....')
+        logging.debug('closed...... preferences....')
         self.preferences_closed_signal.emit()
         event.accept()
         # if self.isVisible():
@@ -75,6 +75,7 @@ class Preferences(QDialog):
         elif not os.path.exists(osf_path):
             os.makedirs(osf_path)
         elif os.path.isfile(osf_path):
+            # FIXME: Consolidate redundant messages
             AlertHandler.warn(
                 "An OSF file exists where you would like to create the OSF folder. Delete it, or choose a different location")
             logging.warning("An OSF file exists where you would like to create the OSF folder.")

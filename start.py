@@ -2,9 +2,13 @@ import sys
 
 from PyQt5.QtWidgets import (QApplication, QMessageBox, QSystemTrayIcon)
 from osfoffline.application.main import OSFApp
+from osfoffline import utils
 
 
 def start():
+    # Start logging all events
+    utils.start_app_logging()
+
     app = QApplication(sys.argv)
 
     if not QSystemTrayIcon.isSystemTrayAvailable():
