@@ -1,7 +1,11 @@
-__author__ = 'himanshu'
-from PyQt5.QtWidgets import QSystemTrayIcon
-from queue import Queue
+# -*- coding: utf-8 -*-
 from datetime import datetime, timedelta
+from queue import Queue
+
+from PyQt5.QtWidgets import QSystemTrayIcon
+
+from osfoffline.settings import ALERT_TIME
+
 
 show_alerts = True
 
@@ -11,15 +15,12 @@ MODIFYING = 2
 DELETING = 3
 MOVING = 4
 
-ALERT_TIME = 1000
-
 
 alert_icon = None
 tray_alert_signal = None
 
 last_alert_time = None
 alert_queue = Queue()
-
 
 
 def setup_alerts(system_tray_icon, tray_signal):
@@ -33,7 +34,6 @@ def setup_alerts(system_tray_icon, tray_signal):
     tray_alert_signal = tray_signal
 
 
-
 def alert_running():
     global last_alert_time
     cur_time = datetime.now()
@@ -45,14 +45,15 @@ def alert_running():
 
 def run_alert(alert_title, alert_message):
     alert_icon.showMessage(
-                alert_title,
-                alert_message,
-                QSystemTrayIcon.NoIcon,
-                msecs=ALERT_TIME  # NOTE: some systems don't allow any control over this...
+        alert_title,
+        alert_message,
+        QSystemTrayIcon.NoIcon,
+        msecs=ALERT_TIME  # NOTE: some systems don't allow any control over this...
     )
 
     global last_alert_time
     last_alert_time = datetime.now()
+
 
 def clear_queue():
     # clear the queue in a thread safe manner.
@@ -72,12 +73,12 @@ def warn(message):
 
 def create_alert_tuple(file_name, action):
     title = {
-            DOWNLOAD: "Downloading",
-            UPLOAD: "Uploading",
-            MODIFYING: "Modifying",
-            DELETING: "Deleting",
-            MOVING: 'Moving'
-        }
+        DOWNLOAD: "Downloading",
+        UPLOAD: "Uploading",
+        MODIFYING: "Modifying",
+        DELETING: "Deleting",
+        MOVING: 'Moving'
+    }
     text = "{} {}".format(title[action], file_name)
     alert_tuple = (text, "- OSF Offline")
     return alert_tuple
@@ -93,10 +94,10 @@ def info(file_name, action):
     global last_alert_time
     global tray_alert_signal
 
-    #get text for alert ready
+    # get text for alert ready
     alert_tuple = create_alert_tuple(file_name, action)
 
-    #emit signal to update tray action alert
+    # emit signal to update tray action alert
     tray_alert_signal.emit(str(alert_tuple[0]))
 
     # run balloon alert
@@ -121,8 +122,9 @@ def info(file_name, action):
             if alert_queue.empty():
                 run_alert(alert_tuple[0], alert_tuple[1])
             else:
-                if datetime.now() - last_alert_time < timedelta(milliseconds= (ALERT_TIME * 3)) :  # last alert was recent
-                    run_alert('Updating {} files'.format(alert_queue.qsize() + 1), "Check <a href='www.osf.io'>www.osf.io</a> for details.")
+                if datetime.now() - last_alert_time < timedelta(milliseconds=(ALERT_TIME * 3)):  # last alert was recent
+                    run_alert('Updating {} files'.format(alert_queue.qsize() + 1),
+                              "Check <a href='www.osf.io'>www.osf.io</a> for details.")
                     clear_queue()
                 else:
                     run_alert(alert_tuple[0], alert_tuple[1])

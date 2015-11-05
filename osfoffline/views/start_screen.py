@@ -3,7 +3,7 @@ import aiohttp
 import asyncio
 import logging
 import concurrent
-from flask import Flask, request
+from flask import request
 
 from PyQt5.QtCore import pyqtSignal
 from PyQt5.QtWidgets import QDialog
@@ -17,14 +17,6 @@ from osfoffline.database_manager.models import User
 from osfoffline.views.rsc.startscreen import Ui_startscreen
 from osfoffline.exceptions.osf_exceptions import OSFAuthError
 from osfoffline.polling_osf_manager.osf_query import OSFQuery
-
-app = Flask(__name__)
-
-def shutdown_server():
-    func = request.environ.get('werkzeug.server.shutdown')
-    if func is None:
-        raise RuntimeError('Not running with the Werkzeug Server')
-    func()
 
 
 class StartScreen(QDialog):
@@ -85,10 +77,11 @@ class StartScreen(QDialog):
                 user.logged_in = True
                 save(session, user)
 
-                self.close()
         else:
             # Authentication failed, user has likely provided an invalid token
             raise OSFAuthError('Invalid auth response: {}'.format(resp.status))
+
+        self.close()
 
     def setup_slots(self):
         logging.info('setting up start_screen slots')
@@ -113,9 +106,6 @@ class StartScreen(QDialog):
         """
         if self._user_logged_in():
             self.done_logging_in_signal.emit()
-            # self.hide()
-            # event.ignore()
-            # self.destroy()
         else:
             self.quit_application_signal.emit()
         event.accept()

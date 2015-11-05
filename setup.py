@@ -17,7 +17,7 @@ setup(
     author='Center for Open Science',
     author_email='contact@cos.io',
     url='https://github.com/himanshuo/OSF-Offline',
-    packages=find_packages(exclude=("tests*", )),
+    packages=find_packages(exclude=("tests*",)),
     package_dir={'osfoffline': 'osfoffline'},
     include_package_data=True,
     # install_requires=requirements,

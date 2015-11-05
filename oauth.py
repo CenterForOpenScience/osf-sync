@@ -8,15 +8,15 @@ __author__ = 'andyboughton'
 
 import os
 
-from flask import Flask, abort, redirect, request, session, url_for
 import furl
+
+from flask import Flask, abort, redirect, request, session, url_for
 import requests
 from requests_oauthlib import OAuth2Session
 
 CLIENT_ID = 'eb53366f1ef347e3a7dde94cae4896be'
 CLIENT_SECRET = 'iUny91itQg8hBneJZfU5yLLnvKdQfBYjdPLjvpLX'
 REDIRECT_URI = 'http://localhost:5001/oauth_callback/'
-
 
 API_BASE_URL = 'https://staging-api.osf.io/v2'
 AUTH_BASE_URL = 'https://staging-accounts.osf.io/oauth2/authorize'
@@ -83,6 +83,7 @@ class ApiV2(object):
 
     :param client: A `requests`-like object for making API calls.
     """
+
     def __init__(self, client=None):
         self.client = client or requests
 
@@ -111,9 +112,11 @@ def home():
 
 @app.route('/login/', methods=['GET'])
 def login():
-    import ipdb;ipdb.set_trace()
+    import ipdb;
+    ipdb.set_trace()
     osf = OAuth2Session(client_id=CLIENT_ID, redirect_uri=REDIRECT_URI)
-    authorization_url, state = osf.authorization_url(AUTH_BASE_URL,client_secret=CLIENT_SECRET, approval_prompt='force')
+    authorization_url, state = osf.authorization_url(AUTH_BASE_URL, client_secret=CLIENT_SECRET,
+                                                     approval_prompt='force')
     # session['oauth_state'] = state
     return redirect(authorization_url)
 
@@ -169,6 +172,7 @@ if __name__ == '__main__':
     base.args['approval_prompt'] = 'force'
     # rsp = requests.get(base.url)
     import webbrowser
+
     print(base.url)
     webbrowser.open_new_tab(base.url)
 
@@ -183,6 +187,7 @@ if __name__ == '__main__':
     # base.args['approval_prompt'] = 'force'
     # rsp = requests.get(base.url)
     import webbrowser
+
     print(base.url)
     webbrowser.open_new_tab(base.url)
 

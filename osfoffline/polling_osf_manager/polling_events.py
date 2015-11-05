@@ -1,11 +1,15 @@
-from osfoffline.utils.path import ProperPath
-from osfoffline.polling_osf_manager.osf_query import OSFQuery
 import os
 import shutil
 import asyncio
-import osfoffline.alerts as AlertHandler
 import logging
+
 import aiohttp
+
+from osfoffline.utils.path import ProperPath
+from osfoffline.polling_osf_manager.osf_query import OSFQuery
+import osfoffline.alerts as AlertHandler
+
+
 class PollingEvent(object):
     def __init__(self, path):
         assert isinstance(path, str)
@@ -13,6 +17,7 @@ class PollingEvent(object):
     @asyncio.coroutine
     def run(self):
         pass
+
 
 class CreateFolder(PollingEvent):
     def __init__(self, path):
@@ -60,6 +65,7 @@ class RenameFolder(PollingEvent):
         AlertHandler.info(self.new_path.name, AlertHandler.MODIFYING)
         yield from _rename(self.old_path, self.new_path)
 
+
 class RenameFile(PollingEvent):
     def __init__(self, old_path, new_path):
         super().__init__(old_path)
@@ -75,6 +81,7 @@ class RenameFile(PollingEvent):
     def run(self):
         AlertHandler.info(self.new_path.name, AlertHandler.MODIFYING)
         yield from _rename(self.old_path, self.new_path)
+
 
 class UpdateFile(PollingEvent):
     def __init__(self, path, download_url, osf_query):
@@ -94,10 +101,11 @@ class UpdateFile(PollingEvent):
             logging.warning(e)
             # AlertHandler.warn("File unable to be updated online")
 
+
 class DeleteFolder(PollingEvent):
     def __init__(self, path):
         super().__init__(path)
-        self.path=ProperPath(path, is_dir=True)
+        self.path = ProperPath(path, is_dir=True)
 
     @asyncio.coroutine
     def run(self):
@@ -117,14 +125,16 @@ class DeleteFolder(PollingEvent):
 class DeleteFile(PollingEvent):
     def __init__(self, path):
         super().__init__(path)
-        self.path=ProperPath(path, is_dir=False)
+        self.path = ProperPath(path, is_dir=False)
 
     @asyncio.coroutine
     def run(self):
         try:
             os.remove(self.path.full_path)
         except FileNotFoundError:
-            logging.warning('file not deleted because does not exist on local filesystem. inside delete_local_file_folder (2)')
+            logging.warning(
+                'file not deleted because does not exist on local filesystem. inside delete_local_file_folder (2)')
+
 
 @asyncio.coroutine
 def _download_file(path, url, osf_query):
@@ -151,6 +161,7 @@ def _download_file(path, url, osf_query):
     except OSError:
         AlertHandler.warn("unable to open file")
         raise
+
 
 @asyncio.coroutine
 def _rename(old_path, new_path):

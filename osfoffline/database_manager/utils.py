@@ -1,9 +1,10 @@
-from sqlalchemy.orm.exc import MultipleResultsFound, NoResultFound
-from osfoffline.database_manager.models import User
 from contextlib import contextmanager
-from osfoffline.database_manager.db import session, DB_DIR
-
 import shutil
+
+from osfoffline.database_manager.db import session
+from osfoffline.settings import PROJECT_DB_PATH
+
+
 def save(session, *items_to_save):
     for item in items_to_save:
         session.add(item)
@@ -26,38 +27,39 @@ def session_scope():
     finally:
         session.close()
 
+
 def remove_db():
-    shutil.rmtree(DB_DIR)
+    shutil.rmtree(PROJECT_DB_PATH)
 
 
 
-# def close_session_safe(session):
-#     try:
-#         session.close()
-#     except:
+    # def close_session_safe(session):
+    #     try:
+    #         session.close()
+    #     except:
 
 
-# def get_current_user(self, session):
-#     user = None
-#     import threading
-#     print('---inside getcurrentuser-----{}----'.format(threading.current_thread()))
-#     err = False
-#     try:
-#         user = session.query(User).filter(User.logged_in).one()
-#     except MultipleResultsFound:
-#         # log out all users and restart login screen to get a single user to log in
-#         print('logging out all users.')
-#         for user in session.query(User):
-#             user.logged_in = False
-#             save(session, user)
-#         err = True
-#         session.close()
-#     except NoResultFound:
-#         err = True
-#         print('no users are logged in currently. Logging in first user in db.')
-#         session.close()
-#
-#     if err:
-#         self.login_action.trigger()
-#     else:
-#         return user
+    # def get_current_user(self, session):
+    #     user = None
+    #     import threading
+    #     print('---inside getcurrentuser-----{}----'.format(threading.current_thread()))
+    #     err = False
+    #     try:
+    #         user = session.query(User).filter(User.logged_in).one()
+    #     except MultipleResultsFound:
+    #         # log out all users and restart login screen to get a single user to log in
+    #         print('logging out all users.')
+    #         for user in session.query(User):
+    #             user.logged_in = False
+    #             save(session, user)
+    #         err = True
+    #         session.close()
+    #     except NoResultFound:
+    #         err = True
+    #         print('no users are logged in currently. Logging in first user in db.')
+    #         session.close()
+    #
+    #     if err:
+    #         self.login_action.trigger()
+    #     else:
+    #         return user

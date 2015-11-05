@@ -5,6 +5,6 @@ class local_db_sync_exception(Exception):
 class LocalDBBothNone(local_db_sync_exception):
     pass
 
+
 class IncorrectLocalDBMatch(local_db_sync_exception):
     pass
-

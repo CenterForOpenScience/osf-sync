@@ -1,20 +1,19 @@
-__author__ = 'himanshu'
-from PyQt5.Qt import QIcon
-from PyQt5.QtWidgets import (QDialog, QSystemTrayIcon,
-                             QAction, QMenu)
-import osfoffline.views.rsc.resources  # need this import for the logo to work properly.
+# -*- coding: utf-8 -*-
 import sys
 import os
 import subprocess
-import osfoffline.alerts as AlertHandler
 import webbrowser
+
+from PyQt5.Qt import QIcon
+from PyQt5.QtWidgets import (QDialog, QSystemTrayIcon,
+                             QAction, QMenu)
+import osfoffline.alerts as AlertHandler
 from osfoffline.utils.validators import validate_containing_folder
 from PyQt5.QtCore import pyqtSignal
 
+
 class SystemTray(QDialog):
-
     tray_alert_signal = pyqtSignal((str,))
-
 
     def __init__(self):
         super().__init__()
@@ -82,7 +81,3 @@ class SystemTray(QDialog):
                     raise NotImplementedError
         else:
             AlertHandler.warn('osf folder is not set')
-
-
-
-

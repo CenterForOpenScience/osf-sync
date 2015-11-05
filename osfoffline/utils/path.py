@@ -1,4 +1,5 @@
 import os
+
 from osfoffline.exceptions.path_exceptions import InvalidPathError
 
 
@@ -6,7 +7,6 @@ class ProperPath(object):
     """
     A standardized and validated path.
     """
-
 
     def generic_path_validation(self, path):
         """Validates a specific path, e.g. /folder/file.txt, /folder/
@@ -45,8 +45,6 @@ class ProperPath(object):
         self._is_dir = is_dir
 
         self.generic_path_validation(path)
-
-
 
     @property
     def is_dir(self):
@@ -87,7 +85,7 @@ class ProperPath(object):
             return os.path.join(self._orig_path, '')  # add trailing slash if not already there
         else:
             if self._orig_path.endswith(os.sep):
-                return self._orig_path[0:-1* len(os.sep)]  # remove separator
+                return self._orig_path[0:-1 * len(os.sep)]  # remove separator
             else:
                 return self._orig_path
 

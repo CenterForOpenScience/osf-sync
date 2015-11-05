@@ -1,31 +1,28 @@
-__author__ = 'himanshu'
-import json
 import os
 import asyncio
-import shutil
 import concurrent
-import pytz
-import aiohttp
 import logging
+
+import aiohttp
+import iso8601
+from sqlalchemy.orm.exc import MultipleResultsFound, NoResultFound
+
+import osfoffline.alerts as AlertHandler
 from osfoffline.database_manager.models import User, Node, File, Base
 from osfoffline.database_manager.db import session
 from osfoffline.database_manager.utils import save
+from osfoffline.exceptions.item_exceptions import InvalidItemType
 from osfoffline.polling_osf_manager.api_url_builder import api_url_for, USERS, NODES
 from osfoffline.polling_osf_manager.osf_query import OSFQuery
-from osfoffline.polling_osf_manager.remote_objects import RemoteObject, RemoteNode, RemoteFile, RemoteFolder,RemoteFileFolder
+from osfoffline.polling_osf_manager.remote_objects import RemoteObject, RemoteNode, RemoteFile, RemoteFileFolder
 from osfoffline.polling_osf_manager.polling_event_queue import PollingEventQueue
-from osfoffline.polling_osf_manager.polling_events import CreateFile,CreateFolder,RenameFile,RenameFolder, DeleteFile,DeleteFolder,UpdateFile
-import iso8601
-import osfoffline.alerts as AlertHandler
-from osfoffline.exceptions.item_exceptions import InvalidItemType
-from sqlalchemy.orm.exc import MultipleResultsFound, NoResultFound
-
-RECHECK_TIME = 5  # seconds
+from osfoffline.polling_osf_manager.polling_events import (CreateFile, CreateFolder, RenameFile, RenameFolder,
+                                                           DeleteFile, DeleteFolder, UpdateFile)
+from osfoffline.settings import POLL_DELAY
 
 
 class Poll(object):
     def __init__(self, user, loop):
-        super().__init__()
         assert isinstance(user, User)
         self._keep_running = True
 
@@ -35,12 +32,10 @@ class Poll(object):
         self.osf_query = OSFQuery(loop=self._loop, oauth_token=self.user.oauth_token)
         self.polling_event_queue = PollingEventQueue(loop=self._loop)
 
-
     def stop(self):
 
         self._keep_running = False
         self.osf_query.close()
-
 
     def start(self):
         # annoying and weird way to get the remote user from the coroutine
@@ -122,10 +117,9 @@ class Poll(object):
         i = 0
         while i < len(sorted_combined_list):
 
-
             both_exist = i + 1 < len(sorted_combined_list) and \
-                self.get_id(sorted_combined_list[i]) == \
-                self.get_id(sorted_combined_list[i + 1])
+                         self.get_id(sorted_combined_list[i]) == \
+                         self.get_id(sorted_combined_list[i + 1])
             if both_exist:
 
                 # (local, remote)
@@ -175,11 +169,12 @@ class Poll(object):
             # get remote top level nodes
             try:
                 remote_top_level_nodes = yield from self.osf_query.get_top_level_nodes(all_remote_nodes_url)
-            except (aiohttp.errors.ClientConnectionError, aiohttp.errors.ClientTimeoutError, concurrent.futures._base.TimeoutError):
+            except (aiohttp.errors.ClientConnectionError, aiohttp.errors.ClientTimeoutError,
+                    concurrent.futures._base.TimeoutError):
                 # NOTE: can't work with partial list! That would suggest that nodes were created online.
                 AlertHandler.warn("Bad Internet Connection")
                 # waits till the end of a sleep to stop. thus can make numerous smaller sleeps
-                for i in range(RECHECK_TIME):
+                for i in range(POLL_DELAY):
                     yield from asyncio.sleep(1)
                 continue
 
@@ -187,7 +182,8 @@ class Poll(object):
             # get local top level nodes
             local_top_level_nodes = self.user.top_level_nodes
 
-            local_remote_top_level_nodes = self.make_local_remote_tuple_list(local_top_level_nodes, remote_top_level_nodes)
+            local_remote_top_level_nodes = self.make_local_remote_tuple_list(local_top_level_nodes,
+                                                                             remote_top_level_nodes)
 
             session.refresh(self.user)
             sync_list = self.user.guid_for_top_level_nodes_to_sync
@@ -196,7 +192,8 @@ class Poll(object):
                 if remote and remote.id in sync_list:
                     try:
                         yield from self.check_node(local, remote, local_parent_node=None)
-                    except (aiohttp.errors.ClientConnectionError, aiohttp.errors.ClientTimeoutError, concurrent.futures._base.TimeoutError):
+                    except (aiohttp.errors.ClientConnectionError, aiohttp.errors.ClientTimeoutError,
+                            concurrent.futures._base.TimeoutError):
                         AlertHandler.warn('Bad Internet Connection')
 
             yield from self.polling_event_queue.run()
@@ -207,10 +204,8 @@ class Poll(object):
 
 
             # waits till the end of a sleep to stop. thus can make numerous smaller sleeps
-            for i in range(RECHECK_TIME):
+            for i in range(POLL_DELAY):
                 yield from asyncio.sleep(1)
-
-
 
     @asyncio.coroutine
     def check_node(self, local_node, remote_node, local_parent_node):
@@ -245,7 +240,9 @@ class Poll(object):
         # handle file_folders for node
         try:
             yield from self.check_file_folder(local_node, remote_node)
-        except (aiohttp.errors.ClientConnectionError, aiohttp.errors.ClientTimeoutError, concurrent.futures._base.TimeoutError):
+        except (
+                aiohttp.errors.ClientConnectionError, aiohttp.errors.ClientTimeoutError,
+                concurrent.futures._base.TimeoutError):
             AlertHandler.warn('Bad Internet Connection')
 
         # ensure that local node has Components folder
@@ -254,7 +251,9 @@ class Poll(object):
         # recursively handle node's children
         try:
             remote_children = yield from self.osf_query.get_child_nodes(remote_node)
-        except (aiohttp.errors.ClientConnectionError, aiohttp.errors.ClientTimeoutError, concurrent.futures._base.TimeoutError):
+        except (
+                aiohttp.errors.ClientConnectionError, aiohttp.errors.ClientTimeoutError,
+                concurrent.futures._base.TimeoutError):
             AlertHandler.warn('Bad Internet Connection')
             return
 
@@ -262,40 +261,45 @@ class Poll(object):
         for local, remote in local_remote_nodes:
             try:
                 yield from self.check_node(local, remote, local_parent_node=local_node)
-            except (aiohttp.errors.ClientConnectionError, aiohttp.errors.ClientTimeoutError, concurrent.futures._base.TimeoutError):
+            except (aiohttp.errors.ClientConnectionError, aiohttp.errors.ClientTimeoutError,
+                    concurrent.futures._base.TimeoutError):
                 AlertHandler.warn('Bad Internet Connection')
 
     @asyncio.coroutine
     def check_file_folder(self, local_node, remote_node):
         logging.info('checking file_folder')
-        #todo: probably can put this step into get_child_files for nodes.
-        #fixme: doesnt handle multiple providers right now...
+        # todo: probably can put this step into get_child_files for nodes.
+        # fixme: doesnt handle multiple providers right now...
 
         try:
             remote_node_files = yield from self.osf_query.get_child_files(remote_node)
 
-        except (aiohttp.errors.ClientConnectionError, aiohttp.errors.ClientTimeoutError, concurrent.futures._base.TimeoutError):
+        except (
+                aiohttp.errors.ClientConnectionError, aiohttp.errors.ClientTimeoutError,
+                concurrent.futures._base.TimeoutError):
             AlertHandler.warn('Bad Internet Connection')
             return
         except aiohttp.errors.HttpBadRequest:
-            AlertHandler.warn('could not access files for node {}. Node might have been deleted.'.format(remote_node.name))
+            AlertHandler.warn(
+                'could not access files for node {}. Node might have been deleted.'.format(remote_node.name))
             return
-
 
         assert len(remote_node_files) >= 1
         for node_file in remote_node_files:
-            if node_file.name ==  'osfstorage':
+            if node_file.name == 'osfstorage':
                 osfstorage_folder = node_file
         assert osfstorage_folder
 
-
         try:
             remote_node_top_level_file_folders = yield from self.osf_query.get_child_files(osfstorage_folder)
-        except (aiohttp.errors.ClientConnectionError, aiohttp.errors.ClientTimeoutError, concurrent.futures._base.TimeoutError):
+        except (
+                aiohttp.errors.ClientConnectionError, aiohttp.errors.ClientTimeoutError,
+                concurrent.futures._base.TimeoutError):
             AlertHandler.warn('Bad Internet Connection')
             return
         except aiohttp.errors.HttpBadRequest:
-            AlertHandler.warn('could not access files for node {}. Node might have been deleted.'.format(remote_node.name))
+            AlertHandler.warn(
+                'could not access files for node {}. Node might have been deleted.'.format(remote_node.name))
             return
 
         local_remote_files = self.make_local_remote_tuple_list(
@@ -311,7 +315,8 @@ class Poll(object):
                     local_parent_file_folder=None,
                     local_node=local_node
                 )
-            except (aiohttp.errors.ClientConnectionError, aiohttp.errors.ClientTimeoutError, concurrent.futures._base.TimeoutError):
+            except (aiohttp.errors.ClientConnectionError, aiohttp.errors.ClientTimeoutError,
+                    concurrent.futures._base.TimeoutError):
                 AlertHandler.warn('Bad Internet Connection')
 
     @asyncio.coroutine
@@ -375,7 +380,8 @@ class Poll(object):
                 yield from self.delete_local_file_folder(local_file_folder)
                 return
         elif local_file_folder is not None and remote_file_folder is not None:
-            possibly_new_remote_file_folder = yield from self.modify_file_folder_logic(local_file_folder, remote_file_folder)
+            possibly_new_remote_file_folder = yield from self.modify_file_folder_logic(local_file_folder,
+                                                                                       remote_file_folder)
             # if we do not need to modify things, remote file folder and local file folder does not change
             # we do not need to get a new local file folder because it is updated internally by the db
             if possibly_new_remote_file_folder:
@@ -391,12 +397,12 @@ class Poll(object):
 
             try:
                 remote_children = yield from self.osf_query.get_child_files(remote_file_folder)
-            except (aiohttp.errors.ClientConnectionError, aiohttp.errors.ClientTimeoutError, concurrent.futures._base.TimeoutError):
+            except (aiohttp.errors.ClientConnectionError, aiohttp.errors.ClientTimeoutError,
+                    concurrent.futures._base.TimeoutError):
                 AlertHandler.warn('Bad Internet Connection')
                 return
 
             local_remote_file_folders = self.make_local_remote_tuple_list(local_file_folder.files, remote_children)
-
 
             for local, remote in local_remote_file_folders:
                 try:
@@ -406,12 +412,11 @@ class Poll(object):
                         local_parent_file_folder=local_file_folder,
                         local_node=local_node
                     )
-                except (aiohttp.errors.ClientConnectionError, aiohttp.errors.ClientTimeoutError, concurrent.futures._base.TimeoutError):
+                except (aiohttp.errors.ClientConnectionError, aiohttp.errors.ClientTimeoutError,
+                        concurrent.futures._base.TimeoutError):
                     AlertHandler.warn('Bad Internet Connection')
 
-                # if we are unable to get children, then we do not try to get and manipulate children
-
-
+                    # if we are unable to get children, then we do not try to get and manipulate children
 
     # Create
     @asyncio.coroutine
@@ -431,7 +436,6 @@ class Poll(object):
         )
         save(session, new_node)
 
-
         if local_parent_node:
             self._ensure_components_folder(local_parent_node)
         self.polling_event_queue.put(CreateFolder(new_node.path))
@@ -439,7 +443,6 @@ class Poll(object):
 
         assert local_parent_node is None or (new_node in local_parent_node.child_nodes)
         return new_node
-
 
     @asyncio.coroutine
     def create_local_file_folder(self, remote_file_folder, local_parent_folder, local_node):
@@ -466,7 +469,6 @@ class Poll(object):
         )
         save(session, new_file_folder)
 
-
         if type == File.FILE:
             event = CreateFile(
                 path=new_file_folder.path,
@@ -490,21 +492,21 @@ class Poll(object):
         assert isinstance(local_node, Node)
         assert local_file_folder.locally_created
 
-
         if local_file_folder.is_folder:
             remote_file_folder = yield from self.osf_query.upload_folder(local_file_folder)
         elif local_file_folder.is_file:
             try:
                 remote_file_folder = yield from self.osf_query.upload_file(local_file_folder)
             except FileNotFoundError:
-                logging.warning('file not created on remote server because does not exist locally: {}'.format(local_file_folder.name))
+                logging.warning('file not created on remote server because does not exist locally: {}'.format(
+                    local_file_folder.name))
                 return
 
         local_file_folder.osf_id = remote_file_folder.id
         local_file_folder.osf_path = remote_file_folder.id
         local_file_folder.locally_created = False
 
-        save(session,local_file_folder)
+        save(session, local_file_folder)
 
         return remote_file_folder
 
@@ -523,27 +525,25 @@ class Poll(object):
 
         save(session, local_node)
 
-
-
         self.polling_event_queue.put(RenameFolder(old_path, local_node.path))
-
 
     @asyncio.coroutine
     def modify_file_folder_logic(self, local_file_folder, remote_file_folder):
-        assert isinstance(local_file_folder,File)
-        assert isinstance(remote_file_folder,RemoteFileFolder)
+        assert isinstance(local_file_folder, File)
+        assert isinstance(remote_file_folder, RemoteFileFolder)
 
         updated_remote_file_folder = None
         # this handles both files and folders being renamed
         if local_file_folder.name != remote_file_folder.name:
 
             if local_file_folder.locally_renamed:
-                updated_remote_file_folder = yield from self.rename_remote_file_folder(local_file_folder, remote_file_folder)
+                updated_remote_file_folder = yield from self.rename_remote_file_folder(local_file_folder,
+                                                                                       remote_file_folder)
             else:
-                yield from self.rename_local_file_folder(local_file_folder,  remote_file_folder)
+                yield from self.rename_local_file_folder(local_file_folder, remote_file_folder)
 
         # if file size is different, then only do you  bother checking whether to upload or to download
-        if local_file_folder.is_file and local_file_folder.size != remote_file_folder.size: # todo: local_file_folder.hash != remote_file_folder.size
+        if local_file_folder.is_file and local_file_folder.size != remote_file_folder.size:  # todo: local_file_folder.hash != remote_file_folder.size
             if (yield from self.local_is_newer(local_file_folder, remote_file_folder)):
                 updated_remote_file_folder = yield from self.update_remote_file(local_file_folder, remote_file_folder)
             elif (yield from self.remote_is_newer(local_file_folder, remote_file_folder)):
@@ -561,7 +561,7 @@ class Poll(object):
 
 
 
-        #handle renaming local file and local folder
+        # handle renaming local file and local folder
         old_path = local_file_folder.path
         # update model
         local_file_folder.name = remote_file_folder.name
@@ -585,9 +585,9 @@ class Poll(object):
 
         # update local file system
         event = UpdateFile(
-                path=local_file.path,
-                download_url=remote_file.download_url,
-                osf_query=self.osf_query
+            path=local_file.path,
+            download_url=remote_file.download_url,
+            osf_query=self.osf_query
         )
         self.polling_event_queue.put(event)
 
@@ -598,14 +598,12 @@ class Poll(object):
         assert isinstance(remote_file, RemoteFile)
         assert remote_file.id == local_file.osf_path
 
-
         try:
             new_remote_file = yield from self.osf_query.upload_file(local_file)
         except FileNotFoundError:
-            logging.warning('file not reuploaded on remote server because does not exist locally. inside create_remote_file_folder')
+            logging.warning(
+                'file not reuploaded on remote server because does not exist locally. inside create_remote_file_folder')
             return remote_file
-
-
 
         return new_remote_file
 
@@ -617,11 +615,11 @@ class Poll(object):
         assert remote_file_folder.id == local_file_folder.osf_path
         assert local_file_folder.name != remote_file_folder.name
 
-
         if local_file_folder.is_file:
             new_remote_file_folder = yield from self.osf_query.rename_remote_file(local_file_folder, remote_file_folder)
-        else: # if local_file_folder.is_folder:
-            new_remote_file_folder = yield from self.osf_query.rename_remote_folder(local_file_folder, remote_file_folder)
+        else:  # if local_file_folder.is_folder:
+            new_remote_file_folder = yield from self.osf_query.rename_remote_folder(local_file_folder,
+                                                                                    remote_file_folder)
 
         return new_remote_file_folder
 
@@ -632,7 +630,7 @@ class Poll(object):
 
         if local_file_folder.is_file:
             new_remote_file_folder = yield from self.osf_query.move_remote_file(local_file_folder)
-        else: # if local_file_folder.is_folder:
+        else:  # if local_file_folder.is_folder:
             new_remote_file_folder = yield from self.osf_query.move_remote_folder(local_file_folder)
 
         return new_remote_file_folder
@@ -642,7 +640,6 @@ class Poll(object):
     def delete_local_node(self, local_node):
         logging.info('delete_local_node')
         assert isinstance(local_node, Node)
-
 
         path = local_node.path
 
@@ -679,7 +676,6 @@ class Poll(object):
         assert local_file_folder.osf_id == self.get_id(remote_file_folder)
         assert local_file_folder.locally_deleted
 
-
         if local_file_folder.is_file:
             yield from self.osf_query.delete_remote_file(remote_file_folder)
         elif local_file_folder.is_folder:
@@ -688,7 +684,6 @@ class Poll(object):
         local_file_folder.deleted = False
         session.delete(local_file_folder)
         save(session)
-
 
     @asyncio.coroutine
     def _get_local_remote_times(self, local, remote):
@@ -701,7 +696,7 @@ class Poll(object):
         # NOTE; waterbutler does NOT update time when a file or folder is RENAMED.
         # thus cannot accurately determine when file/folder was renamed.
         # thus, going to have to go with local is pretty much always newer.
-        #todo: based on above note, I think it is a better idea to go with the .locally_renamed idea.
+        # todo: based on above note, I think it is a better idea to go with the .locally_renamed idea.
         if isinstance(remote, RemoteFileFolder):
             remote_time = yield from remote.last_modified(local.node.osf_id, self.osf_query)
         else:
@@ -726,8 +721,6 @@ class Poll(object):
             else:
                 return True
 
-
-
     @asyncio.coroutine
     def remote_is_newer(self, local, remote):
         assert local
@@ -743,7 +736,6 @@ class Poll(object):
             else:
                 return True
 
-
     @asyncio.coroutine
     def is_locally_moved(self, remote):
         assert isinstance(remote, RemoteObject)
@@ -752,7 +744,6 @@ class Poll(object):
             return local.locally_moved
         except (MultipleResultsFound, NoResultFound):
             return False
-
 
     @asyncio.coroutine
     def get_local_from_remote(self, remote):
@@ -766,7 +757,6 @@ class Poll(object):
             raise InvalidItemType
 
         return session.query(cls).filter(cls.osf_id == remote.id).one()
-
 
     def _ensure_components_folder(self, local_node):
         assert isinstance(local_node, Node)

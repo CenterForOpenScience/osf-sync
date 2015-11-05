@@ -1,58 +1,50 @@
-import os
-import json
 import logging
 import logging.config
+import os
+
 from appdirs import user_config_dir, user_data_dir
-import furl
+
+## Development mode: use a local OSF dev version and more granular logging
+DEV_MODE = False  # TODO (abought): auto-set flag when using `inv start_for_tests`
+
+### General settings
 PROJECT_NAME = 'osf-offline'
 PROJECT_AUTHOR = 'cos'
-PROJECT_CONFIG_PATH = user_config_dir(PROJECT_NAME, PROJECT_AUTHOR)
-PROJECT_DB_PATH = user_data_dir(PROJECT_NAME, PROJECT_AUTHOR)
 
+### Variables used to control where application config data is stored
+PROJECT_CONFIG_PATH = user_config_dir(appname=PROJECT_NAME, appauthor=PROJECT_AUTHOR)
+PROJECT_DB_PATH = user_data_dir(appname=PROJECT_NAME, appauthor=PROJECT_AUTHOR)
+DB_FILE_PATH = os.path.join(PROJECT_DB_PATH, 'osf.db')
+
+### Base URL for API server; used to fetch data
 # API_BASE = 'http://localhost:5000'
-API_BASE = 'https://staging-api.osf.io'
-FILE_BASE = 'https://staging-files.osf.io'
+if DEV_MODE is True:
+    API_BASE = 'http://localhost:8000'
+    FILE_BASE = 'http://localhost:7777'  ## FIXME: Dev mode currently does not work with local waterbutler (abought)
+else:
+    API_BASE = 'https://staging-api.osf.io'
+    FILE_BASE = 'https://staging-files.osf.io'
+
+### Interval (in seconds) to poll the OSF for server-side file changes
+if DEV_MODE is True:
+    POLL_DELAY = 5  # seconds
+else:
+    POLL_DELAY = 5 * 60  # seconds
+
+### Time to keep alert messages on screen (in milliseconds); may not be configurable on all platforms
+ALERT_TIME = 1000  # ms
 
 
-
-# import hashlib
-#
-# try:
-#     from waterbutler import settings
-# except ImportError:
-#     settings = {}
-#
-# config = settings.get('SERVER_CONFIG', {})
-#
-#
-# ADDRESS = config.get('ADDRESS', '127.0.0.1')
-# PORT = config.get('PORT', 7777)
-#
-# DEBUG = config.get('DEBUG', True)
-#
-# CHUNK_SIZE = config.get('CHUNK_SIZE', 65536)  # 64KB
-# MAX_BODY_SIZE = config.get('MAX_BODY_SIZE', int(4.9 * (1024 ** 3)))  # 4.9 GB
-
-
-# try:
-#
-#     DEFAULT_FORMATTER = {
-#         '()': 'colorlog.ColoredFormatter',
-#         'format': '%(cyan)s[%(asctime)s]%(log_color)s[%(levelname)s][%(name)s]: %(reset)s%(message)s'
-#     }
-# except ImportError:
-#     DEFAULT_FORMATTER = {
-#         '()': 'waterbutler.core.logging.MaskFormatter',
-#         'format': '[%(asctime)s][%(levelname)s][%(name)s]: %(message)s',
-#         'pattern': '(?<=cookie=)(.*?)(?=&|$)',
-#         'mask': '***'
-#     }
-import colorlog  # noqa
+### Logging configuration
 DEFAULT_FORMATTER = {
-   '()': 'colorlog.ColoredFormatter',
-   'format': '%(cyan)s[%(asctime)s]%(log_color)s[%(threadName)s][%(filename)s][%(levelname)s][%(name)s]: %(reset)s%(message)s'
+    '()': 'colorlog.ColoredFormatter',
+    'format': '%(cyan)s[%(asctime)s]%(log_color)s[%(threadName)s][%(filename)s][%(levelname)s][%(name)s]: %(reset)s%(message)s'
 }
 
+if DEV_MODE is True:
+    log_level = 'DEBUG'
+else:
+    log_level = 'INFO'
 
 DEFAULT_LOGGING_CONFIG = {
     'version': 1,
@@ -63,49 +55,30 @@ DEFAULT_LOGGING_CONFIG = {
     'handlers': {
         'console': {
             'class': 'logging.StreamHandler',
-            'level': 'INFO',
+            'level': log_level,
             'formatter': 'console'
         },
         'syslog': {
             'class': 'logging.handlers.SysLogHandler',
-            'level': 'INFO'
+            'level': log_level
         }
     },
     'loggers': {
         '': {
             'handlers': ['console'],
-            'level': 'INFO',
+            'level': log_level,
             'propagate': False
         }
     },
     'root': {
-        'level': 'INFO',
+        'level': log_level,
         'handlers': ['console']
     }
 }
 
-
-
-# try:
-#     config_path = os.environ['{}_CONFIG'.format(PROJECT_NAME.upper())]
-# except KeyError:
-#     env = os.environ.get('ENV', 'test')
-#     config_path = '{}/{}-{}.json'.format(PROJECT_CONFIG_PATH, PROJECT_NAME, env)
-#
-#
-# config = {}
-# config_path = os.path.expanduser(config_path)
-# if not os.path.exists(config_path):
-#     logging.warning('No \'{}\' configuration file found'.format(config_path))
-# else:
-#     with open(os.path.expanduser(config_path)) as fp:
-#         config = json.load(fp)
-#
-#
-# def get(key, default):
-#     return config.get(key, default)
-
-
-# logging_config = get('LOGGING', DEFAULT_LOGGING_CONFIG)
 logging_config = DEFAULT_LOGGING_CONFIG
 logging.config.dictConfig(logging_config)
+
+
+## TODO: Add a custom excepthook and implement logging to a file on user's hard drive (after cleanup PR)
+## logger.critical('Whatever', exc_info=(exc_type, exc_value, tb))

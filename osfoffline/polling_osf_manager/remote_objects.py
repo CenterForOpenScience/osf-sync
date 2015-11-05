@@ -48,7 +48,6 @@ class RemoteNode(RemoteObject):
 
         self.validate()
 
-
     def validate(self):
         super().validate()
         assert self.child_files_url
@@ -70,10 +69,6 @@ class RemoteFileFolder(RemoteObject):
         self.move_url = remote_dict['links']['move'] if 'move' in remote_dict['links'] else None
         self.delete_url = remote_dict['links']['delete'] if 'delete' in remote_dict['links'] else None
 
-
-
-
-
     def validate(self):
         super().validate()
         assert self.provider
@@ -81,10 +76,8 @@ class RemoteFileFolder(RemoteObject):
         assert self.delete_url if not self.id else True
 
 
-
 class RemoteFolder(RemoteFileFolder):
     def __init__(self, remote_dict):
-
         super().__init__(remote_dict)
         assert remote_dict['attributes']['kind'] == 'folder'
 
@@ -108,7 +101,6 @@ class RemoteFile(RemoteFileFolder):
     def __init__(self, remote_dict):
         super().__init__(remote_dict)
         assert remote_dict['attributes']['kind'] == 'file'
-
 
         self.download_url = remote_dict['links']['download']
         self.overwrite_url = remote_dict['links']['upload']
@@ -152,7 +144,7 @@ def dict_to_remote_object(remote_dict):
 
 
 def remote_to_local_datetime(remote_utc_time_string):
-        """convert osf utc time string to a proper datetime (with utc timezone).
-            throws iso8601.ParseError. Handle as needed.
-        """
-        return iso8601.parse_date(remote_utc_time_string)
+    """convert osf utc time string to a proper datetime (with utc timezone).
+        throws iso8601.ParseError. Handle as needed.
+    """
+    return iso8601.parse_date(remote_utc_time_string)

@@ -1,11 +1,11 @@
 __author__ = 'himanshu'
 import asyncio
-import os
 
 """
 # todo: FIGURE OUT HOW TO MAKE POLLINGEVENTQUEUE WORK WITH LOOP PROPERLY....
 https://github.com/python/asyncio/blob/f4111812967fded634637936225205f29035a449/tests/test_queues.py
 """
+
 
 class PollingEventQueue(object):
     def __init__(self, loop):
@@ -19,5 +19,3 @@ class PollingEventQueue(object):
 
     def put(self, event):
         self._queue.put_nowait(event)
-
-

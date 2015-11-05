@@ -5,7 +5,6 @@ import logging
 from appdirs import user_log_dir
 from sqlalchemy.orm.exc import MultipleResultsFound
 from sqlalchemy.orm.exc import NoResultFound
-
 from PyQt5.QtWidgets import (QApplication, QDialog)
 from osfoffline.views.preferences import Preferences
 from osfoffline.views.system_tray import SystemTray
@@ -25,11 +24,9 @@ from osfoffline.utils.debug import debug_trace
 
 
 class OSFApp(QDialog):
-
     login_signal = pyqtSignal()
     start_tray_signal = pyqtSignal()
     containing_folder_updated_signal = pyqtSignal()
-
 
     def __init__(self):
         super().__init__()
@@ -48,10 +45,7 @@ class OSFApp(QDialog):
 
         # connect all signal-slot pairs
         self.setup_connections()
-
         self.background_worker = BackgroundWorker()
-
-
 
     def setup_connections(self):
         # [ (signal, slot) ]
@@ -88,9 +82,6 @@ class OSFApp(QDialog):
         for signal, slot in signal_slot_pairs:
             signal.connect(slot)
 
-
-
-
     def _can_restart_background_worker(self):
         try:
             user = self.get_current_user()
@@ -103,10 +94,9 @@ class OSFApp(QDialog):
         if not self.background_worker:
             return False
         if self.background_worker.is_alive():
-           return False
+            return False
 
         return True
-
 
     def start(self):
         logging.warning('start in main called.')
@@ -130,10 +120,9 @@ class OSFApp(QDialog):
             containing_folder = os.path.abspath(self.set_containing_folder_initial())
 
         user.osf_local_folder_path = os.path.join(containing_folder, "OSF")
-       
+
         save(session, user)
         self.tray.set_containing_folder(containing_folder)
-
 
         if not os.path.isdir(user.osf_local_folder_path):
             os.makedirs(user.osf_local_folder_path)
@@ -142,8 +131,12 @@ class OSFApp(QDialog):
 
         self.start_tray_signal.emit()
         logging.warning('starting background worker from main.start')
+        # fix the multithreading problem
+        try:
+            self.background_worker = BackgroundWorker()
+        except AttributeError:
+            pass
         self.background_worker.start()
-
 
     def resume(self):
         logging.info("resuming")
@@ -152,18 +145,16 @@ class OSFApp(QDialog):
         # I was unable to correctly pause the background thread
         # thus took this route for now.
         if self._can_restart_background_worker():
-            #stop previous
+            # stop previous
             self.background_worker.stop()
             self.background_worker.join()
 
-            #start new
+            # start new
             self.background_worker = BackgroundWorker()
             self.background_worker.start()
         else:
-            #todo: what goes here, if anything?
+            # todo: what goes here, if anything?
             logging.info('wanted to but could not resume background worker')
-
-
 
     def pause(self):
         logging.info('pausing background worker')
@@ -171,9 +162,6 @@ class OSFApp(QDialog):
             logging.info('pausing background worker')
             self.background_worker.stop()
             self.background_worker.join()
-
-
-
 
     def quit(self):
         try:
@@ -190,9 +178,6 @@ class OSFApp(QDialog):
             # quit() stops gui and then quits application
             QApplication.instance().quit()
 
-
-
-
     def _logout_all_users(self):
         for user in session.query(User):
             user.logged_in = False
@@ -200,8 +185,6 @@ class OSFApp(QDialog):
 
     def get_current_user(self):
         return session.query(User).filter(User.logged_in).one()
-
-
 
     def start_logging(self):
 
@@ -234,7 +217,6 @@ class OSFApp(QDialog):
         # add the handler to the root logger
         logging.getLogger('').addHandler(console)
         # logging.getLogger('sqlalchemy.engine').addHandler()
-
 
     def set_containing_folder_initial(self):
         return QFileDialog.getExistingDirectory(self, "Choose where to place OSF folder")

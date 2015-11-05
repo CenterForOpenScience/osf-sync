@@ -1,17 +1,15 @@
-from PyQt5.QtWidgets import (QAction, QDialog, QFileDialog, QTreeWidgetItem)
-from PyQt5.QtCore import QCoreApplication, QRect, Qt
+import os
+import logging
+
+from PyQt5.QtWidgets import (QDialog, QFileDialog, QTreeWidgetItem)
+from PyQt5.QtCore import QCoreApplication, Qt
 from PyQt5.QtCore import pyqtSignal
 from osfoffline.views.rsc.preferences_rc import Ui_Preferences  # REQUIRED FOR GUI
 from osfoffline.database_manager.db import session
-from osfoffline.database_manager.utils import save, session_scope
-from osfoffline.database_manager.models import User, Node
+from osfoffline.database_manager.models import User
 from osfoffline.polling_osf_manager.api_url_builder import api_url_for, NODES, USERS
-from osfoffline.polling_osf_manager.osf_query import OSFQuery
 from osfoffline.polling_osf_manager.remote_objects import RemoteNode
 import requests
-import os
-import logging
-import asyncio
 import osfoffline.alerts as AlertHandler
 
 
@@ -49,9 +47,6 @@ class Preferences(QDialog):
         #     event.ignore()
         #     self.destroy()
 
-
-
-
     def alerts_changed(self):
         if self.preferences_window.desktopNotifications.isChecked():
             AlertHandler.show_alerts = True
@@ -70,9 +65,6 @@ class Preferences(QDialog):
             # todo: make it so that this application does NOT start on login
             pass
 
-
-
-
     def set_containing_folder(self):
         new_containing_folder = QFileDialog.getExistingDirectory(self, "Choose where to place OSF folder")
         osf_path = os.path.join(new_containing_folder, "OSF")
@@ -83,7 +75,8 @@ class Preferences(QDialog):
         elif not os.path.exists(osf_path):
             os.makedirs(osf_path)
         elif os.path.isfile(osf_path):
-            AlertHandler.warn("An OSF file exists where you would like to create the OSF folder. Delete it, or choose a different location")
+            AlertHandler.warn(
+                "An OSF file exists where you would like to create the OSF folder. Delete it, or choose a different location")
             logging.warning("An OSF file exists where you would like to create the OSF folder.")
             return
 
@@ -91,11 +84,8 @@ class Preferences(QDialog):
         user.osf_local_folder_path = os.path.join(osf_path)
 
         self.preferences_window.containingFolderTextEdit.setText(self._translate("Preferences", self.containing_folder))
-        self.open_window(tab=Preferences.GENERAL) # todo: dynamically update ui????
+        self.open_window(tab=Preferences.GENERAL)  # todo: dynamically update ui????
         self.containing_folder_updated_signal.emit(new_containing_folder)
-
-
-
 
     def update_sync_nodes(self):
         user = session.query(User).filter(User.logged_in).one()
@@ -136,7 +126,6 @@ class Preferences(QDialog):
         self.reset_tree_widget()
         _translate = QCoreApplication.translate
 
-
         user = session.query(User).filter(User.logged_in).one()
         for node in self.remote_top_level_nodes:
             tree_item = QTreeWidgetItem(self.preferences_window.treeWidget)
@@ -157,8 +146,8 @@ class Preferences(QDialog):
             if user:
                 user_nodes = []
                 url = api_url_for(USERS, related_type=NODES, user_id=user.osf_id)
-                headers={'Authorization': 'Bearer {}'.format(user.oauth_token)}
-                #headers={'Cookie':'osf_staging={}'.format(user.oauth_token)}
+                headers = {'Authorization': 'Bearer {}'.format(user.oauth_token)}
+                #headers = {'Cookie':'osf_staging={}'.format(user.oauth_token)}
                 resp = requests.get(url, headers=headers).json()
                 logging.warning(resp)
                 user_nodes.extend(resp['data'])
@@ -174,16 +163,14 @@ class Preferences(QDialog):
 
         return remote_top_level_nodes
 
-
     def setup_slots(self):
         self.preferences_window.tabWidget.currentChanged.connect(self.selector)
 
 
-
 def debug_trace():
-  '''Set a tracepoint in the Python debugger that works with Qt'''
-  from PyQt5.QtCore import pyqtRemoveInputHook
+    '''Set a tracepoint in the Python debugger that works with Qt'''
+    from PyQt5.QtCore import pyqtRemoveInputHook
 
-  from pdb import set_trace
-  pyqtRemoveInputHook()
-  set_trace()
+    from pdb import set_trace
+    pyqtRemoveInputHook()
+    set_trace()

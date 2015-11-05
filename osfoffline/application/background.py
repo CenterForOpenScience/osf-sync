@@ -1,31 +1,24 @@
-__author__ = 'himanshu'
+# -*- coding: utf-8 -*-
 import threading
 import asyncio
-from sqlalchemy.orm.exc import MultipleResultsFound, NoResultFound
+import logging
+
 from watchdog.observers import Observer
-from osfoffline.database_manager.utils import save
 import osfoffline.database_manager.models as models
 import osfoffline.polling_osf_manager.polling as polling
 import osfoffline.filesystem_manager.osf_event_handler as osf_event_handler
 from osfoffline.database_manager.db import session
-from osfoffline.filesystem_manager.sync_local_filesytem_and_db import LocalDBSync
-import logging
+
 
 class BackgroundWorker(threading.Thread):
-
     def __init__(self):
         super().__init__()
-
         self.user = None
         self.osf_folder = ''
         self.loop = None
         self.paused = True  # start out paused
         self.running = False
         self.poller = None
-
-
-
-
 
     def run(self):
 
@@ -47,17 +40,12 @@ class BackgroundWorker(threading.Thread):
             self.start_polling_server()
             self.running = True
 
-
     def pause_background_tasks(self):
 
         if self.running:
-
             self.stop_polling_server()
-
             self.stop_observing_osf_folder()
-
             # self.stop_loop()
-
             self.running = False
 
     def start_polling_server(self):
@@ -68,13 +56,10 @@ class BackgroundWorker(threading.Thread):
         if self.poller:
             self.poller.stop()
 
-
-
     # todo: can refactor this code out to somewhere
 
     def get_current_user(self):
         return session.query(models.User).filter(models.User.logged_in).one()
-
 
     def stop_loop(self, close=False):
         logging.info('stop loop')
@@ -103,9 +88,6 @@ class BackgroundWorker(threading.Thread):
         logging.info('stop observing')
         self.stop_loop(close=True)
 
-
-
-
     def start_observing_osf_folder(self):
         # if something inside the folder changes, log it to config dir
 
@@ -124,15 +106,15 @@ class BackgroundWorker(threading.Thread):
         # LocalDBSync(self.user.osf_local_folder_path, self.observer, self.user).emit_new_events()
 
         try:
-
             self.observer.start()  # start
         except OSError:
+            # FIXME: Document these limits and provide better user notification.
+            #    See http://pythonhosted.org/watchdog/installation.html for limits.
             logging.warning('limit of watched items reached')
 
     def stop_observing_osf_folder(self):
         self.observer.stop()
         self.observer.join()
-
 
     # courtesy of waterbutler
     def ensure_event_loop(self):
@@ -152,24 +134,16 @@ class BackgroundWorker(threading.Thread):
         return asyncio.get_event_loop()
 
 
-
-"""
-HOW DOES LOGIN/LOGOUT WORK?
-
-previously logged in:
-when you first open osf offline, you go to main.py which sets up views, connections, and controller.
-controller sets up db, logs, and determines which user is logged in.
-when all is good, controller starts background worker.
-background worker polls api and observer osf folder
-
-not logged in:
-when you first open osf offline, you go to main.py which sets up views, connections, and controller.
-controller sets up db, logs, and opens create user screen. user logs in. then get user from db.
-when all is good, controller starts background worker.
-background worker polls api and observer osf folder
-
-
-
-
-
-"""
+# HOW DOES LOGIN/LOGOUT WORK?
+#
+# previously logged in:
+# when you first open osf offline, you go to main.py which sets up views, connections, and controller.
+# controller sets up db, logs, and determines which user is logged in.
+# when all is good, controller starts background worker.
+# background worker polls api and observer osf folder
+#
+# not logged in:
+# when you first open osf offline, you go to main.py which sets up views, connections, and controller.
+# controller sets up db, logs, and opens create user screen. user logs in. then get user from db.
+# when all is good, controller starts background worker.
+# background worker polls api and observer osf folder
