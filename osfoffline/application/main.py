@@ -36,7 +36,6 @@ class OSFApp(QDialog):
         self.app_name = "OSFOffline"
         self.app_author = "COS"
 
-
         # views
         self.start_screen = StartScreen()
         self.tray = SystemTray()
@@ -192,7 +191,6 @@ class OSFApp(QDialog):
         log_dir = user_log_dir(self.app_name, self.app_author)
         if not os.path.exists(log_dir):  # ~/.cache/appname
             os.makedirs(log_dir)
-
 
         # make sure logging file exists
         log_file = open(os.path.join(log_dir, 'osf.log'), 'w+')

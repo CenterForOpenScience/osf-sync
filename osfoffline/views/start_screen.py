@@ -25,7 +25,6 @@ class StartScreen(QDialog):
         user_name = self.start_screen.emailEdit.text().strip()
         password = self.start_screen.passwordEdit.text().strip()
 
-
         # assumption: logged in user properly.
         # assumption: all the fields needed for db are set
         full_name = user_name
