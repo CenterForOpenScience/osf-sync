@@ -157,11 +157,13 @@ class OSFApp(QDialog):
             logging.info('wanted to but could not resume background worker')
 
     def pause(self):
-        logging.info('pausing background worker')
+        logging.info('pausing')
         if self.background_worker and self.background_worker.is_alive():
             logging.info('pausing background worker')
             self.background_worker.stop()
+            logging.info('background worker stopped')
             self.background_worker.join()
+            logging.info('paused background worker')
 
     def quit(self):
         try:
