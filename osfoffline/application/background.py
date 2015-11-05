@@ -62,31 +62,30 @@ class BackgroundWorker(threading.Thread):
         return session.query(models.User).filter(models.User.logged_in).one()
 
     def stop_loop(self, close=False):
+        """ WARNING: Only pass in 'close' if you plan on creating an entirely new loop afterwards
+        """
         logging.info('stop loop')
         if self.loop.is_closed():
-            logging.info('loop already closed')
-
-        elif not self.loop.is_running():
-            logging.info('loop is stopped already. closing it')
-            self.loop.close()
-        else:
-            # stop loop when current tasks finish.
-            self.loop.call_soon(self.loop.stop)
-            logging.info('call_soon to loop.stop. will stop when polling/observing events finish.')
-            # todo: find better way?
+            logging.info('loop already stopped')
             if close:
-                while not self.loop.is_closed():
-                    if not self.loop.is_running():
-                        self.loop.close()
+                logging.info('closing loop')
+
+        logging.info('calling loop.stop. will stop when polling/observing events finish.')
+        self.loop.stop()
+
+        if close:
+            while not self.loop.is_closed():
+                if not self.loop.is_running():
+                    logging.info('closing loop')
+                    self.loop.close()
 
     def stop(self):
-
         logging.info('stopping background worker')
         self.stop_polling_server()
         logging.info('stop polling')
         self.stop_observing_osf_folder()
         logging.info('stop observing')
-        self.stop_loop(close=True)
+        self.stop_loop(close=False)
 
     def start_observing_osf_folder(self):
         # if something inside the folder changes, log it to config dir
