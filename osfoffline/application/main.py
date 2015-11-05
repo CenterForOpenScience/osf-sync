@@ -98,7 +98,7 @@ class OSFApp(QDialog):
         return True
 
     def start(self):
-        logging.debug('start in main called.')
+        logging.debug('Start in main called.')
 
         # todo: HANDLE LOGIN FAILED
         try:
@@ -114,11 +114,11 @@ class OSFApp(QDialog):
 
         containing_folder = os.path.dirname(user.osf_local_folder_path)
         while not validate_containing_folder(containing_folder):
-            logging.warning("Invalid containing folder: {}".format(containing_folder))
-            AlertHandler.warn("Invalid containing folder. Please choose another.")
+            logging.warning('Invalid containing folder: {}'.format(containing_folder))
+            AlertHandler.warn('Invalid containing folder. Please choose another.')
             containing_folder = os.path.abspath(self.set_containing_folder_initial())
 
-        user.osf_local_folder_path = os.path.join(containing_folder, "OSF")
+        user.osf_local_folder_path = os.path.join(containing_folder, 'OSF')
 
         save(session, user)
         self.tray.set_containing_folder(containing_folder)
@@ -136,7 +136,7 @@ class OSFApp(QDialog):
         self.background_worker.start()
 
     def resume(self):
-        logging.debug("resuming")
+        logging.debug('resuming')
         # todo: properly pause the background thread
         # I am recreating the background thread everytime for now.
         # I was unable to correctly pause the background thread

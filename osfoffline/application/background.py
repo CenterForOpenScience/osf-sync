@@ -22,7 +22,7 @@ class BackgroundWorker(threading.Thread):
 
     def run(self):
 
-        logging.debug('run in background tasks called for first time.')
+        logging.debug('Run in background tasks called for first time.')
         self.loop = self.ensure_event_loop()
         self.run_background_tasks()
         self.loop.run_forever()
@@ -34,7 +34,7 @@ class BackgroundWorker(threading.Thread):
             self.user = self.get_current_user()
             self.osf_folder = self.user.osf_local_folder_path
 
-            logging.debug("start observing")
+            logging.debug('start observing')
             self.start_observing_osf_folder()
             logging.debug('start polling')
             self.start_polling_server()

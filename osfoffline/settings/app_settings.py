@@ -27,7 +27,7 @@ else:
 if DEV_MODE is True:
     POLL_DELAY = 5  # seconds
 else:
-    POLL_DELAY = 15 * 60  # seconds
+    POLL_DELAY = 5 * 60  # seconds
 
 ### Time to keep alert messages on screen (in milliseconds); may not be configurable on all platforms
 ALERT_TIME = 1000  # ms
