@@ -533,7 +533,13 @@ class Poll(object):
         updated_remote_file_folder = None
         # this handles both files and folders being renamed
         if local_file_folder.name != remote_file_folder.name:
+            # TODO: we are using a heuristic to determine if a folder is renamed. The heuristic is
+            # TODO: that there is a flag set locally when a folder is renamed. If the flag is set, then
+            # TODO: we update the remote folder. The issue occurs when both the local folder and remote
+            # TODO: folder are renamed. Which is newer? We don't know.
 
+            # TODO: this is also the case for files because a change in a file name does NOT warrant
+            # TODO: updating the modified field on the OSF.
             if local_file_folder.locally_renamed:
                 updated_remote_file_folder = yield from self.rename_remote_file_folder(local_file_folder,
                                                                                        remote_file_folder)
@@ -542,9 +548,9 @@ class Poll(object):
 
         # if file size is different, then only do you  bother checking whether to upload or to download
         if local_file_folder.is_file and local_file_folder.size != remote_file_folder.size:  # todo: local_file_folder.hash != remote_file_folder.size
-            if (yield from self.local_is_newer(local_file_folder, remote_file_folder)):
+            if (yield from self.local_file_is_newer(local_file_folder, remote_file_folder)):
                 updated_remote_file_folder = yield from self.update_remote_file(local_file_folder, remote_file_folder)
-            elif (yield from self.remote_is_newer(local_file_folder, remote_file_folder)):
+            elif (yield from self.remote_file_is_newer(local_file_folder, remote_file_folder)):
                 yield from self.update_local_file(local_file_folder, remote_file_folder)
 
         # want to have the remote file folder continue to be the most recent version.
@@ -680,20 +686,16 @@ class Poll(object):
 
     @asyncio.coroutine
     def _get_local_remote_times(self, local, remote):
-        assert local
-        assert remote
-        assert isinstance(local, Base)
-        assert isinstance(remote, RemoteObject)
+        assert isinstance(local, File)
+        assert isinstance(remote, RemoteFile)
 
         local_time = local.date_modified.replace(tzinfo=iso8601.iso8601.Utc())
         # NOTE; waterbutler does NOT update time when a file or folder is RENAMED.
         # thus cannot accurately determine when file/folder was renamed.
         # thus, going to have to go with local is pretty much always newer.
         # todo: based on above note, I think it is a better idea to go with the .locally_renamed idea.
-        if isinstance(remote, RemoteFileFolder):
-            remote_time = yield from remote.last_modified(local.node.osf_id, self.osf_query)
-        else:
-            remote_time = remote.last_modified
+
+        remote_time = remote.last_modified
 
         return local_time, remote_time
 
@@ -701,33 +703,30 @@ class Poll(object):
     # THUS, if we are modifying something and remote is None, the modification MUST be coming from local.
 
     @asyncio.coroutine
-    def local_is_newer(self, local, remote):
-        assert local
-        assert remote
-        try:
+    def local_file_is_newer(self, local, remote):
+        assert isinstance(local, File)
+        assert isinstance(remote, RemoteFile)
 
+        try:
             local_time, remote_time = yield from self._get_local_remote_times(local, remote)
             return local_time > remote_time
         except iso8601.ParseError:
-            if isinstance(remote, RemoteFile):
-                return local.size > remote.size
-            else:
-                return True
+            # TODO: if there are parsing issues with the time then we fall back to comparing sizes.
+            return local.size > remote.size
+
 
     @asyncio.coroutine
-    def remote_is_newer(self, local, remote):
-        assert local
-        assert remote
+    def remote_file_is_newer(self, local, remote):
+        assert isinstance(local, File)
+        assert isinstance(remote, RemoteFile)
 
         try:
-
             local_time, remote_time = yield from self._get_local_remote_times(local, remote)
             return local_time < remote_time
         except iso8601.ParseError:
-            if isinstance(remote, RemoteFile):
-                return local.size < remote.size
-            else:
-                return True
+            # TODO: if there are parsing issues with the time then we fall back to comparing sizes.
+            return local.size < remote.size
+
 
     @asyncio.coroutine
     def is_locally_moved(self, remote):

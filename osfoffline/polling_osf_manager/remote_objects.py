@@ -85,8 +85,6 @@ class RemoteFolder(RemoteFileFolder):
         self.upload_file_url = remote_dict['links']['upload']
         self.upload_folder_url = remote_dict['links']['new_folder']
 
-        # self.has_write_privileges = 'POST' in remote_dict['links']['self_methods']
-        # #todo: await decision. can use OPTION
         self.validate()
 
     def validate(self):
@@ -94,7 +92,6 @@ class RemoteFolder(RemoteFileFolder):
         assert self.child_files_url
         assert self.upload_file_url
         assert self.upload_folder_url
-        # assert self.has_write_privileges is not None
 
 
 class RemoteFile(RemoteFileFolder):
@@ -104,20 +101,20 @@ class RemoteFile(RemoteFileFolder):
 
         self.download_url = remote_dict['links']['download']
         self.overwrite_url = remote_dict['links']['upload']
-        # self.hash = remote_dict['metadata']['extra']['hash']
-        # self.rented = remote_dict['metadata']['extra']['rented']
         self.size = remote_dict['attributes']['size']
-        # self.last_modified = remote_to_local_datetime(remote_dict['attributes']['date_modified'])
-        # #todo: IS THIS ON ACTUAL SERVER YET? Chris said it would be up there soon.
-        # self._write_privileges = 'POST' in remote_dict['links']['self_methods']
+
+        self.last_modified_string = remote_dict['attributes'].get('modified')
+
 
         self.validate()
 
-    # @property
-    # def has_write_privileges(self):
-    #     # if self.rented:
-    #     #     return False
-    #     return self._write_privileges
+    @property
+    def last_modified(self):
+        """
+        We store the last modified string above. We turn it into a datetime on demand so that
+        it will raise an error if the last modified string is wrong.
+        """
+        return remote_to_local_datetime(self.last_modified_string)
 
     def validate(self):
         super().validate()
@@ -125,8 +122,8 @@ class RemoteFile(RemoteFileFolder):
         assert self.delete_url
         assert self.size >= 0
         assert self.overwrite_url
-        # assert self.last_modified
-        # assert self.has_write_privileges is not None
+
+
 
 
 def dict_to_remote_object(remote_dict):
