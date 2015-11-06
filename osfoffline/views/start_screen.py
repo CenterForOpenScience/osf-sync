@@ -1,10 +1,10 @@
-import furl
-import aiohttp
 import asyncio
 import logging
 import concurrent
 from flask import request
 
+import furl
+import aiohttp
 from PyQt5.QtCore import pyqtSignal
 from PyQt5.QtWidgets import QDialog, QMessageBox
 from sqlalchemy.orm.exc import MultipleResultsFound, NoResultFound
@@ -17,6 +17,7 @@ from osfoffline.database_manager.models import User
 from osfoffline.views.rsc.startscreen import Ui_startscreen
 from osfoffline.exceptions.osf_exceptions import OSFAuthError
 from osfoffline.polling_osf_manager.osf_query import OSFQuery
+from osfoffline.polling_osf_manager.remote_objects import RemoteUser
 
 
 class StartScreen(QDialog):
@@ -40,8 +41,8 @@ class StartScreen(QDialog):
         osf = OSFQuery(loop, personal_access_token)
         logging.debug('url: {}'.format(url))
         try:
-            resp = yield from osf.make_request(url)
-        except (aiohttp.errors.ClientTimeoutError, aiohttp.errors.ClientConnectionError, concurrent.futures._base.TimeoutError):
+            resp = yield from osf.make_request(url, expects=[200])
+        except (aiohttp.errors.ClientTimeoutError, aiohttp.errors.ClientConnectionError, aiohttp.errors.TimeoutError):
             # No internet connection
             QMessageBox.warning(
                 None,
@@ -56,37 +57,36 @@ class StartScreen(QDialog):
                 "Invalid login credentials."
             )
         else:
-            if resp.status == 200:
-                json_resp = yield from resp.json()
-                full_name = json_resp['data']['attributes']['full_name']     # Use one of these later to "Welcome {user}"
-                given_name = json_resp['data']['attributes']['given_name']   # Use one of these later to "Welcome {user}"
-                osf_id = json_resp['data']['id']
+            json_resp = yield from resp.json()
+            remote_user = RemoteUser(json_resp['data'])
+            full_name = json_resp['data']['attributes']['full_name']     # Use one of these later to "Welcome {user}"
+            given_name = json_resp['data']['attributes']['given_name']   # Use one of these later to "Welcome {user}"
+            osf_id = json_resp['data']['id']
 
-                try:
-                    user = session.query(User).filter(User.osf_id == osf_id).one()
-                    user.logged_in = True
-                    save(session, user)
-                except MultipleResultsFound:
-                    logging.warning('multiple users with same username. deleting all users with this username. restarting function.')
-                    for user in session.query(User):
-                        if user.osf_login == osf_id:
-                            session.delete(user)
-                            save(session)
-                    self.log_in()
-                except NoResultFound:
-                    logging.debug('user doesnt exist. Creating user. and logging them in.')
-                    user = User(
-                        full_name=full_name,
-                        osf_id=osf_id,
-                        osf_login='',  # TODO: email goes here when more auth methods are added, not currently returned by APIv2
-                        osf_local_folder_path='',
-                        oauth_token=personal_access_token,
-                    )
-                    user.logged_in = True
-                    save(session, user)
-
+            try:
+                user = session.query(User).filter(User.osf_id == remote_user.id).one()
+            except MultipleResultsFound:
+                logging.warning('multiple users with same username. deleting all users with this username. restarting function.')
+                for user in session.query(User).filter(User.osf_id == remote_user.id).all():
+                    session.delete(user)
+                    save(session)
+                self.log_in()
+            except NoResultFound:
+                logging.debug('user doesnt exist. Creating user. and logging them in.')
+                user = User(
+                    full_name=full_name,
+                    osf_id=osf_id,
+                    osf_login='',  # TODO: email goes here when more auth methods are added, not currently returned by APIv2
+                    osf_local_folder_path='',
+                    oauth_token=personal_access_token,
+                )
+                user.logged_in = True
+                save(session, user)
             else:
-                raise OSFAuthError('Invalid auth response: {}'.format(resp.status))
+                if not user.oauth_token == personal_access_token:
+                    user.oauth_token == personal_access_token
+                user.logged_in = True
+                save(session, user)
 
             self.close()
 
