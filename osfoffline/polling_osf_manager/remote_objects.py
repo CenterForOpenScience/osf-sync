@@ -103,8 +103,7 @@ class RemoteFile(RemoteFileFolder):
         self.download_url = remote_dict['links']['download']
         self.overwrite_url = remote_dict['links']['upload']
         self.size = remote_dict['attributes']['size']
-
-        self.last_modified_string = remote_dict['attributes'].get('modified')
+        self.last_modified_string = remote_dict['attributes'].get('date_modified')
 
 
         self.validate()
