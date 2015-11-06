@@ -158,8 +158,7 @@ class OSFQuery(object):
         url = remote.move_url
 
         data = {
-            'action': 'move',
-            'path': local.parent.osf_path if local.parent else '{}:{}'.format(local.node_id, local.provider),
+            'action': 'rename',
             'rename': local.name
         }
 
