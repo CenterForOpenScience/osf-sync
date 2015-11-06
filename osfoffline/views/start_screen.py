@@ -59,9 +59,6 @@ class StartScreen(QDialog):
         else:
             json_resp = yield from resp.json()
             remote_user = RemoteUser(json_resp['data'])
-            full_name = json_resp['data']['attributes']['full_name']     # Use one of these later to "Welcome {user}"
-            given_name = json_resp['data']['attributes']['given_name']   # Use one of these later to "Welcome {user}"
-            osf_id = json_resp['data']['id']
 
             try:
                 user = session.query(User).filter(User.osf_id == remote_user.id).one()
@@ -74,19 +71,18 @@ class StartScreen(QDialog):
             except NoResultFound:
                 logging.debug('user doesnt exist. Creating user. and logging them in.')
                 user = User(
-                    full_name=full_name,
-                    osf_id=osf_id,
+                    full_name=remote_user.full_name,
+                    osf_id=remote_user.id,
                     osf_login='',  # TODO: email goes here when more auth methods are added, not currently returned by APIv2
                     osf_local_folder_path='',
                     oauth_token=personal_access_token,
                 )
-                user.logged_in = True
-                save(session, user)
             else:
                 if not user.oauth_token == personal_access_token:
                     user.oauth_token == personal_access_token
-                user.logged_in = True
-                save(session, user)
+
+            user.logged_in = True
+            save(session, user)
 
             self.close()
 
