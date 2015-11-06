@@ -69,7 +69,7 @@ class StartScreen(QDialog):
                     try:
                         save(session, user)
                     except Exception as e:
-                        logging.error(e)
+                        logging.exception(e)
                         QMessageBox.warning(
                             None,
                             "Log in Failed",
@@ -80,7 +80,7 @@ class StartScreen(QDialog):
             except NoResultFound:
                 logging.debug('user doesnt exist. Creating user. and logging them in.')
                 user = User(
-                    full_name=remote_user.full_name,
+                    full_name=remote_user.name,
                     osf_id=remote_user.id,
                     osf_login='',  # TODO: email goes here when more auth methods are added, not currently returned by APIv2
                     osf_local_folder_path='',
@@ -94,7 +94,7 @@ class StartScreen(QDialog):
             try:
                 save(session, user)
             except Exception as e:
-                logging.error(e)
+                logging.exception(e)
                 QMessageBox.warning(
                     None,
                     "Log in Failed",
