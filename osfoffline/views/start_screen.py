@@ -49,7 +49,7 @@ class StartScreen(QDialog):
                 "Log in Failed",
                 "Unable to connect to server. Check your internet connection or try again later."
             )
-        except aiohttp.errors.HttpBadRequest:
+        except (aiohttp.errors.HttpBadRequest, aiohttp.errors.BadStatusLine):
             # Invalid credentials
             QMessageBox.warning(
                 None,
