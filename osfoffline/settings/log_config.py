@@ -1,7 +1,7 @@
 import logging
 import logging.config
 import os
-import sys
+import colorlog
 
 from appdirs import user_log_dir
 
