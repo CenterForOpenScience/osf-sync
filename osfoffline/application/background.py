@@ -19,6 +19,7 @@ class BackgroundWorker(threading.Thread):
         self.paused = True  # start out paused
         self.running = False
         self.poller = None
+        self.observer = None
 
     def run(self):
 
@@ -62,25 +63,31 @@ class BackgroundWorker(threading.Thread):
         return session.query(models.User).filter(models.User.logged_in).one()
 
     def stop_loop(self, close=False):
+        """ WARNING: Only pass in 'close' if you plan on creating a new loop afterwards
+        """
         logging.debug('stop loop')
-        if self.loop.is_closed():
-            logging.debug('loop already closed')
+        if not self.loop:
+            logging.debug('loop never initialized')
+            return
 
-        elif not self.loop.is_running():
-            logging.debug('loop is stopped already. closing it')
-            self.loop.close()
+        if not self.loop.is_running():
+            logging.debug('loop already stopped')
+            if close:
+                if self.loop.is_closed():
+                    logging.debug('loop already closed')
+                else:
+                    logging.debug('closing loop')
+                    self.loop.close()
         else:
-            # stop loop when current tasks finish.
-            self.loop.call_soon(self.loop.stop)
-            logging.debug('call_soon to loop.stop. will stop when polling/observing events finish.')
-            # todo: find better way?
+            logging.debug('calling loop.stop(). will stop when polling/observing events finish.')
+            self.loop.stop()
             if close:
                 while not self.loop.is_closed():
                     if not self.loop.is_running():
+                        logging.debug('closing loop')
                         self.loop.close()
 
     def stop(self):
-
         logging.debug('stopping background worker')
         self.stop_polling_server()
         logging.debug('stop polling')
@@ -113,8 +120,9 @@ class BackgroundWorker(threading.Thread):
             logging.warning('limit of watched items reached')
 
     def stop_observing_osf_folder(self):
-        self.observer.stop()
-        self.observer.join()
+        if self.observer:
+            self.observer.stop()
+            self.observer.join()
 
     # courtesy of waterbutler
     def ensure_event_loop(self):

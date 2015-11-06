@@ -49,8 +49,8 @@ class User(Base):
         return top_nodes
 
     def __repr__(self):
-        return "<User(fullname={}, osf_password={}, osf_local_folder_path={})>".format(
-            self.full_name, self.osf_password, self.osf_local_folder_path)
+        return "<User(fullname={}, osf_local_folder_path={})>".format(
+            self.full_name, self.osf_local_folder_path)
 
 
 # todo: make locally_created, locally_deleted enum's in a EVENTS fields rather than custom variables

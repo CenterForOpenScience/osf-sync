@@ -110,48 +110,21 @@ class Poll(object):
         assert None not in local_list
         assert None not in remote_list
 
-        combined_list = local_list + remote_list
-        sorted_combined_list = sorted(combined_list, key=self.get_id)
+        local_files = {}
+        remote_files = {}
 
-        local_remote_tuple_list = []
-        i = 0
-        while i < len(sorted_combined_list):
+        for local in local_list:
+            assert isinstance(local, Base)
+            local_files[local.osf_id] = local
 
-            both_exist = i + 1 < len(sorted_combined_list) and \
-                         self.get_id(sorted_combined_list[i]) == \
-                         self.get_id(sorted_combined_list[i + 1])
-            if both_exist:
+        for remote in remote_list:
+            assert isinstance(remote, RemoteObject)
+            remote_files[remote.id] = remote
 
-                # (local, remote)
-                if isinstance(sorted_combined_list[i], RemoteObject):  # remote
-                    new_tuple = (sorted_combined_list[i + 1], sorted_combined_list[i])
-                elif isinstance(sorted_combined_list[i], Base):  # local
-                    new_tuple = (sorted_combined_list[i], sorted_combined_list[i + 1])
-                else:
-                    raise TypeError('invalid type: {}'.format(type(sorted_combined_list[i])))
-
-                # add an extra 1 because both values should be added to tuple list
-                i += 1
-            elif isinstance(sorted_combined_list[i], RemoteObject):
-
-                new_tuple = (None, sorted_combined_list[i])
-
-            else:
-
-                new_tuple = (sorted_combined_list[i], None)
-
-            local_remote_tuple_list.append(new_tuple)
-            i += 1
-
-        for local, remote in local_remote_tuple_list:
-            assert isinstance(local, Base) or local is None
-            assert isinstance(remote, RemoteObject) or remote is None
-            if isinstance(local, Base) and isinstance(remote, dict):
-                assert local.osf_id == remote.id
-
-        return local_remote_tuple_list
-
-    # Check
+        return [
+            (local_files.get(fid), remote_files.get(fid))
+            for fid in set(list(local_files.keys()) + list(remote_files.keys()))
+        ]
 
     @asyncio.coroutine
     def check_osf(self, remote_user):
@@ -177,7 +150,6 @@ class Poll(object):
                 for i in range(POLL_DELAY):
                     yield from asyncio.sleep(1)
                 continue
-
 
             # get local top level nodes
             local_top_level_nodes = self.user.top_level_nodes
