@@ -66,8 +66,17 @@ class StartScreen(QDialog):
                 logging.warning('multiple users with same username. deleting all users with this username. restarting function.')
                 for user in session.query(User).filter(User.osf_id == remote_user.id).all():
                     session.delete(user)
-                    save(session)
-                self.log_in()
+                    try:
+                        save(session, user)
+                    except Exception as e:
+                        logging.error(e)
+                        QMessageBox.warning(
+                            None,
+                            "Log in Failed",
+                            "Unable to save user data. Please try again later."
+                        )
+
+                return self.log_in()
             except NoResultFound:
                 logging.debug('user doesnt exist. Creating user. and logging them in.')
                 user = User(
