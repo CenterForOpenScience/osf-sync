@@ -693,8 +693,7 @@ class Poll(object):
         # NOTE; waterbutler does NOT update time when a file or folder is RENAMED.
         # thus cannot accurately determine when file/folder was renamed.
         # thus, going to have to go with local is pretty much always newer.
-        # todo: based on above note, I think it is a better idea to go with the .locally_renamed idea.
-
+        # NOTE: based on above note, it is a better idea to go with the .locally_renamed idea.
         remote_time = remote.last_modified
 
         return local_time, remote_time
