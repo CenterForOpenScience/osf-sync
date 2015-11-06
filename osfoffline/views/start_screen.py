@@ -82,7 +82,15 @@ class StartScreen(QDialog):
                     user.oauth_token == personal_access_token
 
             user.logged_in = True
-            save(session, user)
+            try:
+                save(session, user)
+            except Exception as e:
+                logging.error(e)
+                QMessageBox.warning(
+                    None,
+                    "Log in Failed",
+                    "Unable to save user data. Please try again later."
+                )
 
             self.close()
 
