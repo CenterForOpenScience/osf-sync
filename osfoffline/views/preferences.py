@@ -21,8 +21,8 @@ class Preferences(QDialog):
     OSF = 1
     ABOUT = 2
 
-    PROJECT_NAME_COLUMN = 0
-    PROJECT_SYNC_COLUMN = 1
+    PROJECT_NAME_COLUMN = 1
+    PROJECT_SYNC_COLUMN = 0
 
     preferences_closed_signal = pyqtSignal()
     containing_folder_updated_signal = pyqtSignal((str,))
