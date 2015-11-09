@@ -18,7 +18,7 @@ class User(Base):
 
     id = Column(Integer, primary_key=True)
     full_name = Column(String)
-    osf_login = Column(String, unique=True)
+    # osf_login = Column(String, unique=True)  # TODO: Re-enable when username/password login is done
     osf_password = Column(String)
     osf_local_folder_path = Column(String)
     oauth_token = Column(String)
