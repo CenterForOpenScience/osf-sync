@@ -15,7 +15,7 @@ from osfoffline.database_manager.models import User
 from osfoffline.exceptions.osf_exceptions import OSFAuthError
 from osfoffline.polling_osf_manager.osf_query import OSFQuery
 from osfoffline.polling_osf_manager.remote_objects import RemoteUser
-from osfoffline.utls.authentication import AuthClient
+from osfoffline.utils.authentication import AuthClient
 from osfoffline.utils.debug import debug_trace
 from osfoffline.views.rsc.startscreen import Ui_startscreen
 
@@ -38,7 +38,12 @@ class StartScreen(QDialog):
         username = self.start_screen.usernameEdit.text().strip()
         password = self.start_screen.passwordEdit.text().strip()
         auth_client = AuthClient()
-        user = yield from auth_client.log_in(username=username, password=password)
+        try:
+            user = yield from auth_client.log_in(username=username, password=password)
+        except Exception as e:
+            logging.exception(e)
+            user = None
+
         if user:
             logging.debug('Successfully logged in user: {}'.format(user))
             self.close()
