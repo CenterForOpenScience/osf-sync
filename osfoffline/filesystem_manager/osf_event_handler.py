@@ -5,7 +5,7 @@ storing the data into the db, and then sending a request to the remote server.
 import asyncio
 import logging
 
-from watchdog.events import FileSystemEventHandler, DirModifiedEvent
+from watchdog.events import FileSystemEventHandler, DirModifiedEvent, DirCreatedEvent, FileCreatedEvent
 from osfoffline.database_manager.models import Node, File, User
 from osfoffline.database_manager.db import session
 from osfoffline.database_manager.utils import save
@@ -49,6 +49,15 @@ class OSFEventHandler(FileSystemEventHandler):
 
         # determine and get what moved
         if not self._already_exists(src_path):
+            try:
+                self._get_parent_item_from_path(src_path)
+            except ItemNotInDB:
+                # This means it was put into a place on the hierarchy being watched but otherwise not attached to a
+                # node, so it needs to be added just like a new event rather than as a move.
+
+                new_event = DirCreatedEvent(event.dest_path) if event.is_directory else FileCreatedEvent(event.dest_path)
+                yield from self._create_file_or_folder(new_event, src_path=dest_path)
+                return
             logging.warning('Tried to move item that does not exist: {}'.format(src_path.name))
             return
 
@@ -101,20 +110,7 @@ class OSFEventHandler(FileSystemEventHandler):
             logging.info('moved from {} to {}'.format(src_path.full_path, dest_path.full_path))
 
     @asyncio.coroutine
-    def on_created(self, event):
-        """Called when a file or directory is created.
-
-        :param event:
-            Event representing file/directory creation.
-        :type event:
-            :class:`DirCreatedEvent` or :class:`FileCreatedEvent`
-        """
-        src_path = ProperPath(event.src_path, event.is_directory)
-
-        # create new model
-        if self._already_exists(src_path):
-            return
-
+    def _create_file_or_folder(self, event, src_path):
         # assert: whats being created is a file folder
         try:
             containing_item = self._get_parent_item_from_path(src_path)
@@ -144,6 +140,23 @@ class OSFEventHandler(FileSystemEventHandler):
                 return
         save(session, new_item, containing_item)
         logging.info("created new {} {}".format('folder' if event.is_directory else 'file', src_path.full_path))
+
+    @asyncio.coroutine
+    def on_created(self, event):
+        """Called when a file or directory is created.
+
+        :param event:
+            Event representing file/directory creation.
+        :type event:
+            :class:`DirCreatedEvent` or :class:`FileCreatedEvent`
+        """
+        src_path = ProperPath(event.src_path, event.is_directory)
+
+        # create new model
+        if self._already_exists(src_path):
+            return
+
+        yield from self._create_file_or_folder(event, src_path=src_path)
 
     @asyncio.coroutine
     def on_modified(self, event):
