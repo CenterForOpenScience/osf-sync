@@ -1,11 +1,13 @@
 import asyncio
 import datetime
 import furl
+import json
 import logging
 
 import aiohttp
 import bcrypt
 from PyQt5.QtWidgets import QMessageBox
+from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
 
 from osfoffline import settings
 from osfoffline.database_manager.db import session
@@ -14,32 +16,22 @@ from osfoffline.database_manager.utils import save
 from osfoffline.polling_osf_manager.remote_objects import RemoteUser
 
 
-def generate_hash(password):
+def generate_hash(password, salt=None):
     """ Generates a password hash using `bcrypt`.
         Number of rounds for salt generation is 12.
 
     :return: hashed password
     """
+    if not salt:
+        salt = bcrypt.gensalt(12)
     return bcrypt.hashpw(
         password.encode('utf-8'),
-        bcrypt.gensalt(12)
+        salt
     )
-
-token_request_body = json.load({
-    'data': {
-        'type': 'tokens',
-        'attributes': {
-            'name': 'OSF-Offline {}'.format(datetime.date.today()),
-            'scopes': 'osf.full_write'
-        }
-    }
-})
-
 
 class AuthClient(object):
     """Manages authorization flow """
     def __init__(self):
-        self.API_URL = furl.furl(settings.API_BASE)
         self.failed_login = False
 
     @asyncio.coroutine
@@ -48,21 +40,28 @@ class AuthClient(object):
 
             :return: personal_access_token or None
         """
-        token_url = self.API_URL.path.add('/v2/tokens/create/')
+        token_url = furl.furl(settings.API_BASE)
+        token_url.path.add('/v2/tokens/')
+        token_request_body = '{"data": {"attributes": {"name": "OSF-Offline ' + \
+            str(datetime.date.today()) + \
+            '", "scopes": "osf.full_write"}, "type": "tokens"}}'
+        headers = {'content-type': 'application/json'}
 
         try:
-            resp = yield from aiohttp.request(method='POST', url=token_url.url, data=token_request_body, auth=(username, password))
+            resp = yield from aiohttp.request(method='POST', url=token_url.url, headers=headers, data=token_request_body, auth=(username, password))
         except (aiohttp.errors.ClientTimeoutError, aiohttp.errors.ClientConnectionError, aiohttp.errors.TimeoutError):
             # No internet connection
             self.display_error('Unable to connect to server. Check your internet connection or try again later.')
         except Exception as e:
-            # Invalid credentials
-            self.display_error('Invalid login credentials', e=e)
+            # Invalid credentials probably, will be prompted later
+            logging.exception(e)
         else:
             if not resp.status == 201:
                 return None
             json_resp = yield from resp.json()
             return json_resp['data']['attributes']['token_id']
+
+        return
 
     @asyncio.coroutine
     def _find_or_create_user(self, username, password):
@@ -71,9 +70,10 @@ class AuthClient(object):
 
         :return: user
         """
+        user = None
+
         try:
             user = session.query(User).filter(User.osf_login == username).one()
-
         except MultipleResultsFound:
             logging.warning('Multiple users with same username. deleting all users with this username. restarting function.')
             for user in session.query(User).filter(User.osf_login == username).all():
@@ -83,12 +83,12 @@ class AuthClient(object):
                 except Exception as e:
                     self.display_error('Unable to save user data. Please try again later.', e=e)
             user = yield from self._find_or_create_user(username, password)
-
         except NoResultFound:
             logging.debug('User doesnt exist. Attempting to authenticate, then creating user.')
-            personal_access_token = yield from self.authenticate(username, password)
+            personal_access_token = yield from self._authenticate(username, password)
             if not personal_access_token:
                 self.failed_login = True
+                return
             else:
                 user = User(
                     full_name='',
@@ -98,19 +98,22 @@ class AuthClient(object):
                     osf_local_folder_path='',
                     oauth_token=personal_access_token,
                 )
-
         finally:
-            #Hit API_URL and populate more user data if possible
-            if not user.oauth_token or user.password != generate_hash(password):
-                logger.warning('Login error: User {} either has no oauth token or submitted a different password. Attempting to authenticate'.format(user))
-                personal_access_token = yield from self.authenticate(username, password)
+            #Hit APIv2 and populate more user data if possible
+            if not user:
+                self.display_error('Invalid login credentials')
+                return
+
+            if not user.oauth_token or user.osf_password != generate_hash(password, user.osf_password):
+                logging.warning('Login error: User {} either has no oauth token or submitted a different password. Attempting to authenticate'.format(user))
+                personal_access_token = yield from self._authenticate(username, password)
                 if not personal_access_token:
                     self.failed_login = True
                 else:
                     user.oauth_token = personal_access_token
 
             if not self.failed_login:
-                yield from self._populate_user_data(user, username, password)
+                return (yield from self._populate_user_data(user, username, password))
             else:
                 return
 
@@ -121,15 +124,14 @@ class AuthClient(object):
 
             :return: user
         """
-        me = self.API_URL.path.add('/v2/users/me/')
+        me = furl.furl(settings.API_BASE)
+        me.path.add('/v2/users/me/')
         header = {'Authorization': 'Bearer {}'.format(user.oauth_token)}
         try:
             resp = yield from aiohttp.request(method='GET', url=me.url, headers=header)
-
         except (aiohttp.errors.ClientTimeoutError, aiohttp.errors.ClientConnectionError, aiohttp.errors.TimeoutError):
             # No internet connection
             self.display_error('Unable to connect to server. Check your internet connection or try again later')
-
         except (aiohttp.errors.HttpBadRequest, aiohttp.errors.BadStatusLine):
             # Invalid credentials, delete possibly revoked PAT from user data and try again.
             # TODO: attempt to delete token from remote user data
@@ -138,7 +140,6 @@ class AuthClient(object):
                 yield from self._populate_user_data(user, username, password)
             else:
                 return
-
         else:
             json_resp = yield from resp.json()
             remote_user = RemoteUser(json_resp['data'])
@@ -155,10 +156,10 @@ class AuthClient(object):
         """
         self.failed_login = False
         if not username or not password:
-            raise ValueError('Username and password required for login.')
-
+            self.display_error('Username and password required for login.')
+            return
         user = yield from self._find_or_create_user(username, password)
-        if failed_login:
+        if self.failed_login:
             return
         if user:
             user.logged_in = True
