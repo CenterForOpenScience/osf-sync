@@ -55,9 +55,12 @@ class Preferences(QDialog):
             reply = QMessageBox()
             reply.setText('Unsaved changes')
             reply.setIcon(QMessageBox.Warning)
-            reply.setInformativeText('You have unsaved changes to your synced projects.  Are you sure you would like to leave without saving?')
-            reply.addButton('Exit without saving', QMessageBox.YesRole)
-            reply.addButton('Review/Save changes', QMessageBox.NoRole)
+            reply.setInformativeText('You have unsaved changes to your synced projects.\n\n '
+                                     'Please review your changes and press \'update\' if you would like to save them. \n\n  '
+                                     'Are you sure you would like to leave without saving? \n')
+            default = reply.addButton('Exit without saving', QMessageBox.YesRole)
+            reply.addButton('Review changes', QMessageBox.NoRole)
+            reply.setDefaultButton(default)
             test = reply.exec_()
             if test == 0:
                 event.accept()
