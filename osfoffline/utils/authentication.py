@@ -48,11 +48,10 @@ class AuthClient(object):
 
             :return: personal_access_token or None
         """
-        token_url = furl.furl(settings.AUTH_BASE.format(username, password))
-        token_url.path.add('/v2/tokens/create/')
+        token_url = self.API_URL.path.add('/v2/tokens/create/')
 
         try:
-            resp = yield from aiohttp.request(method='POST', url=token_url.url, data=token_request_body)
+            resp = yield from aiohttp.request(method='POST', url=token_url.url, data=token_request_body, auth=(username, password))
         except (aiohttp.errors.ClientTimeoutError, aiohttp.errors.ClientConnectionError, aiohttp.errors.TimeoutError):
             # No internet connection
             self.display_error('Unable to connect to server. Check your internet connection or try again later.')

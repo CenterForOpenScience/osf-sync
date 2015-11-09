@@ -19,16 +19,13 @@ PROJECT_DB_FILE = os.path.join(PROJECT_DB_DIR, 'osf.db')
 if DEV_MODE is True:
     API_BASE = 'http://localhost:8000'
     FILE_BASE = 'http://localhost:7777'  ## FIXME: Dev mode currently does not work with local waterbutler (abought)
-    AUTH_BASE = 'http://{}:{}@localhost:8080'
 else:
     API_BASE = 'https://staging-api.osf.io'
     FILE_BASE = 'https://staging-files.osf.io'
-    AUTH_BASE = 'https://{}:{}@staging-api.osf.io'
 
 # if PROD_MODE:  # TODO: uncomment these before release
 #	 API_BASE = 'https://api.osf.io'
 #	 FILE_BASE = 'https://files.osf.io'
-#	 AUTH_BASE = 'https://{}:{}@api.osf.io'
 
 ### Interval (in seconds) to poll the OSF for server-side file changes
 if DEV_MODE is True:
