@@ -1,6 +1,5 @@
 import asyncio
 import concurrent
-from flask import request
 import logging
 
 import aiohttp
@@ -16,6 +15,7 @@ from osfoffline.database_manager.models import User
 from osfoffline.exceptions.osf_exceptions import OSFAuthError
 from osfoffline.polling_osf_manager.osf_query import OSFQuery
 from osfoffline.polling_osf_manager.remote_objects import RemoteUser
+from osfoffline.utls.authentication import AuthClient
 from osfoffline.utils.debug import debug_trace
 from osfoffline.views.rsc.startscreen import Ui_startscreen
 
@@ -35,73 +35,15 @@ class StartScreen(QDialog):
     @asyncio.coroutine
     def log_in(self):
         logging.debug('attempting to log in')
-        personal_access_token = self.start_screen.personalAccessTokenEdit.text().strip()
-        url = settings.API_BASE + '/v2/users/me/'
-        loop = asyncio.get_event_loop()
-        osf = OSFQuery(loop, personal_access_token)
-        logging.debug('url: {}'.format(url))
-        try:
-            resp = yield from osf.make_request(url, expects=[200])
-        except (aiohttp.errors.ClientTimeoutError, aiohttp.errors.ClientConnectionError, aiohttp.errors.TimeoutError):
-            # No internet connection
-            QMessageBox.warning(
-                None,
-                "Log in Failed",
-                "Unable to connect to server. Check your internet connection or try again later."
-            )
-        except (aiohttp.errors.HttpBadRequest, aiohttp.errors.BadStatusLine):
-            # Invalid credentials
-            QMessageBox.warning(
-                None,
-                "Log in Failed",
-                "Invalid login credentials."
-            )
-        else:
-            json_resp = yield from resp.json()
-            remote_user = RemoteUser(json_resp['data'])
-
-            try:
-                user = session.query(User).filter(User.osf_id == remote_user.id).one()
-            except MultipleResultsFound:
-                logging.warning('multiple users with same username. deleting all users with this username. restarting function.')
-                for user in session.query(User).filter(User.osf_id == remote_user.id).all():
-                    session.delete(user)
-                    try:
-                        save(session, user)
-                    except Exception as e:
-                        logging.exception(e)
-                        QMessageBox.warning(
-                            None,
-                            "Log in Failed",
-                            "Unable to save user data. Please try again later."
-                        )
-
-                return self.log_in()
-            except NoResultFound:
-                logging.debug('user doesnt exist. Creating user. and logging them in.')
-                user = User(
-                    full_name=remote_user.name,
-                    osf_id=remote_user.id,
-                    osf_login='',  # TODO: email goes here when more auth methods are added, not currently returned by APIv2
-                    osf_local_folder_path='',
-                    oauth_token=personal_access_token,
-                )
-            else:
-                if not user.oauth_token == personal_access_token:
-                    user.oauth_token == personal_access_token
-
-            user.logged_in = True
-            try:
-                save(session, user)
-            except Exception as e:
-                logging.exception(e)
-                QMessageBox.warning(
-                    None,
-                    "Log in Failed",
-                    "Unable to save user data. Please try again later."
-                )
-
+        username = self.start_screen.usernameEdit.text().strip()
+        password = self.start_screen.passwordEdit.text().strip()
+        auth_client = AuthClient()
+        user = yield from auth_client.log_in(username=username, password=password)
+        if user:
+            logging.debug('Successfully logged in user: {}'.format(user))
             self.close()
+        else:
+            logging.debug('Login Failed')
 
     def setup_slots(self):
         logging.debug('setting up start_screen slots')
