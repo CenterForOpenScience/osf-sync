@@ -115,6 +115,8 @@ class Poll(object):
 
         for local in local_list:
             assert isinstance(local, Base)
+            if isinstance(local, File) and local.name == '.DS_Store':
+                continue
             local_files[local.osf_id] = local
 
         for remote in remote_list:
