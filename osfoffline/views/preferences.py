@@ -35,6 +35,9 @@ class Preferences(QDialog):
         self.preferences_window.setupUi(self)
 
         self.preferences_window.changeFolderButton_2.clicked.connect(self.update_sync_nodes)
+        self.preferences_window.pushButton.clicked.connect(self.sync_all)
+        self.preferences_window.pushButton_2.clicked.connect(self.sync_none)
+
         self.tree_items = []
         self.setup_slots()
 
@@ -98,6 +101,14 @@ class Preferences(QDialog):
                     if tree_item.checkState(self.PROJECT_SYNC_COLUMN) == Qt.Checked:
                         guid_list.append(id)
         user.guid_for_top_level_nodes_to_sync = guid_list
+
+    def sync_all(self):
+        for tree_item in self.tree_items:
+            tree_item.setCheckState(self.PROJECT_SYNC_COLUMN, Qt.Checked)
+
+    def sync_none(self):
+        for tree_item in self.tree_items:
+            tree_item.setCheckState(self.PROJECT_SYNC_COLUMN, Qt.Unchecked)
 
     def open_window(self, tab=GENERAL):
         if self.isVisible():
