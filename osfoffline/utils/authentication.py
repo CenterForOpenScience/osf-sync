@@ -25,9 +25,15 @@ def generate_hash(password):
         bcrypt.gensalt(12)
     )
 
-token_request_body = json.loads(
-    '{"data": {"type": "tokens", "attributes": {"name": "OSF-Offline {}", "scopes": "osf.full_write"}}}'.format(datetime.date.today())
-)
+token_request_body = json.load({
+    'data': {
+        'type': 'tokens',
+        'attributes': {
+            'name': 'OSF-Offline {}'.format(datetime.date.today()),
+            'scopes': 'osf.full_write'
+        }
+    }
+})
 
 
 class AuthClient(object):
@@ -42,28 +48,17 @@ class AuthClient(object):
 
             :return: personal_access_token or None
         """
-        token_url = self.API_URL.path.add('/v2/tokens/create/')
-        token_url.args['username'] = username
-        token_url.args['password'] = password
+        token_url = furl.furl(settings.AUTH_BASE.format(username, password))
+        token_url.path.add('/v2/tokens/create/')
 
         try:
             resp = yield from aiohttp.request(method='POST', url=token_url.url, data=token_request_body)
         except (aiohttp.errors.ClientTimeoutError, aiohttp.errors.ClientConnectionError, aiohttp.errors.TimeoutError):
             # No internet connection
-            QMessageBox.warning(
-                None,
-                "Log in Failed",
-                "Unable to connect to server. Check your internet connection or try again later."
-            )
-            self.failed_login = True
+            self.display_error('Unable to connect to server. Check your internet connection or try again later.')
         except Exception as e:
             # Invalid credentials
-            QMessageBox.warning(
-                None,
-                "Log in Failed",
-                "Invalid login credentials."
-            )
-            self.failed_login = True
+            self.display_error('Invalid login credentials', e=e)
         else:
             if not resp.status == 201:
                 return None
@@ -79,16 +74,6 @@ class AuthClient(object):
         """
         try:
             user = session.query(User).filter(User.osf_login == username).one()
-            assert user.oauth_token
-            assert user.password = generate_hash(password)
-
-        except AssertionError:
-            logger.warning('Login error: User {} either has no oauth token or submitted a different password. Attempting to authenticate'.format(user))
-            personal_access_token = yield from self.authenticate(username, password)
-            if not personal_access_token:
-                self.failed_login = True
-            else:
-                user.oauth_token = personal_access_token
 
         except MultipleResultsFound:
             logging.warning('Multiple users with same username. deleting all users with this username. restarting function.')
@@ -97,12 +82,7 @@ class AuthClient(object):
                 try:
                     save(session, user)
                 except Exception as e:
-                    logging.exception(e)
-                    QMessageBox.warning(
-                        None,
-                        "Log in Failed",
-                        "Unable to save user data. Please try again later."
-                    )
+                    self.display_error('Unable to save user data. Please try again later.', e=e)
             user = yield from self._find_or_create_user(username, password)
 
         except NoResultFound:
@@ -122,6 +102,14 @@ class AuthClient(object):
 
         finally:
             #Hit API_URL and populate more user data if possible
+            if not user.oauth_token or user.password != generate_hash(password):
+                logger.warning('Login error: User {} either has no oauth token or submitted a different password. Attempting to authenticate'.format(user))
+                personal_access_token = yield from self.authenticate(username, password)
+                if not personal_access_token:
+                    self.failed_login = True
+                else:
+                    user.oauth_token = personal_access_token
+
             if not self.failed_login:
                 yield from self._populate_user_data(user, username, password)
             else:
@@ -141,12 +129,7 @@ class AuthClient(object):
 
         except (aiohttp.errors.ClientTimeoutError, aiohttp.errors.ClientConnectionError, aiohttp.errors.TimeoutError):
             # No internet connection
-            QMessageBox.warning(
-                None,
-                "Log in Failed",
-                "Unable to connect to server. Check your internet connection or try again later."
-            )
-            self.failed_login = True
+            self.display_error('Unable to connect to server. Check your internet connection or try again later')
 
         except (aiohttp.errors.HttpBadRequest, aiohttp.errors.BadStatusLine):
             # Invalid credentials, delete possibly revoked PAT from user data and try again.
@@ -183,14 +166,24 @@ class AuthClient(object):
             try:
                 save(session, user)
             except Exception as e:
-                logging.exception(e)
-                QMessageBox.warning(
-                    None,
-                    "Log in Failed",
-                    "Unable to save user data. Please try again later."
-                )
+                self.display_error('Unable to save user data. Please try again later', e=e)
                 return
             else:
                 return user
 
         return
+
+    def display_error(self, message, fail=True, e=None):
+        """ Displays error message to user, sets fail flag unless otherwise specified,
+            and logs exception if given.
+        """
+        if e:
+            logging.exception(e)
+        if fail:
+            self.failed_login = True
+
+        QMessageBox.warning(
+            None,
+            'Log in Failed',
+            message
+        )
