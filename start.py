@@ -4,12 +4,13 @@ import sys
 from PyQt5.QtWidgets import (QApplication, QMessageBox, QSystemTrayIcon)
 from osfoffline.application.main import OSFApp
 from osfoffline import utils
-from server import SingleInstance
+
 
 def start():
     # Start logging all events
     utils.start_app_logging()
     if os.name == 'nt':
+        from server import SingleInstance
         single_app = SingleInstance()
 
         if single_app.aleradyrunning():
