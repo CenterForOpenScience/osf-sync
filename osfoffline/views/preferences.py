@@ -11,6 +11,7 @@ from osfoffline.polling_osf_manager.api_url_builder import api_url_for, NODES, U
 from osfoffline.polling_osf_manager.remote_objects import RemoteNode
 import requests
 import osfoffline.alerts as AlertHandler
+from osfoffline.utils import path
 
 class Preferences(QDialog):
     """
@@ -40,9 +41,9 @@ class Preferences(QDialog):
 
     def get_guid_list(self):
         guid_list = []
-        for tree_item in self.tree_items:
-            if tree_item[0].checkState(self.PROJECT_SYNC_COLUMN) == Qt.Checked:
-                guid_list.append(tree_item[1])
+        for tree_item, node_id in self.tree_items:
+            if tree_item.checkState(self.PROJECT_SYNC_COLUMN) == Qt.Checked:
+                guid_list.append(node_id)
         return guid_list
 
     def closeEvent(self, event):
@@ -150,15 +151,16 @@ class Preferences(QDialog):
         for node in self.remote_top_level_nodes:
             tree_item = QTreeWidgetItem(self.preferences_window.treeWidget)
             tree_item.setCheckState(self.PROJECT_SYNC_COLUMN, Qt.Unchecked)
-            tree_item.setText(self.PROJECT_NAME_COLUMN, _translate("Preferences", node.name))
+            tree_item.setText(self.PROJECT_NAME_COLUMN, _translate("Preferences", path.make_folder_name(node.name, node_id=node.id)))
 
             if node.id in user.guid_for_top_level_nodes_to_sync:
                 tree_item.setCheckState(self.PROJECT_SYNC_COLUMN, Qt.Checked)
                 if node.id not in self.checked_items:
                     self.checked_items.append(node.id)
-            self.preferences_window.treeWidget.resizeColumnToContents(self.PROJECT_NAME_COLUMN)
 
             self.tree_items.append((tree_item, node.id))
+        self.preferences_window.treeWidget.resizeColumnToContents(self.PROJECT_SYNC_COLUMN)
+        self.preferences_window.treeWidget.resizeColumnToContents(self.PROJECT_NAME_COLUMN)
 
     def get_remote_top_level_nodes(self):
         remote_top_level_nodes = []
