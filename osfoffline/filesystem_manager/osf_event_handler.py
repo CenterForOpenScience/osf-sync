@@ -6,7 +6,9 @@ import asyncio
 import logging
 import os
 
+from sqlalchemy.exc import SQLAlchemyError
 from watchdog.events import FileSystemEventHandler, DirModifiedEvent, DirCreatedEvent, FileCreatedEvent
+
 from osfoffline.database_manager.models import Node, File, User
 from osfoffline.database_manager.db import session
 from osfoffline.database_manager.utils import save
@@ -214,8 +216,12 @@ class OSFEventHandler(FileSystemEventHandler):
                 session.delete(item)
                 save(session)
                 return
-            save(session, item)
-            logging.info('{} set to be deleted'.format(src_path.full_path))
+            try:
+                save(session, item)
+            except SQLAlchemyError as e:
+                logging.warning(e.message)
+            else:
+                logging.info('{} set to be deleted'.format(src_path.full_path))
 
     def dispatch(self, event):
         # basically, ignore all events that occur for 'Components' file or folder
