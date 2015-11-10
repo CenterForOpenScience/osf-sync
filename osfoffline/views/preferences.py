@@ -156,7 +156,8 @@ class Preferences(QDialog):
 
             if node.id in user.guid_for_top_level_nodes_to_sync:
                 tree_item.setCheckState(self.PROJECT_SYNC_COLUMN, Qt.Checked)
-                self.checked_items.append(node.id)
+                if node.id not in self.checked_items:
+                    self.checked_items.append(node.id)
             self.preferences_window.treeWidget.resizeColumnToContents(self.PROJECT_NAME_COLUMN)
 
             self.tree_items.append(tree_item)
