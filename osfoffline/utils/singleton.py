@@ -8,11 +8,11 @@ import logging
 
 class SingleInstance:
     """
-        Adapted from tendo library due to python compatibility
+        Adapted from tendo library due to python incompatibility
         https://raw.githubusercontent.com/pycontribs/tendo/master/tendo/singleton.py
     """
 
-    def __init__(self, flavor_id=""):
+    def __init__(self, flavor_id="", callback=None):
         self.initialized = False
         basename = os.path.splitext(os.path.abspath(sys.argv[0]))[0].replace(
             "/", "-").replace(":", "").replace("\\", "-") + '-%s' % flavor_id + '.lock'
@@ -31,8 +31,9 @@ class SingleInstance:
             except OSError:
                 type, e, tb = sys.exc_info()
                 if e.errno == 13:
-                    logging.error(
-                        "Another instance is already running, quitting.")
+                    logging.error("Another instance is already running, quitting.")
+                    if callback:
+                        callback()
                     sys.exit(-1)
                 print(e.errno)
                 raise
@@ -42,8 +43,9 @@ class SingleInstance:
             try:
                 fcntl.lockf(self.fp, fcntl.LOCK_EX | fcntl.LOCK_NB)
             except IOError:
-                logging.warning(
-                    "Another instance is already running, quitting.")
+                logging.warning("Another instance is already running, quitting.")
+                if callback:
+                    callback()
                 sys.exit(-1)
         self.initialized = True
 
