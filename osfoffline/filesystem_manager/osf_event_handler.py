@@ -214,7 +214,10 @@ class OSFEventHandler(FileSystemEventHandler):
             # nodes cannot be deleted online. THUS, delete it inside database. It will be recreated locally.
             if isinstance(item, Node):
                 session.delete(item)
-                save(session)
+                try:
+                    save(session)
+                except SQLAlchemyError as e:
+                    logging.warning(e.message)
                 return
             try:
                 save(session, item)
