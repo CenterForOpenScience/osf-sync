@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file 'osfoffline/views/rsc/gui/preferences_gui/preferences.ui'
+# Form implementation generated from reading ui file 'osfoffline\views\rsc\gui\preferences_gui\preferences.ui'
 #
-# Created by: PyQt5 UI code generator 5.4.2
+# Created by: PyQt5 UI code generator 5.5.1
 #
 # WARNING! All changes made in this file will be lost!
 
@@ -62,7 +62,7 @@ class Ui_Preferences(object):
         self.changeFolderButton_2.setGeometry(QtCore.QRect(420, 100, 99, 31))
         self.changeFolderButton_2.setObjectName("changeFolderButton_2")
         self.treeWidget = QtWidgets.QTreeWidget(self.groupBox_5)
-        self.treeWidget.setGeometry(QtCore.QRect(10, 56, 311, 150))
+        self.treeWidget.setGeometry(QtCore.QRect(10, 60, 311, 151))
         self.treeWidget.setToolTipDuration(-1)
         self.treeWidget.setObjectName("treeWidget")
         self.pushButton = QtWidgets.QPushButton(self.groupBox_5)
@@ -96,7 +96,7 @@ class Ui_Preferences(object):
         self.containingFolderTextEdit.setHtml(_translate("Preferences", "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"
 "<html><head><meta name=\"qrichtext\" content=\"1\" /><style type=\"text/css\">\n"
 "p, li { white-space: pre-wrap; }\n"
-"</style></head><body style=\" font-family:\'.Helvetica Neue DeskInterface\'; font-size:13pt; font-weight:400; font-style:normal;\">\n"
+"</style></head><body style=\" font-family:\'MS Shell Dlg 2\'; font-size:8.25pt; font-weight:400; font-style:normal;\">\n"
 "<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-family:\'Ubuntu\'; font-size:11pt;\">/home/himanshu/somefolder/My Project</span></p></body></html>"))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab), _translate("Preferences", "General"))
         self.groupBox_2.setTitle(_translate("Preferences", "Account"))
@@ -113,7 +113,7 @@ class Ui_Preferences(object):
         self.textEdit_2.setHtml(_translate("Preferences", "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"
 "<html><head><meta name=\"qrichtext\" content=\"1\" /><style type=\"text/css\">\n"
 "p, li { white-space: pre-wrap; }\n"
-"</style></head><body style=\" font-family:\'.Helvetica Neue DeskInterface\'; font-size:13pt; font-weight:400; font-style:normal;\">\n"
+"</style></head><body style=\" font-family:\'MS Shell Dlg 2\'; font-size:8.25pt; font-weight:400; font-style:normal;\">\n"
 "<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-family:\'Ubuntu\'; font-size:11pt;\">This is OSF OFFLINE. Please go ahead and use it and make more software based off of it. Please and Thank You. </span></p>\n"
 "<p style=\"-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-family:\'Ubuntu\'; font-size:11pt;\"><br /></p>\n"
 "<p align=\"center\" style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-family:\'Ubuntu\'; font-size:11pt;\">© Center for Open Science</span></p></body></html>"))
