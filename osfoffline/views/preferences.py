@@ -9,6 +9,7 @@ from osfoffline.database_manager.db import session
 from osfoffline.database_manager.models import User
 from osfoffline.polling_osf_manager.api_url_builder import api_url_for, NODES, USERS
 from osfoffline.polling_osf_manager.remote_objects import RemoteNode
+from osfoffline.database_manager.utils import save
 import requests
 import osfoffline.alerts as AlertHandler
 
@@ -120,7 +121,9 @@ class Preferences(QDialog):
     def update_sync_nodes(self):
         user = session.query(User).filter(User.logged_in).one()
         guid_list = self.get_guid_list()
+        # FIXME: This needs a try-except block but is waiting on a preferences refactor to be merged
         user.guid_for_top_level_nodes_to_sync = guid_list
+        save(session, user)
         self.checked_items = guid_list
 
     def sync_all(self):
