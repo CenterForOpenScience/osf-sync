@@ -8,6 +8,7 @@ import aiohttp
 import bcrypt
 from PyQt5.QtWidgets import QMessageBox
 from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
+from sqlalchemy.exc import SQLAlchemyError
 
 from osfoffline import settings
 from osfoffline.database_manager.db import session
@@ -19,8 +20,12 @@ from osfoffline.polling_osf_manager.remote_objects import RemoteUser
 def generate_hash(password, salt=None):
     """ Generates a password hash using `bcrypt`.
         Number of rounds for salt generation is 12.
+        Also used for checking passwords when salt
+        is passed in.
 
-    :return: hashed password
+    :param string password: password to hash
+    :param hash salt:       stored hash of a password for comparison.
+    :return:                hashed password
     """
     if not salt:
         salt = bcrypt.gensalt(12)
@@ -53,8 +58,10 @@ class AuthClient(object):
             # No internet connection
             self.display_error('Unable to connect to server. Check your internet connection or try again later.')
         except Exception as e:
-            # Invalid credentials probably, will be prompted later
-            logging.exception(e)
+            # Invalid credentials probably, but it's difficult to tell
+            # Regadless, will be prompted later with dialogbox later
+            # TODO: narrow down possible exceptions here
+            logging.error(e.message)
         else:
             if not resp.status == 201:
                 return None
@@ -68,7 +75,7 @@ class AuthClient(object):
         """ Checks to see if username exists in DB and compares password hashes.
             Tries to authenticate and create user if a valid user/oauth_token is not found.
 
-        :return: user
+        :return: user or None
         """
         user = None
 
@@ -80,8 +87,8 @@ class AuthClient(object):
                 session.delete(user)
                 try:
                     save(session, user)
-                except Exception as e:
-                    self.display_error('Unable to save user data. Please try again later.', e=e)
+                except SQLAlchemyError as e:
+                    self.display_error('Unable to save user data. Please try again later.', exc=e.message)
             user = yield from self._find_or_create_user(username, password)
         except NoResultFound:
             logging.debug('User doesnt exist. Attempting to authenticate, then creating user.')
@@ -122,7 +129,7 @@ class AuthClient(object):
         """ Takes a user object, makes a request to ensure auth is working,
             and fills in any missing user data.
 
-            :return: user
+            :return: user or None
         """
         me = furl.furl(settings.API_BASE)
         me.path.add('/v2/users/me/')
@@ -165,20 +172,24 @@ class AuthClient(object):
             user.logged_in = True
             try:
                 save(session, user)
-            except Exception as e:
-                self.display_error('Unable to save user data. Please try again later', e=e)
+            except SQLAlchemyError as e:
+                self.display_error('Unable to save user data. Please try again later', exc=e.message)
                 return
             else:
                 return user
 
         return
 
-    def display_error(self, message, fail=True, e=None):
+    def display_error(self, message, fail=True, exc=None):
         """ Displays error message to user, sets fail flag unless otherwise specified,
             and logs exception if given.
+
+            :param string message:  Message to be displayed to user
+            :param Boolean fail:    Whether or not this error should abort login. Defaults to True
+            :param string exc:      (Optional) Exception message
         """
-        if e:
-            logging.exception(e)
+        if exc:
+            logging.error(exc)
         if fail:
             self.failed_login = True
 
