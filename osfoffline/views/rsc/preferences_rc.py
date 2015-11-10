@@ -62,7 +62,7 @@ class Ui_Preferences(object):
         self.changeFolderButton_2.setGeometry(QtCore.QRect(420, 100, 99, 31))
         self.changeFolderButton_2.setObjectName("changeFolderButton_2")
         self.treeWidget = QtWidgets.QTreeWidget(self.groupBox_5)
-        self.treeWidget.setGeometry(QtCore.QRect(10, 50, 311, 151))
+        self.treeWidget.setGeometry(QtCore.QRect(10, 56, 311, 150))
         self.treeWidget.setToolTipDuration(-1)
         self.treeWidget.setObjectName("treeWidget")
         self.pushButton = QtWidgets.QPushButton(self.groupBox_5)
