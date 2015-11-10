@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 # Form implementation generated from reading ui file 'osfoffline/views/rsc/gui/startscreen_gui/startscreen.ui'
 #
 # Created by: PyQt5 UI code generator 5.5
@@ -27,6 +29,7 @@ class Ui_startscreen(object):
         self.label_7.setObjectName("label_7")
         self.passwordEdit = QtWidgets.QLineEdit(self.groupBox_7)
         self.passwordEdit.setGeometry(QtCore.QRect(160, 90, 261, 21))
+        self.passwordEdit.setEchoMode(QtWidgets.QLineEdit.Password)
         self.passwordEdit.setObjectName("passwordEdit")
         self.label = QtWidgets.QLabel(startscreen)
         self.label.setGeometry(QtCore.QRect(60, 30, 521, 60))

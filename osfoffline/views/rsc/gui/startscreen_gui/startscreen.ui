@@ -83,6 +83,9 @@
       <height>21</height>
      </rect>
     </property>
+    <property name="echoMode">
+     <enum>QLineEdit::Password</enum>
+    </property>
    </widget>
   </widget>
   <widget class="QLabel" name="label">
