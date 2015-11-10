@@ -14,11 +14,13 @@ def start():
         single_app = SingleInstance()
 
         if single_app.aleradyrunning():
+            warn_app = QApplication(sys.argv)
             QMessageBox.critical(
                 None,
                 "Systray",
                 "OSF-Offline is already running. Check out the system tray."
             )
+            warn_app.quit()
             exit(0)
 
     app = QApplication(sys.argv)
