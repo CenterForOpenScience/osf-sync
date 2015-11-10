@@ -41,10 +41,8 @@ class Preferences(QDialog):
     def get_guid_list(self):
         guid_list = []
         for tree_item in self.tree_items:
-            for name, id in [(node.name, node.id) for node in self.remote_top_level_nodes]:
-                if name == tree_item.text(self.PROJECT_NAME_COLUMN):
-                    if tree_item.checkState(self.PROJECT_SYNC_COLUMN) == Qt.Checked:
-                        guid_list.append(id)
+            if tree_item[0].checkState(self.PROJECT_SYNC_COLUMN) == Qt.Checked:
+                guid_list.append(tree_item[1])
         return guid_list
 
     def closeEvent(self, event):
@@ -160,7 +158,7 @@ class Preferences(QDialog):
                     self.checked_items.append(node.id)
             self.preferences_window.treeWidget.resizeColumnToContents(self.PROJECT_NAME_COLUMN)
 
-            self.tree_items.append(tree_item)
+            self.tree_items.append((tree_item, node.id))
 
     def get_remote_top_level_nodes(self):
         remote_top_level_nodes = []
