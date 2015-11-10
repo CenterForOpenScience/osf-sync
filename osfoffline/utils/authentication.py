@@ -1,11 +1,11 @@
 import asyncio
 import datetime
-import furl
 import json
 import logging
 
 import aiohttp
 import bcrypt
+import furl
 from PyQt5.QtWidgets import QMessageBox
 from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
 from sqlalchemy.exc import SQLAlchemyError
