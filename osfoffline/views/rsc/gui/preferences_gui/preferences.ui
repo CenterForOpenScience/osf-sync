@@ -208,12 +208,12 @@ p, li { white-space: pre-wrap; }
            </property>
            <column>
             <property name="text">
-             <string>Projects</string>
+             <string>Sync</string>
             </property>
            </column>
            <column>
             <property name="text">
-             <string>Sync</string>
+             <string>Projects</string>
             </property>
            </column>
           </widget>
@@ -245,9 +245,6 @@ p, li { white-space: pre-wrap; }
           </widget>
          </widget>
         </widget>
-        <zorder>groupBox_2</zorder>
-        <zorder>groupBox_4</zorder>
-        <zorder>groupBox_5</zorder>
        </widget>
        <widget class="QWidget" name="tab_5">
         <attribute name="title">
