@@ -13,6 +13,7 @@ PROJECT_AUTHOR = 'cos'
 PROJECT_DB_DIR = user_data_dir(appname=PROJECT_NAME, appauthor=PROJECT_AUTHOR)
 PROJECT_DB_FILE = os.path.join(PROJECT_DB_DIR, 'osf.db')
 
+APPLICATION_SCOPES = 'osf.full_write'
 
 ### Base URL for API server; used to fetch data
 # API_BASE = 'http://localhost:5000'

@@ -49,7 +49,8 @@ class AuthClient(object):
         token_url.path.add('/v2/tokens/')
         token_request_body = '{"data": {"attributes": {"name": "OSF-Offline ' + \
             str(datetime.date.today()) + \
-            '", "scopes": "osf.full_write"}, "type": "tokens"}}'
+            '", "scopes": "' + settings.APPLICATION_SCOPES + \
+            '"}, "type": "tokens"}}'
         headers = {'content-type': 'application/json'}
 
         try:
