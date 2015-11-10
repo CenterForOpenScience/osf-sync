@@ -4,8 +4,11 @@ storing the data into the db, and then sending a request to the remote server.
 """
 import asyncio
 import logging
+import os
 
+from sqlalchemy.exc import SQLAlchemyError
 from watchdog.events import FileSystemEventHandler, DirModifiedEvent, DirCreatedEvent, FileCreatedEvent
+
 from osfoffline.database_manager.models import Node, File, User
 from osfoffline.database_manager.db import session
 from osfoffline.database_manager.utils import save
@@ -203,18 +206,25 @@ class OSFEventHandler(FileSystemEventHandler):
         # get item
         item = self._get_item_by_path(src_path)
 
-        # put item in delete state
-        item.locally_deleted = True
-
-        # nodes cannot be deleted online. THUS, delete it inside database. It will be recreated locally.
-        if isinstance(item, Node):
-            session.delete(item)
-            save(session)
-            return
-
-        save(session, item)
-
-        logging.info('{} set to be deleted'.format(src_path.full_path))
+        # put item in delete state after waiting a second and
+        # checking to make sure the file was actually deleted
+        yield from asyncio.sleep(1)
+        if not os.path.exists(item.path):
+            item.locally_deleted = True
+            # nodes cannot be deleted online. THUS, delete it inside database. It will be recreated locally.
+            if isinstance(item, Node):
+                session.delete(item)
+                try:
+                    save(session)
+                except SQLAlchemyError as e:
+                    logging.warning(e.message)
+                return
+            try:
+                save(session, item)
+            except SQLAlchemyError as e:
+                logging.warning(e.message)
+            else:
+                logging.info('{} set to be deleted'.format(src_path.full_path))
 
     def dispatch(self, event):
         # basically, ignore all events that occur for 'Components' file or folder
