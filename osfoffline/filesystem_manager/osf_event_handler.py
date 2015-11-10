@@ -217,12 +217,12 @@ class OSFEventHandler(FileSystemEventHandler):
                 try:
                     save(session)
                 except SQLAlchemyError as e:
-                    logging.warning(e.message)
+                    logging.exception('Error deleting node from database.')
                 return
             try:
                 save(session, item)
             except SQLAlchemyError as e:
-                logging.warning(e.message)
+                logging.exception('Error deleting node from database.')
             else:
                 logging.info('{} set to be deleted'.format(src_path.full_path))
 
