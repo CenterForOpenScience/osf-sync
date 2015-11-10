@@ -126,11 +126,11 @@ class Preferences(QDialog):
         self.checked_items = guid_list
 
     def sync_all(self):
-        for tree_item in self.tree_items:
+        for tree_item, node_id in self.tree_items:
             tree_item.setCheckState(self.PROJECT_SYNC_COLUMN, Qt.Checked)
 
     def sync_none(self):
-        for tree_item in self.tree_items:
+        for tree_item, node_id in self.tree_items:
             tree_item.setCheckState(self.PROJECT_SYNC_COLUMN, Qt.Unchecked)
 
     def open_window(self, tab=GENERAL):
