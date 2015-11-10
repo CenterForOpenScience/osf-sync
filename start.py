@@ -1,18 +1,8 @@
-import os
 import sys
-import __main__
 
 from PyQt5.QtWidgets import (QApplication, QMessageBox, QSystemTrayIcon)
 from osfoffline.application.main import OSFApp
 from osfoffline import utils
-
-
-def is_only_instance():
-    # Determine if there are more than the current instance of the application
-    # running at the current time.
-    return os.system("(( $(ps -ef | grep python | grep '[" +
-                     __main__.__file__[0] + "]" + __main__.__file__[1:] +
-                     "' | wc -l) > 1 ))") != 0
 
 
 def running_warning():
@@ -23,7 +13,7 @@ def running_warning():
         "OSF-Offline is already running. Check out the system tray."
     )
     warn_app.quit()
-    exit(0)
+    sys.exit(0)
 
 
 def start():
@@ -33,10 +23,7 @@ def start():
         from server import SingleInstance
         single_app = SingleInstance()
 
-        if single_app.aleradyrunning():
-            running_warning()
-    elif sys.platform == 'darwin':
-        if not is_only_instance():
+        if single_app.already_running():
             running_warning()
 
     app = QApplication(sys.argv)
