@@ -19,12 +19,8 @@ def running_warning():
 def start():
     # Start logging all events
     utils.start_app_logging()
-    if sys.platform == 'win32':
-        from server import SingleInstance
-        single_app = SingleInstance()
-
-        if single_app.already_running():
-            running_warning()
+    from osfoffline.utils.singleton import SingleInstance
+    me = SingleInstance()  # will end application if an instance is already running
 
     app = QApplication(sys.argv)
 
