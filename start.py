@@ -7,12 +7,23 @@ from osfoffline.application.main import OSFApp
 from osfoffline import utils
 
 
-def isOnlyInstance():
+def is_only_instance():
     # Determine if there are more than the current instance of the application
     # running at the current time.
     return os.system("(( $(ps -ef | grep python | grep '[" +
                      __main__.__file__[0] + "]" + __main__.__file__[1:] +
                      "' | wc -l) > 1 ))") != 0
+
+
+def running_warning():
+    warn_app = QApplication(sys.argv)
+    QMessageBox.information(
+        None,
+        "Systray",
+        "OSF-Offline is already running. Check out the system tray."
+    )
+    warn_app.quit()
+    exit(0)
 
 
 def start():
@@ -23,24 +34,10 @@ def start():
         single_app = SingleInstance()
 
         if single_app.aleradyrunning():
-            warn_app = QApplication(sys.argv)
-            QMessageBox.information(
-                None,
-                "Systray",
-                "OSF-Offline is already running. Check out the system tray."
-            )
-            warn_app.quit()
-            exit(0)
+            running_warning()
     elif sys.platform == 'darwin':
-        if not isOnlyInstance():
-            warn_app = QApplication(sys.argv)
-            QMessageBox.information(
-                None,
-                "Systray",
-                "OSF-Offline is already running. Check out the system tray."
-            )
-            warn_app.quit()
-            exit(0)
+        if not is_only_instance():
+            running_warning()
 
     app = QApplication(sys.argv)
 
