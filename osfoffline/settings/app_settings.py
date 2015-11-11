@@ -24,10 +24,6 @@ else:
     API_BASE = 'https://staging-api.osf.io'
     FILE_BASE = 'https://staging-files.osf.io'
 
-# if PROD_MODE:  # TODO: uncomment these before release
-#	 API_BASE = 'https://api.osf.io'
-#	 FILE_BASE = 'https://files.osf.io'
-
 ### Interval (in seconds) to poll the OSF for server-side file changes
 if DEV_MODE is True:
     POLL_DELAY = 5  # seconds
