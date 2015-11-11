@@ -7,7 +7,6 @@ aiohttp==0.18.3
 appdirs==1.4.0
 argh==0.26.1
 argparse==1.4.0
-bcrypt==2.0.0
 blessings==1.6
 chardet==2.3.0
 colorlog==2.6.0
