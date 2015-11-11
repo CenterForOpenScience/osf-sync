@@ -74,42 +74,28 @@ class AuthClient(object):
             return json_resp['data']['attributes']['token_id']
 
     @asyncio.coroutine
-    def _find_or_create_user(self, username, password):
-        """ Checks to see if username exists in DB and compares password hashes.
-            Tries to authenticate and create user if a valid user/oauth_token is not found.
+    def _create_user(self, username, password):
+        """ Tries to authenticate and create user.
 
-        :return: user
+        :return: user or raise AuthError
         """
-        user = None
-
-        try:
-            user = session.query(User).filter(User.osf_login == username).one()
-        except NoResultFound:
-            logging.debug('User doesnt exist. Attempting to authenticate, then creating user.')
-            personal_access_token = yield from self._authenticate(username, password)
-            user = User(
-                full_name='',
-                osf_id='',
-                osf_login=username,
-                osf_password=generate_hash(password),
-                osf_local_folder_path='',
-                oauth_token=personal_access_token,
-            )
-        finally:
-            #Hit APIv2 and populate more user data if possible
-            if not user.oauth_token or user.osf_password != generate_hash(password, user.osf_password):
-                logging.warning('Login error: User {} either has no oauth token or submitted a different password. Attempting to authenticate'.format(user))
-                personal_access_token = yield from self._authenticate(username, password)
-                user.oauth_token = personal_access_token
-
-            return (yield from self._populate_user_data(user, username, password))
+        logging.debug('User doesnt exist. Attempting to authenticate, then creating user.')
+        personal_access_token = yield from self._authenticate(username, password)
+        user = User(
+            full_name='',
+            osf_id='',
+            osf_login=username,
+            osf_local_folder_path='',
+            oauth_token=personal_access_token,
+        )
+        return (yield from self._populate_user_data(user))
 
     @asyncio.coroutine
-    def _populate_user_data(self, user, username, password):
+    def _populate_user_data(self, user):
         """ Takes a user object, makes a request to ensure auth is working,
             and fills in any missing user data.
 
-            :return: user or None
+            :return: user or raise AuthError
         """
         me = furl.furl(settings.API_BASE)
         me.path.add('/v2/users/me/')
@@ -119,18 +105,13 @@ class AuthClient(object):
         except (aiohttp.errors.ClientTimeoutError, aiohttp.errors.ClientConnectionError, aiohttp.errors.TimeoutError):
             # No internet connection
             raise AuthError('Unable to connect to server. Check your internet connection or try again later')
-        except (aiohttp.errors.HttpBadRequest, aiohttp.errors.BadStatusLine):
-            # Invalid credentials, delete possibly revoked PAT from user data and try again.
-            # TODO: attempt to delete token from remote user data
-            user.oauth_token = yield from self._authenticate(username, password)
-            return (yield from self._populate_user_data(user, username, password))
+        except Exception as e:
+            raise AuthError('Login failed')
         else:
             json_resp = yield from resp.json()
             remote_user = RemoteUser(json_resp['data'])
             user.full_name = remote_user.name
             user.osf_id = remote_user.id
-            user.username = username
-            user.password = generate_hash(password)
 
             return user
 
@@ -141,12 +122,12 @@ class AuthClient(object):
         if not username or not password:
             raise AuthError('Username and password required for login.')
 
-        user = yield from self._find_or_create_user(username, password)
+        user = yield from self._create_user(username, password)
 
         user.logged_in = True
         try:
             save(session, user)
         except SQLAlchemyError as e:
-            raise AuthError('Unable to save user data. Please try again later', exc=e.message)
+            raise AuthError('Unable to save user data. Please try again later')
         else:
             return user

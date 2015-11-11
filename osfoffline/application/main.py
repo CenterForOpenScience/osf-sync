@@ -102,10 +102,10 @@ class OSFApp(QDialog):
 
         # todo: HANDLE LOGIN FAILED
         try:
-            user = self.get_current_user()
+            user = session.query(User).one()
         except MultipleResultsFound:
-            debug_trace()
-            self._logout_all_users()
+            # TODO: make sure this works
+            session.delete(User)
             self.login_signal.emit()
             return
         except NoResultFound:
@@ -182,7 +182,7 @@ class OSFApp(QDialog):
             save(session, user)
 
     def get_current_user(self):
-        return session.query(User).filter(User.logged_in).one()
+        return session.query(User).one()
 
     def set_containing_folder_initial(self):
         return QFileDialog.getExistingDirectory(self, "Choose where to place OSF folder")

@@ -60,7 +60,7 @@ class BackgroundWorker(threading.Thread):
     # todo: can refactor this code out to somewhere
 
     def get_current_user(self):
-        return session.query(models.User).filter(models.User.logged_in).one()
+        return session.query(models.User).one()
 
     def stop_loop(self, close=False):
         """ WARNING: Only pass in 'close' if you plan on creating a new loop afterwards
