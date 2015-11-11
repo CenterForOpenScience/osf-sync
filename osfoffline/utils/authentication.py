@@ -49,10 +49,13 @@ class AuthClient(object):
             # TODO: narrow down possible exceptions here
             raise AuthError('Login failed')
         else:
-            if not resp.status == 201:
+            if resp.status == 401 or resp.status == 403:
+                raise AuthError('Invalid credentials')
+            elif not resp.status == 201:
                 raise AuthError('Invalid authorization response')
-            json_resp = yield from resp.json()
-            return json_resp['data']['attributes']['token_id']
+            else:
+                json_resp = yield from resp.json()
+                return json_resp['data']['attributes']['token_id']
 
     @asyncio.coroutine
     def _create_user(self, username, password):
