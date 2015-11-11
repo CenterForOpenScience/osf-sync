@@ -1,18 +1,13 @@
 import asyncio
-import concurrent
 import logging
 
-import aiohttp
-import furl
 from PyQt5.QtCore import pyqtSignal
 from PyQt5.QtWidgets import QDialog, QMessageBox
-from sqlalchemy.orm.exc import MultipleResultsFound, NoResultFound
 
-from osfoffline import settings
 from osfoffline.database_manager.db import session
 from osfoffline.database_manager.utils import save
 from osfoffline.database_manager.models import User
-from osfoffline.exceptions.osf_exceptions import OSFAuthError
+from osfoffline.exceptions import AuthError
 from osfoffline.polling_osf_manager.osf_query import OSFQuery
 from osfoffline.polling_osf_manager.remote_objects import RemoteUser
 from osfoffline.utils.authentication import AuthClient
@@ -39,20 +34,21 @@ class StartScreen(QDialog):
         password = self.start_screen.passwordEdit.text().strip()
         auth_client = AuthClient()
         try:
-            user = yield from auth_client.log_in(username=username, password=password)
-        except Exception as e:
-            logging.exception(e)
-            user = None
-
-        if user:
-            logging.debug('Successfully logged in user: {}'.format(user))
-            self.close()
+            user = asyncio.get_event_loop().run_until_complete(auth_client.log_in(username=username, password=password))
+        except AuthError as e:
+            logging.exception(e.message)
+            QMessageBox.warning(
+                None,
+                'Log in Failed',
+                e.message
+            )
         else:
-            logging.info('Login Failed')
+            logging.info('Successfully logged in user: {}'.format(user))
+            self.close()
 
     def setup_slots(self):
         logging.debug('setting up start_screen slots')
-        self.start_screen.logInButton.clicked.connect(lambda: asyncio.get_event_loop().run_until_complete(self.log_in()))
+        self.start_screen.logInButton.clicked.connect(self.log_in)
 
     def open_window(self):
         if not self.isVisible():
