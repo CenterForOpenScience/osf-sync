@@ -37,8 +37,6 @@ def generate_hash(password, salt=None):
 
 class AuthClient(object):
     """Manages authorization flow """
-    def __init__(self):
-        self.failed_login = False
 
     @asyncio.coroutine
     def _authenticate(self, username, password):
