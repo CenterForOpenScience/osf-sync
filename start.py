@@ -39,10 +39,11 @@ def start():
     QApplication.setQuitOnLastWindowClosed(False)
 
     osf = OSFApp()
+
     osf.start()
 
     osf.hide()
-    app.exec_()
+    sys.exit(app.exec_())
 
 
 if __name__ == "__main__":
