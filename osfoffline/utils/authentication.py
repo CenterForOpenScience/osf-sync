@@ -69,7 +69,7 @@ class AuthClient(object):
             # Invalid credentials probably, but it's difficult to tell
             # Regadless, will be prompted later with dialogbox later
             # TODO: narrow down possible exceptions here
-            logging.error(e.message)
+            logging.exception('Login failed')
         else:
             if not resp.status == 201:
                 return None

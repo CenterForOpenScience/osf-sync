@@ -48,7 +48,7 @@ class StartScreen(QDialog):
             logging.debug('Successfully logged in user: {}'.format(user))
             self.close()
         else:
-            logging.debug('Login Failed')
+            logging.info('Login Failed')
 
     def setup_slots(self):
         logging.debug('setting up start_screen slots')
