@@ -1,8 +1,9 @@
 import sys
 
-from PyQt5.QtWidgets import (QApplication, QMessageBox, QSystemTrayIcon)
-from osfoffline.application.main import OSFApp
+from PyQt5.QtWidgets import QApplication, QMessageBox, QSystemTrayIcon
+
 from osfoffline import utils
+from osfoffline.application.main import OSFApp
 
 
 def running_warning():
