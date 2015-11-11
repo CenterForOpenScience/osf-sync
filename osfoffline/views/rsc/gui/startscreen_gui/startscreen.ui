@@ -11,7 +11,7 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string>startscreen</string>
+   <string>OSF-Offline | Log in</string>
   </property>
   <widget class="QGroupBox" name="groupBox_7">
    <property name="geometry">
@@ -41,14 +41,14 @@
    <widget class="QLabel" name="label_6">
     <property name="geometry">
      <rect>
-      <x>30</x>
+      <x>103</x>
       <y>50</y>
-      <width>110</width>
+      <width>51</width>
       <height>21</height>
      </rect>
     </property>
     <property name="text">
-     <string>Username (email):</string>
+     <string> Email:</string>
     </property>
    </widget>
    <widget class="QLineEdit" name="usernameEdit">

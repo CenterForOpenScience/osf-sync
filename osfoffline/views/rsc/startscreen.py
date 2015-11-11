@@ -19,7 +19,7 @@ class Ui_startscreen(object):
         self.logInButton.setGeometry(QtCore.QRect(170, 150, 99, 27))
         self.logInButton.setObjectName("logInButton")
         self.label_6 = QtWidgets.QLabel(self.groupBox_7)
-        self.label_6.setGeometry(QtCore.QRect(30, 50, 110, 21))
+        self.label_6.setGeometry(QtCore.QRect(103, 50, 51, 21))
         self.label_6.setObjectName("label_6")
         self.usernameEdit = QtWidgets.QLineEdit(self.groupBox_7)
         self.usernameEdit.setGeometry(QtCore.QRect(160, 50, 261, 21))
@@ -44,9 +44,9 @@ class Ui_startscreen(object):
 
     def retranslateUi(self, startscreen):
         _translate = QtCore.QCoreApplication.translate
-        startscreen.setWindowTitle(_translate("startscreen", "startscreen"))
+        startscreen.setWindowTitle(_translate("startscreen", "OSF-Offline | Log in"))
         self.groupBox_7.setTitle(_translate("startscreen", "Log in"))
         self.logInButton.setText(_translate("startscreen", "Log In"))
-        self.label_6.setText(_translate("startscreen", "Username (email):"))
+        self.label_6.setText(_translate("startscreen", " Email:"))
         self.label_7.setText(_translate("startscreen", "Password:"))
         self.label.setText(_translate("startscreen", "Welcome to OSF Offline"))
