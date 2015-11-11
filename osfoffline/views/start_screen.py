@@ -27,7 +27,6 @@ class StartScreen(QDialog):
         super().__init__()
         self.start_screen = Ui_startscreen()
 
-    @asyncio.coroutine
     def log_in(self):
         logging.debug('attempting to log in')
         username = self.start_screen.usernameEdit.text().strip()
