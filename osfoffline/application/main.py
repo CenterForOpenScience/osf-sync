@@ -104,8 +104,7 @@ class OSFApp(QDialog):
         try:
             user = session.query(User).one()
         except MultipleResultsFound:
-            # TODO: make sure this works
-            session.delete(User)
+            session.query(User).delete()
             self.login_signal.emit()
             return
         except NoResultFound:
@@ -188,9 +187,7 @@ class OSFApp(QDialog):
         return QFileDialog.getExistingDirectory(self, "Choose where to place OSF folder")
 
     def logout(self):
-        user = self.get_current_user()
-        user.logged_in = False
-        save(session, user)
+        session.query(User).delete()
         if self.preferences.isVisible():
             self.preferences.close()
         self.pause()
