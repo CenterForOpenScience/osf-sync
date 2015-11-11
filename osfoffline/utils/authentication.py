@@ -4,7 +4,6 @@ import json
 import logging
 
 import aiohttp
-import bcrypt
 import furl
 from PyQt5.QtWidgets import QMessageBox
 from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
@@ -16,24 +15,6 @@ from osfoffline.database_manager.models import User
 from osfoffline.database_manager.utils import save
 from osfoffline.polling_osf_manager.remote_objects import RemoteUser
 from osfoffline.exceptions import AuthError
-
-
-def generate_hash(password, salt=None):
-    """ Generates a password hash using `bcrypt`.
-        Number of rounds for salt generation is 12.
-        Also used for checking passwords when salt
-        is passed in.
-
-    :param string password: password to hash
-    :param hash salt:       stored hash of a password for comparison.
-    :return:                hashed password
-    """
-    if not salt:
-        salt = bcrypt.gensalt(12)
-    return bcrypt.hashpw(
-        password.encode('utf-8'),
-        salt
-    )
 
 class AuthClient(object):
     """Manages authorization flow """
