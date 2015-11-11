@@ -212,16 +212,10 @@ class File(Base):
         """Recursively walk up the path of the file/folder. Top level file/folder joins with the path of the containing node.
         """
         # +os.path.sep+ instead of os.path.join: http://stackoverflow.com/a/14504695
-        if self.type == self.FILE:
-            if self.parent:
-                return os.path.join(self.parent.path, self.name)
-            else:
-                return os.path.join(self.node.path, self.name)
+        if self.parent:
+            return os.path.join(self.parent.path, self.name)
         else:
-            if self.parent:
-                return os.path.join(self.parent.path, make_folder_name(self.name, node_id=self.osf_id))
-            else:
-                return os.path.join(self.node.path, make_folder_name(self.name, node_id=self.osf_id))
+            return os.path.join(self.node.path, self.name)
 
     def update_hash(self, block_size=2 ** 20):
         if self.is_file:
