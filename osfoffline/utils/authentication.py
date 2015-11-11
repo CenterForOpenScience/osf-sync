@@ -47,14 +47,21 @@ class AuthClient(object):
         """
         token_url = furl.furl(settings.API_BASE)
         token_url.path.add('/v2/tokens/')
-        token_request_body = '{"data": {"attributes": {"name": "OSF-Offline ' + \
-            str(datetime.date.today()) + \
-            '", "scopes": "' + settings.APPLICATION_SCOPES + \
-            '"}, "type": "tokens"}}'
+
+        token_request_body = {
+            'data': {
+                'type': 'tokens',
+                'attributes': {
+                    'name': 'OSF-Offline - {}'.format(datetime.date.today()),
+                    'scopes': settings.APPLICATION_SCOPES
+                }
+            }
+        }
+
         headers = {'content-type': 'application/json'}
 
         try:
-            resp = yield from aiohttp.request(method='POST', url=token_url.url, headers=headers, data=token_request_body, auth=(username, password))
+            resp = yield from aiohttp.request(method='POST', url=token_url.url, headers=headers, data=json.dumps(token_request_body), auth=(username, password))
         except (aiohttp.errors.ClientTimeoutError, aiohttp.errors.ClientConnectionError, aiohttp.errors.TimeoutError):
             # No internet connection
             self.display_error('Unable to connect to server. Check your internet connection or try again later.')
