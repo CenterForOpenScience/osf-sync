@@ -35,7 +35,6 @@ class SingleInstance:
                     if callback:
                         callback()
                     sys.exit(-1)
-                print(e.errno)
                 raise
         else:  # non Windows
             import fcntl
