@@ -101,9 +101,9 @@ class Node(Base):
         # +os.path.sep+ instead of os.path.join: http://stackoverflow.com/a/14504695
 
         if self.parent:
-            return os.path.join(self.parent.path, 'Components', make_folder_name(self.title, self.osf_id))
+            return os.path.join(self.parent.path, 'Components', make_folder_name(self.title, node_id=self.osf_id))
         else:
-            return os.path.join(self.user.osf_local_folder_path, make_folder_name(self.title, self.osf_id))
+            return os.path.join(self.user.osf_local_folder_path, make_folder_name(self.title, node_id=self.osf_id))
 
     def locally_create_children(self):
         self.locally_created = True
@@ -219,9 +219,9 @@ class File(Base):
                 return os.path.join(self.node.path, self.name)
         else:
             if self.parent:
-                return os.path.join(self.parent.path, make_folder_name(self.name, self.osf_id))
+                return os.path.join(self.parent.path, make_folder_name(self.name, node_id=self.osf_id))
             else:
-                return os.path.join(self.node.path, make_folder_name(self.name, self.osf_id))
+                return os.path.join(self.node.path, make_folder_name(self.name, node_id=self.osf_id))
 
     def update_hash(self, block_size=2 ** 20):
         if self.is_file:
