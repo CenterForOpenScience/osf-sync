@@ -1,9 +1,10 @@
 import sys
 
-from PyQt5.QtWidgets import (QApplication, QMessageBox, QSystemTrayIcon)
-from osfoffline.application.main import OSFApp
+from PyQt5.QtWidgets import QApplication, QMessageBox, QSystemTrayIcon
+
 from osfoffline import utils
 from osfoffline.utils.singleton import SingleInstance
+from osfoffline.application.main import OSFApp
 
 
 def running_warning():
@@ -33,10 +34,11 @@ def start():
     QApplication.setQuitOnLastWindowClosed(False)
 
     osf = OSFApp()
+
     osf.start()
 
     osf.hide()
-    app.exec_()
+    sys.exit(app.exec_())
 
 
 if __name__ == "__main__":
