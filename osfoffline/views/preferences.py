@@ -19,7 +19,7 @@ from osfoffline.database_manager.utils import save
 from osfoffline.polling_osf_manager.api_url_builder import api_url_for, NODES, USERS
 from osfoffline.polling_osf_manager.remote_objects import RemoteNode
 from osfoffline.utils import path
-from osfoffline.views.rsc.preferences_rc import Ui_Preferences  # REQUIRED FOR GUI
+from osfoffline.views.rsc.preferences_rc import Ui_Settings  # REQUIRED FOR GUI
 import osfoffline.alerts as AlertHandler
 
 
@@ -41,7 +41,7 @@ class Preferences(QDialog):
         super().__init__()
         self._translate = QCoreApplication.translate
         self.containing_folder = ''
-        self.preferences_window = Ui_Preferences()
+        self.preferences_window = Ui_Settings()
         self.preferences_window.setupUi(self)
 
         self.preferences_window.changeFolderButton_2.clicked.connect(self.update_sync_nodes)
