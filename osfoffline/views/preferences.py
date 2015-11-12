@@ -63,8 +63,6 @@ class Preferences(QDialog):
         return guid_list
 
     def closeEvent(self, event):
-        logging.debug('closed...... preferences....')
-        self.preferences_closed_signal.emit()
         guid_list = self.get_guid_list()
         if guid_list != self.checked_items:
             reply = QMessageBox()
@@ -76,17 +74,10 @@ class Preferences(QDialog):
             default = reply.addButton('Exit without saving', QMessageBox.YesRole)
             reply.addButton('Review changes', QMessageBox.NoRole)
             reply.setDefaultButton(default)
-            test = reply.exec_()
-            if test == 0:
-                event.accept()
-            else:
-                event.ignore()
-        else:
-            event.accept()
-        # if self.isVisible():
-        #     self.hide()
-        #     event.ignore()
-        #     self.destroy()
+            if reply.exec_() != 0:
+                return event.ignore()
+        self.preferences_closed_signal.emit()
+        event.accept()
 
     def alerts_changed(self):
         if self.preferences_window.desktopNotifications.isChecked():
