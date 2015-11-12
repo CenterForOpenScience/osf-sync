@@ -6,7 +6,6 @@ import logging.config
 import logging.handlers
 import os
 
-from osfoffline.settings import log_config
 
 def start_app_logging(config=None):
     """
@@ -17,9 +16,6 @@ def start_app_logging(config=None):
     # Avoids circular import
     from osfoffline import settings
     logging.config.dictConfig(config or settings.LOGGING_CONFIG)
-
-    # Activate custom excepthook
-    sys.excepthook = log_config.capture_exceptions
 
 
 def start_user_logging(user_id, level=logging.ERROR):
