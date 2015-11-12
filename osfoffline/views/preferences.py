@@ -127,6 +127,7 @@ class Preferences(QDialog):
         user.guid_for_top_level_nodes_to_sync = guid_list
         save(session, user)
         self.checked_items = guid_list
+        self.close()
 
     def sync_all(self):
         for tree_item, node_id in self.tree_items:
