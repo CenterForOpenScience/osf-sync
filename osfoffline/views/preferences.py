@@ -1,8 +1,10 @@
 import os
 import logging
+import threading
 
 import requests
 
+from PyQt5 import QtCore
 from PyQt5.QtCore import QCoreApplication
 from PyQt5.QtCore import Qt
 from PyQt5.QtCore import pyqtSignal
@@ -49,6 +51,9 @@ class Preferences(QDialog):
         self.tree_items = []
         self.checked_items = []
         self.setup_slots()
+
+        self._executor = QtCore.QThread()
+        self.node_fetcher = NodeFetcher()
 
     def get_guid_list(self):
         guid_list = []
@@ -157,19 +162,24 @@ class Preferences(QDialog):
         elif selected_index == self.OSF:
             user = session.query(User).filter(User.logged_in).one()
             self.preferences_window.label.setText(self._translate("Preferences", user.full_name))
-            self.create_tree_item_for_each_top_level_node()
+
+            self.preferences_window.treeWidget.setCursor(QtCore.Qt.BusyCursor)
+            self.node_fetcher.finished[list].connect(self.populate_item_tree)
+            self.node_fetcher.moveToThread(self._executor)
+            self._executor.started.connect(self.node_fetcher.fetch)
+            self._executor.start()
 
     def reset_tree_widget(self):
         self.tree_items.clear()
         self.preferences_window.treeWidget.clear()
 
-    def create_tree_item_for_each_top_level_node(self):
-        self.remote_top_level_nodes = self.get_remote_top_level_nodes()
+    @QtCore.pyqtSlot(list)
+    def populate_item_tree(self, nodes):
         self.reset_tree_widget()
         _translate = QCoreApplication.translate
 
         user = session.query(User).filter(User.logged_in).one()
-        for node in self.remote_top_level_nodes:
+        for node in nodes:
             tree_item = QTreeWidgetItem(self.preferences_window.treeWidget)
             tree_item.setCheckState(self.PROJECT_SYNC_COLUMN, Qt.Unchecked)
             tree_item.setText(self.PROJECT_NAME_COLUMN, _translate("Preferences", path.make_folder_name(node.name, node_id=node.id)))
@@ -182,8 +192,17 @@ class Preferences(QDialog):
             self.tree_items.append((tree_item, node.id))
         self.preferences_window.treeWidget.resizeColumnToContents(self.PROJECT_SYNC_COLUMN)
         self.preferences_window.treeWidget.resizeColumnToContents(self.PROJECT_NAME_COLUMN)
+        self.preferences_window.treeWidget.unsetCursor()
 
-    def get_remote_top_level_nodes(self):
+    def setup_slots(self):
+        self.preferences_window.tabWidget.currentChanged.connect(self.selector)
+
+
+class NodeFetcher(QtCore.QObject):
+
+    finished = QtCore.pyqtSignal(list)
+
+    def fetch(self):
         remote_top_level_nodes = []
         try:
 
@@ -204,16 +223,5 @@ class Preferences(QDialog):
         except Exception as e:
             logging.warning(e)
 
+        self.finished.emit(remote_top_level_nodes)
         return remote_top_level_nodes
-
-    def setup_slots(self):
-        self.preferences_window.tabWidget.currentChanged.connect(self.selector)
-
-
-def debug_trace():
-    '''Set a tracepoint in the Python debugger that works with Qt'''
-    from PyQt5.QtCore import pyqtRemoveInputHook
-
-    from pdb import set_trace
-    pyqtRemoveInputHook()
-    set_trace()
