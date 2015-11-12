@@ -63,7 +63,7 @@ class BackgroundWorker(threading.Thread):
         try:
             self.loop.run_forever()
         except Exception as e:
-            print(e)
+            logger.exception(e)
         finally:
             self.stop()
         logging.debug('Background event loop exited')
