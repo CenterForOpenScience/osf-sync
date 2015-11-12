@@ -196,9 +196,6 @@ class LocalDBSync(object):
 #     loop.run_forever()
 
 
-
-
-
 """
 PLAN:
 
