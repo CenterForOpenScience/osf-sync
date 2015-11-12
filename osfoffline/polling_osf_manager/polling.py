@@ -22,6 +22,11 @@ from osfoffline.settings import POLL_DELAY
 
 logger = logging.getLogger(__name__)
 
+try:
+    asyncio.ensure_future
+except AttributeError:
+    asyncio.ensure_future = asyncio.async
+
 
 class Poll(object):
     def __init__(self, user, loop):
@@ -76,10 +81,6 @@ class Poll(object):
         self._loop.call_later(5, self.start)
 
     def start(self):
-        try:
-            asyncio.ensure_future
-        except AttributeError:
-            asyncio.ensure_future = asyncio.async
 
         remote_user = self._loop.run_until_complete(self.get_remote_user())
 
