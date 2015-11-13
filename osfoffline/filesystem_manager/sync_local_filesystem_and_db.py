@@ -39,7 +39,6 @@ class LocalDBSync(object):
         if local is None and db is None:
             raise LocalDBBothNone
         if local and db and self._get_proper_path(local) != self._get_proper_path(db):
-            from osfoffline.utils.debug import debug_trace; debug_trace()
             raise IncorrectLocalDBMatch
         if local and not isinstance(local, ProperPath):
             raise InvalidItemType
