@@ -1,4 +1,5 @@
 invoke==0.11.1
+PyInstaller==3.0
 requests==2.8.1
 iso8601==0.1.11
 furl==0.4.8
