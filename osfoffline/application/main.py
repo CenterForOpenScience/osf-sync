@@ -182,11 +182,6 @@ class OSFApp(QDialog):
             logger.info('Quitting application')
             QApplication.instance().quit()
 
-    def _logout_all_users(self):
-        for user in session.query(User):
-            user.logged_in = False
-            save(session, user)
-
     def get_current_user(self):
         return session.query(User).one()
 
