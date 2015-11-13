@@ -229,7 +229,6 @@ class OSFEventHandler(FileSystemEventHandler):
     def dispatch(self, event):
         # basically, ignore all events that occur for 'Components' file or folder
         if self._event_is_for_components_file_folder(event):
-            AlertHandler.warn('Cannot have a custom file or folder named Components')
             return
 
         _method_map = {
