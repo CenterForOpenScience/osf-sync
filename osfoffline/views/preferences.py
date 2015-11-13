@@ -157,11 +157,8 @@ class Preferences(QDialog):
 
             self._executor = QtCore.QThread()
             self.node_fetcher = NodeFetcher()
-            if len(self.tree_items) == 0:
-                self.preferences_window.treeWidget.setCursor(QtCore.Qt.BusyCursor)
-                self.node_fetcher.finished[list].connect(self.populate_item_tree)
-            else:
-                self.node_fetcher.finished[list].connect(self.check_tree_changed)
+            self.preferences_window.treeWidget.setCursor(QtCore.Qt.BusyCursor)
+            self.node_fetcher.finished[list].connect(self.populate_item_tree)
             self.node_fetcher.moveToThread(self._executor)
             self._executor.started.connect(self.node_fetcher.fetch)
             self._executor.start()
@@ -169,11 +166,6 @@ class Preferences(QDialog):
     def reset_tree_widget(self):
         self.tree_items.clear()
         self.preferences_window.treeWidget.clear()
-
-    def check_tree_changed(self, nodes):
-        if nodes != self.tree_items:
-            self.preferences_window.treeWidget.setCursor(QtCore.Qt.BusyCursor)
-            self.populate_item_tree(nodes)
 
     @QtCore.pyqtSlot(list)
     def populate_item_tree(self, nodes):
