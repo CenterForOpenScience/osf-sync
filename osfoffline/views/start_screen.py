@@ -54,8 +54,9 @@ class StartScreen(QDialog):
 
     def open_window(self):
         if not self.isVisible():
-            self.start_screen.setupUi(self)
-            self.setup_slots()
+            if not self._has_UI():
+                self.start_screen.setupUi(self)
+                self.setup_slots()
             self.show()
 
     def _user_logged_in(self):
@@ -65,6 +66,14 @@ class StartScreen(QDialog):
         except:
             return False
 
+    def _has_UI(self):
+        try:
+            should_exist = self.start_screen.usernameEdit
+        except AttributeError:
+            return False
+        else:
+            return True
+
     def closeEvent(self, event):
         """ If closeEvent occured by us, then it means user is properly logged in. Thus close.
             Else, event is by user without logging in. THUS, quit entire application.
@@ -73,4 +82,7 @@ class StartScreen(QDialog):
             self.done_logging_in_signal.emit()
         else:
             self.quit_application_signal.emit()
+
+        self.start_screen.usernameEdit.setText('')
+        self.start_screen.passwordEdit.setText('')
         event.accept()

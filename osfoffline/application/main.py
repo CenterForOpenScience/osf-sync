@@ -3,6 +3,7 @@ import asyncio
 import logging
 import os
 
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm.exc import MultipleResultsFound
 from sqlalchemy.orm.exc import NoResultFound
 
@@ -108,9 +109,8 @@ class OSFApp(QDialog):
     def start(self):
         logger.debug('Start in main called.')
 
-        # todo: HANDLE LOGIN FAILED
         try:
-            user = session.query(User).one()
+            user = session.query(User).filter(User.logged_in).one()
         except MultipleResultsFound:
             session.query(User).delete()
             self.login_signal.emit()
@@ -170,9 +170,13 @@ class OSFApp(QDialog):
                 logger.info('Stopping background worker')
                 self.background_worker.stop()
 
-            logger.info('Saving user data')
-            user = session.query(User).filter(User.logged_in).one()
-            save(session, user)
+            try:
+                user = session.query(User).filter(User.logged_in).one()
+            except NoResultFound:
+                pass
+            else:
+                logger.info('Saving user data')
+                save(session, user)
             session.close()
         finally:
             logger.info('Quitting application')
@@ -190,11 +194,17 @@ class OSFApp(QDialog):
         return QFileDialog.getExistingDirectory(self, "Choose where to place OSF folder")
 
     def logout(self):
-        session.query(User).delete()
+        user = session.query(User).filter(User.logged_in).one()
+        user.logged_in = False
+        try:
+            save(session, user)
+        except SQLAlchemyError:
+            session.query(User).delete()
+
         if self.preferences.isVisible():
             self.preferences.close()
-        self.pause()
-        self.login_signal.emit()
+
+        self.start_screen.open_window()
 
     def open_preferences(self):
         logger.debug('pausing for preference modification')
