@@ -168,8 +168,10 @@ class OSFApp(QDialog):
     def sync_now(self):
         if not self.background_worker:
             self.start()
-        if self.background_worker.is_alive():
+        try:
             self.pause()
+        except RuntimeError:
+            pass
 
         self.resume()
 
