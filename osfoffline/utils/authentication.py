@@ -5,8 +5,6 @@ import logging
 
 import aiohttp
 import furl
-from PyQt5.QtWidgets import QMessageBox
-from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
 from sqlalchemy.exc import SQLAlchemyError
 
 from osfoffline import settings
@@ -72,10 +70,10 @@ class AuthClient(object):
             osf_local_folder_path='',
             oauth_token=personal_access_token,
         )
-        return (yield from self._populate_user_data(user))
+        return (yield from self.populate_user_data(user))
 
     @asyncio.coroutine
-    def _populate_user_data(self, user):
+    def populate_user_data(self, user):
         """ Takes a user object, makes a request to ensure auth is working,
             and fills in any missing user data.
 
@@ -90,8 +88,10 @@ class AuthClient(object):
             # No internet connection
             raise AuthError('Unable to connect to server. Check your internet connection or try again later')
         except Exception as e:
-            raise AuthError('Login failed')
+            raise AuthError('Login failed. Please log in again.')
         else:
+            if resp.status != 200:
+                raise AuthError('Invalid credentials. Please log in again.')
             json_resp = yield from resp.json()
             remote_user = RemoteUser(json_resp['data'])
             user.full_name = remote_user.name
@@ -100,13 +100,16 @@ class AuthClient(object):
             return user
 
     @asyncio.coroutine
-    def log_in(self, username=None, password=None):
+    def log_in(self, user=None, username=None, password=None):
         """ Takes standard auth credentials, returns authenticated user or raises AuthError.
         """
         if not username or not password:
             raise AuthError('Username and password required for login.')
 
-        user = yield from self._create_user(username, password)
+        if user:
+            user.oauth_token = yield from self._authenticate(username, password)
+        else:
+            user = yield from self._create_user(username, password)
 
         user.logged_in = True
         try:

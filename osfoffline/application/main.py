@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+import asyncio
 import logging
 import os
 
@@ -9,12 +10,15 @@ from PyQt5.QtCore import pyqtSignal
 from PyQt5.QtWidgets import QApplication
 from PyQt5.QtWidgets import QDialog
 from PyQt5.QtWidgets import QFileDialog
+from PyQt5.QtWidgets import QMessageBox
+
 
 from osfoffline.application.background import BackgroundWorker
 from osfoffline.database_manager.db import session
 from osfoffline.database_manager.models import User
 from osfoffline.database_manager.utils import save
-from osfoffline.utils.debug import debug_trace
+from osfoffline.exceptions import AuthError
+from osfoffline.utils.authentication import AuthClient
 from osfoffline.utils.validators import validate_containing_folder
 from osfoffline.views.preferences import Preferences
 from osfoffline.views.start_screen import StartScreen
@@ -114,6 +118,18 @@ class OSFApp(QDialog):
         except NoResultFound:
             self.login_signal.emit()
             return
+
+        try:
+            # Simple request to ensure user logged in with valid oauth_token
+            user = asyncio.get_event_loop().run_until_complete(AuthClient().populate_user_data(user))
+        except AuthError as e:
+            logging.exception(e.message)
+            QMessageBox.warning(
+                None,
+                'Log in Failed',
+                e.message
+            )
+            self.login_signal.emit()
 
         containing_folder = os.path.dirname(user.osf_local_folder_path)
         while not validate_containing_folder(containing_folder):
