@@ -13,6 +13,7 @@ API_BASE = 'https://staging-api.osf.io'
 FILE_BASE = 'https://staging-files.osf.io'
 
 # Interval (in seconds) to poll the OSF for server-side file changes
+# TODO: Change this to ~20 years and have syncing be manual
 POLL_DELAY = 5 * 60  # seconds
 
 # Time to keep alert messages on screen (in milliseconds); may not be configurable on all platforms

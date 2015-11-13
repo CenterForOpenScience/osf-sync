@@ -14,6 +14,7 @@ from osfoffline.application.background import BackgroundWorker
 from osfoffline.database_manager.db import session
 from osfoffline.database_manager.models import User
 from osfoffline.database_manager.utils import save
+from osfoffline.filesystem_manager.sync_local_filesystem_and_db import LocalDBSync
 from osfoffline.utils.debug import debug_trace
 from osfoffline.utils.validators import validate_containing_folder
 from osfoffline.views.preferences import Preferences
@@ -57,6 +58,7 @@ class OSFApp(QDialog):
             # system tray
             (self.tray.open_osf_folder_action.triggered, self.tray.open_osf_folder),
             (self.tray.launch_osf_action.triggered, self.tray.start_osf),
+            (self.tray.sync_now_action.triggered, self.sync_now),
             # (self.tray.currently_synching_action.triggered, self.controller.currently_synching),
             (self.tray.preferences_action.triggered, self.open_preferences),
             (self.tray.about_action.triggered, self.start_about_screen),
@@ -162,6 +164,14 @@ class OSFApp(QDialog):
         finally:
             logger.info('Quitting application')
             QApplication.instance().quit()
+
+    def sync_now(self):
+        if not self.background_worker:
+            self.start()
+        if self.background_worker.is_alive():
+            self.pause()
+
+        self.resume()
 
     def _logout_all_users(self):
         for user in session.query(User):

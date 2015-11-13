@@ -12,8 +12,8 @@ from PyQt5.QtWidgets import QDialog
 from PyQt5.QtWidgets import QMenu
 from PyQt5.QtWidgets import QSystemTrayIcon
 
+from osfoffline import alerts as AlertHandler
 from osfoffline.utils.validators import validate_containing_folder
-import osfoffline.alerts as AlertHandler
 # need this import for the logo to work properly.
 import osfoffline.views.rsc.resources  # noqa
 
@@ -31,6 +31,7 @@ class SystemTray(QDialog):
         # menu items
         self.open_osf_folder_action = QAction("Open OSF Folder", self)
         self.launch_osf_action = QAction("Launch OSF", self)
+        self.sync_now_action = QAction("Sync Now", self)
         self.currently_synching_action = QAction("Up to date", self)
         self.currently_synching_action.setDisabled(True)
         self.preferences_action = QAction("Preferences", self)
@@ -42,6 +43,7 @@ class SystemTray(QDialog):
         self.tray_icon_menu.addAction(self.open_osf_folder_action)
         self.tray_icon_menu.addAction(self.launch_osf_action)
         self.tray_icon_menu.addSeparator()
+        self.tray_icon_menu.addAction(self.sync_now_action)
         self.tray_icon_menu.addAction(self.currently_synching_action)
         self.tray_icon_menu.addSeparator()
         self.tray_icon_menu.addAction(self.preferences_action)
