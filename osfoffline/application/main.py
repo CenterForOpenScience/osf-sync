@@ -124,11 +124,6 @@ class OSFApp(QDialog):
             user = asyncio.get_event_loop().run_until_complete(AuthClient().populate_user_data(user))
         except AuthError as e:
             logging.exception(e.message)
-            QMessageBox.warning(
-                None,
-                'Log in Failed',
-                e.message
-            )
             self.login_signal.emit()
 
         containing_folder = os.path.dirname(user.osf_local_folder_path)
@@ -202,10 +197,19 @@ class OSFApp(QDialog):
         self.start_screen.open_window()
 
     def open_preferences(self):
-        logger.debug('pausing for preference modification')
-        self.pause()
-        logger.debug('opening preferences')
-        self.preferences.open_window(Preferences.GENERAL)
+        try:
+            user = session.query(User).filter(User.logged_in).one()
+        except:
+            QMessageBox.warning(
+                None,
+                'Log in',
+                'You must log in to view your preferences.')
+            self.start_screen.show()
+        else:
+            logger.debug('pausing for preference modification')
+            self.pause()
+            logger.debug('opening preferences')
+            self.preferences.open_window(Preferences.GENERAL)
 
     def start_about_screen(self):
         self.pause()
