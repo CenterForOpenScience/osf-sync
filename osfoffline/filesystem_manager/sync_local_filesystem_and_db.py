@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import os
 import hashlib
+import itertools
 
 from watchdog.events import (
     DirDeletedEvent,
@@ -56,7 +57,7 @@ class LocalDBSync(object):
 
         return [
             (local_children.get(path), db_children.get(path))
-            for path in set(list(local_children.keys()) + list(db_children.keys()))
+            for path in set(itertools.chain(local_children.keys(), db_children.keys()))
         ]
 
     def _get_children(self, item):
