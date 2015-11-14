@@ -19,7 +19,7 @@ from osfoffline.database_manager.utils import save
 from osfoffline.polling_osf_manager.api_url_builder import api_url_for, NODES, USERS
 from osfoffline.polling_osf_manager.remote_objects import RemoteNode
 from osfoffline.utils import path
-from osfoffline.views.rsc.preferences_rc import Ui_Preferences  # REQUIRED FOR GUI
+from osfoffline.views.rsc.preferences_rc import Ui_Settings  # REQUIRED FOR GUI
 import osfoffline.alerts as AlertHandler
 
 
@@ -41,7 +41,7 @@ class Preferences(QDialog):
         super().__init__()
         self._translate = QCoreApplication.translate
         self.containing_folder = ''
-        self.preferences_window = Ui_Preferences()
+        self.preferences_window = Ui_Settings()
         self.preferences_window.setupUi(self)
 
         self.preferences_window.changeFolderButton_2.clicked.connect(self.update_sync_nodes)
@@ -127,6 +127,7 @@ class Preferences(QDialog):
         user.guid_for_top_level_nodes_to_sync = guid_list
         save(session, user)
         self.checked_items = guid_list
+        self.close()
 
     def sync_all(self):
         for tree_item, node_id in self.tree_items:
@@ -155,6 +156,8 @@ class Preferences(QDialog):
             user = session.query(User).filter(User.logged_in).one()
             self.preferences_window.label.setText(self._translate("Preferences", user.full_name))
 
+            self._executor = QtCore.QThread()
+            self.node_fetcher = NodeFetcher()
             self.preferences_window.treeWidget.setCursor(QtCore.Qt.BusyCursor)
             self.node_fetcher.finished[list].connect(self.populate_item_tree)
             self.node_fetcher.moveToThread(self._executor)
