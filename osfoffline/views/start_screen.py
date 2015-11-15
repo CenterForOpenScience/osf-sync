@@ -57,6 +57,7 @@ class StartScreen(QDialog):
             if not self._has_UI():
                 self.start_screen.setupUi(self)
                 self.setup_slots()
+            self.start_screen.usernameEdit.setFocus()
             self.show()
 
     def _user_logged_in(self):
