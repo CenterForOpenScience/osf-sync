@@ -191,35 +191,18 @@ class OSFApp(QDialog):
         except SQLAlchemyError:
             session.query(User).delete()
 
+        self.tray.tray_icon.hide()
         if self.preferences.isVisible():
             self.preferences.close()
 
         self.start_screen.open_window()
 
     def open_preferences(self):
-        try:
-            user = session.query(User).filter(User.logged_in).one()
-        except:
-            QMessageBox.warning(
-                None,
-                'Log in',
-                'You must log in to view your preferences.')
-            self.start_screen.show()
-        else:
-            logger.debug('pausing for preference modification')
-            self.pause()
-            logger.debug('opening preferences')
-            self.preferences.open_window(Preferences.GENERAL)
+        logger.debug('pausing for preference modification')
+        self.pause()
+        logger.debug('opening preferences')
+        self.preferences.open_window(Preferences.GENERAL)
 
     def start_about_screen(self):
-        try:
-            user = session.query(User).filter(User.logged_in).one()
-        except:
-            QMessageBox.warning(
-                None,
-                'Log in',
-                'You must log in to view your preferences.')
-            self.start_screen.show()
-        else:
-            self.pause()
-            self.preferences.open_window(Preferences.ABOUT)
+        self.pause()
+        self.preferences.open_window(Preferences.ABOUT)
