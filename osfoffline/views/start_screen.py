@@ -25,7 +25,7 @@ class StartScreen(QDialog):
         self.start_screen = Ui_startscreen()
 
     def log_in(self):
-        self.start_screen.logInButton.setEnabled(False)
+        #self.start_screen.logInButton.setDisabled(True)  # Doesn't update until the asyncio call below returns
         logging.debug('attempting to log in')
         username = self.start_screen.usernameEdit.text().strip()
         password = self.start_screen.passwordEdit.text().strip()
@@ -45,7 +45,7 @@ class StartScreen(QDialog):
                 'Log in Failed',
                 e.message
             )
-            self.start_screen.logInButton.setEnabled(True)
+            #self.start_screen.logInButton.setEnabled(True)
         else:
             logging.info('Successfully logged in user: {}'.format(user))
             self.close()
@@ -59,8 +59,15 @@ class StartScreen(QDialog):
             if not self._has_UI():
                 self.start_screen.setupUi(self)
                 self.setup_slots()
-            self.start_screen.usernameEdit.setFocus()
-            self.start_screen.logInButton.setEnabled(True)
+            try:
+                # 'Remember me' functionality
+                username = session.query(User).one().osf_login
+            except (NoResultFound, AttributeError):
+                self.start_screen.usernameEdit.setFocus()
+            else:
+                self.start_screen.usernameEdit.setText(username)
+                self.start_screen.passwordEdit.setFocus()
+            #self.start_screen.logInButton.setEnabled(True)
             self.show()
 
     def _user_logged_in(self):
