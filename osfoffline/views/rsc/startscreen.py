@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'osfoffline/views/rsc/gui/startscreen_gui/startscreen.ui'
 #
-# Created by: PyQt5 UI code generator 5.5
+# Created by: PyQt5 UI code generator 5.5.1
 #
 # WARNING! All changes made in this file will be lost!
 
@@ -23,6 +23,7 @@ class Ui_startscreen(object):
         self.gridLayout_2.setSpacing(6)
         self.gridLayout_2.setObjectName("gridLayout_2")
         self.passwordEdit = QtWidgets.QLineEdit(self.groupBox_7)
+        self.passwordEdit.setFocusPolicy(QtCore.Qt.StrongFocus)
         self.passwordEdit.setEchoMode(QtWidgets.QLineEdit.Password)
         self.passwordEdit.setObjectName("passwordEdit")
         self.gridLayout_2.addWidget(self.passwordEdit, 1, 1, 1, 1)
@@ -30,9 +31,11 @@ class Ui_startscreen(object):
         self.label_7.setObjectName("label_7")
         self.gridLayout_2.addWidget(self.label_7, 1, 0, 1, 1)
         self.usernameEdit = QtWidgets.QLineEdit(self.groupBox_7)
+        self.usernameEdit.setFocusPolicy(QtCore.Qt.StrongFocus)
         self.usernameEdit.setObjectName("usernameEdit")
         self.gridLayout_2.addWidget(self.usernameEdit, 0, 1, 1, 1)
         self.logInButton = QtWidgets.QPushButton(self.groupBox_7)
+        self.logInButton.setFocusPolicy(QtCore.Qt.StrongFocus)
         self.logInButton.setObjectName("logInButton")
         self.gridLayout_2.addWidget(self.logInButton, 2, 1, 1, 1)
         self.label_6 = QtWidgets.QLabel(self.groupBox_7)
@@ -49,6 +52,8 @@ class Ui_startscreen(object):
 
         self.retranslateUi(startscreen)
         QtCore.QMetaObject.connectSlotsByName(startscreen)
+        startscreen.setTabOrder(self.usernameEdit, self.passwordEdit)
+        startscreen.setTabOrder(self.passwordEdit, self.logInButton)
 
     def retranslateUi(self, startscreen):
         _translate = QtCore.QCoreApplication.translate
