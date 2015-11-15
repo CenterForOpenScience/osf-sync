@@ -25,6 +25,7 @@ class StartScreen(QDialog):
         self.start_screen = Ui_startscreen()
 
     def log_in(self):
+        self.start_screen.logInButton.setEnabled(False)
         logging.debug('attempting to log in')
         username = self.start_screen.usernameEdit.text().strip()
         password = self.start_screen.passwordEdit.text().strip()
@@ -44,6 +45,7 @@ class StartScreen(QDialog):
                 'Log in Failed',
                 e.message
             )
+            self.start_screen.logInButton.setEnabled(True)
         else:
             logging.info('Successfully logged in user: {}'.format(user))
             self.close()
@@ -58,6 +60,7 @@ class StartScreen(QDialog):
                 self.start_screen.setupUi(self)
                 self.setup_slots()
             self.start_screen.usernameEdit.setFocus()
+            self.start_screen.logInButton.setEnabled(True)
             self.show()
 
     def _user_logged_in(self):
