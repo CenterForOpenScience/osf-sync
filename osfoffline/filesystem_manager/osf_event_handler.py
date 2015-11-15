@@ -185,7 +185,7 @@ class OSFEventHandler(FileSystemEventHandler):
             src_path = ProperPath(event.src_path, event.is_directory)
         except Exception:
             logging.exception('Exception caught: Invalid path')
-            AlterHandler.warn('invalid path specified. {} will not be synced.'.format(event.src_path.split('/')[-1]))
+            AlertHandler.warn('invalid path specified. {} will not be synced.'.format(event.src_path.split('/')[-1]))
         else:
             # create new model
             if self._already_exists(src_path):
@@ -209,7 +209,7 @@ class OSFEventHandler(FileSystemEventHandler):
             src_path = ProperPath(event.src_path, event.is_directory)
         except Exception:
             logging.exception('Exception caught: Invalid path')
-            AlterHandler.warn('invalid path specified. {} will not be synced'.format(event.src_path.split('/')[-1]))
+            AlertHandler.warn('invalid path specified. {} will not be synced'.format(event.src_path.split('/')[-1]))
         else:
             # get item
             try:
@@ -242,7 +242,7 @@ class OSFEventHandler(FileSystemEventHandler):
             src_path = ProperPath(event.src_path, event.is_directory)
         except Exception:
             logging.exception('Exception caught: Invalid path')
-            AlterHandler.warn('invalid path specified. {} will not be synced'.format(event.src_path.split('/')[-1]))
+            AlertHandler.warn('invalid path specified. {} will not be synced'.format(event.src_path.split('/')[-1]))
         else:
             if not self._already_exists(src_path):
                 return
