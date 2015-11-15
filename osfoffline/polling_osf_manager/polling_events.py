@@ -124,7 +124,12 @@ class UpdateFile(PollingEvent):
         if not isinstance(self.download_url, str):
             logging.error('Update file download_url is not a str.')
             return
-        updated_file_path = ProperPath(self.path, is_dir=False)
+        try:
+            updated_file_path = ProperPath(self.path, is_dir=False)
+        except Exception:
+            # TODO: Narrow down this exception and do client side warnings
+            logging.exception('Exception caught: Invalid target path for updated file.')
+            return
         AlertHandler.info(updated_file_path.name, AlertHandler.MODIFYING)
         yield from _download_file(updated_file_path, self.download_url, self.osf_query)
 
