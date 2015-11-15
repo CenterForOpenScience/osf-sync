@@ -212,5 +212,14 @@ class OSFApp(QDialog):
             self.preferences.open_window(Preferences.GENERAL)
 
     def start_about_screen(self):
-        self.pause()
-        self.preferences.open_window(Preferences.ABOUT)
+        try:
+            user = session.query(User).filter(User.logged_in).one()
+        except:
+            QMessageBox.warning(
+                None,
+                'Log in',
+                'You must log in to view your preferences.')
+            self.start_screen.show()
+        else:
+            self.pause()
+            self.preferences.open_window(Preferences.ABOUT)
