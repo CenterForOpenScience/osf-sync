@@ -12,6 +12,7 @@ from PyQt5.QtWidgets import QDialog
 from PyQt5.QtWidgets import QFileDialog
 from PyQt5.QtWidgets import QMessageBox
 from PyQt5.QtWidgets import QTreeWidgetItem
+from sqlalchemy.exc import SQLAlchemyError
 
 from osfoffline.database_manager.db import session
 from osfoffline.database_manager.models import User
@@ -35,6 +36,7 @@ class Preferences(QDialog):
     PROJECT_SYNC_COLUMN = 0
 
     preferences_closed_signal = pyqtSignal()
+
     containing_folder_updated_signal = pyqtSignal((str,))
 
     def __init__(self):
@@ -76,7 +78,12 @@ class Preferences(QDialog):
             reply.setDefaultButton(default)
             if reply.exec_() != 0:
                 return event.ignore()
-        self.preferences_closed_signal.emit()
+        try:
+            user = session.query(User).filter(User.logged_in).one()
+        except SQLAlchemyError:
+            pass
+        else:
+            self.preferences_closed_signal.emit()
         event.accept()
 
     def alerts_changed(self):
@@ -172,8 +179,11 @@ class Preferences(QDialog):
     def populate_item_tree(self, nodes):
         self.reset_tree_widget()
         _translate = QCoreApplication.translate
+        try:
+            user = session.query(User).filter(User.logged_in).one()
+        except SQLAlchemyError:
+            return
 
-        user = session.query(User).filter(User.logged_in).one()
         for node in nodes:
             tree_item = QTreeWidgetItem(self.preferences_window.treeWidget)
             tree_item.setCheckState(self.PROJECT_SYNC_COLUMN, Qt.Unchecked)
