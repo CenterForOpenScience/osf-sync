@@ -39,7 +39,7 @@ class CreateFolder(PollingEvent):
                 os.makedirs(folder_to_create.full_path)
             except Exception:
                 # TODO: Narrow down this exception and do client side warnings
-                logging.exception('Exception caught: Invalid target path for folder.')
+                logging.exception('Exception caught: Problem making a directory.')
                 return
 
 
@@ -157,13 +157,19 @@ class DeleteFolder(PollingEvent):
         # todo: is windows supported??
         if shutil.rmtree.avoids_symlink_attacks:
             AlertHandler.info(folder_to_delete.name, AlertHandler.DELETING)
-            shutil.rmtree(
-                self.path.full_path,
-                onerror=lambda a, b, c: logging.warning('local node not deleted because it does not exist.')
-            )
+            try:
+                shutil.rmtree(
+                    self.path.full_path,
+                    onerror=lambda a, b, c: logging.warning('local node not deleted because it does not exist.')
+                )
+            except Exception:
+                # TODO: Narrow down this exception and do client side warnings
+                logging.exception('Exception caught: Problem removing the tree.')
+                return
         else:
             logging.error("Cannot delete folder without risking symlink attack. Method not implemented.")
             return
+
 
 class DeleteFile(PollingEvent):
     def __init__(self, path):
