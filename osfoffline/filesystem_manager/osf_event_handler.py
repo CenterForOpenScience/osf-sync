@@ -51,7 +51,7 @@ class OSFEventHandler(FileSystemEventHandler):
             dest_path = ProperPath(event.dest_path, event.is_directory)
         except Exception:
             logging.exception('Exception caught: Invalid path specified')
-            AlertHandler.warn('Error moving {}. {} will not be synced.'.format('folder' if event.is_directory else 'file', src_path.split('/')[-1]))
+            AlertHandler.warn('Error moving {}. {} will not be synced.'.format('folder' if event.is_directory else 'file', os.path.basename(event.src_path)))
         else:
             # determine and get what moved
             if not self._already_exists(src_path):
@@ -70,8 +70,8 @@ class OSFEventHandler(FileSystemEventHandler):
             try:
                 item = self._get_item_by_path(src_path)
             except ItemNotInDB:
-                logging.exception('Exception caught: Tried to move or rename item {}, but it could not be found in DB'.src_path.name)
-                AlertHandler.warn('Could not find item to manipulate. {} will not be synced'.format(src_path.title))
+                logging.exception('Exception caught: Tried to move or rename item {}, but it could not be found in DB'.format(src_path.name))
+                AlertHandler.warn('Could not find item to manipulate. {} will not be synced'.format(src_path.name))
             else:
                 if isinstance(item, Node):
                     AlertHandler.warn('Cannot manipulate components locally. {} will stop syncing'.format(item.title))
@@ -185,7 +185,7 @@ class OSFEventHandler(FileSystemEventHandler):
             src_path = ProperPath(event.src_path, event.is_directory)
         except Exception:
             logging.exception('Exception caught: Invalid path')
-            AlertHandler.warn('invalid path specified. {} will not be synced.'.format(event.src_path.split('/')[-1]))
+            AlertHandler.warn('invalid path specified. {} will not be synced.'.format(os.path.basename(event.src_path)))
         else:
             # create new model
             if self._already_exists(src_path):
@@ -209,7 +209,7 @@ class OSFEventHandler(FileSystemEventHandler):
             src_path = ProperPath(event.src_path, event.is_directory)
         except Exception:
             logging.exception('Exception caught: Invalid path')
-            AlertHandler.warn('invalid path specified. {} will not be synced'.format(event.src_path.split('/')[-1]))
+            AlertHandler.warn('invalid path specified. {} will not be synced'.format(os.path.basename(event.src_path)))
         else:
             # get item
             try:
@@ -220,7 +220,12 @@ class OSFEventHandler(FileSystemEventHandler):
                 return  # todo: remove this once above is implemented
 
             # update hash
-            item.update_hash()
+            try:
+                item.update_hash()
+            except OSError:
+                logging.exception('File inaccessible during update_hash')
+                AlertHandler.warn('Error updating {}. {} inaccessible, will stop syncing.'.format('Folder' if event.is_directory else 'File', item.name))
+                return
 
             # save
             try:
@@ -242,7 +247,7 @@ class OSFEventHandler(FileSystemEventHandler):
             src_path = ProperPath(event.src_path, event.is_directory)
         except Exception:
             logging.exception('Exception caught: Invalid path')
-            AlertHandler.warn('invalid path specified. {} will not be synced'.format(event.src_path.split('/')[-1]))
+            AlertHandler.warn('invalid path specified. {} will not be synced'.format(os.path.basename(event.src_path)))
         else:
             if not self._already_exists(src_path):
                 return
@@ -325,9 +330,7 @@ class OSFEventHandler(FileSystemEventHandler):
             if ProperPath(event.src_path, True).name == 'Components':
                 return True
             try:
-                if ProperPath(event.dest_path, True).name == 'Components':
-                    return True
-                return False
+                return ProperPath(event.dest_path, True).name == 'Components'
             except AttributeError:
                 return False
         except Exception:
