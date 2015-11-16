@@ -1,7 +1,8 @@
-import os
 import asyncio
-import time
+import itertools
 import logging
+import os
+import time
 
 import aiohttp
 import iso8601
@@ -182,7 +183,7 @@ class Poll(object):
 
         return new_files + [
             (local_files.get(fid), remote_files.get(fid))
-            for fid in set(list(local_files.keys()) + list(remote_files.keys()))
+            for fid in set(itertools.chain(local_files.keys(), remote_files.keys()))
         ]
 
     @asyncio.coroutine

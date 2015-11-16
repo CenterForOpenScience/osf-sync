@@ -5,9 +5,11 @@ import threading
 
 from watchdog.observers import Observer
 
+
 from osfoffline.database_manager import models
 from osfoffline.database_manager.db import session
 from osfoffline.filesystem_manager import osf_event_handler
+from osfoffline.filesystem_manager.sync_local_filesystem_and_db import LocalDBSync
 from osfoffline.polling_osf_manager import polling
 
 
@@ -89,6 +91,8 @@ class BackgroundWorker(threading.Thread):
         self.observer = Observer()  # create observer. watched for events on files.
         # attach event handler to observed events. make observer recursive
         self.observer.schedule(self.event_handler, self.osf_folder, recursive=True)
+
+        # TODO: Fix reindexing functionality to not delete everything when a sync fails or exits unsafely
         # LocalDBSync(self.user.osf_local_folder_path, self.observer, self.user).emit_new_events()
 
         try:
