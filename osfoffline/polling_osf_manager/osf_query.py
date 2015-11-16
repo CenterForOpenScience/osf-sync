@@ -243,7 +243,7 @@ class OSFQuery(object):
         resp.close()
 
     @asyncio.coroutine
-    def make_request(self, url, method=None, params=None, expects=None, get_json=False, timeout=180, data=None, raise_exceptions=False):
+    def make_request(self, url, method=None, params=None, expects=None, get_json=False, timeout=180, data=None):
         yield from self.throttler.acquire()
 
         if method is None:
@@ -268,10 +268,8 @@ class OSFQuery(object):
             error_message = '[status code: {}]:: {} @url {}'.format(response.status, content, url)
             logging.error(error_message)
             self.close()
-            if raise_exceptions:
-                raise aiohttp.errors.HttpBadRequest(error_message)
-            else:
-                logging.error("HTTP Request Error: {}".format(error_message))
+            raise aiohttp.errors.HttpBadRequest(error_message)
+
         if get_json:
             json_response = yield from response.json()
             return json_response
