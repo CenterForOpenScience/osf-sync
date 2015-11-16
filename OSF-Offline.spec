@@ -4,7 +4,7 @@ block_cipher = None
 
 
 a = Analysis(['start.py'],
-             pathex=['/Users/nchen/Projects/OSF-Offline'],
+             pathex=['C:\\Users\\IEUser\\Documents\\GitHub\\OSF-Offline'],
              binaries=None,
              datas=None,
              hiddenimports=[],
@@ -25,8 +25,4 @@ exe = EXE(pyz,
           debug=False,
           strip=None,
           upx=True,
-          console=False , icon='circle_logo.icns')
-app = BUNDLE(exe,
-             name='OSF-Offline.app',
-             icon='circle_logo.icns',
-             bundle_identifier=None)
+          console=False , icon='circle_logo.ico')
