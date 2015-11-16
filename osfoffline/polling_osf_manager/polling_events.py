@@ -35,7 +35,12 @@ class CreateFolder(PollingEvent):
             return
         if not os.path.exists(folder_to_create.full_path):
             AlertHandler.info(folder_to_create.name, AlertHandler.DOWNLOAD)
-            os.makedirs(folder_to_create.full_path)
+            try:
+                os.makedirs(folder_to_create.full_path)
+            except Exception:
+                # TODO: Narrow down this exception and do client side warnings
+                logging.exception('Exception caught: Invalid target path for folder.')
+                return
 
 
 class CreateFile(PollingEvent):
