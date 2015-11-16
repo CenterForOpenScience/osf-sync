@@ -203,6 +203,11 @@ def _download_file(path, url, osf_query):
     except (aiohttp.errors.HttpMethodNotAllowed, aiohttp.errors.BadHttpMessage):
         AlertHandler.warn("Do not have access to file.")
         logging.warning("Do not have access to file.")
+    except aiohttp.errors.HttpBadRequest:
+        AlertHandler.warn("Problem accessing file.")
+        logging.exception("Exception caught downloading file.")
+    except Exception:
+        logging.exception("Exception caught: problem downloading file.")
     try:
         with open(path.full_path, 'wb') as fd:
             while True:
