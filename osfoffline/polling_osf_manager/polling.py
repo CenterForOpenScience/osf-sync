@@ -82,13 +82,12 @@ class Poll(object):
         self._loop.call_later(5, self.start)
 
     def start(self):
-
         remote_user = self._loop.run_until_complete(self.get_remote_user())
 
         try:
-            self.queue = asyncio.JoinableQueue(maxsize=15)
+            self.queue = asyncio.JoinableQueue(maxsize=0)
         except AttributeError:
-            self.queue = asyncio.Queue(maxsize=15)
+            self.queue = asyncio.Queue(maxsize=0)
 
         self.process_job = asyncio.ensure_future(self.process_queue())
         self.poll_job = asyncio.ensure_future(self.check_osf(remote_user))
@@ -103,8 +102,10 @@ class Poll(object):
         while True:
             job = yield from self.queue.get()
             logger.info('Running {}'.format(job))
-            yield from job.run()
-            self.queue.task_done()
+            try:
+                yield from job.run()
+            finally:
+                self.queue.task_done()
 
     @asyncio.coroutine
     def get_remote_user(self):
