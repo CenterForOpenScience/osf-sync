@@ -84,6 +84,7 @@ class Preferences(QDialog):
             pass
         else:
             self.preferences_closed_signal.emit()
+        self.reset_tree_widget()
         event.accept()
 
     def alerts_changed(self):
