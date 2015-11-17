@@ -8,7 +8,7 @@ import furl
 from sqlalchemy.exc import SQLAlchemyError
 
 from osfoffline import settings
-from osfoffline.database_manager.db import session
+from osfoffline.database_manager.db import clear_models, session
 from osfoffline.database_manager.models import User
 from osfoffline.database_manager.utils import save
 from osfoffline.polling_osf_manager.remote_objects import RemoteUser
@@ -108,6 +108,10 @@ class AuthClient(object):
 
         if user:
             user.oauth_token = yield from self._authenticate(username, password)
+            if user.osf_login != username:
+                #Different user authenticated, drop old user and allow login
+                clear_models()
+                user = yield from self._create_user(username, password)
         else:
             user = yield from self._create_user(username, password)
 
