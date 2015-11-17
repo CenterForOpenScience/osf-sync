@@ -4,6 +4,7 @@ from PyQt5.QtWidgets import QApplication, QMessageBox, QSystemTrayIcon
 
 from osfoffline import utils
 from osfoffline.application.main import OSFApp
+from osfoffline.database_manager.db import drop_db
 
 
 def running_warning():
@@ -19,6 +20,9 @@ def running_warning():
 
 def start():
     # Start logging all events
+    if '--drop' in sys.argv:
+        drop_db()
+
     utils.start_app_logging()
     if sys.platform == 'win32':
         from server import SingleInstance
