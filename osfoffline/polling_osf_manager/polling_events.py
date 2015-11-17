@@ -159,7 +159,7 @@ class DeleteFolder(PollingEvent):
             AlertHandler.info(folder_to_delete.name, AlertHandler.DELETING)
             try:
                 shutil.rmtree(
-                    self.path.full_path,
+                    folder_to_delete.full_path,
                     onerror=lambda a, b, c: logging.warning('local node not deleted because it does not exist.')
                 )
             except Exception:
