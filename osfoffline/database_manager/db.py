@@ -1,3 +1,5 @@
+import contextlib
+
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, scoped_session
 from osfoffline.database_manager.models import Base
@@ -19,3 +21,10 @@ session_factory = sessionmaker(bind=engine)
 Session = scoped_session(session_factory)
 
 session = Session()
+
+def drop_db():
+    with contextlib.closing(engine.connect()) as con:
+        trans = con.begin()
+        for table in reversed(Base.metadata.sorted_tables):
+            con.execute(table.delete())
+        trans.commit()

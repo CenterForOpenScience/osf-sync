@@ -148,11 +148,12 @@ class Preferences(QDialog):
         if self.isVisible():
             self.preferences_window.tabWidget.setCurrentIndex(tab)
             self.selector(tab)
-            self.raise_()
         else:
             self.preferences_window.tabWidget.setCurrentIndex(tab)
             self.selector(tab)
             self.show()
+        self.raise_()
+        self.activateWindow()
 
     def selector(self, selected_index):
         if selected_index == self.GENERAL:

@@ -91,7 +91,9 @@ class BackgroundWorker(threading.Thread):
         self.observer = Observer()  # create observer. watched for events on files.
         # attach event handler to observed events. make observer recursive
         self.observer.schedule(self.event_handler, self.osf_folder, recursive=True)
-        LocalDBSync(self.user.osf_local_folder_path, self.observer, self.user).emit_new_events()
+
+        # TODO: Fix reindexing functionality to not delete everything when a sync fails or exits unsafely
+        # LocalDBSync(self.user.osf_local_folder_path, self.observer, self.user).emit_new_events()
 
         try:
             self.observer.start()  # start

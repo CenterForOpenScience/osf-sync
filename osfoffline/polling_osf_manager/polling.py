@@ -29,6 +29,14 @@ except AttributeError:
     asyncio.ensure_future = asyncio.async
 
 
+class JoinableQueue(getattr(asyncio, 'JoinableQueue', asyncio.Queue)):
+
+    def _put(self, item):
+        self._queue.append(item)
+        self._unfinished_tasks += 1
+        self._finished.clear()
+
+
 class Poll(object):
     def __init__(self, user, loop):
         assert isinstance(user, User)
@@ -82,13 +90,9 @@ class Poll(object):
         self._loop.call_later(5, self.start)
 
     def start(self):
-
         remote_user = self._loop.run_until_complete(self.get_remote_user())
 
-        try:
-            self.queue = asyncio.JoinableQueue(maxsize=15)
-        except AttributeError:
-            self.queue = asyncio.Queue(maxsize=15)
+        self.queue = JoinableQueue(maxsize=15)
 
         self.process_job = asyncio.ensure_future(self.process_queue())
         self.poll_job = asyncio.ensure_future(self.check_osf(remote_user))
@@ -103,8 +107,10 @@ class Poll(object):
         while True:
             job = yield from self.queue.get()
             logger.info('Running {}'.format(job))
-            yield from job.run()
-            self.queue.task_done()
+            try:
+                yield from job.run()
+            finally:
+                self.queue.task_done()
 
     @asyncio.coroutine
     def get_remote_user(self):
@@ -166,18 +172,22 @@ class Poll(object):
 
         local_files = {}
         remote_files = {}
+        new_files = []
 
         for local in local_list:
             assert isinstance(local, Base)
             if isinstance(local, File) and local.name == '.DS_Store':
                 continue
-            local_files[local.osf_id] = local
+            if local.osf_id:
+                local_files[local.osf_id] = local
+            else:
+                new_files.append((local, None))
 
         for remote in remote_list:
             assert isinstance(remote, RemoteObject)
             remote_files[remote.id] = remote
 
-        return [
+        return new_files + [
             (local_files.get(fid), remote_files.get(fid))
             for fid in set(itertools.chain(local_files.keys(), remote_files.keys()))
         ]
