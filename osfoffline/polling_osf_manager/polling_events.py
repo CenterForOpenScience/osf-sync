@@ -179,6 +179,7 @@ class DeleteFile(PollingEvent):
     @asyncio.coroutine
     def run(self):
         file_to_delete = ProperPath(self.path, is_dir=False)
+        AlertHandler.info(file_to_delete.name, AlertHandler.DELETING)
         try:
             os.remove(file_to_delete.full_path)
         except FileNotFoundError:
