@@ -585,7 +585,8 @@ class Poll(object):
             new_remote_file = yield from self.osf_query.upload_file(local_file)
         except FileNotFoundError:
             logger.warning(
-                'file not reuploaded on remote server because does not exist locally. inside create_remote_file_folder')
+                'file {} not reuploaded on remote server because does not exist locally. it probably downloaded incorrectly.'.format(local_file.name))
+            yield from self.update_local_file(local_file, remote_file)
             return remote_file
 
         return new_remote_file
