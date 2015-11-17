@@ -6,7 +6,6 @@ import time
 
 import aiohttp
 import iso8601
-from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm.exc import MultipleResultsFound, NoResultFound
 
 import osfoffline.alerts as AlertHandler
