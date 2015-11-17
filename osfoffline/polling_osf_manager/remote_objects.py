@@ -42,10 +42,7 @@ class RemoteNode(RemoteObject):
         self.name = remote_dict['attributes']['title']
         self.category = remote_dict['attributes']['category']
         self.child_files_url = remote_dict['relationships']['files']['links']['related']['href']
-        try:
-            self.is_top_level = bool(remote_dict['relationships']['parent']['links']['related']['href'] is None)
-        except KeyError:
-            self.is_top_level = True
+        self.is_top_level = 'parent' not in remote_dict['relationships']
         self.child_nodes_url = remote_dict['relationships']['children']['links']['related']['href']
         # self.num_child_nodes = remote_dict['relationships']['children']['links']['related']['meta']['count']
         self.last_modified = remote_to_local_datetime(remote_dict['attributes']['date_modified'])
