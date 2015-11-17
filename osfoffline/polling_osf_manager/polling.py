@@ -29,6 +29,14 @@ except AttributeError:
     asyncio.ensure_future = asyncio.async
 
 
+class JoinableQueue(getattr(asyncio, 'JoinableQueue', asyncio.Queue)):
+
+    def _put(self, item):
+        self._queue.append(item)
+        self._unfinished_tasks += 1
+        self._finished.clear()
+
+
 class Poll(object):
     def __init__(self, user, loop):
         assert isinstance(user, User)
@@ -84,10 +92,7 @@ class Poll(object):
     def start(self):
         remote_user = self._loop.run_until_complete(self.get_remote_user())
 
-        try:
-            self.queue = asyncio.JoinableQueue(maxsize=0)
-        except AttributeError:
-            self.queue = asyncio.Queue(maxsize=0)
+        self.queue = JoinableQueue(maxsize=15)
 
         self.process_job = asyncio.ensure_future(self.process_queue())
         self.poll_job = asyncio.ensure_future(self.check_osf(remote_user))
