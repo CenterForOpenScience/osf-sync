@@ -108,6 +108,10 @@ class AuthClient(object):
 
         if user:
             user.oauth_token = yield from self._authenticate(username, password)
+            if user.osf_login != username:
+                #Different user authenticated, drop old user and allow login
+                session.query(User).delete()
+                user = yield from self._create_user(username, password)
         else:
             user = yield from self._create_user(username, password)
 
