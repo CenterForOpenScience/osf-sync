@@ -200,14 +200,18 @@ def _download_file(path, url, osf_query):
         # FIXME: Consolidate redundant messages
         AlertHandler.warn("Bad Internet Connection")
         logging.warning("Bad Internet Connection")
+        return
     except (aiohttp.errors.HttpMethodNotAllowed, aiohttp.errors.BadHttpMessage):
         AlertHandler.warn("Do not have access to file.")
         logging.warning("Do not have access to file.")
+        return
     except aiohttp.errors.HttpBadRequest:
         AlertHandler.warn("Problem accessing file.")
         logging.exception("Exception caught downloading file.")
+        return
     except Exception:
         logging.exception("Exception caught: problem downloading file.")
+        return
     try:
         with open(path.full_path, 'wb') as fd:
             while True:
