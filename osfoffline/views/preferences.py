@@ -84,6 +84,7 @@ class Preferences(QDialog):
             pass
         else:
             self.preferences_closed_signal.emit()
+        self.reset_tree_widget()
         event.accept()
 
     def alerts_changed(self):
@@ -174,6 +175,7 @@ class Preferences(QDialog):
 
     def reset_tree_widget(self):
         self.tree_items.clear()
+        self.checked_items.clear()
         self.preferences_window.treeWidget.clear()
 
     @QtCore.pyqtSlot(list)
