@@ -198,8 +198,8 @@ def _download_file(path, url, osf_query):
     try:
         resp = yield from osf_query.make_request(url)
     except (aiohttp.errors.ClientOSError):
-        AlertHandler.warn("Invalid permissions for OSF folder")
-        logging.exception("Invalid permissions for OSF folder")
+        AlertHandler.warn("Please install operating system updates")
+        logging.exception("SSL certificate error")
         return
     except (aiohttp.errors.ClientConnectionError, aiohttp.errors.ClientTimeoutError):
         # FIXME: Consolidate redundant messages
