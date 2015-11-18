@@ -197,6 +197,9 @@ def _download_file(path, url, osf_query):
         return
     try:
         resp = yield from osf_query.make_request(url)
+    except (aiohttp.errors.ClientOSError):
+        AlertHandler.warn("Invalid permissions for OSF folder")
+        logging.exception("Invalid permissions for OSF folder")
     except (aiohttp.errors.ClientConnectionError, aiohttp.errors.ClientTimeoutError):
         # FIXME: Consolidate redundant messages
         AlertHandler.warn("Bad Internet Connection")
