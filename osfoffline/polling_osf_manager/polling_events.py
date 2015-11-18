@@ -152,22 +152,16 @@ class DeleteFolder(PollingEvent):
             # TODO: Narrow down this exception and do client side warnings
             logging.exception('Exception caught: Invalid source path for deleted folder.')
             return
-        # this works on systems that use file descriptors.
-        # thus, linux, mac are supported.
-        # todo: is windows supported??
-        if shutil.rmtree.avoids_symlink_attacks:
-            AlertHandler.info(folder_to_delete.name, AlertHandler.DELETING)
-            try:
-                shutil.rmtree(
-                    folder_to_delete.full_path,
-                    onerror=lambda a, b, c: logging.warning('local node not deleted because it does not exist.')
-                )
-            except Exception:
-                # TODO: Narrow down this exception and do client side warnings
-                logging.exception('Exception caught: Problem removing the tree.')
-                return
-        else:
-            logging.error("Cannot delete folder without risking symlink attack. Method not implemented.")
+
+        AlertHandler.info(folder_to_delete.name, AlertHandler.DELETING)
+        try:
+            shutil.rmtree(
+                folder_to_delete.full_path,
+                onerror=lambda a, b, c: logging.warning('local node not deleted because it does not exist.')
+            )
+        except Exception:
+            # TODO: Narrow down this exception and do client side warnings
+            logging.exception('Exception caught: Problem removing the tree.')
             return
 
 
