@@ -2,6 +2,7 @@ import contextlib
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, scoped_session
+from osfoffline.database_manager import CORE_OSFO_MODELS
 from osfoffline.database_manager.models import Base
 from osfoffline.settings import PROJECT_DB_FILE
 
@@ -28,3 +29,7 @@ def drop_db():
         for table in reversed(Base.metadata.sorted_tables):
             con.execute(table.delete())
         trans.commit()
+
+def clear_models():
+    for model in CORE_OSFO_MODELS:
+        session.query(model).delete()
