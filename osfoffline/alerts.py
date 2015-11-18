@@ -124,7 +124,7 @@ def info(file_name, action):
             else:
                 if datetime.now() - last_alert_time < timedelta(milliseconds=(ALERT_TIME * 3)):  # last alert was recent
                     run_alert('Updating {} files'.format(alert_queue.qsize() + 1),
-                              "Check <a href='www.osf.io'>www.osf.io</a> for details.")
+                              "Check www.osf.io for details.")
                     clear_queue()
                 else:
                     run_alert(alert_tuple[0], alert_tuple[1])
