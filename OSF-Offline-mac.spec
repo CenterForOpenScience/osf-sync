@@ -4,7 +4,7 @@ block_cipher = None
 
 
 a = Analysis(['start.py'],
-             pathex=['C:\\Users\\IEUser\\Documents\\GitHub\\OSF-Offline'],
+             pathex=['/Users/nchen/Projects/OSF-Offline'],
              binaries=None,
              datas=None,
              hiddenimports=[],
