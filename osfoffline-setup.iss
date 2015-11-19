@@ -2,7 +2,7 @@
 ; SEE THE DOCUMENTATION FOR DETAILS ON CREATING INNO SETUP SCRIPT FILES!
 
 #define MyAppName "OSF-Offline"
-#define MyAppVersion "0.0.5"
+#define MyAppVersion "0.1.0"
 #define MyAppPublisher "Center for Open Science"
 #define MyAppURL "http://osf.io/"
 #define MyAppExeName "OSF-Offline.exe"
@@ -25,7 +25,7 @@ DisableProgramGroupPage=true
 DisableStartupPrompt=true
 LicenseFile=C:\Users\IEUser\Documents\GitHub\osf.io\LICENSE
 OutputDir=C:\Users\IEUser\Desktop
-OutputBaseFilename=OSF-Offline-Setup-V4
+OutputBaseFilename=OSF-Offline-Setup-v0.1.0
 SetupIconFile=C:\Users\IEUser\Documents\GitHub\OSF-Offline\circle_logo.ico
 Compression=lzma
 SolidCompression=yes
@@ -44,7 +44,7 @@ Source: "C:\Users\IEUser\Documents\GitHub\OSF-Offline\Psvince\psvince\psvince.dl
 ; uninstall time to check if the target program is running
 Source: "C:\Users\IEUser\Documents\GitHub\OSF-Offline\Psvince\psvince\psvince.dll"; DestDir: {app}
 
-Source: "C:\Users\IEUser\Documents\GitHub\OSF-Offline\dist\OSF-Offline.exe"; DestDir: "{app}"; Flags: ignoreversion
+Source: "C:\Users\IEUser\Documents\GitHub\OSF-Offline\dist\OSF-Offline.exe"; DestDir: "{app}";
 ; NOTE: Don't use "Flags: ignoreversion" on any shared system files
 
 [Icons]
