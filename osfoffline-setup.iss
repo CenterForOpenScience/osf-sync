@@ -26,7 +26,7 @@ DisableStartupPrompt=true
 LicenseFile=C:\Users\IEUser\Documents\GitHub\osf.io\LICENSE
 OutputDir=C:\Users\IEUser\Desktop
 OutputBaseFilename=OSF-Offline-Setup-v0.1.0
-SetupIconFile=C:\Users\IEUser\Documents\GitHub\OSF-Offline\circle_logo.ico
+SetupIconFile=C:\Users\IEUser\Documents\GitHub\OSF-Offline\images\cos_logo.ico
 Compression=lzma
 SolidCompression=yes
 
@@ -39,10 +39,10 @@ Name: "quicklaunchicon"; Description: "{cm:CreateQuickLaunchIcon}"; GroupDescrip
 
 [Files]
 ; DLL used to check if the target program is running at install time
-Source: "C:\Users\IEUser\Documents\GitHub\OSF-Offline\Psvince\psvince\psvince.dll"; flags: dontcopy
+Source: "C:\Users\IEUser\Documents\GitHub\OSF-Offline\psvince.dll"; flags: dontcopy
 ; psvince is installed in {app} folder, so it will be loaded at 
 ; uninstall time to check if the target program is running
-Source: "C:\Users\IEUser\Documents\GitHub\OSF-Offline\Psvince\psvince\psvince.dll"; DestDir: {app}
+Source: "C:\Users\IEUser\Documents\GitHub\OSF-Offline\psvince.dll"; DestDir: {app}
 
 Source: "C:\Users\IEUser\Documents\GitHub\OSF-Offline\dist\OSF-Offline.exe"; DestDir: "{app}";
 ; NOTE: Don't use "Flags: ignoreversion" on any shared system files
