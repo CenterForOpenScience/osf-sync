@@ -1,6 +1,5 @@
 import os
 import logging
-import threading
 
 import requests
 
@@ -219,7 +218,7 @@ class NodeFetcher(QtCore.QObject):
                 user_nodes = []
                 url = api_url_for(USERS, related_type=NODES, user_id=user.osf_id)
                 headers = {'Authorization': 'Bearer {}'.format(user.oauth_token)}
-                resp = requests.get(url, headers=headers).json()
+                resp = requests.get(url, headers=headers, params={'page[size]': 500}).json()
                 user_nodes.extend(resp['data'])
                 while resp['links']['next']:
                     resp = requests.get(resp['links']['next'], headers=headers).json()
