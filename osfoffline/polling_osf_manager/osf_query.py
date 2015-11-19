@@ -32,11 +32,11 @@ class OSFQuery(object):
         if remote_url is None:
             return remote_children
 
-        resp = yield from self.make_request(remote_url, get_json=True)
+        resp = yield from self.make_request(remote_url, params={'page[size]': 500}, get_json=True)
 
         remote_children.extend(resp['data'])
         while resp['links']['next']:
-            resp = yield from self.make_request(resp['links']['next'], get_json=True)
+            resp = yield from self.make_request(resp['links']['next'], params={'page[size]': 500}, get_json=True)
 
             remote_children.extend(resp['data'])
 

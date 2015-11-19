@@ -152,6 +152,10 @@ class File(Base):
     name = Column(String)
 
     hash = Column(String)
+
+    md5 = Column(String)
+    sha256 = Column(String)
+
     type = Column(Enum(FOLDER, FILE), nullable=False)
     date_modified = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
     # todo: osf_id and osf_path are duplicates right now. One needs to be removed.
@@ -206,7 +210,7 @@ class File(Base):
     def has_parent(self):
         return self.parent is not None
 
-    @hybrid_property
+    @property
     def path(self):
         """Recursively walk up the path of the file/folder. Top level file/folder joins with the path of the containing node.
         """
@@ -218,14 +222,16 @@ class File(Base):
 
     def update_hash(self, block_size=2 ** 20):
         if self.is_file:
-            m = hashlib.md5()
+            m, s = hashlib.md5(), hashlib.sha256()
             with open(self.path, "rb") as f:
                 while True:
                     buf = f.read(block_size)
                     if not buf:
                         break
                     m.update(buf)
+                    s.update(buf)
             self.hash = m.hexdigest()
+            self.md5, self.sha256 = m.hexdigest(), s.hexdigest()
 
     @hybrid_property
     def size(self):

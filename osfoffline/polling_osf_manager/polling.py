@@ -176,7 +176,8 @@ class Poll(object):
 
         for local in local_list:
             assert isinstance(local, Base)
-            if isinstance(local, File) and local.name == '.DS_Store':
+            # Note check lost+found ext3+ folder
+            if isinstance(local, File) and local.name in ('.DS_Store', 'desktop.ini'):
                 continue
             if local.osf_id:
                 local_files[local.osf_id] = local
@@ -224,6 +225,7 @@ class Poll(object):
             AlertHandler.up_to_date()
             logger.debug('---------SHOULD HAVE ALL OSF FILES---------')
 
+            # Pro-tip POLL_DELAY must be < 24 hours
             yield from asyncio.sleep(POLL_DELAY)
 
     @asyncio.coroutine
@@ -250,6 +252,8 @@ class Poll(object):
         if local_node is None:
             local_node = yield from self.create_local_node(remote_node, local_parent_node)
         elif local_node is not None and remote_node is None:
+            # TODO can we actually delete here?
+            # If our DB says nothing in local node has been modified
             yield from self.delete_local_node(local_node)
             return
         elif local_node is not None and remote_node is not None:
@@ -276,17 +280,20 @@ class Poll(object):
         # fixme: doesnt handle multiple providers right now...
 
         try:
-            remote_node_files = yield from self.osf_query.get_child_files(remote_node)
+            connected_addons = yield from self.osf_query.get_child_files(remote_node)
         except aiohttp.errors.HttpBadRequest:
             AlertHandler.warn(
                 'could not access files for node {}. Node might have been deleted.'.format(remote_node.name))
             return
 
-        assert len(remote_node_files) >= 1
-        for node_file in remote_node_files:
-            if node_file.name == 'osfstorage':
-                osfstorage_folder = node_file
-        assert osfstorage_folder
+        try:
+            osfstorage_folder = next(
+                node_file
+                for node_file in connected_addons
+                if node_file.name == 'osfstorage'
+            )
+        except StopIteration:
+            raise ValueError('No OSF Storage folder found')
 
         try:
             remote_node_top_level_file_folders = yield from self.osf_query.get_child_files(osfstorage_folder)
@@ -445,7 +452,9 @@ class Poll(object):
             osf_path=remote_file_folder.id,
             user=self.user,
             parent=local_parent_folder,
-            node=local_node
+            node=local_node,
+            md5=getattr(remote_file_folder, 'md5', None),
+            sha256=getattr(remote_file_folder, 'sha256', None),
         )
         save(session, new_file_folder)
 
