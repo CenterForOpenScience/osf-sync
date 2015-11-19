@@ -3,7 +3,7 @@
 block_cipher = None
 
 
-a = Analysis(['start.py'],
+a = Analysis(['/Users/nchen/Projects/start.py'],
              pathex=['/Users/nchen/Projects/OSF-Offline'],
              binaries=None,
              datas=None,
