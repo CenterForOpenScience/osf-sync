@@ -3,8 +3,8 @@
 block_cipher = None
 
 
-a = Analysis(['start.py'],
-             pathex=['/Users/nchen/Projects/OSF-Offline'],
+a = Analysis(['C:\\Users\\IEUser\\Documents\\GitHub\\OSF-Offline\\start.py'],
+             pathex=['C:\\Users\\IEUser\\Documents\\GitHub\\OSF-Offline'],
              binaries=None,
              datas=None,
              hiddenimports=[],
@@ -25,9 +25,4 @@ exe = EXE(pyz,
           debug=False,
           strip=None,
           upx=True,
-          console=False , icon='images/cos_logo.icns')
-app = BUNDLE(exe,
-             name='OSF-Offline.app',
-             icon='images/cos_logo.icns',
-             bundle_identifier=None)
-
+          console=False , icon='deploy\\images\\cos_logo.ico')
