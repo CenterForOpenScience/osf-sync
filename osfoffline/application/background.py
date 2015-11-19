@@ -55,6 +55,8 @@ class BackgroundWorker(threading.Thread):
         self.user = self.get_current_user()
         self.osf_folder = self.user.osf_local_folder_path
 
+        LocalDBSync(self.observer, self.user, self.loop).sync_db()
+
         logger.debug('Starting observer thread')
         self.start_folder_observer()
 

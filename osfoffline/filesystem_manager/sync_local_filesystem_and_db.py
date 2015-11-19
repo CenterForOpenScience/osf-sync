@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 import os
+import asyncio
+import logging
 import hashlib
 import itertools
 
@@ -11,209 +13,186 @@ from watchdog.events import (
     DirCreatedEvent,
 )
 from watchdog.observers import Observer
+from sqlalchemy.orm.exc import MultipleResultsFound, NoResultFound
+from osfoffline.database_manager.db import session
+from osfoffline.polling_osf_manager.osf_query import OSFQuery
 from osfoffline.database_manager.models import User, Node, File, Base
 from osfoffline.exceptions.item_exceptions import InvalidItemType, FolderNotInFileSystem
 from osfoffline.exceptions.local_db_sync_exceptions import LocalDBBothNone, IncorrectLocalDBMatch
 from osfoffline.utils.path import ProperPath
+from osfoffline.polling_osf_manager.api_url_builder import api_url_for, NODES, USERS
+
+
+logger = logging.getLogger(__name__)
+
+
+def get_sha256(path, chunk_size=1024**2):
+    s = hashlib.sha256()
+    with open(path, 'rb') as fobj:
+        while True:
+            chunk = fobj.read(chunk_size)
+            if not chunk:
+                break
+            s.update(chunk)
+    return s.hexdigest()
 
 
 class LocalDBSync(object):
     COMPONENTS_FOLDER_NAME = 'Components'
 
-    def __init__(self, absolute_osf_dir_path, observer, user):
-        if not isinstance(observer, Observer):
-            raise TypeError
-        if not isinstance(user, User):
-            raise TypeError
-        if not os.path.isdir(absolute_osf_dir_path):
+    def __init__(self, observer, user, loop=None):
+        self.user = user
+        self.observer = observer
+        self.loop = loop or asyncio.get_event_loop()
+        self.osf_query = OSFQuery(self.loop, self.user.oauth_token)
+        self.osf_folder = self.user.osf_local_folder_path
+
+        if not os.path.isdir(self.osf_folder):
             raise FolderNotInFileSystem
 
-        self.osf_path = ProperPath(absolute_osf_dir_path, True)
-        self.observer = observer
-        self.user = user
+        self.osf_path = ProperPath(self.osf_folder, True)
 
-    def emit_new_events(self):
-        for local_child, db_child in self._make_local_db_tuple_list(self.osf_path, self.user):
-            self._emit_single_event_and_recurse(local_child, db_child)
-
-    def _make_local_db_tuple_list(self, local, db):
-        if local is None and db is None:
-            raise LocalDBBothNone
-        if local and db and self._get_proper_path(local) != self._get_proper_path(db):
-            raise IncorrectLocalDBMatch
-        if local and not isinstance(local, ProperPath):
-            raise InvalidItemType
-
-        local_children = {}
-        db_children = {}
-
-        for child in self._get_children(local):
-            assert isinstance(child, ProperPath)
-            local_children[child.full_path] = child
-
-        for child in self._get_children(db):
-            assert isinstance(child, Base)
-            db_children[self._get_proper_path(child).full_path] = child
-
-        return [
-            (local_children.get(path), db_children.get(path))
-            for path in set(itertools.chain(local_children.keys(), db_children.keys()))
+    def sync_db(self):
+        logger.info('Beginning initial sync')
+        events, nodes = [], [
+            node for node in
+            self.user.top_level_nodes
+            if node.osf_id in self.user.guid_for_top_level_nodes_to_sync
         ]
+        for node in nodes:
+            logger.info('Resyncing node {}'.format(node))
+            events.extend(self.loop.run_until_complete(self.crawl_node(node)))
+        logger.info('Initial sync finished')
 
-    def _get_children(self, item):
-        if item is None:
+    def match_local_remote(self, local_list, remote_list):
+        ret = {}
+        for local in local_list:
+            ret.setdefault((local.name, local.is_dir), [None, None])[0] = local
+
+        for remote in remote_list:
+            ret.setdefault((remote.name, remote.is_dir), [None, None])[1] = remote
+
+        return ret
+
+    @asyncio.coroutine
+    def crawl_node(self, node, local_path='/', remote_path='/'):
+        logger.debug('Crawling node {} at path {}'.format(node, local_path))
+        events, directories = [], []
+        resources = self.match_local_remote(
+            self.list_local_dir(node, local_path),
+            (yield from self.list_remote_dir(node, remote_path))
+        )
+
+        for (name, is_dir), (local, remote) in resources.items():
+            if is_dir:
+                directories.append((
+                    getattr(local, 'fullpath', None),
+                    getattr(remote, 'osf_id', None)
+                ))
+            event = self.infer_event(local, remote)
+            if event is not None:
+                events.append(event)
+                # raise ValueError('GOT AN EVENT OH SHIT')
+                # DO SOMETHING HERE
+                # yield from self.queue.put(event)
+
+        # yield from self.queue.join()
+
+        for local_dir, remote_dir in directories:
+            yield from self.crawl_node(node, local_dir, remote_dir)
+
+        return events
+
+    @asyncio.coroutine
+    def list_remote_dir(self, node, remote_folder):
+        if remote_folder is None:
             return []
 
-        # local
-        if isinstance(item, ProperPath):
-            if item.is_file:
-                return []
-            else:
-                children = []
-                for child in os.listdir(item.full_path):
-                    child_item_path = os.path.join(item.full_path, child)
-                    is_dir = os.path.isdir(child_item_path)
-                    child_item = ProperPath(child_item_path, is_dir)
+        if remote_folder != '/':
+            return (yield from self.osf_query.get_child_files(remote_folder))
 
-                    # handle the components folder
-                    if child_item.name == LocalDBSync.COMPONENTS_FOLDER_NAME:
-                        for component in os.listdir(child_item_path):
-                            component_path = os.path.join(child_item_path, component)
-                            component_is_dir = os.path.isdir(component_path)
-                            # NOTE: making a concious decision here to ignore invalid file in components folder
-                            # NOTE: this means the user is not getting an alert in this case
-                            if component_is_dir:
-                                children.append(ProperPath(component_path, component_is_dir))
-                    else:
-                        children.append(child_item)
-                return children
-        # db
+        if not hasattr(self, '__nodes'):
+            url = api_url_for(USERS, related_type=NODES, user_id=self.user.osf_id)
+            self.__nodes = yield from self.osf_query.get_top_level_nodes(url)
+
+        try:
+            remote = next(remote for remote in self.__nodes if remote.id == node.osf_id)
+        except StopIteration:
+            raise ValueError('Requested Node not found')
+
+        providers = yield from self.osf_query.get_child_files(remote)
+
+        try:
+            remote_folder = next(provider for provider in providers if provider.provider == 'osfstorage')
+        except StopIteration:
+            raise ValueError('No OSFStorage folder found')
+
+        return (yield from self.osf_query.get_child_files(remote_folder))
+
+    def list_local_dir(self, node, path):
+        if path is None:
+            return []
+        path = os.path.join(node.path, path.lstrip('/'))
+        try:
+            return [
+                ProperPath(
+                    os.path.join(path, name),
+                    os.path.isdir(os.path.join(path, name))
+                )
+                for name in os.listdir(path)
+            ]
+        except FileNotFoundError:
+            return []
+
+    def infer_event(self, local_file, remote_file):
+        try:
+            if remote_file:
+                db_file = session.query(File).filter(File.is_folder == remote_file.is_dir, File.osf_id == remote_file.id).one()
+            elif local_file:
+                db_file = next(
+                    f for f in
+                    session.query(File).filter(File.is_folder == remote_file.is_dir, File.osf_id == remote_file.id)
+                    if f.path == local_file.full_path
+                )
+            else:
+                return None
+        except (NoResultFound, StopIteration):
+            if local_file and remote_file:
+                # pls to implement
+                raise ValueError('Found conflicting files remotely and locally that are not tracked')
+            elif local_file and not remote_file:
+                # Upload to OSF
+                if local_file.is_dir:
+                    return DirCreatedEvent(local_file.full_path)
+                else:
+                    return FileCreatedEvent(local_file.full_path)
+            elif not local_file and remote_file:
+                # Download from OSF
+                # Actual poller will handle this case :+1:
+                return None
+            else:
+                raise ValueError('EVERYTHING IS NONE HOW DID YOU GET HERE')
+
+        if local_file and remote_file:
+            if os.path.getsize(local_file.full_path) == db_file.size and db_file.sha256 == get_sha256(local_file.full_path):
+                return None  # File has not changed
+            if remote_file.sha256 == db_file.sha256:
+                # File has been changed locally
+                return FileModifiedEvent(local_file.full_path)
+            raise ValueError('Upstream file and local file has been modified since last sync')
+        elif local_file and not remote_file:
+            if local_file.size == db_file.size and db_file.sha256 == get_sha256(local_file):
+                return None  # Poller will delete this file
+            # Upstream has been deleted but the local file has been modified.
+            # Go ahead and upload. User can delete it if they'd like
+            # TODO might have to remove the database entry here
+            if local_file.is_dir:
+                return DirCreatedEvent(local_file.full_path)
+            else:
+                return FileCreatedEvent(local_file.full_path)
+        elif not local_file and remote_file:
+            # Poller will re-download the file. Only persist deletes that happened whilst online
+            return None
         else:
-            if isinstance(item, File):
-                return item.files
-            elif isinstance(item, Node):
-                return item.child_nodes + item.top_level_file_folders
-            elif isinstance(item, User):
-                return item.top_level_nodes
-            else:
-                raise InvalidItemType('LocalDBSync._get_children does '
-                                      'not handle items of type '
-                                      '{item_type}'.format(item_type=type(item)))
-
-    def _get_proper_path(self, item):
-        if isinstance(item, ProperPath):
-            return item
-        elif isinstance(item, User):
-            return ProperPath(item.osf_local_folder_path, True)
-        elif isinstance(item, File) and item.is_file:
-            return ProperPath(item.path, False)
-        elif isinstance(item, Base):
-            return ProperPath(item.path, True)
-        elif isinstance(item, str):
-            absolute = os.path.join(self.osf_path.full_path, item)
-            return ProperPath(absolute, os.path.isdir(absolute))
-        else:
-            raise InvalidItemType('LocalDBSync._get_proper_path does '
-                                  'not handle items of type '
-                                  '{item_type}'.format(item_type=type(item)))
-
-    def _make_hash(self, local):
-        assert isinstance(local, ProperPath)
-        m = hashlib.md5()
-        with open(local.full_path, "rb") as f:
-            while True:
-                buf = f.read(2048)
-                if not buf:
-                    break
-                m.update(buf)
-        return m.hexdigest()
-
-    def _determine_event_type(self, local, db):
-        if not local and not db:
-            raise LocalDBBothNone
-        if local and not isinstance(local, ProperPath):
-            raise TypeError
-        if db and (not (isinstance(db, Node) or isinstance(db, File))):
-            raise TypeError
-
-        event = None
-
-        if local:
-            # TODO: find better way of ignoring files we want to ignore
-            if local.name.startswith('.') or local.name.endswith('~'):
-                return event
-
-        if local and db:
-            if self._get_proper_path(local) != self._get_proper_path(db):
-                raise IncorrectLocalDBMatch
-            if isinstance(db, File) and db.is_file and self._make_hash(local) != db.hash:
-                event = FileModifiedEvent(self._get_proper_path(local).full_path)  # create changed event
-                # folder modified event cannot happen. It will be a create and delete event.
-        elif local is None:
-            db_path = self._get_proper_path(db).full_path
-            if isinstance(db, File) and db.is_file:
-                event = FileDeletedEvent(db_path)  # delete event for file
-            else:
-                event = DirDeletedEvent(db_path)  # delete event for folder
-        elif db is None:
-            local_path = self._get_proper_path(local)
-            if local_path.is_dir:
-                event = DirCreatedEvent(local_path.full_path)
-            else:
-                event = FileCreatedEvent(local_path.full_path)
-        return event
-
-    def _emit_single_event_and_recurse(self, local, db):
-        assert local or db
-        event = self._determine_event_type(local, db)
-        if event:
-            emitter = next(iter(self.observer.emitters))
-            emitter.queue_event(event)
-
-        for local_child, db_child in self._make_local_db_tuple_list(local, db):
-            self._emit_single_event_and_recurse(local_child, db_child)
-
-# observer = Observer()  # create observer. watched for events on files.
-
-# if __name__=='__main__':
-#
-#     setup_db('home/himanshu/.local/share/OSF Offline')
-#     session = get_session()
-#     osf_folder = '/home/himanshu/OSF-Offline/osfoffline/sandbox/dumbdir/OSF/'
-#     user = User(osf_path= osf_folder)
-#     session.add(user)
-#     session.commit()
-#     observer = Observer()
-#
-#     loop = asyncio.get_event_loop()
-#
-#     event_handler = OSFEventHandler(osf_folder, '','',loop)
-#     observer.schedule(event_handler, osf_folder, recursive=True)
-#
-#
-#     determine_new_events(user.osf_path, observer, user)
-#     observer.start()
-#     loop.run_forever()
-
-
-"""
-PLAN:
-
-
-1) we will do the same match up the local filesystem with whats in the db in a [(local, db)]
-2) get_id in this case will just be path. local.path, os.path.fullpath.
-3) local: file/folder full path,
-   db:
-3) can create new event Event(. . .) then you can use observer.queue_event(event)
-    will have to research how the Event is created to make it match what filesystem does.
-
-
-NOTE: os.walk will give you local file system. can compare to db. BUT, this doesnt tell you if something exists in db and not in filesystem. THUS DONT DO THIS.
-NOTE: local is going to be path because thats all you need for folders.
-NOTE: when CHECKING, you check to see if db item is a file. If file, then you check to see if different from what db has using YOU CAN ACTUALLY USE HASH IN THIS CASE!!!!!!!!!!
-
-ISSUES:
-1)
-2)
-
-"""
+            # TODO delete file from DB. Why is there anyways?
+            return None
