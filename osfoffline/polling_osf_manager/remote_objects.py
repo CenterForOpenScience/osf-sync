@@ -78,6 +78,8 @@ class RemoteFileFolder(RemoteObject):
 
 
 class RemoteFolder(RemoteFileFolder):
+    is_dir = True
+
     def __init__(self, remote_dict):
         super().__init__(remote_dict)
         assert remote_dict['attributes']['kind'] == 'folder'
@@ -96,14 +98,18 @@ class RemoteFolder(RemoteFileFolder):
 
 
 class RemoteFile(RemoteFileFolder):
+    is_dir = False
+
     def __init__(self, remote_dict):
         super().__init__(remote_dict)
         assert remote_dict['attributes']['kind'] == 'file'
-
         self.download_url = remote_dict['links']['download']
         self.overwrite_url = remote_dict['links']['upload']
         self.size = remote_dict['attributes']['size']
         self.last_modified_string = remote_dict['attributes'].get('date_modified')
+
+        self.md5 = remote_dict['attributes']['extra']['hashes']['md5']
+        self.sha256 = remote_dict['attributes']['extra']['hashes']['sha256']
 
         self.validate()
 
