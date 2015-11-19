@@ -10,8 +10,8 @@ PROJECT_AUTHOR = 'cos'
 APPLICATION_SCOPES = 'osf.full_write'
 
 # Base URL for API server; used to fetch data
-API_BASE = 'https://api.osf.io'
-FILE_BASE = 'https://files.osf.io'
+API_BASE = 'https://test-api.osf.io'
+FILE_BASE = 'https://test-files.osf.io'
 
 # Interval (in seconds) to poll the OSF for server-side file changes
 POLL_DELAY = 24 * 60 * 60  # Once per day

@@ -191,6 +191,10 @@ def _download_file(path, url, osf_query):
         return
     try:
         resp = yield from osf_query.make_request(url)
+    except (aiohttp.errors.ClientOSError):
+        AlertHandler.warn("Please install operating system updates")
+        logging.exception("SSL certificate error")
+        return
     except (aiohttp.errors.ClientConnectionError, aiohttp.errors.ClientTimeoutError):
         # FIXME: Consolidate redundant messages
         AlertHandler.warn("Bad Internet Connection")
