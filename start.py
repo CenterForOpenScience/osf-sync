@@ -3,6 +3,7 @@ import sys
 from PyQt5.QtWidgets import QApplication, QMessageBox, QSystemTrayIcon
 
 from osfoffline import utils
+from osfoffline.utils.singleton import SingleInstance
 from osfoffline.application.main import OSFApp
 from osfoffline.database_manager.db import drop_db
 
@@ -15,8 +16,6 @@ def running_warning():
         "OSF-Offline is already running. Check out the system tray."
     )
     warn_app.quit()
-    sys.exit(0)
-
 
 def start():
     # Start logging all events
@@ -24,12 +23,7 @@ def start():
         drop_db()
 
     utils.start_app_logging()
-    if sys.platform == 'win32':
-        from server import SingleInstance
-        single_app = SingleInstance()
-
-        if single_app.already_running():
-            running_warning()
+    me = SingleInstance(callback=running_warning)  # will end application if an instance is already running
 
     app = QApplication(sys.argv)
 
