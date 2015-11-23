@@ -92,7 +92,6 @@ class LocalDBSync(object):
             event = self.infer_event(local, remote)
             if event is not None:
                 events.append(event)
-                # raise ValueError('GOT AN EVENT OH SHIT')
                 # DO SOMETHING HERE
                 # yield from self.queue.put(event)
 
