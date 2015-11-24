@@ -12,11 +12,11 @@ class Auditor(abc.ABC):
     def audit(self):
         raise NotImplemented
 
-    def __init__(self, node, remote, local, user_intervention_cb=None, task_done_cb=None, task_created_cb=None):
+    def __init__(self, node, queue, remote='/', local='/', intervention_cb=None, decision=None):
         self.node = node
-        self.task_done_cb = task_done_cb
-        self.task_created_cb = task_created_cb
-        self.user_intervention_cb = user_intervention_cb
+        self.queue = queue
+        self.decision = decision
+        self.intervention_cb = intervention_cb
 
         self.local = local
         self.remote = remote
@@ -36,21 +36,21 @@ class Auditor(abc.ABC):
         except (NoResultFound, StopIteration):
             self.db = None
 
+    @asyncio
+    def get_decision(self, intervention):
+        if self.decision is not None:
+            return self.decision
+
+        if self.intervention_cb:
+            self.decision = yield from self.intervention_cb(intervention)
+            return self.decision
+
+        # TODO should we allow defaults?
+        return intervention.DEFAULT_DECISION
+
     @asyncio.coroutine
     def handle_sync_decision(self, intervention):
-        # TODO should we allow defaults?
-        if self.user_intervention_cb:
-            decision = yield from self.user_intervention_cb(intervention)
-        else:
-            decision = intervention.DEFAULT_DECISION
-
-        return intervention.resolve(decision)
-
-
-class Decision(enum.Enum):
-    MINE = 0
-    THEIRS = 1
-    KEEP_BOTH = 2
+        return intervention.resolve((yield from self.get_decision(intervention)))
 
 
 class FileAuditor(Auditor):
@@ -58,7 +58,7 @@ class FileAuditor(Auditor):
     @asyncio.coroutine
     def audit(self):
         if self.db:
-            if self.remote and self.local:
+            if self.remote and self.local:  # (✓ remote, ✓ db, ✓ local)
                 if os.path.getsize(self.local.full_path) == self.db.size and self.db.sha256 == self._get_local_sha256():
                     # File has not changed
                     return None
@@ -66,16 +66,16 @@ class FileAuditor(Auditor):
                     # Local file has been changed. Upload it
                     return (yield from self.queue.put(events.UploadFile(self.local)))
                 # Prompt user
-                return (yield from self.handle_sync_decision(interventions.BothUpdate(self)))
-            elif self.remote:
+                return (yield from self.handle_sync_decision(interventions.BothUpdated(self)))
+            elif self.remote:  # (✓ remote, ✓ db, X local)
                 # Poller will re-download the file. Only persist deletes that happened whilst online
                 # Or prompt user if they would like to delete the remote file
                 return (yield from self.queue.put(events.DownloadFile(self.remote)))
-            else:
+            else:  # (X remote, ✓ db, X local)
                 # File is gone. Delete from database
                 return (yield from self.queue.put(events.DeleteDatabaseEntry(self.db)))
         else:
-            if self.remote and self.local:
+            if self.remote and self.local:  # (✓ remote, X db, ✓ local)
                 local_sha = self._get_local_sha256()
                 if os.path.getsize(self.local.full_path) == self.remote.size and self.remote['extra']['hashes']['sha256'] == local_sha:
                     # Create entry in database
@@ -85,7 +85,7 @@ class FileAuditor(Auditor):
                     return (yield from self.queue.put(events.DownloadFile(self.remote)))
                 # Prompt user. local and upstream have diverged
                 return (yield from self.handle_sync_decision(interventions.BothCreated(self)))
-            elif self.remote:
+            elif self.remote:  # (X remote, X db, ✓ local)
                 # File was created remotely. Download for the first time
                 return (yield from self.queue.put(events.DownloadFile(self.remote)))
 
@@ -102,36 +102,42 @@ class FolderAuditor(Auditor):
             self.node,
             remote,
             local,
-            task_done_cb=self.task_done_cb,
-            task_created_cb=self.task_created_cb,
+            self.queue,
+            decision=self.decision,
             user_intervention_cb=self.user_intervention_cb,
         )
 
     @asyncio.coroutine
     def audit(self):
         if self.db:
-            if self.remote and self.local:
-                return (yield from self.crawl())
-            elif self.remote:
+            if self.remote and self.local:  # (✓ remote, ✓ db, ✓ local)
+                # Everything is okay continue one
+                # Block left here for clarity
                 pass
+            elif self.remote:  # (✓ remote, ✓ db, X local)
                 # Download Folder
                 # Could prompt user
-            else:
-                pass
+                # Note the return. Don't crawl further
+                return (yield from self.queue.put(event.DownloadFolder(self.remote)))
+            else:  # (X remote, ✓ db, ✓ local)
                 # Prompt user
                 # Could decide by ensuring nothing has changed in this folder or its subfolders
                 # Or move to recycle bin, User could always restore if need be
+                yield from self.queue.put((yield from self.handle_sync_decision(interventions.RemoteDeleted(self))))
         else:
-            if self.remote and self.local:
+            if self.remote and self.local:  # (✓ remote, X db, ✓ local)
                 # Create in database
-                return (yield from self.crawl())
-            elif self.remote:
-                pass
+                yield from self.queue.put(event.CreateDatabaseEntry(self.remote))
+            elif self.remote:  # (✓ remote, X db, X local)
                 # Create folder locally
-            else:
-                pass
+                yield from self.queue.put(event.CreateLocalFolder(self.remote))
+            elif self.local:  # (X remote, X db, ✓ local)
                 # Ask whether to upload the folder or delete it
                 # Or check logs :shrug:
+                yield from self.queue.put((yield from self.handle_sync_decision(interventions.RemoteDeleted(self))))
+
+        # Continue crawling
+        return (yield from self.crawl())
 
     @asyncio.coroutine
     def crawl(self):
@@ -153,16 +159,19 @@ class FolderAuditor(Auditor):
 
     @asyncio.coroutine
     def _list_remote_dir(self):
-        if remote_folder == '/':
-            return (yield from (yield from self.client.get_node(self.node.osf_id)).get_storage('osfstorage'))
+        if self.remote == '/':
+            return (yield from self.node.get_storage('osfstorage'))
         return (yield from remote_folder.get_children())
 
     def _list_local_dir(self):
         path = os.path.join(
             self.node.path,
             settings.OSF_STORAGE_FOLDER,
-            self.local.full_path.lstrip('/')
         )
+
+        if self.local != '/':
+            # Special case for the "root"
+            path = os.path.join(path, self.local.full_path.lstrip('/'))
 
         return [
             ProperPath(

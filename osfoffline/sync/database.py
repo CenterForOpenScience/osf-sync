@@ -55,8 +55,8 @@ class DatabaseSync:
         ]
         for node in nodes:
             logger.info('Resyncing node {}'.format(node))
-            # events.extend(asyncio.get_event_loop().run_until_complete(self._crawl_node(node)))
-            yield from self._crawl_node(node)
+            node = yield from self.client.get_node(node.osf_id)
+            yield from Auditor(node, self.queue).audit()
         logger.info('Initial sync finished')
 
     def _match_local_remote(self, local_list, remote_list):
