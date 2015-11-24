@@ -93,7 +93,7 @@ class Node(Base):
     def top_level(self):
         return self.parent is None
 
-    @hybrid_property
+    @property
     def path(self):
         """Recursively walk up the path of the node. Top level node joins with the osf folder path of the user
         """

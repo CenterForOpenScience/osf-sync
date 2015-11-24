@@ -1,4 +1,5 @@
 import os
+import abc
 import shutil
 import asyncio
 import logging
@@ -10,18 +11,15 @@ from osfoffline.polling_osf_manager.osf_query import OSFQuery
 import osfoffline.alerts as AlertHandler
 
 
-class PollingEvent(object):
-    def __init__(self):
-        pass
+class BaseEvent(metaclass=abc.ABCMeta):
 
-    @asyncio.coroutine
+    @abc.abstractmethod
     def run(self):
-        pass
+        raise NotImplementedError
 
 
-class CreateFolder(PollingEvent):
+class CreateFolder(BaseEvent):
     def __init__(self, path):
-        super().__init__()
         self.path = path
 
     @asyncio.coroutine
@@ -43,9 +41,8 @@ class CreateFolder(PollingEvent):
                 return
 
 
-class CreateFile(PollingEvent):
+class CreateFile(BaseEvent):
     def __init__(self, path, download_url, osf_query):
-        super().__init__()
         self.path = path
         self.osf_query = osf_query
         self.download_url = download_url
@@ -62,10 +59,8 @@ class CreateFile(PollingEvent):
         yield from _download_file(new_file_path, self.download_url, self.osf_query)
 
 
-class RenameFolder(PollingEvent):
+class RenameFolder(BaseEvent):
     def __init__(self, old_path, new_path):
-        super().__init__()
-
         self.old_path = old_path
         self.new_path = new_path
 
@@ -88,10 +83,8 @@ class RenameFolder(PollingEvent):
         yield from _rename(old_folder_path, new_folder_path)
 
 
-class RenameFile(PollingEvent):
+class RenameFile(BaseEvent):
     def __init__(self, old_path, new_path):
-        super().__init__()
-
         self.old_path = old_path
         self.new_path = new_path
 
@@ -114,9 +107,8 @@ class RenameFile(PollingEvent):
         yield from _rename(old_file_path, new_file_path)
 
 
-class UpdateFile(PollingEvent):
+class UpdateFile(BaseEvent):
     def __init__(self, path, download_url, osf_query):
-        super().__init__()
         self.path = path
         self.osf_query = osf_query
         self.download_url = download_url
@@ -139,9 +131,8 @@ class UpdateFile(PollingEvent):
         yield from _download_file(updated_file_path, self.download_url, self.osf_query)
 
 
-class DeleteFolder(PollingEvent):
+class DeleteFolder(BaseEvent):
     def __init__(self, path):
-        super().__init__()
         self.path = path
 
     @asyncio.coroutine
@@ -171,9 +162,8 @@ class DeleteFolder(PollingEvent):
             return
 
 
-class DeleteFile(PollingEvent):
+class DeleteFile(BaseEvent):
     def __init__(self, path):
-        super().__init__()
         self.path = path
 
     @asyncio.coroutine
