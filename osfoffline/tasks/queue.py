@@ -45,15 +45,16 @@ class JoinableQueue(getattr(asyncio, 'JoinableQueue', asyncio.Queue)):
 
 class TaskQueue:
 
-    QUEUE_MAX_SIZE = 15
+    MAX_SIZE = 15
 
     def __init__(self):
-        self.queue = JoinableQueue(maxsize=self.QUEUE_MAX_SIZE)
+        self.queue = JoinableQueue(maxsize=self.MAX_SIZE)
 
     @asyncio.coroutine
     def start(self):
         while True:
             job = yield from self.queue.get()
+            yield from asyncio.sleep(1)
             logger.info('Running {}'.format(job))
             try:
                 yield from job.run()
@@ -69,6 +70,9 @@ class TaskQueue:
     @asyncio.coroutine
     def join(self):
         yield from self.queue.join()
+
+    def qsize(self):
+        return self.queue.qsize()
 
 # class Poll(object):
 #     def __init__(self, user, loop):

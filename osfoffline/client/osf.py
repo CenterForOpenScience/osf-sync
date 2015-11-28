@@ -19,7 +19,7 @@ class OSFClient:
         return (yield from Node.load(self.request_session, id))
 
 
-class BaseResource(metaclass=abc.ABCMeta):
+class BaseResource(abc.ABC):
 
     # OSF_HOST = 'staging-api.osf.io'
     OSF_HOST = 'api.osf.io'

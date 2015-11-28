@@ -33,5 +33,7 @@ IGNORED_NAMES = ['.DS_Store', 'lost+found', 'Desktop.ini']
 
 OSF_STORAGE_FOLDER = 'OSF Storage'
 
+LOCAL_DELETE_THRESHOLD = 10
+
 # wab~,vmc,vhd,vo1,vo2,vsv,vud,vmdk,vmsn,vmsd,hdd,vdi,vmwarevm,nvram,vmx,vmem,iso,dmg,sparseimage,wim,ost,o,qtch,log
 # wab~,vmc,vhd,vdi,vo1,vo2,vsv,vud,iso,dmg,sparseimage,sys,cab,exe,msi,dll,dl_,wim,ost,o,qtch,log,ithmb,vmdk,vmem,vmsd,vmsn,vmss,vmx,vmxf,menudata,appicon,appinfo,pva,pvs,pvi,pvm,fdd,hds,drk,mem,nvram,hdd
