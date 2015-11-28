@@ -111,9 +111,9 @@ class FileAuditor(BaseAuditor):
     @asyncio.coroutine
     def _on_both_changed(self):
         if not self.remote and not self.local:
-            return (yield from self.operation_queue.put(operations.DatabaseFileDelete(self.db)))
-        elif self.remote['extra']['hashes']['sha256'] == self._get_local_sha256():
-            return (yield from self.operation_queue.put(operations.DatabaseFileCreate(self.remote)))
+            return (yield from self.queue.put(events.DatabaseFileDelete(self.db)))
+        elif self.remote.extra['hashes']['sha256'] == self._get_local_sha256():
+            return (yield from self.queue.put(events.DatabaseFileCreate(self.remote)))
         return (yield from self._handle_sync_decision(interventions.RemoteLocalFileConflict(self)))
 
     @asyncio.coroutine
