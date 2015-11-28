@@ -2,7 +2,7 @@ import abc
 import enum
 import asyncio
 
-from osfoffline.tasks import events
+from osfoffline.tasks import operations
 
 
 class Decision(enum.Enum):
@@ -17,10 +17,6 @@ class Decision(enum.Enum):
 class BaseIntervention(abc.ABC):
 
     @abc.abstractmethod
-    def get_options(self):
-        raise NotImplementedError
-
-    @abc.abstractmethod
     @asyncio.coroutine
     def resolve(self, decision):
         raise NotImplementedError
@@ -33,15 +29,17 @@ class LocalFileDeleted(BaseIntervention):
 
     DEFAULT_DECISION = Decision.THEIRS
 
-    def get_options(self):
-        return (Decision.MINE, Decision.THEIRS)
+    def __init__(self, auditor):
+        super().__init__(auditor)
+        self.description = 'This is the description'
+        self.options = (Decision.MINE, Decision.THEIRS)
 
     @asyncio.coroutine
     def resolve(self, decision):
         if decision == Decision.MINE:
-            yield from self.auditor.queue.put(events.DeleteFile(self.auditor.remote))
+            yield from self.auditor.operation_queue.put(operations.DeleteFile(self.auditor.remote))
         elif decision == Decision.THEIRS:
-            yield from self.auditor.queue.put(events.DownloadFile(self.auditor.remote))
+            yield from self.auditor.operation_queue.put(operations.DownloadFile(self.auditor.remote))
         else:
             raise ValueError("Unknown decision")
 
@@ -50,18 +48,20 @@ class RemoteLocalFileConflict(BaseIntervention):
 
     DEFAULT_DECISION = Decision.KEEP_BOTH
 
-    def get_options(self):
-        return (Decision.MINE, Decision.THEIRS, Decision.KEEP_BOTH)
+    def __init__(self, auditor):
+        super().__init__(auditor)
+        self.description = 'This is the description'
+        self.options = (Decision.MINE, Decision.THEIRS, Decision.KEEP_BOTH)
 
     @asyncio.coroutine
     def resolve(self, decision):
         if decision == Decision.MINE:
-            yield from self.auditor.queue.put(events.UploadFile(self.auditor.local))
+            yield from self.auditor.operation_queue.put(operations.UploadFile(self.auditor.local))
         elif decision == Decision.THEIRS:
-            yield from self.auditor.queue.put(events.DownloadFile(self.auditor.remote))
+            yield from self.auditor.operation_queue.put(operations.DownloadFile(self.auditor.remote))
         elif decision == Decision.KEEP_BOTH:
-            yield from self.auditor.queue.put(events.KeepFile(self.auditor.local))
-            yield from self.auditor.queue.put(events.DownloadFile(self.auditor.remote))
+            yield from self.auditor.operation_queue.put(operations.KeepFile(self.auditor.local))
+            yield from self.auditor.operation_queue.put(operations.DownloadFile(self.auditor.remote))
         else:
             raise ValueError("Unknown decision")
 
@@ -76,20 +76,20 @@ class RemoteFolderDeleted(BaseIntervention):
         self.deleted = 0
 
         for event in events:
-            if isinstance(event, (events.DeleteFile, events.DeleteFolder)):
+            if isinstance(event, (operations.DeleteFile, operations.DeleteFolder)):
                 self.deleted += 1
             else:
                 self.changed += 1
 
-    def get_options(self):
-        return (Decision.MINE, Decision.THEIRS)
+        self.description = 'This is the description'
+        self.options = (Decision.MINE, Decision.THEIRS)
 
     @asyncio.coroutine
     def resolve(self, decision):
         # TODO: Validate logic
         if decision == Decision.MINE:
-            yield from self.auditor.queue.put(events.UploadFolder(self.auditor.local))
+            yield from self.auditor.operation_queue.put(operations.UploadFolder(self.auditor.local))
         elif decision == Decision.THEIRS:
-            yield from self.auditor.queue.put(events.DeleteFolder(self.auditor.local))
+            yield from self.auditor.operation_queue.put(operations.DeleteFolder(self.auditor.local))
         else:
             raise ValueError("Unknown decision")

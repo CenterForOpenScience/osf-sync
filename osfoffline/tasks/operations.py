@@ -11,14 +11,14 @@ from osfoffline.polling_osf_manager.osf_query import OSFQuery
 import osfoffline.alerts as AlertHandler
 
 
-class BaseEvent(abc.ABC):
+class BaseOperation(abc.ABC):
 
     @abc.abstractmethod
     def run(self):
         raise NotImplementedError
 
 
-class KeepFile(BaseEvent):
+class KeepFile(BaseOperation):
 
     def __init__(self, local):
         self.local = local
@@ -28,7 +28,7 @@ class KeepFile(BaseEvent):
         print("Keep File: {}".format(self.local))
 
 
-class CreateLocalFolder(BaseEvent):
+class CreateLocalFolder(BaseOperation):
 
     def __init__(self, remote):
         self.remote = remote
@@ -38,7 +38,7 @@ class CreateLocalFolder(BaseEvent):
         print("Create Local Folder: {}".format(self.remote))
 
 
-class DeleteFile(BaseEvent):
+class DeleteFile(BaseOperation):
 
     def __init__(self, local):
         self.local = local
@@ -48,7 +48,7 @@ class DeleteFile(BaseEvent):
         print("Delete File: {}".format(self.local))
 
 
-class DeleteFolder(BaseEvent):
+class DeleteFolder(BaseOperation):
 
     def __init__(self, local):
         self.local = local
@@ -58,7 +58,7 @@ class DeleteFolder(BaseEvent):
         print("Delete Folder: {}".format(self.local))
 
 
-class DownloadFile(BaseEvent):
+class DownloadFile(BaseOperation):
 
     def __init__(self, remote):
         self.remote = remote
@@ -68,7 +68,7 @@ class DownloadFile(BaseEvent):
         print("Download File: {}".format(self.remote))
 
 
-class DownloadFolder(BaseEvent):
+class DownloadFolder(BaseOperation):
 
     def __init__(self, remote):
         self.remote = remote
@@ -78,7 +78,7 @@ class DownloadFolder(BaseEvent):
         print("Download Folder: {}".format(self.remote))
 
 
-class UploadFile(BaseEvent):
+class UploadFile(BaseOperation):
 
     def __init__(self, local):
         self.local = local
@@ -88,7 +88,7 @@ class UploadFile(BaseEvent):
         print("Upload File: {}".format(self.local))
 
 
-class UploadFolder(BaseEvent):
+class UploadFolder(BaseOperation):
 
     def __init__(self, local):
         self.local = local
@@ -98,7 +98,7 @@ class UploadFolder(BaseEvent):
         print("Upload Folder: {}".format(self.local))
 
 
-class DatabaseFileCreate(BaseEvent):
+class DatabaseFileCreate(BaseOperation):
 
     def __init__(self, remote):
         self.db = remote
@@ -107,7 +107,7 @@ class DatabaseFileCreate(BaseEvent):
     def run(self):
         print("Database File Create: {}".format(self.remote))
 
-class DatabaseFileDelete(BaseEvent):
+class DatabaseFileDelete(BaseOperation):
 
     def __init__(self, db):
         self.db = db
@@ -116,7 +116,7 @@ class DatabaseFileDelete(BaseEvent):
     def run(self):
         print("Database File Delete: {}".format(self.db))
 
-class DatabaseFolderCreate(BaseEvent):
+class DatabaseFolderCreate(BaseOperation):
 
     def __init__(self, remote):
         self.remote = remote
@@ -125,7 +125,7 @@ class DatabaseFolderCreate(BaseEvent):
     def run(self):
         print("Database Folder Create: {}".format(self.remote))
 
-class DatabaseFolderDelete(BaseEvent):
+class DatabaseFolderDelete(BaseOperation):
 
     def __init__(self, db):
         self.db = db

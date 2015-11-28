@@ -1,7 +1,7 @@
 import asyncio
 import logging
 
-from osfoffline.tasks import events
+from osfoffline.tasks import operations
 
 #
 # import asyncio
@@ -43,7 +43,7 @@ class JoinableQueue(getattr(asyncio, 'JoinableQueue', asyncio.Queue)):
         self._finished.clear()
 
 
-class TaskQueue:
+class OperationsQueue(JoinableQueue):
 
     MAX_SIZE = 15
 
@@ -52,6 +52,7 @@ class TaskQueue:
 
     @asyncio.coroutine
     def start(self):
+        logger.info('start processing queue')
         while True:
             job = yield from self.queue.get()
             yield from asyncio.sleep(1)
@@ -63,7 +64,7 @@ class TaskQueue:
 
     @asyncio.coroutine
     def put(self, event):
-        if not isinstance(event, events.BaseEvent):
+        if not isinstance(event, operations.BaseOperation):
             raise Exception('Invalid Event Type')
         yield from self.queue.put(event)
 
@@ -73,6 +74,10 @@ class TaskQueue:
 
     def qsize(self):
         return self.queue.qsize()
+
+
+class InterventionQueue(JoinableQueue):
+    pass
 
 # class Poll(object):
 #     def __init__(self, user, loop):

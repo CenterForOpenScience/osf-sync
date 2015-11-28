@@ -9,10 +9,10 @@ from osfoffline.polling_osf_manager.osf_query import OSFQuery
 # from osfoffline.database_manager.models import User, Node, File, Base
 from osfoffline.database_manager.models import File
 from osfoffline.client.osf import Node
-from osfoffline.tasks import events
 from osfoffline import settings
 from osfoffline.utils.path import ProperPath
-from osfoffline.sync import interventions
+from osfoffline.tasks import operations
+from osfoffline.tasks import interventions
 from osfoffline.exceptions.item_exceptions import InvalidItemType, FolderNotInFileSystem
 
 
@@ -43,13 +43,13 @@ class BaseAuditor(abc.ABC):
     def _on_local_changed(self):
         raise NotImplementedError
 
-    def __init__(self, node, queue, remote, local=None, intervention_cb=None, decision=None, state='OFFLINE'):
+    def __init__(self, node, operation_queue, intervention_queue, remote, local=None, decision=None, state='OFFLINE'):
         self.state = state
 
         self.node = node
-        self.queue = queue
+        self.operation_queue = operation_queue
+        self.intervention_queue = intervention_queue
         self.decision = decision
-        self.intervention_cb = intervention_cb
 
         self.local = local
         self.remote = remote
@@ -87,20 +87,11 @@ class BaseAuditor(abc.ABC):
         return None
 
     @asyncio.coroutine
-    def _get_decision(self, intervention):
-        if self.decision is not None:
-            return self.decision
-
-        if self.intervention_cb:
-            self.decision = yield from self.intervention_cb(intervention)
-            return self.decision
-
-        # TODO should we allow defaults?
-        return intervention.DEFAULT_DECISION
-
-    @asyncio.coroutine
     def _handle_sync_decision(self, intervention):
-        yield from intervention.resolve((yield from self._get_decision(intervention)))
+        if self.decision is not None:
+            yield from intervention.resolve(self.decision)
+        yield from self.intervention_queue.put(intervention)
+        return True  #  TODO: Replace w/ enum
 
 
 class FileAuditor(BaseAuditor):
@@ -120,9 +111,9 @@ class FileAuditor(BaseAuditor):
     @asyncio.coroutine
     def _on_both_changed(self):
         if not self.remote and not self.local:
-            return (yield from self.queue.put(events.DatabaseFileDelete(self.db)))
+            return (yield from self.operation_queue.put(operations.DatabaseFileDelete(self.db)))
         elif self.remote['extra']['hashes']['sha256'] == self._get_local_sha256():
-            return (yield from self.queue.put(events.DatabaseFileCreate(self.remote)))
+            return (yield from self.operation_queue.put(operations.DatabaseFileCreate(self.remote)))
         return (yield from self._handle_sync_decision(interventions.RemoteLocalFileConflict(self)))
 
     @asyncio.coroutine
@@ -131,9 +122,9 @@ class FileAuditor(BaseAuditor):
         if not self.remote:
             # TODO: Need remote un-delete feature w/ user notification.
             # File has been deleted on the remote and not changed locally.
-            return (yield from self.queue.put(events.DeleteFile(self.local)))
+            return (yield from self.operation_queue.put(operations.DeleteFile(self.local)))
         # File has been created remotely, we don't have it locally.
-        return (yield from self.queue.put(events.DownloadFile(self.remote)))
+        return (yield from self.operation_queue.put(operations.DownloadFile(self.remote)))
 
     @asyncio.coroutine
     def _on_local_changed(self):
@@ -142,7 +133,7 @@ class FileAuditor(BaseAuditor):
             # File has been deleted locally, and remote exists.
             return (yield from self._handle_sync_decision(interventions.LocalFileDeleted(self)))
         # File has been modified locally, and remote has not changed.
-        return (yield from self.queue.put(events.UploadFile(self.remote)))
+        return (yield from self.operation_queue.put(operations.UploadFile(self.remote)))
 
     @asyncio.coroutine
     def _get_local_sha256(self, chunk_size=64*1024):
@@ -163,10 +154,10 @@ class FolderAuditor(BaseAuditor):
 
     @asyncio.coroutine
     def audit(self):
-        yield from super().audit()
-
-        # Continue crawling
-        return (yield from self.crawl())
+        # Assumptions: should always return None, a truthy value indicates an intervention was issued for this junction.
+        if not (yield from super().audit()):
+            # Continue crawling
+            return (yield from self.crawl())
 
     @asyncio.coroutine
     def _remote_changed(self):
@@ -181,8 +172,8 @@ class FolderAuditor(BaseAuditor):
     @asyncio.coroutine
     def _on_both_changed(self):
         if not self.remote and not self.local:
-            return (yield from self.queue.put(events.DatabaseFolderDelete(self.db)))
-        return (yield from self.queue.put(events.DatabaseFolderCreate(self.remote)))
+            return (yield from self.operation_queue.put(operations.DatabaseFolderDelete(self.db)))
+        return (yield from self.operation_queue.put(operations.DatabaseFolderCreate(self.remote)))
 
     @asyncio.coroutine
     def _on_remote_changed(self):
@@ -191,22 +182,24 @@ class FolderAuditor(BaseAuditor):
             # TODO: Need remote un-delete feature, one can recursively verify no modifications locally and perform deletion w/ user notification.
             # TODO: User will be prompted for folder deletions
             # Folder has been deleted on the remote, ask for user intervention
-            queue = asyncio.Queue()
+            op_queue = asyncio.Queue()
 
-            yield from self.crawl(queue=queue, decision=interventions.Decision.MERGE)
+            yield from self.crawl(operation_queue=op_queue, decision=interventions.Decision.MERGE)
 
             changed = False
-            q = list(queue._queue)
+            q = list(op_queue._queue)
             for event in q:
-                if not isinstance(event, (events.DeleteFile, events.DeleteFolder)):
+                if not isinstance(event, (operations.DeleteFile, operations.DeleteFolder)):
                     changed = True
                     break
 
             if changed or len(q) > settings.LOCAL_DELETE_THRESHOLD:
+                # TODO: Short circut child crawl
                 return (yield from self._handle_sync_decision(interventions.RemoteFolderDeleted(self, q)))
-            return (yield from self.queue.put(events.DeleteFolder(self.local)))
+            return (yield from self.operation_queue.put(operations.DeleteFolder(self.local)))
         # Folder has been created remotely, we don't have it locally.
-        return (yield from self.queue.put(events.DownloadFolder(self.remote)))
+        yield from self.operation_queue.put(operations.DeleteFolder(self.local))
+        return (yield from self.operation_queue.put(operations.DownloadFolder(self.remote)))
 
     @asyncio.coroutine
     def _on_local_changed(self):
@@ -214,9 +207,8 @@ class FolderAuditor(BaseAuditor):
         if not self.local:
             # File has been deleted locally, and remote exists.
             return (yield from self._handle_sync_decision(interventions.LocalFileDeleted(self)))
-            return (yield from self.intervention_queue.put(intervensions.LocalFileDeleted(self)))
         # File has been modified locally, and remote has not changed.
-        return (yield from self.queue.put(events.UploadFile(self.remote)))
+        return (yield from self.operation_queue.put(operations.UploadFile(self.remote)))
 
     # @asyncio.coroutine
     # def audit(self):
@@ -251,7 +243,7 @@ class FolderAuditor(BaseAuditor):
     #     return (yield from self.crawl())
 
     @asyncio.coroutine
-    def crawl(self, queue=None, decision=None):
+    def crawl(self, operation_queue=None, decision=None):
         directory_list = {}
 
         if self.remote:
@@ -264,7 +256,7 @@ class FolderAuditor(BaseAuditor):
 
         auditors = []
         for (name, is_dir), (remote, local) in directory_list.items():
-            auditors.append(self._child(remote, local, is_dir, queue=queue, decision=decision))
+            auditors.append(self._child(operation_queue, remote, local, is_dir, decision=decision))
 
         # done, pending = yield from asyncio.wait([auditor.audit() for auditor in auditors], return_when=asyncio.FIRST_EXCEPTION)
         # if pending:
@@ -289,16 +281,16 @@ class FolderAuditor(BaseAuditor):
     #         raise future.exception()
 
 
-    def _child(self, remote, local, is_dir, decision=None, queue=None):
+    def _child(self, operation_queue, remote, local, is_dir, decision=None):
         cls = FolderAuditor if is_dir else FileAuditor
 
         return cls(
             self.node,
-            queue if queue else self.queue,
+            operation_queue or self.operation_queue,
+            self.intervention_queue,
             remote,
             local,
-            decision=decision if decision else self.decision,
-            intervention_cb=self.intervention_cb,
+            decision=decision or self.decision
         )
 
     @asyncio.coroutine

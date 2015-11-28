@@ -34,8 +34,9 @@ class DatabaseSync:
 
     COMPONENTS_FOLDER_NAME = 'Components'
 
-    def __init__(self, queue, user):
-        self.queue = queue
+    def __init__(self, operation_queue, intervention_queue, user):
+        self.operation_queue = operation_queue
+        self.intervention_queue = intervention_queue
         self.user = user
         self.client = OSFClient(self.user.oauth_token)
         # self.osf_query = OSFQuery(asyncio.get_event_loop(), self.user.oauth_token)
@@ -48,7 +49,7 @@ class DatabaseSync:
         # self.osf_path = ProperPath(self.osf_folder, True)
 
     @asyncio.coroutine
-    def check(self, intervention_cb=None):
+    def check(self):
         logger.info('Beginning initial sync')
         nodes = [
             node for node in
@@ -58,10 +59,13 @@ class DatabaseSync:
         for node in nodes:
             logger.info('Resyncing node {}'.format(node))
             remote = yield from self.client.get_node(node.osf_id)
-            yield from FolderAuditor(node, self.queue, remote, intervention_cb=intervention_cb).crawl()
+            yield from FolderAuditor(node, self.operation_queue, self.intervention_queue, remote).crawl()
+
+        yield from self.intervention_queue.join()
+        yield from self.operation_queue.join()
+
         logger.info('Initial sync finished')
 
-        self.queue.join()
 
     # def _match_local_remote(self, local_list, remote_list):
     #     ret = {}
