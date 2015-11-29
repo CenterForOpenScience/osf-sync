@@ -113,13 +113,16 @@ class DecisionForm(npyscreen.ActionPopup):
     DEFAULT_LINES = 12
     DEFAULT_COLUMNS = 120
 
-    def __init__(self, intervention):
+    def __init__(self, intervention, parentApp=None):
         self.intervention = intervention
-        super().__init__()
+        super().__init__(parentApp=parentApp)
+
+    def create(self):
+        self.center_on_display()
         # self.preserve_selected_widget = True
         mlw = self.add(wgmultiline.Pager,)
         text = [self.intervention.__class__.__name__ + ':']
-        text.extend(textwrap.wrap(intervention.description, self.DEFAULT_COLUMNS - 10))
+        text.extend(textwrap.wrap(self.intervention.description, self.DEFAULT_COLUMNS - 10))
         mlw.values = text
 
     def generate_button(self, option):
@@ -180,7 +183,7 @@ class App(npyscreen.StandardApp):
     def onStart(self):
         self.keypress_timeout_default = 1
 
-        self.addForm('MAIN', MainForm)
+        self.main = self.addForm('MAIN', MainForm)
 
         self.worker.start()
 
@@ -191,7 +194,7 @@ class App(npyscreen.StandardApp):
     def while_waiting(self):
         try:
             intervention = self.worker.intervention_queue.get_nowait()
-            df = DecisionForm(intervention)
+            df = DecisionForm(intervention, parentApp=self.main)
             df.edit()
             logger.info('Got decision {} for {}'.format(df.value, intervention))
             self.worker.loop.call_soon_threadsafe(asyncio.ensure_future, intervention.resolve(df.value))
