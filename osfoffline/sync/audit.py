@@ -4,16 +4,14 @@ import asyncio
 import hashlib
 
 from sqlalchemy.orm.exc import NoResultFound
-from osfoffline.database_manager.db import session
-from osfoffline.polling_osf_manager.osf_query import OSFQuery
-# from osfoffline.database_manager.models import User, Node, File, Base
-from osfoffline.database_manager.models import File
-from osfoffline.client.osf import Node
+
 from osfoffline import settings
-from osfoffline.utils.path import ProperPath
-from osfoffline.tasks import operations
+from osfoffline.client.osf import Node
+from osfoffline.database_manager.db import session
+from osfoffline.database_manager.models import File
 from osfoffline.tasks import interventions
-from osfoffline.exceptions.item_exceptions import InvalidItemType, FolderNotInFileSystem
+from osfoffline.tasks import operations
+from osfoffline.utils.path import ProperPath
 
 
 class BaseAuditor(abc.ABC):
@@ -43,8 +41,8 @@ class BaseAuditor(abc.ABC):
     def _on_local_changed(self):
         raise NotImplementedError
 
-    def __init__(self, node, operation_queue, intervention_queue, remote, local=None, decision=None, state='OFFLINE'):
-        self.state = state
+    def __init__(self, node, operation_queue, intervention_queue, remote, local=None, decision=None, initial=False):
+        self.is_initial = initial
 
         self.node = node
         self.operation_queue = operation_queue
@@ -102,7 +100,7 @@ class FileAuditor(BaseAuditor):
 
     @asyncio.coroutine
     def _local_changed(self):
-        if self.state == 'OFFLINE':
+        if self.is_initial:
             if self.local and self.db:
                 return not (os.path.getsize(self.local.full_path) == self.db.size and self.db.sha256 == (yield from self._get_local_sha256()))
             return True
@@ -128,7 +126,7 @@ class FileAuditor(BaseAuditor):
 
     @asyncio.coroutine
     def _on_local_changed(self):
-        # Assumption: we would never enter this method if self.state was not OFFLINE, no remote file changes have occurred.
+        # Assumption: we would never enter this method if this is the initial sync (is_initial == True), no remote file changes have occurred.
         if not self.local:
             # File has been deleted locally, and remote exists.
             return (yield from self._handle_sync_decision(interventions.LocalFileDeleted(self)))
@@ -165,7 +163,7 @@ class FolderAuditor(BaseAuditor):
 
     @asyncio.coroutine
     def _local_changed(self):
-        if self.state == 'OFFLINE':
+        if self.is_initial:
             return (self.local and self.db)
         return False  # Online changes handled by watchdog
 
@@ -203,44 +201,12 @@ class FolderAuditor(BaseAuditor):
 
     @asyncio.coroutine
     def _on_local_changed(self):
-        # Assumption: we would never enter this method if self.state was not OFFLINE, no remote file changes have occurred.
+        # Assumption: we would never enter this method if this is the intial sync (self.is_intial == True), no remote file changes have occurred.
         if not self.local:
             # File has been deleted locally, and remote exists.
             return (yield from self._handle_sync_decision(interventions.LocalFileDeleted(self)))
         # File has been modified locally, and remote has not changed.
         return (yield from self.operation_queue.put(operations.UploadFile(self.remote)))
-
-    # @asyncio.coroutine
-    # def audit(self):
-    #     if self.db:
-    #         if self.remote and self.local:  # (✓ remote, ✓ db, ✓ local)
-    #             # Everything is okay continue one
-    #             # Block left here for clarity
-    #             pass
-    #         elif self.remote:  # (✓ remote, ✓ db, X local)
-    #             # Download Folder
-    #             # Could prompt user
-    #             # Note the return. Don't crawl further
-    #             return (yield from self.queue.put(events.DownloadFolder(self.remote)))
-    #         else:  # (X remote, ✓ db, ✓ local)
-    #             # Prompt user
-    #             # Could decide by ensuring nothing has changed in this folder or its subfolders
-    #             # Or move to recycle bin, User could always restore if need be
-    #             yield from self.queue.put((yield from self.handle_sync_decision(interventions.RemoteFolderDeleted(self))))
-    #     else:
-    #         if self.remote and self.local:  # (✓ remote, X db, ✓ local)
-    #             # Create in database
-    #             yield from self.queue.put(events.CreateDatabaseEntry(self.remote))
-    #         elif self.remote:  # (✓ remote, X db, X local)
-    #             # Create folder locally
-    #             yield from self.queue.put(events.CreateLocalFolder(self.remote))
-    #         elif self.local:  # (X remote, X db, ✓ local)
-    #             # Ask whether to upload the folder or delete it
-    #             # Or check logs :shrug:
-    #             yield from self.queue.put((yield from self.handle_sync_decision(interventions.RemoteFolderDeleted(self))))
-    #
-    #     # Continue crawling
-    #     return (yield from self.crawl())
 
     @asyncio.coroutine
     def crawl(self, operation_queue=None, decision=None):
@@ -258,28 +224,7 @@ class FolderAuditor(BaseAuditor):
         for (name, is_dir), (remote, local) in directory_list.items():
             auditors.append(self._child(operation_queue, remote, local, is_dir, decision=decision))
 
-        # done, pending = yield from asyncio.wait([auditor.audit() for auditor in auditors], return_when=asyncio.FIRST_EXCEPTION)
-        # if pending:
-        #     future = pending.pop()
-        #     future.result()
-        # assert not pending
-
-        # tasks = [asyncio.ensure_future(auditor.audit()) for auditor in auditors]
-        # [task.add_done_callback(self.handle_error) for task in tasks]
-
         yield from asyncio.gather(*[auditor.audit() for auditor in auditors])
-
-        # yield from asyncio.wait(tasks, return_when=asyncio.FIRST_EXCEPTION)
-        # try:
-        #     yield from asyncio.gather(*[auditor.audit() for auditor in auditors])
-        # except Exception as ex:
-        #     raise ex
-
-
-    # def handle_error(self, future):
-    #     if future.exception():
-    #         raise future.exception()
-
 
     def _child(self, operation_queue, remote, local, is_dir, decision=None):
         cls = FolderAuditor if is_dir else FileAuditor
@@ -290,7 +235,8 @@ class FolderAuditor(BaseAuditor):
             self.intervention_queue,
             remote,
             local,
-            decision=decision or self.decision
+            decision=decision or self.decision,
+            initial=self.is_initial
         )
 
     @asyncio.coroutine
@@ -317,56 +263,3 @@ class FolderAuditor(BaseAuditor):
             for name in os.listdir(path)
             if name not in settings.IGNORED_NAMES
         ]
-
-
-
-
-
-
-
-    # @asyncio.coroutine
-    # def _audit_in_db(self):
-    #     # event = RemoteFileChanged
-    #     # event = LocalFileChanged
-    #     # event = RemoteLocalFileChanged
-    #
-    #
-    #     if self.mode == 'OFFLINE':
-    #         # Offline Mode is mean to bring the local db and local file system in sync.
-    #         # A followup Online audit happening periodically via the pooling will download any new files.
-    #         if self.remote and self.local:  # (✓ remote, ✓ db, ✓ local)
-    #             local_sha = yield from self._get_local_sha256()
-    #             if os.path.getsize(self.local.full_path) == self.db.size and self.db.sha256 == local_sha:
-    #                 # File has not changed
-    #                 return None
-    #             if self.remote.extra['hashes']['sha256'] == self.db.sha256:
-    #                 # Local file has been changed. Upload it
-    #                 return (yield from self.queue.put(events.UploadFile(self.local)))
-    #             # Prompt user
-    #             return (yield from self.handle_sync_decision(interventions.RemoteLocalFileConflict(self)))
-    #         elif self.remote:  # (✓ remote, ✓ db, X local)
-    #             # Poller will re-download the file. Only persist deletes that happened whilst online
-    #             # Or prompt user if they would like to delete the remote file
-    #             return (yield from self.queue.put(events.DownloadFile(self.remote)))
-    #         else:  # (X remote, ✓ db, X local)
-    #             # File is gone. Delete from database
-    #             return (yield from self.queue.put(events.DeleteDatabaseEntry(self.db)))
-    #
-    #     if self.mode == 'ONLINE':
-    #         pass
-    #
-    # @asyncio.coroutine
-    # def _audit_not_in_db(self):
-    #     if self.remote and self.local:  # (✓ remote, X db, ✓ local)
-    #         local_sha = yield from self._get_local_sha256()
-    #         if os.path.getsize(self.local.full_path) == self.remote.size and self.remote['extra']['hashes']['sha256'] == local_sha:
-    #             # Create entry in database
-    #             return (yield from self.queue.put(events.CreateDatabaseEntry(self.remote)))
-    #         if local_sha in [version['extra']['hashes']['sha256'] for version in self.remote.get_version()]:
-    #             # File is an old version. Download the latest
-    #             return (yield from self.queue.put(events.DownloadFile(self.remote)))
-    #         # Prompt user. local and upstream have diverged
-    #         return (yield from self.handle_sync_decision(interventions.RemoteLocalFileConflict(self)))
-    #     elif self.remote:  # (X remote, X db, ✓ local)
-    #         # File was created remotely. Download for the first time
-    #         return (yield from self.queue.put(events.DownloadFile(self.remote)))

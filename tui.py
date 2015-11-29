@@ -1,10 +1,16 @@
 import sys
 import logging
+import textwrap
 import collections
+
+from npyscreen import wgbutton
+from npyscreen import wgmultiline
+
 
 debug = 'debug' in sys.argv
 
 logger = logging.getLogger(__name__)
+
 
 class StdWrapper:
 
@@ -41,7 +47,7 @@ import npyscreen
 
 from osfoffline.database_manager.db import session
 from osfoffline.database_manager import models
-from osfoffline.sync.database import DatabaseSync
+from osfoffline.sync.remote import RemoteSync
 from osfoffline.tasks.queue import OperationsQueue, InterventionQueue
 
 try:
@@ -74,8 +80,14 @@ class BackgroundWorker(threading.Thread):
         self.operation_queue_task.add_done_callback(self._handle_exception)
 
         self.intervention_queue = InterventionQueue()
-        self.database_sync = DatabaseSync(self.operation_queue, self.intervention_queue, user)
-        self.loop.run_until_complete(self.database_sync.check())
+
+        self.remote_sync = RemoteSync(self.operation_queue, self.intervention_queue, user)
+        self.loop.run_until_complete(self.remote_sync.initialize())
+
+        self.remote_sync_job = asyncio.ensure_future(self.remote_sync.start())
+        self.remote_sync_job.add_done_callback(self._handle_exception)
+
+        self.loop.run_forever()
 
     def _handle_exception(self, future):
         logger.info('In handle exception')
@@ -84,7 +96,7 @@ class BackgroundWorker(threading.Thread):
             # self.database_task.cancel()
             # self.queue_task.cancel()
             # raise future.exception()
-            raise Exception('blah')
+            raise future.exception()
 
     def stop(self):
         if self.loop:
@@ -92,41 +104,42 @@ class BackgroundWorker(threading.Thread):
 
 
 class DecisionForm(npyscreen.ActionPopup):
+    SHOW_ATT = 2
+    SHOW_ATX = 10
+    DEFAULT_LINES = 12
+    DEFAULT_COLUMNS = 120
 
-    class OptionButton(npyscreen.MiniButtonPress):
-        def __init__(self, *args, **kwargs):
-            super().__init__()
-        def whenPressed(self):
-            return self.parent.value = self.option
+    def __init__(self, intervention):
+        self.intervention = intervention
+        super().__init__()
+        # self.preserve_selected_widget = True
+        mlw = self.add(wgmultiline.Pager,)
+        text = [self.intervention.__class__.__name__ + ':']
+        text.extend(textwrap.wrap(intervention.description, self.DEFAULT_COLUMNS - 10))
+        mlw.values = text
 
-    # def create(self):
-    #     self.queue_status = self.add(npyscreen.TitleText, name="Queue Status", max_height=3, value='0', editable=False)
+    def generate_button(self, option):
+        class OptionButton(wgbutton.MiniButtonPress):
+            def whenPressed(self):
+                self.parent.editing = False
+                self.parent.value = option
+        return OptionButton
+
     def create_control_buttons(self):
-        super().create_control_buttons()
-        for option in self.intervention.options:
-            self._add_button(
-                '{}_button'.format(option),
-                ChoiceButton,
-                str(option)
-                10,
-                10,
-                None
-            )
-
-        self._add_button('ok_button',
-                    self.__class__.OKBUTTON_TYPE,
-                    self.__class__.OK_BUTTON_TEXT,
-                    0 - self.__class__.OK_BUTTON_BR_OFFSET[0],
-                    0 - self.__class__.OK_BUTTON_BR_OFFSET[1] - len(self.__class__.OK_BUTTON_TEXT),
-                    None
-                    )
-
+        offset = -2
+        for i, option in enumerate(self.intervention.options):
+            offset -= 3
+            offset -= len(str(option))
+            self._add_button(str(i), self.generate_button(option), str(option), -2, offset, None)
 
 
 class MainForm(npyscreen.Form):
 
     def create(self):
-        self.queue_status = self.add(npyscreen.TitleText, name="Queue Status", max_height=3, value='0', editable=False)
+        self.queue_status = self.add(npyscreen.TitleText, name="Queue Status", max_height=3, value='0', editable=False, max_width=25)
+
+        self.sync_now = self.add(npyscreen.ButtonPress, name='Sync Now', relx=-15, rely=2)
+        self.sync_now.whenPressed = self._sync_now
 
         self.queue = self.add(npyscreen.BoxTitle, name="Queue", rely=4, max_height=10)
         self.queue.entry_widget.scroll_exit = True
@@ -136,6 +149,9 @@ class MainForm(npyscreen.Form):
         stdout_wrapper.on_write = self._on_std_write
         stderr_wrapper.on_write = self._on_std_write
 
+    def _sync_now(self):
+        self.parentApp.worker.loop.call_soon_threadsafe(asyncio.ensure_future, self.parentApp.worker.remote_sync.sync_now())
+
     def _on_std_write(self, msg):
         if not msg == '\n':
             self.logs.buffer([msg])
@@ -143,7 +159,7 @@ class MainForm(npyscreen.Form):
     def while_waiting(self):
         self.queue_status.value = '{}/{}'.format(self.parentApp.worker.operation_queue.qsize(), self.parentApp.worker.operation_queue.MAX_SIZE)
         self.queue_status.display()
-        self.queue.values = list(self.parentApp.worker.operation_queue.queue._queue)
+        self.queue.values = list(self.parentApp.worker.operation_queue._queue)
         self.queue.display()
         self.logs.display()
 
@@ -165,27 +181,14 @@ class App(npyscreen.StandardApp):
     def while_waiting(self):
         try:
             intervention = self.worker.intervention_queue.get_nowait()
-            # decision = npyscreen.notify_yes_no('testing', title="Message", form_color='STANDOUT', wrap=True, editw=0)
-            decision = self._decision_form(intervention)
-            asyncio.ensure_future(intervention.resolve(intervention.DEFAULT_DECISION), loop=self.worker.loop)
+            df = DecisionForm(intervention)
+            df.edit()
+            logger.info('Got decision {} for {}'.format(df.value, intervention))
+            self.worker.loop.call_soon_threadsafe(asyncio.ensure_future, intervention.resolve(df.value))
+            # self.worker.loop.call_soon_threadsafe(self.worker.intervention_queue.task_done)
+            self.worker.intervention_queue.task_done()
         except asyncio.QueueEmpty:
             pass
-
-    def _decision_form(self):
-        # def notify_yes_no(message, title="Message", form_color='STANDOUT', wrap=True, editw = 0,):
-        message = _prepare_message(message)
-        F   = DecisionForm(name=title, color=form_color)
-        F.preserve_selected_widget = True
-        mlw = F.add(wgmultiline.Pager,)
-        mlw_width = mlw.width-1
-        if wrap:
-            message = _wrap_message_lines(message, mlw_width)
-        mlw.values = message
-        F.editw = editw
-        F.edit()
-        return F.value
-
-
 
 
 if __name__ == '__main__':

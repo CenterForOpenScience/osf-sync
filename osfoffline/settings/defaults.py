@@ -14,7 +14,7 @@ API_BASE = 'https://test-api.osf.io'
 FILE_BASE = 'https://test-files.osf.io'
 
 # Interval (in seconds) to poll the OSF for server-side file changes
-POLL_DELAY = 24 * 60 * 60  # Once per day
+REMOTE_CHECK_INTERVAL = 60 * 5  # Every 5 minutes
 
 # Time to keep alert messages on screen (in milliseconds); may not be configurable on all platforms
 ALERT_TIME = 1000  # ms
