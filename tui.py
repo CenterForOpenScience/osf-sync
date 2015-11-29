@@ -45,8 +45,9 @@ import threading
 
 import npyscreen
 
-from osfoffline.database_manager.db import session
 from osfoffline.database_manager import models
+from osfoffline.database_manager.db import session
+from osfoffline.sync.local import LocalSync
 from osfoffline.sync.remote import RemoteSync
 from osfoffline.tasks.queue import OperationsQueue, InterventionQueue
 
@@ -83,6 +84,9 @@ class BackgroundWorker(threading.Thread):
 
         self.remote_sync = RemoteSync(self.operation_queue, self.intervention_queue, user)
         self.loop.run_until_complete(self.remote_sync.initialize())
+
+        self.local_sync = LocalSync(user, self.operation_queue, self.intervention_queue)
+        self.local_sync.start()
 
         self.remote_sync_job = asyncio.ensure_future(self.remote_sync.start())
         self.remote_sync_job.add_done_callback(self._handle_exception)

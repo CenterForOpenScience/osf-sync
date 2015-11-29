@@ -29,7 +29,7 @@ CONSOLE_FORMATTER = {
 
 FILE_FORMATTER = '[%(asctime)s][%(threadName)s][%(filename)s][%(levelname)s][%(name)s]: %(message)s'
 
-IGNORED_NAMES = ['.DS_Store', 'lost+found', 'Desktop.ini']
+IGNORED_PATTERNS = ['*.DS_Store', '*lost+found', '*Desktop.ini']
 
 OSF_STORAGE_FOLDER = 'OSF Storage'
 
