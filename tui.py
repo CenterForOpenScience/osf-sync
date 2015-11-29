@@ -150,15 +150,15 @@ class MainForm(npyscreen.Form):
 
         self.logs = self.add(npyscreen.BufferPager, name="Logs")
 
-        stdout_wrapper.on_write = self._on_std_write
-        stderr_wrapper.on_write = self._on_std_write
+        self.add_event_hander("STDWRITEEVENT", self.ev_std_write_event_handler)
 
     def _sync_now(self):
         self.parentApp.worker.loop.call_soon_threadsafe(asyncio.ensure_future, self.parentApp.worker.remote_sync.sync_now())
 
-    def _on_std_write(self, msg):
-        if not msg == '\n':
-            self.logs.buffer([msg])
+    def ev_std_write_event_handler(self, event):
+        msg = event.payload
+        self.logs.buffer([msg])
+        self.logs.display()
 
     def while_waiting(self):
         self.queue_status.value = '{}/{}'.format(self.parentApp.worker.operation_queue.qsize(), self.parentApp.worker.operation_queue.MAX_SIZE)
@@ -174,6 +174,8 @@ class App(npyscreen.StandardApp):
         super().__init__()
         self.worker = worker
         self.loop = asyncio.get_event_loop()
+        stdout_wrapper.on_write = self.on_std_write
+        stderr_wrapper.on_write = self.on_std_write
 
     def onStart(self):
         self.keypress_timeout_default = 1
@@ -181,6 +183,10 @@ class App(npyscreen.StandardApp):
         self.addForm('MAIN', MainForm)
 
         self.worker.start()
+
+    def on_std_write(self, msg):
+        if not msg == '\n':
+            self.queue_event(npyscreen.Event("STDWRITEEVENT", msg))
 
     def while_waiting(self):
         try:
