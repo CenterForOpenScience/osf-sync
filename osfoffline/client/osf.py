@@ -65,7 +65,6 @@ class Node(BaseResource):
         return (yield from NodeStorage.load(self.request_session, self.id, id))
 
 
-
 class StorageObject(BaseResource):
 
     @classmethod

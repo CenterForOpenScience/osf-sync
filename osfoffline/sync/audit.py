@@ -96,22 +96,34 @@ class FileAuditor(BaseAuditor):
 
     @asyncio.coroutine
     def _remote_changed(self):
-        return (self.remote and self.db) and self.remote.extra['hashes']['sha256'] == self.db.sha256
+        if not self.remote and not self.db:
+            return False
+        if self.remote and self.db:
+            return self.remote.extra['hashes']['sha256'] == self.db.sha256
+        return True
 
     @asyncio.coroutine
     def _local_changed(self):
-        if self.is_initial:
-            if self.local and self.db:
+        if not self.local and not self.db:
+            return False
+        if self.local and self.db:
+            if self.is_initial:
                 return not (os.path.getsize(self.local.full_path) == self.db.size and self.db.sha256 == (yield from self._get_local_sha256()))
-            return True
-        return False  # Online changes handled by watchdog
+            else:
+                # TODO optimize. No need to hash the file while in "Online mode" can just check date modified
+                return not (os.path.getsize(self.local.full_path) == self.db.size and self.db.sha256 == (yield from self._get_local_sha256()))
+        return True
 
     @asyncio.coroutine
     def _on_both_changed(self):
         if not self.remote and not self.local:
-            return (yield from self.queue.put(events.DatabaseFileDelete(self.db)))
-        elif self.remote.extra['hashes']['sha256'] == self._get_local_sha256():
-            return (yield from self.queue.put(events.DatabaseFileCreate(self.remote)))
+            return (yield from self.queue.put(operations.DatabaseFileDelete(self.db)))
+        elif self.remote and not self.local:
+            return (yield from self._handle_sync_decision(interventions.LocalFileDeleted(self)))
+        elif not self.remote and self.local:
+            return (yield from self._handle_sync_decision(interventions.RemoteFileDeleted(self)))
+        elif self.remote.extra['hashes']['sha256'] == (yield from self._get_local_sha256()):
+            return (yield from self.queue.put(operations.DatabaseFileCreate(self.remote)))
         return (yield from self._handle_sync_decision(interventions.RemoteLocalFileConflict(self)))
 
     @asyncio.coroutine
@@ -120,18 +132,24 @@ class FileAuditor(BaseAuditor):
         if not self.remote:
             # TODO: Need remote un-delete feature w/ user notification.
             # File has been deleted on the remote and not changed locally.
-            return (yield from self.operation_queue.put(operations.DeleteFile(self.local)))
-        # File has been created remotely, we don't have it locally.
-        return (yield from self.operation_queue.put(operations.DownloadFile(self.remote)))
+            return (yield from self.operation_queue.put(operations.RemoteDeleteFile(self.local)))
+        if not self.local:
+            # File has been update remotely, we don't have it locally.
+            return (yield from self.operation_queue.put(operations.LocalCreateFile(self.remote)))
+            # File has been updated remotely, we have an old version.
+        return (yield from self.operation_queue.put(operations.LocalUpdateFile(self.remote)))
 
     @asyncio.coroutine
     def _on_local_changed(self):
-        # Assumption: we would never enter this method if this is the initial sync (is_initial == True), no remote file changes have occurred.
+        # Assumption: Either this the inital sync or watchdog missed this file somehow
         if not self.local:
             # File has been deleted locally, and remote exists.
             return (yield from self._handle_sync_decision(interventions.LocalFileDeleted(self)))
-        # File has been modified locally, and remote has not changed.
-        return (yield from self.operation_queue.put(operations.UploadFile(self.remote)))
+        if not self.remote:
+            # File has been modified locally, and remote does not exist.
+            return (yield from self.operation_queue.put(operations.RemoteCreateFile(self.local)))
+            # File has been modified locally, and remote has not changed.
+        return (yield from self.operation_queue.put(operations.RemoteUpdateFile(self.local)))
 
     @asyncio.coroutine
     def _get_local_sha256(self, chunk_size=64*1024):
@@ -159,18 +177,18 @@ class FolderAuditor(BaseAuditor):
 
     @asyncio.coroutine
     def _remote_changed(self):
-        return (self.remote and self.db)
+        return (self.remote and not self.db) or (not self.remote and self.db)
 
     @asyncio.coroutine
     def _local_changed(self):
-        if self.is_initial:
-            return (self.local and self.db)
-        return False  # Online changes handled by watchdog
+        return (self.remote and not self.db) or (not self.remote and self.db)
 
     @asyncio.coroutine
     def _on_both_changed(self):
         if not self.remote and not self.local:
+            # Remote and local do not exist but a database entry exists
             return (yield from self.operation_queue.put(operations.DatabaseFolderDelete(self.db)))
+        # Remote and local do exist but a database entry does not exist
         return (yield from self.operation_queue.put(operations.DatabaseFolderCreate(self.remote)))
 
     @asyncio.coroutine
@@ -194,19 +212,17 @@ class FolderAuditor(BaseAuditor):
             if changed or len(q) > settings.LOCAL_DELETE_THRESHOLD:
                 # TODO: Short circut child crawl
                 return (yield from self._handle_sync_decision(interventions.RemoteFolderDeleted(self, q)))
-            return (yield from self.operation_queue.put(operations.DeleteFolder(self.local)))
+            return (yield from self.operation_queue.put(operations.LocalDeleteFolder(self.local)))
         # Folder has been created remotely, we don't have it locally.
-        yield from self.operation_queue.put(operations.DeleteFolder(self.local))
-        return (yield from self.operation_queue.put(operations.DownloadFolder(self.remote)))
+        return (yield from self.operation_queue.put(operations.LocalCreateFolder(self.remote)))
 
     @asyncio.coroutine
     def _on_local_changed(self):
-        # Assumption: we would never enter this method if this is the intial sync (self.is_intial == True), no remote file changes have occurred.
         if not self.local:
-            # File has been deleted locally, and remote exists.
-            return (yield from self._handle_sync_decision(interventions.LocalFileDeleted(self)))
-        # File has been modified locally, and remote has not changed.
-        return (yield from self.operation_queue.put(operations.UploadFile(self.remote)))
+            # Folder has been deleted locally, and remote exists.
+            return (yield from self._handle_sync_decision(interventions.LocalFolderDeleted(self)))
+        # Folder has been created locally, and remote does not exist
+        return (yield from self.operation_queue.put(operations.RemoteCreateFolder(self.local)))
 
     @asyncio.coroutine
     def crawl(self, operation_queue=None, decision=None):

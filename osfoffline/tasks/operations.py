@@ -18,17 +18,28 @@ class BaseOperation(abc.ABC):
         raise NotImplementedError
 
 
-class KeepFile(BaseOperation):
+class LocalKeepFile(BaseOperation):
 
     def __init__(self, local):
         self.local = local
 
     @asyncio.coroutine
     def run(self):
-        print("Keep File: {}".format(self.local))
+        print("LocalKeep File: {}".format(self.local))
 
 
-class CreateLocalFolder(BaseOperation):
+# Download File
+class LocalCreateFile(BaseOperation):
+
+    def __init__(self, remote):
+        self.remote = remote
+
+    @asyncio.coroutine
+    def run(self):
+        print("Create Local File: {}".format(self.remote))
+
+
+class LocalCreateFolder(BaseOperation):
 
     def __init__(self, remote):
         self.remote = remote
@@ -36,66 +47,93 @@ class CreateLocalFolder(BaseOperation):
     @asyncio.coroutine
     def run(self):
         print("Create Local Folder: {}".format(self.remote))
+        # db_parent = self.db_from_remote(remote.parent)
+        # new_folder = File()
+        # os.mkdir(new_folder.path)
+        # save(session, new_folder)
 
 
-class DeleteFile(BaseOperation):
-
-    def __init__(self, local):
-        self.local = local
-
-    @asyncio.coroutine
-    def run(self):
-        print("Delete File: {}".format(self.local))
-
-
-class DeleteFolder(BaseOperation):
-
-    def __init__(self, local):
-        self.local = local
-
-    @asyncio.coroutine
-    def run(self):
-        print("Delete Folder: {}".format(self.local))
-
-
-class DownloadFile(BaseOperation):
+# Download File
+class LocalUpdateFile(BaseOperation):
 
     def __init__(self, remote):
         self.remote = remote
 
     @asyncio.coroutine
     def run(self):
-        print("Download File: {}".format(self.remote))
+        print("Update Local File: {}".format(self.remote))
 
 
-class DownloadFolder(BaseOperation):
+class LocalDeleteFile(BaseOperation):
+
+    def __init__(self, local):
+        self.local = local
+
+    @asyncio.coroutine
+    def run(self):
+        print("Delete Local File: {}".format(self.local))
+
+
+class LocalDeleteFolder(BaseOperation):
+
+    def __init__(self, local):
+        self.local = local
+
+    @asyncio.coroutine
+    def run(self):
+        print("Delete Local Folder: {}".format(self.local))
+
+
+# Upload File
+class RemoteCreateFile(BaseOperation):
+
+    def __init__(self, local):
+        self.local = local
+
+    @asyncio.coroutine
+    def run(self):
+        print("Create Remote File: {}".format(self.local))
+
+
+class RemoteCreateFolder(BaseOperation):
+
+    def __init__(self, local):
+        self.local = local
+
+    @asyncio.coroutine
+    def run(self):
+        print("Create Remote Folder: {}".format(self.local))
+
+
+# Upload File
+class RemoteUpdateFile(BaseOperation):
+
+    def __init__(self, local):
+        self.local = local
+
+    @asyncio.coroutine
+    def run(self):
+        print("Update Remote File: {}".format(self.local))
+
+
+class RemoteDeleteFile(BaseOperation):
 
     def __init__(self, remote):
         self.remote = remote
 
     @asyncio.coroutine
     def run(self):
-        print("Download Folder: {}".format(self.remote))
+        print("Delete Remote File: {}".format(self.remote))
 
 
-class UploadFile(BaseOperation):
+class RemoteDeleteFolder(BaseOperation):
 
-    def __init__(self, local):
-        self.local = local
-
-    @asyncio.coroutine
-    def run(self):
-        print("Upload File: {}".format(self.local))
-
-
-class UploadFolder(BaseOperation):
-
-    def __init__(self, local):
-        self.local = local
+    def __init__(self, remote):
+        self.remote = remote
 
     @asyncio.coroutine
     def run(self):
-        print("Upload Folder: {}".format(self.local))
+        print("Delete Remote Folder: {}".format(self.remote))
 
 
 class DatabaseFileCreate(BaseOperation):
@@ -107,14 +145,6 @@ class DatabaseFileCreate(BaseOperation):
     def run(self):
         print("Database File Create: {}".format(self.remote))
 
-class DatabaseFileDelete(BaseOperation):
-
-    def __init__(self, db):
-        self.db = db
-
-    @asyncio.coroutine
-    def run(self):
-        print("Database File Delete: {}".format(self.db))
 
 class DatabaseFolderCreate(BaseOperation):
 
@@ -124,6 +154,17 @@ class DatabaseFolderCreate(BaseOperation):
     @asyncio.coroutine
     def run(self):
         print("Database Folder Create: {}".format(self.remote))
+
+
+class DatabaseFileDelete(BaseOperation):
+
+    def __init__(self, db):
+        self.db = db
+
+    @asyncio.coroutine
+    def run(self):
+        print("Database File Delete: {}".format(self.db))
+
 
 class DatabaseFolderDelete(BaseOperation):
 

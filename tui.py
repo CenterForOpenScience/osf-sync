@@ -1,6 +1,7 @@
 import sys
 import logging
 import textwrap
+import threading
 import collections
 
 from npyscreen import wgbutton
@@ -189,7 +190,7 @@ class App(npyscreen.StandardApp):
 
     def on_std_write(self, msg):
         if not msg == '\n':
-            self.queue_event(npyscreen.Event("STDWRITEEVENT", msg))
+            self.event_queues['MAINQUEUE'].interal_queue.appendleft(npyscreen.Event("STDWRITEEVENT", msg))
 
     def while_waiting(self):
         try:
