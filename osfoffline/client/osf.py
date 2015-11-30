@@ -39,11 +39,16 @@ class BaseResource(abc.ABC):
     @classmethod
     @asyncio.coroutine
     def load(cls, request_session, *args):
-        resp = yield from request_session.request('GET', cls.get_url(*args))
+        resp = yield from request_session.request('GET', cls.get_url(*args), params={'page[size]': 250})
         data = yield from resp.json()
 
         if isinstance(data['data'], list):
-            return [cls(request_session, item) for item in data['data']]
+            l = data['data']
+            while data['data']['links'].get('next'):
+                resp = yield from request_session.request('GET', data['data']['links']['next'], params={'page[size]': 250})
+                data = yield from resp.json()
+                l.extend(data['data'])
+            return [cls(request_session, item) for item in l]
         return cls(request_session, data['data'])
 
 
@@ -62,7 +67,9 @@ class Node(BaseResource):
 
     @asyncio.coroutine
     def get_storage(self, id):
-        return (yield from NodeStorage.load(self.request_session, self.id, id))
+        for storage in (yield from NodeStorage.load(self.request_session, self.id)):
+            if storage.provider == id:
+                return storage
 
 
 class StorageObject(BaseResource):
@@ -74,7 +81,7 @@ class StorageObject(BaseResource):
     @classmethod
     @asyncio.coroutine
     def load(cls, request_session, *args):
-        resp = yield from request_session.request('GET', cls.get_url(*args))
+        resp = yield from request_session.request('GET', cls.get_url(*args), params={'page[size]': 250})
         data = yield from resp.json()
 
         if isinstance(data['data'], list):
@@ -84,11 +91,12 @@ class StorageObject(BaseResource):
             ]
         return cls(request_session, data['data'])
 
-    def __init__(self, request_session, data):
+    def __init__(self, request_session, data, parent=None):
         super().__init__(request_session, data)
-        if self.date_modified:
+        self.parent = parent
+        if hasattr(self, 'date_modified') and self.date_modified:
             self.date_modified = iso8601.parse_date(self.date_modified)
-        if self.last_touched:
+        if hasattr(self, 'last_touched') and self.last_touched:
             self.last_touched = iso8601.parse_date(self.last_touched)
 
 
@@ -97,24 +105,28 @@ class Folder(StorageObject):
 
     @asyncio.coroutine
     def get_children(self):
-        resp = yield from self.request_session.request('GET', self.raw['relationships']['files']['links']['related']['href'])
+        resp = yield from self.request_session.request('GET', self.raw['relationships']['files']['links']['related']['href'], params={'page[size]': 250})
         data = yield from resp.json()
 
         if isinstance(data['data'], list):
+            l = data['data']
+            while data['links'].get('next'):
+                resp = yield from self.request_session.request('GET', data['links']['next'], params={'page[size]': 250})
+                data = yield from resp.json()
+                l.extend(data['data'])
             return [
-                (Folder if item['attributes']['kind'] == 'folder' else File)(self.request_session, item)
-                for item in data['data']
+                (Folder if item['attributes']['kind'] == 'folder' else File)(self.request_session, item, parent=self)
+                for item in l
             ]
-        return StorageObject(self.request_session, data['data'])
-
+        return StorageObject(self.request_session, data['data'], parent=self)
 
 
 class NodeStorage(Folder):
 
     @classmethod
-    def get_url(cls, node_id, storage_id):
-        return Node.get_url(node_id) + 'files/' + storage_id + '/'
-
+    def get_url(cls, node_id):
+        # return Node.get_url(node_id) + 'files/' + storage_id + '/'
+        return Node.get_url(node_id) + 'files/'
 
 
 class File(StorageObject):

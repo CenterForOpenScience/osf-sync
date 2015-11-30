@@ -9,6 +9,7 @@ from sqlalchemy import Column, Integer, Boolean, String, DateTime
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.ext.hybrid import hybrid_property
 from osfoffline.utils.path import make_folder_name
+from osfoffline import settings
 
 Base = declarative_base()
 
@@ -217,7 +218,7 @@ class File(Base):
         if self.parent:
             return os.path.join(self.parent.path, self.name)
         else:
-            return os.path.join(self.node.path, self.name)
+            return os.path.join(self.node.path, settings.OSF_STORAGE_FOLDER)
 
     def update_hash(self, block_size=2 ** 20):
         if self.is_file:

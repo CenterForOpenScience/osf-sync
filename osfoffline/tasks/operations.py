@@ -1,14 +1,10 @@
 import os
 import abc
-import shutil
 import asyncio
-import logging
 
-import aiohttp
-
-from osfoffline.utils.path import ProperPath
-from osfoffline.polling_osf_manager.osf_query import OSFQuery
-import osfoffline.alerts as AlertHandler
+from osfoffline.database_manager import models
+from osfoffline.database_manager.db import session
+from osfoffline.database_manager.utils import save
 
 
 class BaseOperation(abc.ABC):
@@ -37,6 +33,16 @@ class LocalCreateFile(BaseOperation):
     @asyncio.coroutine
     def run(self):
         print("Create Local File: {}".format(self.remote))
+        db_parent = session.query(models.File).filter(models.File.osf_id == self.remote.parent.id).one()
+        path = os.path.join(db_parent.path, self.remote.name)
+        with open(path, 'wb') as fobj:
+            resp = yield from self.remote.request_session.request('GET', self.remote.raw['links']['download'])
+            while True:
+                chunk = yield from resp.content.read(1024 * 64)
+                if not chunk:
+                    break
+                fobj.write(chunk)
+        yield from resp.release()
 
 
 class LocalCreateFolder(BaseOperation):
@@ -139,7 +145,7 @@ class RemoteDeleteFolder(BaseOperation):
 class DatabaseFileCreate(BaseOperation):
 
     def __init__(self, remote):
-        self.db = remote
+        self.remote = remote
 
     @asyncio.coroutine
     def run(self):
@@ -148,12 +154,23 @@ class DatabaseFileCreate(BaseOperation):
 
 class DatabaseFolderCreate(BaseOperation):
 
-    def __init__(self, remote):
+    def __init__(self, node, remote):
+        self.node = node
         self.remote = remote
 
     @asyncio.coroutine
     def run(self):
         print("Database Folder Create: {}".format(self.remote))
+        save(session, models.File(
+            name=self.remote.name,
+            type=self.remote.kind,
+            osf_id=self.remote.id,
+            provider=self.remote.provider,
+            osf_path=self.remote.id,
+            user=session.query(models.User).one(),
+            parent=(self.remote.parent and self.remote.parent.id) or None,
+            node=self.node
+        ))
 
 
 class DatabaseFileDelete(BaseOperation):

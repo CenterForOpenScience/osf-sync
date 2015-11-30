@@ -41,7 +41,7 @@ class BaseAuditor(abc.ABC):
     def _on_local_changed(self):
         raise NotImplementedError
 
-    def __init__(self, node, operation_queue, intervention_queue, remote, local=None, decision=None, initial=False):
+    def __init__(self, node, operation_queue, intervention_queue, remote, local, decision=None, initial=False):
         self.is_initial = initial
 
         self.node = node
@@ -117,13 +117,13 @@ class FileAuditor(BaseAuditor):
     @asyncio.coroutine
     def _on_both_changed(self):
         if not self.remote and not self.local:
-            return (yield from self.queue.put(operations.DatabaseFileDelete(self.db)))
+            return (yield from self.operation_queue.put(operations.DatabaseFileDelete(self.db)))
         elif self.remote and not self.local:
             return (yield from self._handle_sync_decision(interventions.LocalFileDeleted(self)))
         elif not self.remote and self.local:
             return (yield from self._handle_sync_decision(interventions.RemoteFileDeleted(self)))
         elif self.remote.extra['hashes']['sha256'] == (yield from self._get_local_sha256()):
-            return (yield from self.queue.put(operations.DatabaseFileCreate(self.remote)))
+            return (yield from self.operation_queue.put(operations.DatabaseFileCreate(self.remote)))
         return (yield from self._handle_sync_decision(interventions.RemoteLocalFileConflict(self)))
 
     @asyncio.coroutine
@@ -189,7 +189,7 @@ class FolderAuditor(BaseAuditor):
             # Remote and local do not exist but a database entry exists
             return (yield from self.operation_queue.put(operations.DatabaseFolderDelete(self.db)))
         # Remote and local do exist but a database entry does not exist
-        return (yield from self.operation_queue.put(operations.DatabaseFolderCreate(self.remote)))
+        return (yield from self.operation_queue.put(operations.DatabaseFolderCreate(self.node, self.remote)))
 
     @asyncio.coroutine
     def _on_remote_changed(self):
@@ -257,25 +257,17 @@ class FolderAuditor(BaseAuditor):
 
     @asyncio.coroutine
     def _list_remote_dir(self):
-        if isinstance(self.remote, Node):
-            return (yield from self.remote.get_storage('osfstorage'))
         return (yield from self.remote.get_children())
 
     def _list_local_dir(self):
-        path = os.path.join(
-            self.node.path,
-            settings.OSF_STORAGE_FOLDER,
-        )
-
-        if self.local != '/':
-            # Special case for the "root"
-            path = os.path.join(path, self.local.full_path.lstrip('/'))
+        if not self.local.full_path.startswith(self.node.path):
+            raise Exception('wat')
 
         return [
             ProperPath(
-                os.path.join(path, name),
-                os.path.isdir(os.path.join(path, name))
+                os.path.join(self.local.full_path, name),
+                os.path.isdir(os.path.join(self.local.full_path, name))
             )
-            for name in os.listdir(path)
+            for name in os.listdir(self.local.full_path)
             if name not in settings.IGNORED_NAMES
         ]

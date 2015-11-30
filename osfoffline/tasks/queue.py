@@ -32,6 +32,10 @@ class OperationsQueue(Queue):
 
     MAX_SIZE = 15
 
+    # TODO Maybe fixme Could just ignore and give up on using MAX_SIZE
+    # def __init__(self):
+    #     super().__init__(maxsize=self.MAX_SIZE)
+
     @asyncio.coroutine
     def start(self):
         logger.info('start processing queue')
