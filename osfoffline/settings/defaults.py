@@ -1,8 +1,5 @@
-# Just to insure requirement
+# Ensures that required logging module is tracked by pyinstaller
 import colorlog  # noqa
-
-# Development mode: use a local OSF dev version and more granular logging
-DEV_MODE = False  # TODO (abought): auto-set flag when using `inv start_for_tests`
 
 # General settings
 PROJECT_NAME = 'osf-offline'
