@@ -16,7 +16,7 @@ except ImportError:
     logger.warning('No local.py found. Using default settings.')
 
 
-# Generated setttings
+# Generated settings
 
 # Variables used to control where application config data is stored
 PROJECT_DB_DIR = user_data_dir(appname=PROJECT_NAME, appauthor=PROJECT_AUTHOR)
@@ -38,7 +38,7 @@ LOGGING_CONFIG = {
     'version': 1,
     'disable_existing_loggers': False,
     'formatters': {
-        'console': CONSOLE_FORMATTER,
+        'console': {'format': FILE_FORMATTER},
         'file_log': {'format': FILE_FORMATTER}
     },
     'handlers': {

@@ -26,6 +26,7 @@ class LocalKeepFile(BaseOperation):
 
 # Download File
 class LocalCreateFile(BaseOperation):
+    """Download an individual file from the OSF"""
 
     def __init__(self, remote):
         self.remote = remote
@@ -46,6 +47,7 @@ class LocalCreateFile(BaseOperation):
 
 
 class LocalCreateFolder(BaseOperation):
+    """Create a folder, and populate the contents of that folder (all files to be downloaded)"""
 
     def __init__(self, remote):
         self.remote = remote
