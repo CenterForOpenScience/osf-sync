@@ -3,7 +3,6 @@ import logging
 
 from watchdog.observers import Observer
 
-from osfoffline.tasks import operations
 from osfoffline.sync.watchdog import ConsolidatedEventHandler
 
 

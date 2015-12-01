@@ -74,7 +74,6 @@ class BackgroundWorker(threading.Thread):
     def run(self):
         self.loop = self._ensure_event_loop()
 
-        root_dir = '/Users/michael/Desktop/OSF'
         user = session.query(models.User).one()
 
         self.operation_queue = OperationsQueue()

@@ -193,7 +193,6 @@ class DatabaseFolderDelete(BaseOperation):
         print("Database Folder Delete: {}".format(self.db))
 
 
-
 # class CreateFolder(BaseEvent):
 #
 #     def __init__(self, path):
