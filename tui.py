@@ -5,6 +5,10 @@ import textwrap
 
 from npyscreen import wgbutton
 from npyscreen import wgmultiline
+from sqlalchemy.orm.exc import NoResultFound
+
+from osfoffline.exceptions import AuthError
+from osfoffline.utils.authentication import AuthClient
 
 
 debug = 'debug' in sys.argv
@@ -43,8 +47,8 @@ import threading
 
 import npyscreen
 
-from osfoffline.database_manager import models
-from osfoffline.database_manager.db import session
+from osfoffline.database import models
+from osfoffline.database import session
 from osfoffline.sync.local import LocalSync
 from osfoffline.sync.remote import RemoteSync
 from osfoffline.tasks.queue import OperationsQueue, InterventionQueue
@@ -74,6 +78,7 @@ class BackgroundWorker(threading.Thread):
         self.loop = self._ensure_event_loop()
 
         user = session.query(models.User).one()
+        root_folder = user.osf_local_folder_path
 
         self.operation_queue = OperationsQueue()
         self.operation_queue_task = asyncio.ensure_future(self.operation_queue.start())
@@ -87,8 +92,8 @@ class BackgroundWorker(threading.Thread):
         self.local_sync = LocalSync(user, self.operation_queue, self.intervention_queue)
         self.local_sync.start()
 
-        self.remote_sync_job = asyncio.ensure_future(self.remote_sync.start())
-        self.remote_sync_job.add_done_callback(self._handle_exception)
+        self.remote_sync_task = asyncio.ensure_future(self.remote_sync.start())
+        self.remote_sync_task.add_done_callback(self._handle_exception)
 
         self.loop.run_forever()
 
@@ -143,6 +148,85 @@ class DecisionForm(npyscreen.ActionPopup):
             self._add_button(str(i), self.generate_button(option), str(option), -2, offset, None)
 
 
+class NodeSyncForm(npyscreen.ActionPopup):
+    SHOW_ATT = 2
+    SHOW_ATX = 10
+    DEFAULT_LINES = 8
+    DEFAULT_COLUMNS = 60
+    OK_BUTTON_TEXT = 'Login'
+    CANCEL_BUTTON_BR_OFFSET = (2, 14)
+
+
+class LoginForm(npyscreen.ActionPopup):
+    SHOW_ATT = 2
+    SHOW_ATX = 10
+    DEFAULT_LINES = 8
+    DEFAULT_COLUMNS = 60
+    OK_BUTTON_TEXT = 'Login'
+    CANCEL_BUTTON_BR_OFFSET = (2, 14)
+
+    def create(self):
+        self.center_on_display()
+
+        self.name = 'Login'
+
+        self.username = self.add(npyscreen.TitleText, name="Username:")
+        self.password = self.add(npyscreen.TitlePassword, name="Password:", rely=4)
+
+    def on_ok(self):
+        log_in_task = asyncio.ensure_future(AuthClient().log_in(username=self.username.value, password=self.password.value))
+
+        try:
+            asyncio.get_event_loop().run_until_complete(log_in_task)
+            user = log_in_task.result()
+        except AuthError as ex:
+            logger.exception(ex.message)
+            npyscreen.notify_confirm(ex.message, 'Log in Failed')
+        else:
+            logger.info('Successfully logged in user: {}'.format(user))
+            self.parentApp.worker.start()
+            self.parentApp.setNextForm('MAIN')
+
+    def on_cancel(self):
+        self.parentApp.setNextForm(None)
+
+
+class SettingsForm(npyscreen.ActionPopup):
+    SHOW_ATT = 2
+    SHOW_ATX = 10
+    DEFAULT_LINES = 12
+    DEFAULT_COLUMNS = 60
+    OK_BUTTON_TEXT = 'Save'
+    CANCEL_BUTTON_BR_OFFSET = (2, 14)
+
+    def create(self):
+        self.center_on_display()
+
+        self.name = 'Preferences'
+
+        self.folder = self.add(npyscreen.TitleFilename, name = "Folder:")
+
+        self.nodes = F.add(npyscreen.TitleMultiSelect, max_height =-2, value = [1,], name="Pick Several",
+                values = ["Option1","Option2","Option3"], scroll_exit=True)
+
+    def on_ok(self):
+        log_in_task = asyncio.ensure_future(AuthClient().log_in(username=self.username.value, password=self.password.value))
+
+        try:
+            asyncio.get_event_loop().run_until_complete(log_in_task)
+            user = log_in_task.result()
+        except AuthError as ex:
+            logger.exception(ex.message)
+            npyscreen.notify_confirm(ex.message, 'Log in Failed')
+        else:
+            logger.info('Successfully logged in user: {}'.format(user))
+            self.parentApp.worker.start()
+            self.parentApp.setNextForm('MAIN')
+
+    def on_cancel(self):
+        self.parentApp.setNextForm(None)
+
+
 class MainForm(npyscreen.Form):
 
     def create(self):
@@ -173,13 +257,25 @@ class MainForm(npyscreen.Form):
         self.queue.display()
         self.logs.display()
 
+        try:
+            intervention = self.parentApp.worker.intervention_queue.get_nowait()
+        except asyncio.QueueEmpty:
+            pass
+        else:
+            df = DecisionForm(intervention, parentAppp=self)
+            df.edit()
+            logger.info('Got decision {} for {}'.format(df.value, intervention))
+            self.parentApp.worker.loop.call_soon_threadsafe(asyncio.ensure_future, intervention.resolve(df.value))
+            # self.worker.loop.call_soon_threadsafe(self.worker.intervention_queue.task_done)
+            self.parentApp.worker.intervention_queue.task_done()
+
 
 class App(npyscreen.StandardApp):
 
     def __init__(self, worker):
         super().__init__()
-        self.worker = worker
         self.loop = asyncio.get_event_loop()
+        self.worker = worker
         stdout_wrapper.on_write = self.on_std_write
         stderr_wrapper.on_write = self.on_std_write
 
@@ -187,24 +283,24 @@ class App(npyscreen.StandardApp):
         self.keypress_timeout_default = 1
 
         self.main = self.addForm('MAIN', MainForm)
+        self.login = self.addForm('LOGIN', LoginForm)
+
+        self.user = None
+        try:
+            self.user = session.query(models.User).one()
+        except NoResultFound:
+            pass
+        else:
+            try:
+                asyncio.get_event_loop().run_until_complete(AuthClient().populate_user_data(self.user))
+            except AuthError:
+                return self.setNextForm('LOGIN')
 
         self.worker.start()
 
     def on_std_write(self, msg):
         if not msg == '\n':
             self.event_queues['MAINQUEUE'].interal_queue.appendleft(npyscreen.Event("STDWRITEEVENT", msg))
-
-    def while_waiting(self):
-        try:
-            intervention = self.worker.intervention_queue.get_nowait()
-            df = DecisionForm(intervention, parentApp=self.main)
-            df.edit()
-            logger.info('Got decision {} for {}'.format(df.value, intervention))
-            self.worker.loop.call_soon_threadsafe(asyncio.ensure_future, intervention.resolve(df.value))
-            # self.worker.loop.call_soon_threadsafe(self.worker.intervention_queue.task_done)
-            self.worker.intervention_queue.task_done()
-        except asyncio.QueueEmpty:
-            pass
 
 
 if __name__ == '__main__':

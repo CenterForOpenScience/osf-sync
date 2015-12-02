@@ -4,8 +4,8 @@ import logging
 
 from osfoffline import settings
 from osfoffline.client.osf import OSFClient
-from osfoffline.exceptions.item_exceptions import FolderNotInFileSystem
-from osfoffline.sync.audit import FolderAuditor
+from osfoffline.sync.exceptions import FolderNotInFileSystem
+from osfoffline.sync.lib.audit import FolderAuditor
 from osfoffline.utils.path import ProperPath
 
 

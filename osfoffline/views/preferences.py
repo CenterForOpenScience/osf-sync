@@ -13,9 +13,9 @@ from PyQt5.QtWidgets import QMessageBox
 from PyQt5.QtWidgets import QTreeWidgetItem
 from sqlalchemy.exc import SQLAlchemyError
 
-from osfoffline.database_manager.db import session
-from osfoffline.database_manager.models import User
-from osfoffline.database_manager.utils import save
+from osfoffline.database import session
+from osfoffline.database.models import User
+from osfoffline.database.utils import save
 from osfoffline.polling_osf_manager.api_url_builder import api_url_for, NODES, USERS
 from osfoffline.polling_osf_manager.remote_objects import RemoteNode
 from osfoffline.utils import path

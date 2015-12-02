@@ -5,12 +5,11 @@ import threading
 
 from watchdog.observers import Observer
 
-
-from osfoffline.database_manager import models
-from osfoffline.database_manager.db import session
-from osfoffline.filesystem_manager import osf_event_handler
-from osfoffline.filesystem_manager.sync_local_filesystem_and_db import LocalDBSync
-from osfoffline.polling_osf_manager import polling
+from osfoffline.database import models
+from osfoffline.database import session
+from osfoffline.sync.local import LocalSync
+from osfoffline.sync.remote import RemoteSync
+from osfoffline.tasks.queue import OperationsQueue, InterventionQueue
 
 
 logger = logging.getLogger(__name__)
@@ -23,14 +22,13 @@ class BackgroundWorker(threading.Thread):
 
         # Start out with null variables for NoneType errors rather than Attribute Errors
         self.user = None
-        self.osf_folder = None
+        self.root_folder = None
 
         self.loop = None
         self.poller = None
         self.observer = None
 
-    # courtesy of waterbutler
-    def ensure_event_loop(self):
+    def _ensure_event_loop(self):
         """Ensure the existance of an eventloop
         Useful for contexts where get_event_loop() may raise an exception.
         Such as multithreaded applications
@@ -52,16 +50,26 @@ class BackgroundWorker(threading.Thread):
         self.loop = self.ensure_event_loop()
         # self.loop.set_debug(True)
 
-        self.user = self.get_current_user()
-        self.osf_folder = self.user.osf_local_folder_path
+        self.user = session.query(models.User).one()
+        self.root_folder = self.user.osf_local_folder_path
 
-        LocalDBSync(self.observer, self.user, self.loop).sync_db()
+        self.operation_queue = OperationsQueue()
+        self.operation_queue_task = asyncio.ensure_future(self.operation_queue.start())
+        self.operation_queue_task.add_done_callback(self._handle_exception)
 
-        logger.debug('Starting observer thread')
-        self.start_folder_observer()
+        self.intervention_queue = InterventionQueue()
 
-        logging.debug('Starting OSF polling')
-        self.start_osf_poller()
+        logger.debug('Initializing Remote Sync')
+        self.remote_sync = RemoteSync(self.operation_queue, self.intervention_queue, user)
+        self.loop.run_until_complete(self.remote_sync.initialize())
+
+        logger.debug('Starting Local Sync')
+        self.local_sync = LocalSync(user, self.operation_queue, self.intervention_queue)
+        self.local_sync.start()
+
+        logger.debug('Starting Remote Sync')
+        self.remote_sync_task = asyncio.ensure_future(self.remote_sync.start())
+        self.remote_sync_task.add_done_callback(self._handle_exception)
 
         logging.debug('Starting background event loop')
         try:
@@ -72,37 +80,30 @@ class BackgroundWorker(threading.Thread):
             self.stop()
         logging.debug('Background event loop exited')
 
-    def get_current_user(self):
-        return session.query(models.User).one()
-
-    def start_osf_poller(self):
-        self.poller = polling.Poll(self.user, self.loop)
-        self.poller.start()
-
-    def start_folder_observer(self):
-        # if something inside the folder changes, log it to config dir
-        # create event handler
-        self.event_handler = osf_event_handler.OSFEventHandler(
-            self.osf_folder,
-            loop=self.loop
-        )
-
-        # todo: if config actually has legitimate data. use it.
-
-        # start
-        self.observer = Observer()  # create observer. watched for events on files.
-        # attach event handler to observed events. make observer recursive
-        self.observer.schedule(self.event_handler, self.osf_folder, recursive=True)
-
-        # TODO: Fix reindexing functionality to not delete everything when a sync fails or exits unsafely
-        # LocalDBSync(self.user.osf_local_folder_path, self.observer, self.user).emit_new_events()
-
-        try:
-            self.observer.start()  # start
-        except OSError as e:
-            # FIXME: Document these limits and provide better user notification.
-            #    See http://pythonhosted.org/watchdog/installation.html for limits.
-            raise RuntimeError('Limit of watched items reached') from e
+    # def start_folder_observer(self):
+    #     # if something inside the folder changes, log it to config dir
+    #     # create event handler
+    #     self.event_handler = osf_event_handler.OSFEventHandler(
+    #         self.root_folder,
+    #         loop=self.loop
+    #     )
+    #
+    #     # todo: if config actually has legitimate data. use it.
+    #
+    #     # start
+    #     self.observer = Observer()  # create observer. watched for events on files.
+    #     # attach event handler to observed events. make observer recursive
+    #     self.observer.schedule(self.event_handler, self.root_folder, recursive=True)
+    #
+    #     # TODO: Fix reindexing functionality to not delete everything when a sync fails or exits unsafely
+    #     # LocalDBSync(self.user.osf_local_folder_path, self.observer, self.user).emit_new_events()
+    #
+    #     try:
+    #         self.observer.start()  # start
+    #     except OSError as e:
+    #         # FIXME: Document these limits and provide better user notification.
+    #         #    See http://pythonhosted.org/watchdog/installation.html for limits.
+    #         raise RuntimeError('Limit of watched items reached') from e
 
     def stop(self):
         # Note: This method is **NOT called from this current thread**
@@ -113,12 +114,10 @@ class BackgroundWorker(threading.Thread):
         logger.debug('Stopping background worker')
 
         logger.debug('Stopping OSF polling')
-        self.loop.call_soon_threadsafe(self.poller.stop)
+        self.loop.call_soon_threadsafe(self.remote_sync.stop)
 
-        logger.debug('Stopping observer thread')
-        # observer is actually a seperate child thread and must be join()ed
-        self.observer.stop()
-        self.observer.join()
+        logger.debug('Stopping local sync thread')
+        self.local_sync.stop()
 
         logger.debug('Stopping the event loop')
         # Note: this is what actually stops the current thread
@@ -140,18 +139,3 @@ class BackgroundWorker(threading.Thread):
         if close:
             self.loop.close()
             logging.debug('Closed event loop')
-
-
-# HOW DOES LOGIN/LOGOUT WORK?
-#
-# previously logged in:
-# when you first open osf offline, you go to main.py which sets up views, connections, and controller.
-# controller sets up db, logs, and determines which user is logged in.
-# when all is good, controller starts background worker.
-# background worker polls api and observer osf folder
-#
-# not logged in:
-# when you first open osf offline, you go to main.py which sets up views, connections, and controller.
-# controller sets up db, logs, and opens create user screen. user logs in. then get user from db.
-# when all is good, controller starts background worker.
-# background worker polls api and observer osf folder

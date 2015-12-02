@@ -5,7 +5,7 @@ from PyQt5.QtWidgets import QApplication, QMessageBox, QSystemTrayIcon
 from osfoffline import utils
 from osfoffline.utils.singleton import SingleInstance
 from osfoffline.application.main import OSFApp
-from osfoffline.database_manager.db import drop_db
+from osfoffline.database import drop_db
 
 
 def running_warning():
