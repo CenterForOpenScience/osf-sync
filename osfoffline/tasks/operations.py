@@ -1,6 +1,5 @@
 import abc
 import asyncio
-import collections
 import logging
 import os
 
@@ -12,9 +11,18 @@ from osfoffline.database_manager.utils import save
 logger = logging.getLogger(__name__)
 
 
-## TODO: Move into alert handling framework
-# Alert data definitions
-TaskFailure = collections.namedtuple('TaskFailure', ['event_type', 'exc_msg'])
+class TaskReport:
+    """Report on whether a task succeeded or failed. Should include sufficient information for the UI layer to display
+        a user-friendly message describing the event that was performed"""
+    def __init__(self, event_type, success=True, exc=None):
+        """
+        :param str event_type: Name of the event type
+        :param bool success: Whether the task succeeded or failed
+        :param Exception exc: (optional) An exception object can be provided with a traceback
+        """
+        self.event_type = event_type
+        self.success = success
+        self.exc = exc
 
 
 class BaseOperation(abc.ABC):
@@ -36,7 +44,8 @@ class BaseOperation(abc.ABC):
             self._run()
         except Exception as e:
             result_tuple = self._format_error(e)
-            logging.exception('Failed to perform operation {}: {}'.format(err_desc.event_type, err_desc.exc_msg))
+            logging.exception('Failed to perform operation {}: {}'.format(
+                result_tuple.event_type, str(result_tuple.exc)))
         else:
             # TODO: Add a tuple describing the event if it ran successfully
             result_tuple = None
@@ -52,7 +61,7 @@ class BaseOperation(abc.ABC):
         :return: TaskFailure
         """
         event_type = self.__class__.__name__
-        return TaskFailure(event_type, str(exc))
+        return TaskReport(event_type, success=False, exc=exc)
 
 
 class LocalKeepFile(BaseOperation):
@@ -86,6 +95,7 @@ class LocalCreateFile(BaseOperation):
         db_parent = session.query(models.File).filter(models.File.osf_id == self.remote.parent.id).one()
         path = os.path.join(db_parent.path, self.remote.name)
         with open(path, 'wb') as fobj:
+            # TODO: Flesh out remote object API client
             resp = yield from self.remote.request_session.request('GET', self.remote.raw['links']['download'])
             while True:
                 chunk = yield from resp.content.read(1024 * 64)
@@ -125,6 +135,7 @@ class LocalUpdateFile(BaseOperation):
 class LocalDeleteFile(BaseOperation):
 
     def __init__(self, local, *args, **kwargs):
+        # TODO: Nan assigned
         super(LocalDeleteFile, self).__init__(*args, **kwargs)
         self.local = local
 
@@ -189,7 +200,7 @@ class RemoteDeleteFile(BaseOperation):
 
 
 class RemoteDeleteFolder(BaseOperation):
-    """Delete a file from the OSF and uopdate the database"""
+    """Delete a file from the OSF and update the database"""
     def __init__(self, remote, *args, **kwargs):
         super(RemoteDeleteFolder, self).__init__(*args, **kwargs)
         self.remote = remote
@@ -199,10 +210,9 @@ class RemoteDeleteFolder(BaseOperation):
         print("Delete Remote Folder: {}".format(self.remote))
 
 
-class DatabaseFileCreate(BaseOperation):
-
+class DatabaseCreateFile(BaseOperation):
     def __init__(self, remote, *args, **kwargs):
-        super(DatabaseFileCreate, self).__init__(*args, **kwargs)
+        super(DatabaseCreateFile, self).__init__(*args, **kwargs)
         self.remote = remote
 
     @asyncio.coroutine
@@ -210,16 +220,18 @@ class DatabaseFileCreate(BaseOperation):
         print("Database File Create: {}".format(self.remote))
 
 
-class DatabaseFolderCreate(BaseOperation):
+class DatabaseCreateFolder(BaseOperation):
 
     def __init__(self, node, remote, *args, **kwargs):
-        super(DatabaseFolderCreate, self).__init__(*args, **kwargs)
+        super(DatabaseCreateFolder, self).__init__(*args, **kwargs)
         self.node = node
         self.remote = remote
 
     @asyncio.coroutine
     def _run(self):
         print("Database Folder Create: {}".format(self.remote))
+
+        parent = self.remote.parent.id if self.remote.parent else None
         save(session, models.File(
             name=self.remote.name,
             type=self.remote.kind,
@@ -227,15 +239,15 @@ class DatabaseFolderCreate(BaseOperation):
             provider=self.remote.provider,
             osf_path=self.remote.id,
             user=session.query(models.User).one(),
-            parent=(self.remote.parent and self.remote.parent.id) or None,
+            parent=parent,
             node=self.node
         ))
 
 
-class DatabaseFileDelete(BaseOperation):
+class DatabaseDeleteFile(BaseOperation):
 
     def __init__(self, db, *args, **kwargs):
-        super(DatabaseFileDelete, self).__init__(*args, **kwargs)
+        super(DatabaseDeleteFile, self).__init__(*args, **kwargs)
         self.db = db
 
     @asyncio.coroutine
@@ -243,10 +255,10 @@ class DatabaseFileDelete(BaseOperation):
         print("Database File Delete: {}".format(self.db))
 
 
-class DatabaseFolderDelete(BaseOperation):
+class DatabaseDeleteFolder(BaseOperation):
 
     def __init__(self, db, *args, **kwargs):
-        super(DatabaseFolderDelete, self).__init__(*args, **kwargs)
+        super(DatabaseDeleteFolder, self).__init__(*args, **kwargs)
         self.db = db
 
     @asyncio.coroutine
