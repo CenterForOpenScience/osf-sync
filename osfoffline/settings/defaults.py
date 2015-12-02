@@ -1,3 +1,9 @@
+import os
+
+from appdirs import user_data_dir
+from appdirs import user_log_dir
+
+
 # General settings
 PROJECT_NAME = 'osf-offline'
 PROJECT_AUTHOR = 'cos'
@@ -27,3 +33,47 @@ LOCAL_DELETE_THRESHOLD = 10
 
 # wab~,vmc,vhd,vo1,vo2,vsv,vud,vmdk,vmsn,vmsd,hdd,vdi,vmwarevm,nvram,vmx,vmem,iso,dmg,sparseimage,wim,ost,o,qtch,log
 # wab~,vmc,vhd,vdi,vo1,vo2,vsv,vud,iso,dmg,sparseimage,sys,cab,exe,msi,dll,dl_,wim,ost,o,qtch,log,ithmb,vmdk,vmem,vmsd,vmsn,vmss,vmx,vmxf,menudata,appicon,appinfo,pva,pvs,pvi,pvm,fdd,hds,drk,mem,nvram,hdd
+
+# Variables used to control where application config data is stored
+PROJECT_DB_DIR = user_data_dir(appname=PROJECT_NAME, appauthor=PROJECT_AUTHOR)
+PROJECT_DB_FILE = os.path.join(PROJECT_DB_DIR, 'osf.db')
+
+PROJECT_LOG_DIR = user_log_dir(appname=PROJECT_NAME, appauthor=PROJECT_AUTHOR)
+PROJECT_LOG_FILE = os.path.join(PROJECT_LOG_DIR, 'osfoffline.log')
+
+LOGGING_CONFIG = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'console': {'format': FILE_FORMATTER},
+        'file_log': {'format': FILE_FORMATTER}
+    },
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'level': LOG_LEVEL,
+            'formatter': 'console'
+        },
+        'syslog': {
+            'class': 'logging.handlers.SysLogHandler',
+            'level': LOG_LEVEL
+        },
+        'logfile': {
+            'class': 'logging.FileHandler',
+            'level': LOG_LEVEL,
+            'filename': PROJECT_LOG_FILE,
+            'formatter': 'file_log'
+        },
+    },
+    'loggers': {
+        '': {
+            'handlers': ['console'],
+            'level': LOG_LEVEL,
+            'propagate': False
+        }
+    },
+    'root': {
+        'level': LOG_LEVEL,
+        'handlers': ['console', 'logfile']
+    }
+}

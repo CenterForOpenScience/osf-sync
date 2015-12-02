@@ -4,7 +4,7 @@ import logging
 from watchdog.observers import Observer
 
 from osfoffline.tasks import operations
-from osfoffline.sync.lib.watchdog import ConsolidatedEventHandler
+from osfoffline.sync.ext.watchdog import ConsolidatedEventHandler
 
 
 logger = logging.getLogger(__name__)

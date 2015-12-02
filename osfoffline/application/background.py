@@ -47,7 +47,7 @@ class BackgroundWorker(threading.Thread):
 
     def run(self):
         logger.debug('Background worker starting')
-        self.loop = self.ensure_event_loop()
+        self.loop = self._ensure_event_loop()
         # self.loop.set_debug(True)
 
         self.user = session.query(models.User).one()
@@ -60,11 +60,11 @@ class BackgroundWorker(threading.Thread):
         self.intervention_queue = InterventionQueue()
 
         logger.debug('Initializing Remote Sync')
-        self.remote_sync = RemoteSync(self.operation_queue, self.intervention_queue, user)
+        self.remote_sync = RemoteSync(self.operation_queue, self.intervention_queue, self.user)
         self.loop.run_until_complete(self.remote_sync.initialize())
 
         logger.debug('Starting Local Sync')
-        self.local_sync = LocalSync(user, self.operation_queue, self.intervention_queue)
+        self.local_sync = LocalSync(self.user, self.operation_queue, self.intervention_queue)
         self.local_sync.start()
 
         logger.debug('Starting Remote Sync')

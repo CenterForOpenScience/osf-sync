@@ -1,19 +1,20 @@
+import asyncio
 import collections
 import logging
 import sys
 import textwrap
+import threading
 
-from npyscreen import wgbutton
-from npyscreen import wgmultiline
-from sqlalchemy.orm.exc import NoResultFound
+import npyscreen
 
-from osfoffline.exceptions import AuthError
-from osfoffline.utils.authentication import AuthClient
-
-
-debug = 'debug' in sys.argv
 
 logger = logging.getLogger(__name__)
+
+
+try:
+    asyncio.ensure_future
+except AttributeError:
+    asyncio.ensure_future = asyncio.async
 
 
 class StdWrapper:
@@ -36,29 +37,6 @@ class StdWrapper:
 
     def fileno(self):
         return self.std.fileno()
-
-if not debug:
-    sys.stdout = stdout_wrapper = StdWrapper(sys.stdout)
-    sys.stderr = stderr_wrapper = StdWrapper(sys.stderr)
-
-
-import asyncio
-import threading
-
-import npyscreen
-
-from osfoffline.database import models
-from osfoffline.database import session
-from osfoffline.sync.local import LocalSync
-from osfoffline.sync.remote import RemoteSync
-from osfoffline.tasks.queue import OperationsQueue, InterventionQueue
-from osfoffline.utils import start_app_logging
-
-
-try:
-    asyncio.ensure_future
-except AttributeError:
-    asyncio.ensure_future = asyncio.async
 
 
 class BackgroundWorker(threading.Thread):
@@ -188,40 +166,40 @@ class LoginForm(npyscreen.ActionPopup):
         self.parentApp.setNextForm(None)
 
 
-class SettingsForm(npyscreen.ActionPopup):
-    SHOW_ATT = 2
-    SHOW_ATX = 10
-    DEFAULT_LINES = 12
-    DEFAULT_COLUMNS = 60
-    OK_BUTTON_TEXT = 'Save'
-    CANCEL_BUTTON_BR_OFFSET = (2, 14)
-
-    def create(self):
-        self.center_on_display()
-
-        self.name = 'Preferences'
-
-        self.folder = self.add(npyscreen.TitleFilename, name = "Folder:")
-
-        self.nodes = F.add(npyscreen.TitleMultiSelect, max_height =-2, value = [1,], name="Pick Several",
-                values = ["Option1","Option2","Option3"], scroll_exit=True)
-
-    def on_ok(self):
-        log_in_task = asyncio.ensure_future(AuthClient().log_in(username=self.username.value, password=self.password.value))
-
-        try:
-            asyncio.get_event_loop().run_until_complete(log_in_task)
-            user = log_in_task.result()
-        except AuthError as ex:
-            logger.exception(ex.message)
-            npyscreen.notify_confirm(ex.message, 'Log in Failed')
-        else:
-            logger.info('Successfully logged in user: {}'.format(user))
-            self.parentApp.worker.start()
-            self.parentApp.setNextForm('MAIN')
-
-    def on_cancel(self):
-        self.parentApp.setNextForm(None)
+# class SettingsForm(npyscreen.ActionPopup):
+#     SHOW_ATT = 2
+#     SHOW_ATX = 10
+#     DEFAULT_LINES = 12
+#     DEFAULT_COLUMNS = 60
+#     OK_BUTTON_TEXT = 'Save'
+#     CANCEL_BUTTON_BR_OFFSET = (2, 14)
+#
+#     def create(self):
+#         self.center_on_display()
+#
+#         self.name = 'Preferences'
+#
+#         self.folder = self.add(npyscreen.TitleFilename, name = "Folder:")
+#
+#         self.nodes = F.add(npyscreen.TitleMultiSelect, max_height =-2, value = [1,], name="Pick Several",
+#                 values = ["Option1","Option2","Option3"], scroll_exit=True)
+#
+#     def on_ok(self):
+#         log_in_task = asyncio.ensure_future(AuthClient().log_in(username=self.username.value, password=self.password.value))
+#
+#         try:
+#             asyncio.get_event_loop().run_until_complete(log_in_task)
+#             user = log_in_task.result()
+#         except AuthError as ex:
+#             logger.exception(ex.message)
+#             npyscreen.notify_confirm(ex.message, 'Log in Failed')
+#         else:
+#             logger.info('Successfully logged in user: {}'.format(user))
+#             self.parentApp.worker.start()
+#             self.parentApp.setNextForm('MAIN')
+#
+#     def on_cancel(self):
+#         self.parentApp.setNextForm(None)
 
 
 class MainForm(npyscreen.Form):
@@ -301,8 +279,27 @@ class App(npyscreen.StandardApp):
 
 
 if __name__ == '__main__':
+    debug = 'debug' in sys.argv
+
+    if not debug:
+        sys.stdout = stdout_wrapper = StdWrapper(sys.stdout)
+        sys.stderr = stderr_wrapper = StdWrapper(sys.stderr)
+
+    from osfoffline import settings  # loads logging configuration
+
+    from npyscreen import wgbutton
+    from npyscreen import wgmultiline
+    from sqlalchemy.orm.exc import NoResultFound
+
+    from osfoffline.database import models
+    from osfoffline.database import session
+    from osfoffline.exceptions import AuthError
+    from osfoffline.utils.authentication import AuthClient
+    from osfoffline.sync.local import LocalSync
+    from osfoffline.sync.remote import RemoteSync
+    from osfoffline.tasks.queue import OperationsQueue, InterventionQueue
+
     worker = BackgroundWorker()
-    start_app_logging()
 
     try:
         if not debug:
