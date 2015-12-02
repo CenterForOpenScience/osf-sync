@@ -2,6 +2,8 @@ import sys
 
 from PyQt5.QtWidgets import QApplication, QMessageBox, QSystemTrayIcon
 
+from osfoffline import settings  # setup logging
+
 from osfoffline import utils
 from osfoffline.utils.singleton import SingleInstance
 from osfoffline.application.main import OSFApp
@@ -22,7 +24,6 @@ def start():
     if '--drop' in sys.argv:
         drop_db()
 
-    utils.start_app_logging()
     me = SingleInstance(callback=running_warning)  # will end application if an instance is already running
 
     app = QApplication(sys.argv)

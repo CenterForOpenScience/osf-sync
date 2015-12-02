@@ -1,3 +1,4 @@
+import asyncio
 import os
 import logging
 
@@ -13,6 +14,7 @@ from PyQt5.QtWidgets import QMessageBox
 from PyQt5.QtWidgets import QTreeWidgetItem
 from sqlalchemy.exc import SQLAlchemyError
 
+from osfoffline.client.osf import OSFClient
 from osfoffline.database import session
 from osfoffline.database.models import User
 from osfoffline.database.utils import save
@@ -187,7 +189,7 @@ class Preferences(QDialog):
         for node in nodes:
             tree_item = QTreeWidgetItem(self.preferences_window.treeWidget)
             tree_item.setCheckState(self.PROJECT_SYNC_COLUMN, Qt.Unchecked)
-            tree_item.setText(self.PROJECT_NAME_COLUMN, _translate("Preferences", path.make_folder_name(node.name, node_id=node.id)))
+            tree_item.setText(self.PROJECT_NAME_COLUMN, _translate('Preferences', path.make_folder_name(node.title, node_id=node.id)))
 
             if node.id in user.guid_for_top_level_nodes_to_sync:
                 tree_item.setCheckState(self.PROJECT_SYNC_COLUMN, Qt.Checked)
@@ -207,26 +209,26 @@ class NodeFetcher(QtCore.QObject):
 
     finished = QtCore.pyqtSignal(list)
 
-    def fetch(self):
-        remote_top_level_nodes = []
+    def ensure_event_loop(self):
         try:
+            return asyncio.get_event_loop()
+        except (AssertionError, RuntimeError):
+            asyncio.set_event_loop(asyncio.new_event_loop())
+        return asyncio.get_event_loop()
 
+    def fetch(self):
+        loop = self.ensure_event_loop()
+        top_level_nodes = []
+        try:
             user = session.query(User).filter(User.logged_in).one()
             if user:
-                user_nodes = []
-                url = api_url_for(USERS, related_type=NODES, user_id=user.osf_id)
-                headers = {'Authorization': 'Bearer {}'.format(user.oauth_token)}
-                resp = requests.get(url, headers=headers, params={'page[size]': 500}).json()
-                user_nodes.extend(resp['data'])
-                while resp['links']['next']:
-                    resp = requests.get(resp['links']['next'], headers=headers).json()
-                    user_nodes.extend(resp['data'])
-                for node in user_nodes:
-                    verified_node = RemoteNode(node)
-                    if verified_node.is_top_level:
-                        remote_top_level_nodes.append(verified_node)
+                client = OSFClient(bearer_token=user.oauth_token)
+                client_user = loop.run_until_complete(client.get_user())
+                user_nodes = loop.run_until_complete(client_user.get_nodes())
+                for user_node in user_nodes:
+                    if 'parent' not in user_node.raw['relationships']:
+                        top_level_nodes.append(user_node)
         except Exception as e:
             logging.warning(e)
 
-        self.finished.emit(remote_top_level_nodes)
-        return remote_top_level_nodes
+        self.finished.emit(top_level_nodes)

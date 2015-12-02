@@ -3,7 +3,7 @@ import asyncio
 import logging
 import threading
 
-from watchdog.observers import Observer
+from asyncio import CancelledError, InvalidStateError
 
 from osfoffline.database import models
 from osfoffline.database import session
@@ -27,6 +27,14 @@ class BackgroundWorker(threading.Thread):
         self.loop = None
         self.poller = None
         self.observer = None
+
+        # TODO: Find a good fix for ulimit setting
+        # try:
+        #     self.observer.start()  # start
+        # except OSError as e:
+        #     # FIXME: Document these limits and provide better user notification.
+        #     #    See http://pythonhosted.org/watchdog/installation.html for limits.
+        #     raise RuntimeError('Limit of watched items reached') from e
 
     def _ensure_event_loop(self):
         """Ensure the existance of an eventloop
@@ -76,55 +84,45 @@ class BackgroundWorker(threading.Thread):
             self.loop.run_forever()
         except Exception as e:
             logger.exception(e)
-        finally:
             self.stop()
         logging.debug('Background event loop exited')
 
-    # def start_folder_observer(self):
-    #     # if something inside the folder changes, log it to config dir
-    #     # create event handler
-    #     self.event_handler = osf_event_handler.OSFEventHandler(
-    #         self.root_folder,
-    #         loop=self.loop
-    #     )
-    #
-    #     # todo: if config actually has legitimate data. use it.
-    #
-    #     # start
-    #     self.observer = Observer()  # create observer. watched for events on files.
-    #     # attach event handler to observed events. make observer recursive
-    #     self.observer.schedule(self.event_handler, self.root_folder, recursive=True)
-    #
-    #     # TODO: Fix reindexing functionality to not delete everything when a sync fails or exits unsafely
-    #     # LocalDBSync(self.user.osf_local_folder_path, self.observer, self.user).emit_new_events()
-    #
-    #     try:
-    #         self.observer.start()  # start
-    #     except OSError as e:
-    #         # FIXME: Document these limits and provide better user notification.
-    #         #    See http://pythonhosted.org/watchdog/installation.html for limits.
-    #         raise RuntimeError('Limit of watched items reached') from e
+    def _handle_exception(self, future):
+        """
+        Handle exception raised while executing a coroutine
+        In present architecture this will not catch failures of individual tasks; an uncaught exception in a failed
+            task will halt execution of entire queue from that point onward
+        """
+        try:
+            exception = future.exception()
+        except (CancelledError, InvalidStateError):
+            pass
+        else:
+            logger.info('Unhandled exception from background worker task')
+            self.stop()
+            raise exception
 
     def stop(self):
         # Note: This method is **NOT called from this current thread**
         # All method/function/routines/etc MUST be thread safe from here out
-        if not self.poller or not self.observer:
-            raise RuntimeError('OSF poller or folder observer is not defined, Background work was not correctly initialized')
 
         logger.debug('Stopping background worker')
 
-        logger.debug('Stopping OSF polling')
-        self.loop.call_soon_threadsafe(self.remote_sync.stop)
+        # logger.debug('Stopping operation queue task')
+        # self.operation_queue_task.cancel()
+        #
+        # logger.debug('Stopping remote sync task')
+        # self.remote_sync_task.cancel()
 
-        logger.debug('Stopping local sync thread')
+        logger.debug('Stopping local sync task')
         self.local_sync.stop()
 
         logger.debug('Stopping the event loop')
         # Note: this is what actually stops the current thread
         # Calls self.join, be careful with what is on the event loop
-        self.stop_loop(close=True)
+        self._stop_loop(close=True)
 
-    def stop_loop(self, close=False):
+    def _stop_loop(self, close=False):
         """ WARNING: Only pass in 'close' if you plan on creating a new loop afterwards
         """
         if not self.loop:
