@@ -20,6 +20,10 @@ class OSFClient:
     def get_node(self, id):
         return (yield from Node.load(self.request_session, id))
 
+    @asyncio.coroutine
+    def get_user(self, id='me'):
+        return (yield from User.load(self.request_session, id))
+
 
 class BaseResource(abc.ABC):
 
@@ -42,15 +46,34 @@ class BaseResource(abc.ABC):
     def load(cls, request_session, *args):
         resp = yield from request_session.request('GET', cls.get_url(*args), params={'page[size]': 250})
         data = yield from resp.json()
+        yield from resp.release()
 
         if isinstance(data['data'], list):
             l = data['data']
-            while data['data']['links'].get('next'):
-                resp = yield from request_session.request('GET', data['data']['links']['next'], params={'page[size]': 250})
+            while data['links'].get('next'):
+                resp = yield from request_session.request('GET', data['links']['next'], params={'page[size]': 250})
                 data = yield from resp.json()
                 l.extend(data['data'])
             return [cls(request_session, item) for item in l]
         return cls(request_session, data['data'])
+
+
+class User(BaseResource):
+
+    RESOURCE = 'users'
+
+    # def __init__(self, request_session, data):
+    #     super().__init__(request_session, data)
+    #     self.date_created = iso8601.parse_date(self.date_created)
+    #     self.date_modified = iso8601.parse_date(self.date_modified)
+
+    @classmethod
+    def get_url(cls, id='me'):
+        return '{}/{}/{}/{}/'.format(cls.OSF_HOST, cls.API_PREFIX, cls.RESOURCE, id)
+
+    @asyncio.coroutine
+    def get_nodes(self):
+        return (yield from UserNode.load(self.request_session, self.id))
 
 
 class Node(BaseResource):
@@ -73,6 +96,13 @@ class Node(BaseResource):
                 return storage
 
 
+class UserNode(Node):
+
+    @classmethod
+    def get_url(cls, id):
+        return '{}/{}/users/{}/nodes/'.format(cls.OSF_HOST, cls.API_PREFIX, id)
+
+
 class StorageObject(BaseResource):
 
     @classmethod
@@ -84,6 +114,7 @@ class StorageObject(BaseResource):
     def load(cls, request_session, *args):
         resp = yield from request_session.request('GET', cls.get_url(*args), params={'page[size]': 250})
         data = yield from resp.json()
+        yield from resp.release()
 
         if isinstance(data['data'], list):
             return [
@@ -108,12 +139,14 @@ class Folder(StorageObject):
     def get_children(self):
         resp = yield from self.request_session.request('GET', self.raw['relationships']['files']['links']['related']['href'], params={'page[size]': 250})
         data = yield from resp.json()
+        yield from resp.release()
 
         if isinstance(data['data'], list):
             l = data['data']
             while data['links'].get('next'):
                 resp = yield from self.request_session.request('GET', data['links']['next'], params={'page[size]': 250})
                 data = yield from resp.json()
+                yield from resp.release()
                 l.extend(data['data'])
             return [
                 (Folder if item['attributes']['kind'] == 'folder' else File)(self.request_session, item, parent=self)
