@@ -2,10 +2,23 @@ import os
 import abc
 import asyncio
 
+from sqlalchemy.exc import SQLAlchemyError
 from osfoffline.database_manager import models
 from osfoffline.database_manager.db import session
 from osfoffline.database_manager.utils import save
+from osfoffline.utils.path import ProperPath
+from osfoffline.exceptions.item_exceptions import ItemNotInDB
 
+
+def _get_item_by_path(path):
+    for node in session.query(models.Node):
+        if ProperPath(node.path, True) == path:
+            return node
+    for file_folder in session.query(models.File):
+        file_path = ProperPath(file_folder.path, file_folder.is_folder)
+        if file_path == path:
+            return file_folder
+    raise ItemNotInDB('item has path: {}'.format(path.full_path))
 
 class BaseOperation(abc.ABC):
 
@@ -80,7 +93,31 @@ class LocalDeleteFile(BaseOperation):
     @asyncio.coroutine
     def run(self):
         print("Delete Local File: {}".format(self.local))
+        db_parent = session.query(models.File).filter(models.File.osf_id == self.local.parent.id).one()
+        path = os.path.join(db_parent.path, self.local.name)
+        if not path:
+            raise Exception
+        os.remove(path)
 
+        # get item
+        try:
+            item = _get_item_by_path(path)
+        except ItemNotInDB:
+            print('Exception caught: Tried to delete item {}, but it was not found in DB'.format(self.local.name))
+        else:
+            # put item in delete state after waiting a second and
+            # checking to make sure the file was actually deleted
+            yield from asyncio.sleep(1)
+            if not os.path.exists(item.path):
+                item.locally_deleted = True
+                # nodes cannot be deleted online. THUS, delete it inside database. It will be recreated locally.
+
+                try:
+                    save(session, item)
+                except SQLAlchemyError as e:
+                    print('Exception caught: Error deleting {} {} from database.'.format('file', item.name))
+                else:
+                    print('{} set to be deleted'.format(path))
 
 class LocalDeleteFolder(BaseOperation):
 
@@ -132,6 +169,30 @@ class RemoteDeleteFile(BaseOperation):
     @asyncio.coroutine
     def run(self):
         print("Delete Remote File: {}".format(self.remote))
+        db_parent = session.query(models.File).filter(models.File.osf_id == self.remote.parent.id).one()
+        path = os.path.join(db_parent.path, self.remote.name)
+
+        resp = yield from self.remote.request_session.request('DELETE', self.remote.id)
+        yield from resp.release()
+
+         # get item
+        try:
+            item = _get_item_by_path(path)
+        except ItemNotInDB:
+            print('Exception caught: Tried to delete item {}, but it was not found in DB'.format(self.local.name))
+        else:
+            # put item in delete state after waiting a second and
+            # checking to make sure the file was actually deleted
+            if resp.status_code == '200':
+                item.locally_deleted = True
+                # nodes cannot be deleted online. THUS, delete it inside database. It will be recreated locally.
+    
+                try:
+                    save(session, item)
+                except SQLAlchemyError as e:
+                    print('Exception caught: Error deleting {} {} from database.'.format('file', item.name))
+                else:
+                    print('{} set to be deleted'.format(path))
 
 
 class RemoteDeleteFolder(BaseOperation):
@@ -408,3 +469,5 @@ class DatabaseFolderDelete(BaseOperation):
 #         os.renames(old_path.full_path, new_path.full_path)
 #     except FileNotFoundError:
 #         logging.warning('renaming of file/folder failed because file/folder not there')
+
+
