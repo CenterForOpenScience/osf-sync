@@ -49,7 +49,7 @@ class OSFApp(QDialog):
 
         # connect all signal-slot pairs
         self.setup_connections()
-        # self.background_worker = BackgroundWorker()
+        self.background_worker = BackgroundWorker()
 
     def setup_connections(self):
         # [ (signal, slot) ]
