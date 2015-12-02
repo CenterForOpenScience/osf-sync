@@ -6,6 +6,7 @@ import os
 from osfoffline.database_manager import models
 from osfoffline.database_manager.db import session
 from osfoffline.database_manager.utils import save
+from osfoffline.utils.authentication import get_current_user
 
 
 logger = logging.getLogger(__name__)
@@ -144,7 +145,6 @@ class LocalUpdateFile(BaseOperation):
 class LocalDeleteFile(BaseOperation):
 
     def __init__(self, local, *args, **kwargs):
-        # TODO: Nan assigned
         super(LocalDeleteFile, self).__init__(*args, **kwargs)
         self.local = local
 
@@ -174,11 +174,11 @@ class RemoteCreateFile(BaseOperation):
     def _run(self):
         print("Create Remote File: {}".format(self.local))
 
-        # TODO: This is how we used to do it... move some upload logic to the new client.osf module
-        remote_file_folder = yield from self.osf_query.upload_file(local_file_folder)
+        ## TODO: This is how we used to do it... move some upload logic to the new client.osf module
+        #remote_file_folder = yield from self.osf_query.upload_file(local_file_folder)
 
 
-        # TODO: Update database state at end of operation to show file was uploaded... or not? No state? Check self.db instance and ask Michael what fields are relevant in the final design
+        ## TODO: Update database state at end of operation to show file was uploaded... or not? No state? Check self.db instance and ask Michael what fields are relevant in the final design
 
 class RemoteCreateFolder(BaseOperation):
     """Upload a folder (and contents) to the OSF and create multiple DB instances to track changes"""
@@ -250,7 +250,7 @@ class DatabaseCreateFile(BaseOperation):
             osf_id=self.remote.id,
             provider=self.remote.provider,
             osf_path=self.remote.id,
-            user=session.query(models.User).one(),
+            user=get_current_user(),
             parent=parent,
             node=self.node
         )
@@ -269,13 +269,14 @@ class DatabaseCreateFolder(BaseOperation):
         print("Database Folder Create: {}".format(self.remote))
 
         parent = self.remote.parent.id if self.remote.parent else None
+        # TODO : Update task to work with API client. Where is remote.kind coming from?
         save(session, models.File(
             name=self.remote.name,
             type=self.remote.kind,
             osf_id=self.remote.id,
             provider=self.remote.provider,
             osf_path=self.remote.id,
-            user=session.query(models.User).one(),
+            user=get_current_user(),
             parent=parent,
             node=self.node
         ))

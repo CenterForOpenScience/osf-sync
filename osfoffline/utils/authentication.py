@@ -9,7 +9,7 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from osfoffline import settings
 from osfoffline.database_manager.db import clear_models, session
-from osfoffline.database_manager.models import User
+from osfoffline.database_manager import models
 from osfoffline.database_manager.utils import save
 from osfoffline.polling_osf_manager.remote_objects import RemoteUser
 from osfoffline.exceptions import AuthError
@@ -20,8 +20,9 @@ def get_current_user():
     Fetch the database object representing the currently active user
     :return: A user object (raises exception if none found)
     :rtype: User
+    :raises SQLAlchemyError
     """
-    # TODO: Implement, then use this wherever pattern repeats itself
+    return session.query(models.User).one()
 
 class AuthClient(object):
     """Manages authorization flow """
@@ -76,7 +77,7 @@ class AuthClient(object):
         """
         logging.debug('User doesnt exist. Attempting to authenticate, then creating user.')
         personal_access_token = yield from self._authenticate(username, password)
-        user = User(
+        user = models.User(
             full_name='',
             osf_id='',
             osf_login=username,
