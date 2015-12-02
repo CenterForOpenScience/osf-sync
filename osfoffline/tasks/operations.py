@@ -1,39 +1,88 @@
-import os
 import abc
 import asyncio
+import collections
+import logging
+import os
 
 from osfoffline.database_manager import models
 from osfoffline.database_manager.db import session
 from osfoffline.database_manager.utils import save
 
 
-class BaseOperation(abc.ABC):
+logger = logging.getLogger(__name__)
 
+
+## TODO: Move into alert handling framework
+# Alert data definitions
+TaskFailure = collections.namedtuple('TaskFailure', ['event_type', 'exc_msg'])
+
+
+class BaseOperation(abc.ABC):
     @abc.abstractmethod
-    def run(self):
+    def _run(self):
+        """Internal implementation of run method; must be overridden in subclasses"""
         raise NotImplementedError
 
-
-class LocalKeepFile(BaseOperation):
-
-    def __init__(self, local):
-        self.local = local
+    def __init__(self,  *args, done_callback=None, **kwargs):
+        """
+        :param function done_callback: An optional function to be called to store the task result.
+        """
+        self._done_callback = done_callback
 
     @asyncio.coroutine
     def run(self):
+        """Wrap internal run method with error handling"""
+        try:
+            self._run()
+        except Exception as e:
+            result_tuple = self._format_error(e)
+            logging.exception('Failed to perform operation {}: {}'.format(err_desc.event_type, err_desc.exc_msg))
+        else:
+            # TODO: Add a tuple describing the event if it ran successfully
+            result_tuple = None
+
+        if self._done_callback is not None:
+                self._done_callback(result_tuple)
+
+    def _format_error(self, exc):
+        """
+        Format the error as a task failure object, which will include sufficient detail to display client-facing errors
+
+        :param Exception exc: The exception raised by task failure
+        :return: TaskFailure
+        """
+        event_type = self.__class__.__name__
+        return TaskFailure(event_type, str(exc))
+
+
+class LocalKeepFile(BaseOperation):
+    """
+    Keep the local copy of the file by making a backup, and ensure that the new (copy of) the file
+        will not be uploaded to the OSF
+    """
+
+    def __init__(self, local, *args, **kwargs):
+        super(LocalKeepFile, self).__init__(*args, **kwargs)
+        self.local = local
+
+    @asyncio.coroutine
+    def _run(self):
         print("LocalKeep File: {}".format(self.local))
 
 
 # Download File
 class LocalCreateFile(BaseOperation):
     """Download an individual file from the OSF"""
-
-    def __init__(self, remote):
+    def __init__(self, remote, *args, **kwargs):
+        """
+        :param StorageObject remote: A reference to the remote storage client object
+        """
+        super(LocalCreateFile, self).__init__(*args, **kwargs)
         self.remote = remote
 
     @asyncio.coroutine
-    def run(self):
-        print("Create Local File: {}".format(self.remote))
+    def _run(self):
+        logging.info("Create Local File: {}".format(self.remote))
         db_parent = session.query(models.File).filter(models.File.osf_id == self.remote.parent.id).one()
         path = os.path.join(db_parent.path, self.remote.name)
         with open(path, 'wb') as fobj:
@@ -48,12 +97,12 @@ class LocalCreateFile(BaseOperation):
 
 class LocalCreateFolder(BaseOperation):
     """Create a folder, and populate the contents of that folder (all files to be downloaded)"""
-
-    def __init__(self, remote):
+    def __init__(self, remote, *args, **kwargs):
+        super(LocalCreateFolder, self).__init__(*args, **kwargs)
         self.remote = remote
 
     @asyncio.coroutine
-    def run(self):
+    def _run(self):
         print("Create Local Folder: {}".format(self.remote))
         # db_parent = self.db_from_remote(remote.parent)
         # new_folder = File()
@@ -63,105 +112,113 @@ class LocalCreateFolder(BaseOperation):
 
 # Download File
 class LocalUpdateFile(BaseOperation):
-
-    def __init__(self, remote):
+    """Download a file from the remote server and modify the database to show task completed"""
+    def __init__(self, remote, *args, **kwargs):
+        super(LocalUpdateFile, self).__init__(*args, **kwargs)
         self.remote = remote
 
     @asyncio.coroutine
-    def run(self):
+    def _run(self):
         print("Update Local File: {}".format(self.remote))
 
 
 class LocalDeleteFile(BaseOperation):
 
-    def __init__(self, local):
+    def __init__(self, local, *args, **kwargs):
+        super(LocalDeleteFile, self).__init__(*args, **kwargs)
         self.local = local
 
     @asyncio.coroutine
-    def run(self):
+    def _run(self):
         print("Delete Local File: {}".format(self.local))
 
 
 class LocalDeleteFolder(BaseOperation):
-
-    def __init__(self, local):
+    """Delete a folder (and all containing files) locally"""
+    def __init__(self, local, *args, **kwargs):
+        super(LocalDeleteFolder, self).__init__(*args, **kwargs)
         self.local = local
 
     @asyncio.coroutine
-    def run(self):
+    def _run(self):
         print("Delete Local Folder: {}".format(self.local))
 
 
-# Upload File
 class RemoteCreateFile(BaseOperation):
-
-    def __init__(self, local):
+    """Upload a file to the OSF, and update the database to reflect the new OSF id"""
+    def __init__(self, local, *args, **kwargs):
+        super(RemoteCreateFile, self).__init__(*args, **kwargs)
         self.local = local
 
     @asyncio.coroutine
-    def run(self):
+    def _run(self):
         print("Create Remote File: {}".format(self.local))
 
 
 class RemoteCreateFolder(BaseOperation):
-
-    def __init__(self, local):
+    """Upload a folder (and contents) to the OSF and create multiple DB instances to track changes"""
+    def __init__(self, local, *args, **kwargs):
+        super(RemoteCreateFolder, self).__init__(*args, **kwargs)
         self.local = local
 
     @asyncio.coroutine
-    def run(self):
+    def _run(self):
         print("Create Remote Folder: {}".format(self.local))
 
 
-# Upload File
 class RemoteUpdateFile(BaseOperation):
-
-    def __init__(self, local):
+    """Upload (already-tracked) file to the OSF (uploads new version)"""
+    def __init__(self, local, *args, **kwargs):
+        super(RemoteUpdateFile, self).__init__(*args, **kwargs)
         self.local = local
 
     @asyncio.coroutine
-    def run(self):
+    def _run(self):
         print("Update Remote File: {}".format(self.local))
 
 
 class RemoteDeleteFile(BaseOperation):
-
-    def __init__(self, remote):
+    """Delete a file that already exists remotely"""
+    def __init__(self, remote, *args, **kwargs):
+        super(RemoteDeleteFile, self).__init__(*args, **kwargs)
         self.remote = remote
 
     @asyncio.coroutine
-    def run(self):
+    def _run(self):
         print("Delete Remote File: {}".format(self.remote))
 
 
 class RemoteDeleteFolder(BaseOperation):
-
-    def __init__(self, remote):
+    """Delete a file from the OSF and uopdate the database"""
+    def __init__(self, remote, *args, **kwargs):
+        super(RemoteDeleteFolder, self).__init__(*args, **kwargs)
         self.remote = remote
 
     @asyncio.coroutine
-    def run(self):
+    def _run(self):
         print("Delete Remote Folder: {}".format(self.remote))
 
 
 class DatabaseFileCreate(BaseOperation):
 
-    def __init__(self, remote):
+    def __init__(self, remote, *args, **kwargs):
+        super(DatabaseFileCreate, self).__init__(*args, **kwargs)
         self.remote = remote
 
     @asyncio.coroutine
-    def run(self):
+    def _run(self):
         print("Database File Create: {}".format(self.remote))
 
 
 class DatabaseFolderCreate(BaseOperation):
 
-    def __init__(self, node, remote):
+    def __init__(self, node, remote, *args, **kwargs):
+        super(DatabaseFolderCreate, self).__init__(*args, **kwargs)
         self.node = node
         self.remote = remote
 
     @asyncio.coroutine
-    def run(self):
+    def _run(self):
         print("Database Folder Create: {}".format(self.remote))
         save(session, models.File(
             name=self.remote.name,
@@ -177,21 +234,23 @@ class DatabaseFolderCreate(BaseOperation):
 
 class DatabaseFileDelete(BaseOperation):
 
-    def __init__(self, db):
+    def __init__(self, db, *args, **kwargs):
+        super(DatabaseFileDelete, self).__init__(*args, **kwargs)
         self.db = db
 
     @asyncio.coroutine
-    def run(self):
+    def _run(self):
         print("Database File Delete: {}".format(self.db))
 
 
 class DatabaseFolderDelete(BaseOperation):
 
-    def __init__(self, db):
+    def __init__(self, db, *args, **kwargs):
+        super(DatabaseFolderDelete, self).__init__(*args, **kwargs)
         self.db = db
 
     @asyncio.coroutine
-    def run(self):
+    def _run(self):
         print("Database Folder Delete: {}".format(self.db))
 
 
