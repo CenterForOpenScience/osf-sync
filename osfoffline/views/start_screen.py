@@ -5,8 +5,8 @@ from PyQt5.QtCore import pyqtSignal
 from PyQt5.QtWidgets import QDialog, QMessageBox
 from sqlalchemy.orm.exc import NoResultFound
 
-from osfoffline.database_manager.db import session
-from osfoffline.database_manager.models import User
+from osfoffline.database import session
+from osfoffline.database.models import User
 from osfoffline.exceptions import AuthError
 from osfoffline.utils.authentication import AuthClient
 from osfoffline.views.rsc.startscreen import Ui_startscreen
@@ -37,7 +37,7 @@ class StartScreen(QDialog):
             pass
 
         try:
-            user = asyncio.get_event_loop().run_until_complete(auth_client.log_in(user=user, username=username, password=password))
+            user = asyncio.get_event_loop().run_until_complete(auth_client.log_in(username=username, password=password))
         except AuthError as e:
             logging.exception(e.message)
             QMessageBox.warning(

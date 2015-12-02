@@ -174,11 +174,8 @@ class LoginForm(npyscreen.ActionPopup):
         self.password = self.add(npyscreen.TitlePassword, name="Password:", rely=4)
 
     def on_ok(self):
-        log_in_task = asyncio.ensure_future(AuthClient().log_in(username=self.username.value, password=self.password.value))
-
         try:
-            asyncio.get_event_loop().run_until_complete(log_in_task)
-            user = log_in_task.result()
+            user = asyncio.get_event_loop().run_until_complete(AuthClient().log_in(username=self.username.value, password=self.password.value))
         except AuthError as ex:
             logger.exception(ex.message)
             npyscreen.notify_confirm(ex.message, 'Log in Failed')

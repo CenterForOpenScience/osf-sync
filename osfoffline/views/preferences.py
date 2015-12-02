@@ -16,8 +16,6 @@ from sqlalchemy.exc import SQLAlchemyError
 from osfoffline.database import session
 from osfoffline.database.models import User
 from osfoffline.database.utils import save
-from osfoffline.polling_osf_manager.api_url_builder import api_url_for, NODES, USERS
-from osfoffline.polling_osf_manager.remote_objects import RemoteNode
 from osfoffline.utils import path
 from osfoffline.views.rsc.preferences_rc import Ui_Settings  # REQUIRED FOR GUI
 import osfoffline.alerts as AlertHandler
