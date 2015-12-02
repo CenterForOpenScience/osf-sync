@@ -41,7 +41,20 @@ class BaseAuditor(abc.ABC):
     def _on_local_changed(self):
         raise NotImplementedError
 
-    def __init__(self, node, operation_queue, intervention_queue, remote, local, decision=None, initial=False):
+    def __init__(self, node, operation_queue, intervention_queue, remote, local, *, decision=None, initial=False):
+        """
+        :param Node node: Database object describing a node
+        :param OperationsQueue operation_queue: Where to store operations that can be performed automatically
+        :param InterventionQueue intervention_queue: Where to store actions that require a user decision
+        :param remote: The response from the server describing a remote node, file, or folder
+        :type remote: StorageObject
+        :type remote: None
+        :param local: Path to the local file or folder
+        :type local: ProperPath
+        :type local: None
+        :param Enum decision: The enumeration option representing a user decision
+        :param bool initial: Whether this represents an initial "offline mode" sync (before filesystem observer active)
+        """
         self.is_initial = initial
 
         self.node = node
@@ -51,7 +64,7 @@ class BaseAuditor(abc.ABC):
 
         self.local = local
         self.remote = remote
-        self.db = None
+        self.db = None  # Database object representing one specific local (or remote) file
 
         if isinstance(remote, Node):
             return
@@ -89,7 +102,7 @@ class BaseAuditor(abc.ABC):
         if self.decision is not None:
             yield from intervention.resolve(self.decision)
         yield from self.intervention_queue.put(intervention)
-        return True  #  TODO: Replace w/ enum
+        return True  # TODO: Replace w/ enum
 
 
 class FileAuditor(BaseAuditor):
@@ -141,7 +154,7 @@ class FileAuditor(BaseAuditor):
 
     @asyncio.coroutine
     def _on_local_changed(self):
-        # Assumption: Either this the inital sync or watchdog missed this file somehow
+        # Assumption: Either this is the inital sync, or watchdog missed this file somehow
         if not self.local:
             # File has been deleted locally, and remote exists.
             return (yield from self._handle_sync_decision(interventions.LocalFileDeleted(self)))
@@ -152,7 +165,7 @@ class FileAuditor(BaseAuditor):
         return (yield from self.operation_queue.put(operations.RemoteUpdateFile(self.local)))
 
     @asyncio.coroutine
-    def _get_local_sha256(self, chunk_size=64*1024):
+    def _get_local_sha256(self, *, chunk_size=64*1024):
         if not hasattr(self, '__local_sha'):
             s = hashlib.sha256()
             with open(self.local.full_path, 'rb') as f:
@@ -225,7 +238,7 @@ class FolderAuditor(BaseAuditor):
         return (yield from self.operation_queue.put(operations.RemoteCreateFolder(self.local)))
 
     @asyncio.coroutine
-    def crawl(self, operation_queue=None, decision=None):
+    def crawl(self, *, operation_queue=None, decision=None):
         directory_list = {}
 
         if self.remote:
@@ -242,7 +255,7 @@ class FolderAuditor(BaseAuditor):
 
         yield from asyncio.gather(*[auditor.audit() for auditor in auditors])
 
-    def _child(self, operation_queue, remote, local, is_dir, decision=None):
+    def _child(self, operation_queue, remote, local, is_dir, *, decision=None):
         cls = FolderAuditor if is_dir else FileAuditor
 
         return cls(

@@ -4,6 +4,8 @@ import iso8601
 
 import aiohttp
 
+from osfoffline import settings
+
 
 class OSFClient:
 
@@ -21,8 +23,7 @@ class OSFClient:
 
 class BaseResource(abc.ABC):
 
-    # OSF_HOST = 'staging-api.osf.io'
-    OSF_HOST = 'api.osf.io'
+    OSF_HOST = settings.API_BASE
     API_PREFIX = 'v2'
 
     def __init__(self, request_session, data):
@@ -34,7 +35,7 @@ class BaseResource(abc.ABC):
 
     @classmethod
     def get_url(cls, id):
-        return 'https://{}/{}/'.format(cls.OSF_HOST, cls.API_PREFIX)
+        return '{}/{}/'.format(cls.OSF_HOST, cls.API_PREFIX)
 
     @classmethod
     @asyncio.coroutine
@@ -63,7 +64,7 @@ class Node(BaseResource):
 
     @classmethod
     def get_url(cls, id):
-        return 'https://{}/{}/{}/{}/'.format(cls.OSF_HOST, cls.API_PREFIX, cls.RESOURCE, id)
+        return '{}/{}/{}/{}/'.format(cls.OSF_HOST, cls.API_PREFIX, cls.RESOURCE, id)
 
     @asyncio.coroutine
     def get_storage(self, id):
@@ -76,7 +77,7 @@ class StorageObject(BaseResource):
 
     @classmethod
     def get_url(cls, id):
-        return 'https://{}/{}/files/{}/'.format(cls.OSF_HOST, cls.API_PREFIX, id)
+        return '{}/{}/files/{}/'.format(cls.OSF_HOST, cls.API_PREFIX, id)
 
     @classmethod
     @asyncio.coroutine

@@ -1,6 +1,6 @@
+from collections import OrderedDict
 import os
 import threading
-from collections import OrderedDict
 
 from watchdog.events import PatternMatchingEventHandler
 

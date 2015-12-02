@@ -1,9 +1,3 @@
-# Just to insure requirement
-import colorlog  # noqa
-
-# Development mode: use a local OSF dev version and more granular logging
-DEV_MODE = False  # TODO (abought): auto-set flag when using `inv start_for_tests`
-
 # General settings
 PROJECT_NAME = 'osf-offline'
 PROJECT_AUTHOR = 'cos'
@@ -22,11 +16,6 @@ ALERT_TIME = 1000  # ms
 LOG_LEVEL = 'INFO'
 
 # Logging configuration
-CONSOLE_FORMATTER = {
-    '()': 'colorlog.ColoredFormatter',
-    'format': '%(cyan)s[%(asctime)s]%(log_color)s[%(threadName)s][%(filename)s][%(levelname)s][%(name)s]: %(reset)s%(message)s'
-}
-
 FILE_FORMATTER = '[%(asctime)s][%(threadName)s][%(filename)s][%(levelname)s][%(name)s]: %(message)s'
 
 IGNORED_NAMES = ['.DS_Store', 'lost+found', 'Desktop.ini']

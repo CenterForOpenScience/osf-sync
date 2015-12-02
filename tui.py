@@ -1,8 +1,7 @@
-import sys
-import logging
-import textwrap
-import threading
 import collections
+import logging
+import sys
+import textwrap
 
 from npyscreen import wgbutton
 from npyscreen import wgmultiline
@@ -38,8 +37,6 @@ if not debug:
     sys.stdout = stdout_wrapper = StdWrapper(sys.stdout)
     sys.stderr = stderr_wrapper = StdWrapper(sys.stderr)
 
-logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(threadName)s - %(name)s - %(levelname)s - %(message)s')
-
 
 import asyncio
 import threading
@@ -51,6 +48,8 @@ from osfoffline.database_manager.db import session
 from osfoffline.sync.local import LocalSync
 from osfoffline.sync.remote import RemoteSync
 from osfoffline.tasks.queue import OperationsQueue, InterventionQueue
+from osfoffline.utils import start_app_logging
+
 
 try:
     asyncio.ensure_future
@@ -74,7 +73,6 @@ class BackgroundWorker(threading.Thread):
     def run(self):
         self.loop = self._ensure_event_loop()
 
-        root_dir = '/Users/michael/Desktop/OSF'
         user = session.query(models.User).one()
 
         self.operation_queue = OperationsQueue()
@@ -95,12 +93,16 @@ class BackgroundWorker(threading.Thread):
         self.loop.run_forever()
 
     def _handle_exception(self, future):
+        """
+        Handle exception raised while executing a coroutine
+        In present architecture this will not catch failures of individual tasks; an uncaught exception in a failed
+            task will halt execution of entire queue from that point onward
+        """
         logger.info('In handle exception')
         if future.exception():
             logger.info('Sync.handle_exception')
             # self.database_task.cancel()
             # self.queue_task.cancel()
-            # raise future.exception()
             raise future.exception()
 
     def stop(self):
@@ -207,6 +209,7 @@ class App(npyscreen.StandardApp):
 
 if __name__ == '__main__':
     worker = BackgroundWorker()
+    start_app_logging()
 
     try:
         if not debug:

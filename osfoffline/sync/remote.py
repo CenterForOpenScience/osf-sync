@@ -1,12 +1,10 @@
 import os
 import asyncio
 import logging
-import hashlib
-import itertools
 
 from osfoffline import settings
 from osfoffline.client.osf import OSFClient
-from osfoffline.exceptions.item_exceptions import InvalidItemType, FolderNotInFileSystem
+from osfoffline.exceptions.item_exceptions import FolderNotInFileSystem
 from osfoffline.sync.audit import FolderAuditor
 from osfoffline.utils.path import ProperPath
 
@@ -45,7 +43,8 @@ class RemoteSync:
         for node in nodes:
             logger.info('Resyncing node {}'.format(node))
             remote, local = yield from self._preprocess_node(node)
-            yield from FolderAuditor(node, self.operation_queue, self.intervention_queue, remote, local, initial=initial).audit()
+            auditor = FolderAuditor(node, self.operation_queue, self.intervention_queue, remote, local, initial=initial)
+            yield from auditor.audit()
 
         logger.info('Finishing intervention queue')
         yield from self.intervention_queue.join()

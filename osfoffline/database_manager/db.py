@@ -23,12 +23,14 @@ Session = scoped_session(session_factory)
 
 session = Session()
 
+
 def drop_db():
     with contextlib.closing(engine.connect()) as con:
         trans = con.begin()
         for table in reversed(Base.metadata.sorted_tables):
             con.execute(table.delete())
         trans.commit()
+
 
 def clear_models():
     for model in CORE_OSFO_MODELS:

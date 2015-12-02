@@ -14,6 +14,7 @@ from osfoffline.database_manager.utils import save
 from osfoffline.polling_osf_manager.remote_objects import RemoteUser
 from osfoffline.exceptions import AuthError
 
+
 class AuthClient(object):
     """Manages authorization flow """
 
@@ -37,11 +38,15 @@ class AuthClient(object):
         headers = {'content-type': 'application/json'}
 
         try:
-            resp = yield from aiohttp.request(method='POST', url=token_url.url, headers=headers, data=json.dumps(token_request_body), auth=(username, password))
+            resp = yield from aiohttp.request(method='POST',
+                                              url=token_url.url,
+                                              headers=headers,
+                                              data=json.dumps(token_request_body),
+                                              auth=(username, password))
         except (aiohttp.errors.ClientTimeoutError, aiohttp.errors.ClientConnectionError, aiohttp.errors.TimeoutError):
             # No internet connection
             raise AuthError('Unable to connect to server. Check your internet connection or try again later.')
-        except Exception as e:
+        except Exception as e:  # noqa
             # Invalid credentials probably, but it's difficult to tell
             # Regadless, will be prompted later with dialogbox later
             # TODO: narrow down possible exceptions here
@@ -87,7 +92,7 @@ class AuthClient(object):
         except (aiohttp.errors.ClientTimeoutError, aiohttp.errors.ClientConnectionError, aiohttp.errors.TimeoutError):
             # No internet connection
             raise AuthError('Unable to connect to server. Check your internet connection or try again later')
-        except Exception as e:
+        except Exception as e:  # noqa
             raise AuthError('Login failed. Please log in again.')
         else:
             if resp.status != 200:
@@ -100,7 +105,7 @@ class AuthClient(object):
             return user
 
     @asyncio.coroutine
-    def log_in(self, user=None, username=None, password=None):
+    def log_in(self, *, user=None, username=None, password=None):
         """ Takes standard auth credentials, returns authenticated user or raises AuthError.
         """
         if not username or not password:
@@ -109,7 +114,7 @@ class AuthClient(object):
         if user:
             user.oauth_token = yield from self._authenticate(username, password)
             if user.osf_login != username:
-                #Different user authenticated, drop old user and allow login
+                # Different user authenticated, drop old user and allow login
                 clear_models()
                 user = yield from self._create_user(username, password)
         else:
@@ -118,7 +123,7 @@ class AuthClient(object):
         user.logged_in = True
         try:
             save(session, user)
-        except SQLAlchemyError as e:
+        except SQLAlchemyError as e:  # noqa
             raise AuthError('Unable to save user data. Please try again later')
         else:
             return user
