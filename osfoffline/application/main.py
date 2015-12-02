@@ -12,9 +12,9 @@ from PyQt5.QtWidgets import QDialog
 from PyQt5.QtWidgets import QFileDialog
 
 from osfoffline.application.background import BackgroundWorker
-from osfoffline.database_manager.db import session
-from osfoffline.database_manager.models import User
-from osfoffline.database_manager.utils import save
+from osfoffline.database import session
+from osfoffline.database.models import User
+from osfoffline.database.utils import save
 from osfoffline.exceptions import AuthError
 from osfoffline.utils.authentication import AuthClient
 from osfoffline.utils.validators import validate_containing_folder
@@ -89,7 +89,7 @@ class OSFApp(QDialog):
 
     def _can_restart_background_worker(self):
         try:
-            user = self.get_current_user()
+            user = session.query(User).one()
         except:
             return False
         if not user.logged_in:
@@ -183,9 +183,6 @@ class OSFApp(QDialog):
             pass
 
         self.resume()
-
-    def get_current_user(self):
-        return session.query(User).one()
 
     def set_containing_folder_initial(self):
         return QFileDialog.getExistingDirectory(self, "Choose where to place OSF folder")

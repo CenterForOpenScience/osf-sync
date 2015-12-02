@@ -2,11 +2,12 @@ import contextlib
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, scoped_session
-from osfoffline.database_manager import CORE_OSFO_MODELS
-from osfoffline.database_manager.models import Base
+from osfoffline.database import models
+from osfoffline.database.models import Base, User, Node, File
 from osfoffline.settings import PROJECT_DB_FILE
 
 
+CORE_OSFO_MODELS = [User, Node, File]
 URL = 'sqlite:///{}'.format(PROJECT_DB_FILE)
 
 # sqlite+pysqlcipher://:passphrase/file_path
@@ -23,12 +24,14 @@ Session = scoped_session(session_factory)
 
 session = Session()
 
+
 def drop_db():
     with contextlib.closing(engine.connect()) as con:
         trans = con.begin()
         for table in reversed(Base.metadata.sorted_tables):
             con.execute(table.delete())
         trans.commit()
+
 
 def clear_models():
     for model in CORE_OSFO_MODELS:

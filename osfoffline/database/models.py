@@ -1,15 +1,17 @@
+import os
 import hashlib
 import datetime
-import os
 
-from osfoffline.database_manager.json_type import JSONEncodedDict
 from sqlalchemy import ForeignKey, Enum
 from sqlalchemy.orm import relationship, backref, validates
 from sqlalchemy import Column, Integer, Boolean, String, DateTime
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.ext.hybrid import hybrid_property
+
+from osfoffline.database.types import JSONEncodedDict
 from osfoffline.utils.path import make_folder_name
 from osfoffline import settings
+
 
 Base = declarative_base()
 

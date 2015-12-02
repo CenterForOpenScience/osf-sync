@@ -6,13 +6,15 @@ import logging
 import aiohttp
 import furl
 from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.orm.exc import NoResultFound
+
 
 from osfoffline import settings
-from osfoffline.database_manager.db import clear_models, session
-from osfoffline.database_manager.models import User
-from osfoffline.database_manager.utils import save
-from osfoffline.polling_osf_manager.remote_objects import RemoteUser
+from osfoffline.database import clear_models, session
+from osfoffline.database.models import User
+from osfoffline.database.utils import save
 from osfoffline.exceptions import AuthError
+
 
 class AuthClient(object):
     """Manages authorization flow """
@@ -41,7 +43,7 @@ class AuthClient(object):
         except (aiohttp.errors.ClientTimeoutError, aiohttp.errors.ClientConnectionError, aiohttp.errors.TimeoutError):
             # No internet connection
             raise AuthError('Unable to connect to server. Check your internet connection or try again later.')
-        except Exception as e:
+        except Exception:
             # Invalid credentials probably, but it's difficult to tell
             # Regadless, will be prompted later with dialogbox later
             # TODO: narrow down possible exceptions here
@@ -54,6 +56,8 @@ class AuthClient(object):
             else:
                 json_resp = yield from resp.json()
                 return json_resp['data']['attributes']['token_id']
+        finally:
+            yield from resp.release()
 
     @asyncio.coroutine
     def _create_user(self, username, password):
@@ -83,33 +87,41 @@ class AuthClient(object):
         me.path.add('/v2/users/me/')
         header = {'Authorization': 'Bearer {}'.format(user.oauth_token)}
         try:
+            # TODO: Update to use client/osf.py
             resp = yield from aiohttp.request(method='GET', url=me.url, headers=header)
         except (aiohttp.errors.ClientTimeoutError, aiohttp.errors.ClientConnectionError, aiohttp.errors.TimeoutError):
             # No internet connection
             raise AuthError('Unable to connect to server. Check your internet connection or try again later')
-        except Exception as e:
+        except Exception:
             raise AuthError('Login failed. Please log in again.')
         else:
             if resp.status != 200:
                 raise AuthError('Invalid credentials. Please log in again.')
             json_resp = yield from resp.json()
-            remote_user = RemoteUser(json_resp['data'])
-            user.full_name = remote_user.name
-            user.osf_id = remote_user.id
+            data = json_resp['data']
+
+            user.full_name = data['attributes']['full_name']
+            user.osf_id = data['id']
 
             return user
 
     @asyncio.coroutine
-    def log_in(self, user=None, username=None, password=None):
+    def log_in(self, username=None, password=None):
         """ Takes standard auth credentials, returns authenticated user or raises AuthError.
         """
         if not username or not password:
             raise AuthError('Username and password required for login.')
 
+        user = None
+        try:
+            user = session.query(User).one()
+        except NoResultFound:
+            pass
+
         if user:
             user.oauth_token = yield from self._authenticate(username, password)
             if user.osf_login != username:
-                #Different user authenticated, drop old user and allow login
+                # Different user authenticated, drop old user and allow login
                 clear_models()
                 user = yield from self._create_user(username, password)
         else:
@@ -118,7 +130,7 @@ class AuthClient(object):
         user.logged_in = True
         try:
             save(session, user)
-        except SQLAlchemyError as e:
+        except SQLAlchemyError:
             raise AuthError('Unable to save user data. Please try again later')
         else:
             return user

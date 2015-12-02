@@ -7,8 +7,8 @@ from sqlalchemy.orm.exc import NoResultFound
 
 from osfoffline import settings
 from osfoffline.client.osf import Node
-from osfoffline.database_manager.db import session
-from osfoffline.database_manager.models import File
+from osfoffline.database import session
+from osfoffline.database.models import File
 from osfoffline.tasks import interventions
 from osfoffline.tasks import operations
 from osfoffline.utils.path import ProperPath
@@ -205,7 +205,7 @@ class FolderAuditor(BaseAuditor):
             changed = False
             q = list(op_queue._queue)
             for event in q:
-                if not isinstance(event, (operations.DeleteFile, operations.DeleteFolder)):
+                if not isinstance(event, (operations.LocalDeleteFile, operations.LocalDeleteFolder)):
                     changed = True
                     break
 

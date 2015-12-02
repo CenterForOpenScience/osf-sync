@@ -4,6 +4,8 @@ import iso8601
 
 import aiohttp
 
+from osfoffline import settings
+
 
 class OSFClient:
 
@@ -18,11 +20,14 @@ class OSFClient:
     def get_node(self, id):
         return (yield from Node.load(self.request_session, id))
 
+    @asyncio.coroutine
+    def get_user(self, id='me'):
+        return (yield from User.load(self.request_session, id))
+
 
 class BaseResource(abc.ABC):
 
-    # OSF_HOST = 'staging-api.osf.io'
-    OSF_HOST = 'api.osf.io'
+    OSF_HOST = settings.API_BASE
     API_PREFIX = 'v2'
 
     def __init__(self, request_session, data):
@@ -34,22 +39,41 @@ class BaseResource(abc.ABC):
 
     @classmethod
     def get_url(cls, id):
-        return 'https://{}/{}/'.format(cls.OSF_HOST, cls.API_PREFIX)
+        return '{}/{}/'.format(cls.OSF_HOST, cls.API_PREFIX)
 
     @classmethod
     @asyncio.coroutine
     def load(cls, request_session, *args):
         resp = yield from request_session.request('GET', cls.get_url(*args), params={'page[size]': 250})
         data = yield from resp.json()
+        yield from resp.release()
 
         if isinstance(data['data'], list):
             l = data['data']
-            while data['data']['links'].get('next'):
-                resp = yield from request_session.request('GET', data['data']['links']['next'], params={'page[size]': 250})
+            while data['links'].get('next'):
+                resp = yield from request_session.request('GET', data['links']['next'], params={'page[size]': 250})
                 data = yield from resp.json()
                 l.extend(data['data'])
             return [cls(request_session, item) for item in l]
         return cls(request_session, data['data'])
+
+
+class User(BaseResource):
+
+    RESOURCE = 'users'
+
+    # def __init__(self, request_session, data):
+    #     super().__init__(request_session, data)
+    #     self.date_created = iso8601.parse_date(self.date_created)
+    #     self.date_modified = iso8601.parse_date(self.date_modified)
+
+    @classmethod
+    def get_url(cls, id='me'):
+        return '{}/{}/{}/{}/'.format(cls.OSF_HOST, cls.API_PREFIX, cls.RESOURCE, id)
+
+    @asyncio.coroutine
+    def get_nodes(self):
+        return (yield from UserNode.load(self.request_session, self.id))
 
 
 class Node(BaseResource):
@@ -63,7 +87,7 @@ class Node(BaseResource):
 
     @classmethod
     def get_url(cls, id):
-        return 'https://{}/{}/{}/{}/'.format(cls.OSF_HOST, cls.API_PREFIX, cls.RESOURCE, id)
+        return '{}/{}/{}/{}/'.format(cls.OSF_HOST, cls.API_PREFIX, cls.RESOURCE, id)
 
     @asyncio.coroutine
     def get_storage(self, id):
@@ -72,17 +96,25 @@ class Node(BaseResource):
                 return storage
 
 
+class UserNode(Node):
+
+    @classmethod
+    def get_url(cls, id):
+        return '{}/{}/users/{}/nodes/'.format(cls.OSF_HOST, cls.API_PREFIX, id)
+
+
 class StorageObject(BaseResource):
 
     @classmethod
     def get_url(cls, id):
-        return 'https://{}/{}/files/{}/'.format(cls.OSF_HOST, cls.API_PREFIX, id)
+        return '{}/{}/files/{}/'.format(cls.OSF_HOST, cls.API_PREFIX, id)
 
     @classmethod
     @asyncio.coroutine
     def load(cls, request_session, *args):
         resp = yield from request_session.request('GET', cls.get_url(*args), params={'page[size]': 250})
         data = yield from resp.json()
+        yield from resp.release()
 
         if isinstance(data['data'], list):
             return [
@@ -107,12 +139,14 @@ class Folder(StorageObject):
     def get_children(self):
         resp = yield from self.request_session.request('GET', self.raw['relationships']['files']['links']['related']['href'], params={'page[size]': 250})
         data = yield from resp.json()
+        yield from resp.release()
 
         if isinstance(data['data'], list):
             l = data['data']
             while data['links'].get('next'):
                 resp = yield from self.request_session.request('GET', data['links']['next'], params={'page[size]': 250})
                 data = yield from resp.json()
+                yield from resp.release()
                 l.extend(data['data'])
             return [
                 (Folder if item['attributes']['kind'] == 'folder' else File)(self.request_session, item, parent=self)
