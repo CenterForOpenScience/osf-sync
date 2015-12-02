@@ -19,7 +19,7 @@ from osfoffline.exceptions import AuthError
 from osfoffline.utils.authentication import AuthClient
 from osfoffline.utils.validators import validate_containing_folder
 from osfoffline.views.preferences import Preferences
-from osfoffline.views.start_screen import StartScreen
+# from osfoffline.views.start_screen import StartScreen
 from osfoffline.views.system_tray import SystemTray
 import osfoffline.alerts as AlertHandler
 
@@ -43,14 +43,13 @@ class OSFApp(QDialog):
         self.app_author = "COS"
 
         # views
-        self.start_screen = StartScreen()
         self.tray = SystemTray()
         self.preferences = Preferences()
         AlertHandler.setup_alerts(self.tray.tray_icon, self.tray.tray_alert_signal)
 
         # connect all signal-slot pairs
         self.setup_connections()
-        self.background_worker = BackgroundWorker()
+        # self.background_worker = BackgroundWorker()
 
     def setup_connections(self):
         # [ (signal, slot) ]
@@ -68,7 +67,7 @@ class OSFApp(QDialog):
             (self.tray.tray_alert_signal, self.tray.update_currently_synching),
 
             # main events
-            (self.login_signal, self.start_screen.open_window),
+            # (self.login_signal, self.start_screen.open_window),
             (self.start_tray_signal, self.tray.start),
 
             # preferences
@@ -81,8 +80,8 @@ class OSFApp(QDialog):
             # (self.preferences.containing_folder_updated_signal, self.preferences.update_containing_folder_text_box),
 
             # start screen
-            (self.start_screen.done_logging_in_signal, self.start),
-            (self.start_screen.quit_application_signal, self.quit),
+            # (self.start_screen.done_logging_in_signal, self.start),
+            # (self.start_screen.quit_application_signal, self.quit),
 
         ]
         for signal, slot in signal_slot_pairs:
@@ -203,7 +202,7 @@ class OSFApp(QDialog):
         if self.preferences.isVisible():
             self.preferences.close()
 
-        self.start_screen.open_window()
+        # self.start_screen.open_window()
 
     def open_preferences(self):
         logger.debug('pausing for preference modification')
