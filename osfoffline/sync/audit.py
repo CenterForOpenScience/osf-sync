@@ -148,7 +148,8 @@ class FileAuditor(BaseAuditor):
             return (yield from self.operation_queue.put(operations.RemoteDeleteFile(self.local)))
         if not self.local:
             # File has been updated remotely, we don't have it locally.
-            return (yield from self.operation_queue.put(operations.LocalCreateFile(self.remote)))
+            return (yield from self.operation_queue.put(operations.LocalCreateFile(self.remote,
+                                                                                   self.node)))
             # File has been updated remotely, we have an old version.
         return (yield from self.operation_queue.put(operations.LocalUpdateFile(self.remote)))
 
@@ -202,7 +203,7 @@ class FolderAuditor(BaseAuditor):
             # Remote and local do not exist but a database entry exists
             return (yield from self.operation_queue.put(operations.DatabaseDeleteFolder(self.db)))
         # Remote and local do exist but a database entry does not exist
-        return (yield from self.operation_queue.put(operations.DatabaseCreateFolder(self.node, self.remote)))
+        return (yield from self.operation_queue.put(operations.DatabaseCreateFolder(self.remote, self.node)))
 
     @asyncio.coroutine
     def _on_remote_changed(self):

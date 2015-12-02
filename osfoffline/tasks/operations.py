@@ -81,13 +81,15 @@ class LocalKeepFile(BaseOperation):
 
 # Download File
 class LocalCreateFile(BaseOperation):
-    """Download an individual file from the OSF"""
-    def __init__(self, remote, *args, **kwargs):
+    """Download an individual file from the OSF into a folder that already exists"""
+    def __init__(self, remote, node, *args, **kwargs):
         """
-        :param StorageObject remote: A reference to the remote storage client object
+        :param StorageObject remote: The response from the server describing a remote file
+        :param Node node: Database object describing the parent node of the file
         """
         super(LocalCreateFile, self).__init__(*args, **kwargs)
         self.remote = remote
+        self.node = node
 
     @asyncio.coroutine
     def _run(self):
@@ -103,6 +105,13 @@ class LocalCreateFile(BaseOperation):
                     break
                 fobj.write(chunk)
         yield from resp.release()
+
+        # After file is saved, create a new database object to track the file
+        #   If the task fails, the database task will be kicked off separately by the auditor on a future cycle
+        # TODO: How do we handle a filename being aliased in local storage (due to OS limitations)?
+        #   TODO: To keep tasks decoupled, perhaps a shared rename function used by DB task?
+        db_task = DatabaseCreateFile(self.remote, self.node, done_callback=self._done_callback)
+        db_task.run()
 
 
 class LocalCreateFolder(BaseOperation):
@@ -165,6 +174,11 @@ class RemoteCreateFile(BaseOperation):
     def _run(self):
         print("Create Remote File: {}".format(self.local))
 
+        # TODO: This is how we used to do it... move some upload logic to the new client.osf module
+        remote_file_folder = yield from self.osf_query.upload_file(local_file_folder)
+
+
+        # TODO: Update database state at end of operation to show file was uploaded... or not? No state? Check self.db instance and ask Michael what fields are relevant in the final design
 
 class RemoteCreateFolder(BaseOperation):
     """Upload a folder (and contents) to the OSF and create multiple DB instances to track changes"""
@@ -211,21 +225,44 @@ class RemoteDeleteFolder(BaseOperation):
 
 
 class DatabaseCreateFile(BaseOperation):
-    def __init__(self, remote, *args, **kwargs):
+    """Create a file in the database, based on information provided from the remote server,
+        and attach the file to the specified node"""
+    # TODO: As written, the dependency on remote object implies it will never create a DB entry unless it is based on data on the server
+    #   TODO (local file creation won't trigger DB operation? Is that intentional design?)
+    def __init__(self, remote, node, *args, **kwargs):
+        """
+        :param StorageObject remote: The response from the server describing a remote file
+        :param Node node: Database object describing the parent node of the file
+        """
         super(DatabaseCreateFile, self).__init__(*args, **kwargs)
         self.remote = remote
+        self.node = node
 
     @asyncio.coroutine
     def _run(self):
-        print("Database File Create: {}".format(self.remote))
+        logging.info("Database File Create: {}".format(self.remote))
+
+        parent = self.remote.parent.id if self.remote.parent else None
+
+        new_instance = models.File(
+            name=self.remote.name,
+            type=self.remote.kind,
+            osf_id=self.remote.id,
+            provider=self.remote.provider,
+            osf_path=self.remote.id,
+            user=session.query(models.User).one(),
+            parent=parent,
+            node=self.node
+        )
+        save(session, new_instance)
 
 
 class DatabaseCreateFolder(BaseOperation):
 
-    def __init__(self, node, remote, *args, **kwargs):
+    def __init__(self, remote, node, *args, **kwargs):
         super(DatabaseCreateFolder, self).__init__(*args, **kwargs)
-        self.node = node
         self.remote = remote
+        self.node = node
 
     @asyncio.coroutine
     def _run(self):

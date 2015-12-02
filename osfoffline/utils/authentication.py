@@ -15,6 +15,14 @@ from osfoffline.polling_osf_manager.remote_objects import RemoteUser
 from osfoffline.exceptions import AuthError
 
 
+def get_current_user():
+    """
+    Fetch the database object representing the currently active user
+    :return: A user object (raises exception if none found)
+    :rtype: User
+    """
+    # TODO: Implement, then use this wherever pattern repeats itself
+
 class AuthClient(object):
     """Manages authorization flow """
 
