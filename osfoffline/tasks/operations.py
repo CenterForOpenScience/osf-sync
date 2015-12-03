@@ -36,6 +36,7 @@ class BaseOperation(abc.ABC):
         """
         :param function done_callback: An optional function to be called to store the task result.
         """
+        # TODO: Evaluate use of done_callback. Main advantage: ability to track status of tasks that fire off secondary tasks.
         self._done_callback = done_callback
 
     @asyncio.coroutine
@@ -44,15 +45,15 @@ class BaseOperation(abc.ABC):
         try:
             self._run()
         except Exception as e:
-            result_tuple = self._format_error(e)
+            task_result = self._format_error(e)
             logging.exception('Failed to perform operation {}: {}'.format(
-                result_tuple.event_type, str(result_tuple.exc)))
+                task_result.event_type, str(task_result.exc)))
         else:
-            # TODO: Add a tuple describing the event if it ran successfully
-            result_tuple = None
+            # TODO: Add a report describing the event if it ran successfully
+            task_result = None
 
         if self._done_callback is not None:
-                self._done_callback(result_tuple)
+                self._done_callback(task_result)
 
     def _format_error(self, exc):
         """
@@ -97,6 +98,7 @@ class LocalCreateFile(BaseOperation):
         logging.info("Create Local File: {}".format(self.remote))
         db_parent = session.query(models.File).filter(models.File.osf_id == self.remote.parent.id).one()
         path = os.path.join(db_parent.path, self.remote.name)
+        # TODO: Create temp file in target directory while downloading, and rename when done. (check that no temp file exists)
         with open(path, 'wb') as fobj:
             # TODO: Flesh out remote object API client
             resp = yield from self.remote.request_session.request('GET', self.remote.raw['links']['download'])
@@ -166,19 +168,26 @@ class LocalDeleteFolder(BaseOperation):
 
 class RemoteCreateFile(BaseOperation):
     """Upload a file to the OSF, and update the database to reflect the new OSF id"""
-    def __init__(self, local, *args, **kwargs):
+    def __init__(self, local, node, *args, **kwargs):
         super(RemoteCreateFile, self).__init__(*args, **kwargs)
         self.local = local
+        self.node = node
 
     @asyncio.coroutine
     def _run(self):
-        print("Create Remote File: {}".format(self.local))
+        logging.info("Create Remote File: {}".format(self.local))
+
 
         ## TODO: This is how we used to do it... move some upload logic to the new client.osf module
         #remote_file_folder = yield from self.osf_query.upload_file(local_file_folder)
 
+        # TODO: Add pattern matching to filter ignored list
+        #client.upload(node_target, self.local.pathstring)  # Pseudocode: Upload file from the specified path to self.node.osf_id target url
 
-        ## TODO: Update database state at end of operation to show file was uploaded... or not? No state? Check self.db instance and ask Michael what fields are relevant in the final design
+        # TODO: APIv2 will give back endpoint that can be parsed. Waterbutler may return something *similar* and need to coerce to work with task object
+        #db_task = DatabaseCreateFile(remote_response_dict, self.node, done_callback=self._done_callback)
+        #db_task.run()
+
 
 class RemoteCreateFolder(BaseOperation):
     """Upload a folder (and contents) to the OSF and create multiple DB instances to track changes"""
@@ -203,7 +212,7 @@ class RemoteUpdateFile(BaseOperation):
 
 
 class RemoteDeleteFile(BaseOperation):
-    """Delete a file that already exists remotely"""
+    """Delete a file that is already known to exist remotely"""
     def __init__(self, remote, *args, **kwargs):
         super(RemoteDeleteFile, self).__init__(*args, **kwargs)
         self.remote = remote
