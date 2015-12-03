@@ -72,11 +72,10 @@ class OSFApp(QDialog):
             (self.start_tray_signal, self.tray.start),
 
             # preferences
-            (self.preferences.preferences_window.desktopNotifications.stateChanged, self.preferences.alerts_changed),
-            (self.preferences.preferences_window.startOnStartup.stateChanged, self.preferences.startup_changed),
-            (self.preferences.preferences_window.changeFolderButton.clicked, self.preferences.set_containing_folder),
+            (self.preferences.ui.desktopNotifications.stateChanged, self.preferences.alerts_changed),
+            (self.preferences.ui.changeFolderButton.clicked, self.preferences.set_containing_folder),
             (self.preferences.preferences_closed_signal, self.resume),
-            (self.preferences.preferences_window.accountLogOutButton.clicked, self.logout),
+            (self.preferences.ui.accountLogOutButton.clicked, self.logout),
             (self.preferences.containing_folder_updated_signal, self.tray.set_containing_folder),
             # (self.preferences.containing_folder_updated_signal, self.preferences.update_containing_folder_text_box),
 
@@ -87,22 +86,6 @@ class OSFApp(QDialog):
         ]
         for signal, slot in signal_slot_pairs:
             signal.connect(slot)
-
-    def _can_restart_background_worker(self):
-        try:
-            user = session.query(User).one()
-        except:
-            return False
-        if not user.logged_in:
-            return False
-        if not os.path.isdir(user.osf_local_folder_path):
-            return False
-        if not self.background_worker:
-            return False
-        if self.background_worker.is_alive():
-            return False
-
-        return True
 
     def start(self):
         logger.debug('Start in main called.')
@@ -176,14 +159,7 @@ class OSFApp(QDialog):
             QApplication.instance().quit()
 
     def sync_now(self):
-        if not self.background_worker:
-            self.start()
-        try:
-            self.pause()
-        except RuntimeError:
-            pass
-
-        self.resume()
+        self.background_worker.sync_now()
 
     def set_containing_folder_initial(self):
         return QFileDialog.getExistingDirectory(self, "Choose where to place OSF folder")

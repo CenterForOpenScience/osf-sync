@@ -107,6 +107,9 @@ class BackgroundWorker(threading.Thread):
             self.stop()
             raise exception
 
+    def sync_now(self):
+        self.loop.call_soon_threadsafe(asyncio.ensure_future, self.remote_sync.sync_now())
+
     def stop(self):
         # Note: This method is **NOT called from this current thread**
         # All method/function/routines/etc MUST be thread safe from here out

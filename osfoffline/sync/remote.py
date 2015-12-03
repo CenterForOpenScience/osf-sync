@@ -4,6 +4,8 @@ import logging
 
 from osfoffline import settings
 from osfoffline.client.osf import OSFClient
+from osfoffline.database import session
+from osfoffline.database.models import Node
 from osfoffline.sync.exceptions import FolderNotInFileSystem
 from osfoffline.sync.ext.audit import FolderAuditor
 from osfoffline.utils.path import ProperPath
@@ -34,12 +36,7 @@ class RemoteSync:
 
     @asyncio.coroutine
     def _check(self, initial):
-        nodes = [
-            node for node in
-            self.user.top_level_nodes
-            if node.osf_id in self.user.guid_for_top_level_nodes_to_sync
-        ]
-        for node in nodes:
+        for node in session.query(Node).all():
             logger.info('Resyncing node {}'.format(node))
             remote, local = yield from self._preprocess_node(node)
             auditor = FolderAuditor(node, self.operation_queue, remote, local, initial=initial)
@@ -50,7 +47,7 @@ class RemoteSync:
 
     @asyncio.coroutine
     def _preprocess_node(self, node):
-        remote_node = yield from self.client.get_node(node.osf_id)
+        remote_node = yield from self.client.get_node(node.id)
         remote = yield from remote_node.get_storage('osfstorage')
         local = ProperPath(os.path.join(node.path, settings.OSF_STORAGE_FOLDER), True)
         os.makedirs(local.full_path, exist_ok=True)
