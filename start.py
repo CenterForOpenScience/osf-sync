@@ -5,8 +5,8 @@ from PyQt5.QtWidgets import QApplication
 from PyQt5.QtWidgets import QMessageBox
 from PyQt5.QtWidgets import QSystemTrayIcon
 
-from osfoffline.application.main import OSFApp
 from osfoffline.database import drop_db
+from osfoffline.gui.qt import OSFOfflineQT
 from osfoffline.utils.singleton import SingleInstance
 
 
@@ -31,7 +31,7 @@ def start():
 
     QApplication.setQuitOnLastWindowClosed(False)
 
-    if not OSFApp(app).start():
+    if not OSFOfflineQT(app).start():
         return sys.exit(1)
     return sys.exit(app.exec_())
 

@@ -11,8 +11,8 @@ from PyQt5.QtWidgets import QMenu
 from osfoffline import settings
 from osfoffline.database import session
 from osfoffline.database.models import User
+from osfoffline.gui.qt.preferences import Preferences
 from osfoffline.utils.validators import validate_containing_folder
-from osfoffline.views.preferences import Preferences
 
 
 logger = logging.getLogger(__name__)

@@ -1,7 +1,7 @@
 <!DOCTYPE RCC>
 <RCC version="1.0">
     <qresource>
-        <file alias="cos_logo_backup.png">images/cos_logo_backup.png</file>
+        <file alias="tray_icon.png">images/tray_icon.png</file>
     </qresource>
 </RCC>
 

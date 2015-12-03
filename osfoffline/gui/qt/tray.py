@@ -1,29 +1,21 @@
-#!/usr/bin/env python
-import asyncio
 import logging
 import os
 
-from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy.orm.exc import MultipleResultsFound
-from sqlalchemy.orm.exc import NoResultFound
+from PyQt5.Qt import QIcon
 from PyQt5.QtCore import pyqtSignal
 from PyQt5.QtWidgets import QApplication
-from PyQt5.Qt import QIcon
 from PyQt5.QtWidgets import QFileDialog
 from PyQt5.QtWidgets import QSystemTrayIcon
+
+from sqlalchemy.orm.exc import NoResultFound
 
 from osfoffline.application.background import BackgroundWorker
 from osfoffline.database import session
 from osfoffline.database.models import User
 from osfoffline.database.utils import save
-from osfoffline.exceptions import AuthError
-from osfoffline.utils.authentication import AuthClient
+from osfoffline.gui.qt.login import LoginScreen
+from osfoffline.gui.qt.menu import OSFOfflineMenu
 from osfoffline.utils.validators import validate_containing_folder
-from osfoffline.views.preferences import Preferences
-from osfoffline.views.login import LoginScreen
-import osfoffline.alerts as AlertHandler
-from osfoffline.application.menu import OSFOfflineMenu
-import osfoffline.views.rsc.resources  # noqa
 
 
 # RUN_PATH = "HKEY_CURRENT_USER\\Software\\Microsoft\\Windows\\CurrentVersion\\Run"
@@ -31,12 +23,12 @@ import osfoffline.views.rsc.resources  # noqa
 logger = logging.getLogger(__name__)
 
 
-class OSFApp(QSystemTrayIcon):
+class OSFOfflineQT(QSystemTrayIcon):
     login_signal = pyqtSignal()
     containing_folder_updated_signal = pyqtSignal()
 
     def __init__(self, application):
-        super().__init__(QIcon(':/cos_logo_backup.png'), application)
+        super().__init__(QIcon(':/tray_icon.png'), application)
         self.setContextMenu(OSFOfflineMenu(self))
         self.show()
 
@@ -44,7 +36,7 @@ class OSFApp(QSystemTrayIcon):
         self.background_worker = BackgroundWorker()
 
         # connect all signal-slot pairs
-        self.setup_connections()
+        # self.setup_connections()
 
     def setup_connections(self):
         # [ (signal, slot) ]
