@@ -40,12 +40,11 @@ class OSFApp(QSystemTrayIcon):
         self.setContextMenu(OSFOfflineMenu(self))
         self.show()
 
-        # views
-        # AlertHandler.setup_alerts(self.tray.tray_icon, self.tray.tray_alert_signal)
+        # worker
+        self.background_worker = BackgroundWorker()
 
         # connect all signal-slot pairs
-        # self.setup_connections()
-        # self.background_worker = BackgroundWorker()
+        self.setup_connections()
 
     def setup_connections(self):
         # [ (signal, slot) ]
@@ -84,7 +83,7 @@ class OSFApp(QSystemTrayIcon):
         containing_folder = os.path.dirname(user.folder or '')
         while not validate_containing_folder(containing_folder):
             logger.warning('Invalid containing folder: {}'.format(containing_folder))
-            AlertHandler.warn('Invalid containing folder. Please choose another.')
+            # AlertHandler.warn('Invalid containing folder. Please choose another.')
             containing_folder = os.path.abspath(QFileDialog.getExistingDirectory(caption='Choose where to place OSF folder'))
 
         user.folder = os.path.join(containing_folder, 'OSF')

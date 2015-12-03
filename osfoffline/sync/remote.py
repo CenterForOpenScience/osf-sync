@@ -18,12 +18,11 @@ class RemoteSync:
 
     COMPONENTS_FOLDER_NAME = 'Components'
 
-    def __init__(self, operation_queue, intervention_queue, user):
+    def __init__(self, operation_queue, user):
         self.operation_queue = operation_queue
-        self.intervention_queue = intervention_queue
         self.user = user
-        self.client = OSFClient(self.user.oauth_token)
 
+        self.client = OSFClient(self.user.oauth_token)
         self._sync_now_fut = asyncio.Future()
 
         if not os.path.isdir(self.user.folder):
@@ -40,11 +39,9 @@ class RemoteSync:
         for node in session.query(Node).all():
             logger.info('Resyncing node {}'.format(node))
             remote, local = yield from self._preprocess_node(node)
-            auditor = FolderAuditor(node, self.operation_queue, self.intervention_queue, remote, local, initial=initial)
+            auditor = FolderAuditor(node, self.operation_queue, remote, local, initial=initial)
             yield from auditor.audit()
 
-        logger.info('Finishing intervention queue')
-        yield from self.intervention_queue.join()
         logger.info('Finishing operation queue')
         yield from self.operation_queue.join()
 

@@ -1,6 +1,9 @@
 import asyncio
 import logging
 
+from asyncio.queues import Queue
+
+
 from osfoffline.tasks import operations
 
 
@@ -52,7 +55,3 @@ class OperationsQueue(Queue):
         if not isinstance(event, operations.BaseOperation):
             raise Exception('Invalid Event Type')
         yield from super().put(event)
-
-
-class InterventionQueue(Queue):
-    pass

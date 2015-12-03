@@ -6,6 +6,7 @@ import logging
 from osfoffline.database import session
 from osfoffline.database import models
 from osfoffline.database.utils import save
+from osfoffline.tasks.notifications import Notification
 
 logger = logging.getLogger(__name__)
 
@@ -47,6 +48,8 @@ class LocalCreateFile(BaseOperation):
                     break
                 fobj.write(chunk)
         yield from resp.release()
+
+        Notification().info("Downloaded File: {}".format(self.remote.name))
 
 
 class LocalCreateFolder(BaseOperation):

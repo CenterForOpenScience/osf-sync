@@ -9,7 +9,8 @@ from osfoffline.database import models
 from osfoffline.database import session
 from osfoffline.sync.local import LocalSync
 from osfoffline.sync.remote import RemoteSync
-from osfoffline.tasks.queue import OperationsQueue, InterventionQueue
+from osfoffline.tasks import Intervention, Notification
+from osfoffline.tasks.queue import OperationsQueue
 
 
 logger = logging.getLogger(__name__)
@@ -35,6 +36,12 @@ class BackgroundWorker(threading.Thread):
         #     # FIXME: Document these limits and provide better user notification.
         #     #    See http://pythonhosted.org/watchdog/installation.html for limits.
         #     raise RuntimeError('Limit of watched items reached') from e
+
+    def set_intervention_cb(self, cb):
+        Intervention().set_callback(cb)
+
+    def set_notification_cb(self, cb):
+        Notification().set_callback(cb)
 
     def _ensure_event_loop(self):
         """Ensure the existance of an eventloop
@@ -65,14 +72,12 @@ class BackgroundWorker(threading.Thread):
         self.operation_queue_task = asyncio.ensure_future(self.operation_queue.start())
         self.operation_queue_task.add_done_callback(self._handle_exception)
 
-        self.intervention_queue = InterventionQueue()
-
         logger.debug('Initializing Remote Sync')
-        self.remote_sync = RemoteSync(self.operation_queue, self.intervention_queue, self.user)
+        self.remote_sync = RemoteSync(self.operation_queue, self.user)
         self.loop.run_until_complete(self.remote_sync.initialize())
 
         logger.debug('Starting Local Sync')
-        self.local_sync = LocalSync(self.user, self.operation_queue, self.intervention_queue)
+        self.local_sync = LocalSync(self.user, self.operation_queue)
         self.local_sync.start()
 
         logger.debug('Starting Remote Sync')

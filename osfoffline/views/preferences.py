@@ -19,7 +19,6 @@ from osfoffline.database.models import User, Node
 from osfoffline.database.utils import save
 from osfoffline.utils import path
 from osfoffline.views.rsc.preferences_rc import Ui_Settings  # REQUIRED FOR GUI
-import osfoffline.alerts as AlertHandler
 
 
 class Preferences(QDialog):
@@ -72,7 +71,8 @@ class Preferences(QDialog):
         event.accept()
 
     def alerts_changed(self):
-        AlertHandler.show_alerts = self.ui.desktopNotifications.isChecked()
+        # AlertHandler.show_alerts = self.ui.desktopNotifications.isChecked()
+        pass
 
     def set_containing_folder(self):
         new_containing_folder = QFileDialog.getExistingDirectory(self, "Choose where to place OSF folder")
@@ -85,8 +85,8 @@ class Preferences(QDialog):
             os.makedirs(osf_path)
         elif os.path.isfile(osf_path):
             # FIXME: Consolidate redundant messages
-            AlertHandler.warn(
-                "An OSF file exists where you would like to create the OSF folder. Delete it, or choose a different location")
+            # AlertHandler.warn(
+            #     "An OSF file exists where you would like to create the OSF folder. Delete it, or choose a different location")
             logging.warning("An OSF file exists where you would like to create the OSF folder.")
             return
 

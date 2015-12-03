@@ -11,13 +11,12 @@ logger = logging.getLogger(__name__)
 
 class LocalSync(ConsolidatedEventHandler):
 
-    def __init__(self, user, operation_queue, intervention_queue):
+    def __init__(self, user, operation_queue):
         super().__init__()
         self.folder = user.folder
 
         self.observer = Observer()
         self.operation_queue = operation_queue
-        self.intervention_queue = intervention_queue
         self.observer.schedule(self, self.folder, recursive=True)
 
     def start(self):
