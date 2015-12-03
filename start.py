@@ -1,12 +1,13 @@
 #!/usr/bin/env python
 import sys
 
-from PyQt5.QtWidgets import QApplication, QMessageBox, QSystemTrayIcon, QDialog
+from PyQt5.QtWidgets import QApplication
+from PyQt5.QtWidgets import QMessageBox
+from PyQt5.QtWidgets import QSystemTrayIcon
 
-from osfoffline.utils.singleton import SingleInstance
 from osfoffline.application.main import OSFApp
 from osfoffline.database import drop_db
-from osfoffline.views.login import LoginScreen
+from osfoffline.utils.singleton import SingleInstance
 
 
 def running_warning():
@@ -30,15 +31,9 @@ def start():
 
     QApplication.setQuitOnLastWindowClosed(False)
 
-    if LoginScreen().exec_() == QDialog.Accepted:
-        osf = OSFApp()
-
-        osf.start()
-
-        osf.hide()
-        sys.exit(app.exec_())
-
-    return sys.exit(1)
+    if not OSFApp(app).start():
+        return sys.exit(1)
+    return sys.exit(app.exec_())
 
 
 if __name__ == "__main__":

@@ -90,8 +90,8 @@ class Preferences(QDialog):
             logging.warning("An OSF file exists where you would like to create the OSF folder.")
             return
 
-        user = session.query(User).filter(User.logged_in).one()
-        user.osf_local_folder_path = os.path.join(osf_path)
+        user = session.query(User).one()
+        user.folder = os.path.join(osf_path)
 
         self.ui.containingFolderTextEdit.setText(self._translate("Preferences", self.containing_folder))
         self.open_window(tab=Preferences.GENERAL)  # todo: dynamically update ui????
@@ -99,7 +99,7 @@ class Preferences(QDialog):
 
     def update_sync_nodes(self):
         self.selected_nodes = []
-        user = session.query(User).filter(User.logged_in).one()
+        user = session.query(User).one()
         for tree_item, node in self.tree_items:
             checked = tree_item.checkState(self.PROJECT_SYNC_COLUMN) == Qt.Checked
             try:
@@ -136,9 +136,9 @@ class Preferences(QDialog):
         self.activateWindow()
 
     def selector(self, selected_index):
-        user = session.query(User).filter(User.logged_in).one()
+        user = session.query(User).one()
         if selected_index == self.GENERAL:
-            containing_folder = os.path.dirname(user.osf_local_folder_path)
+            containing_folder = os.path.dirname(user.folder)
             self.ui.containingFolderTextEdit.setText(self._translate("Preferences", containing_folder))
         elif selected_index == self.OSF:
             self.ui.label.setText(self._translate("Preferences", user.full_name))
@@ -153,7 +153,6 @@ class Preferences(QDialog):
 
     def reset_tree_widget(self):
         self.tree_items.clear()
-        self.checked_items.clear()
         self.ui.treeWidget.clear()
 
     @QtCore.pyqtSlot(list)
@@ -187,7 +186,7 @@ class NodeFetcher(QtCore.QObject):
 
     def fetch(self):
         loop = self.ensure_event_loop()
-        user = session.query(User).filter(User.logged_in).one()
+        user = session.query(User).one()
         try:
             client = OSFClient(bearer_token=user.oauth_token)
             client_user = loop.run_until_complete(client.get_user())

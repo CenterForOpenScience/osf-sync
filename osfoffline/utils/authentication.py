@@ -68,10 +68,9 @@ class AuthClient(object):
         logging.debug('User doesnt exist. Attempting to authenticate, then creating user.')
         personal_access_token = yield from self._authenticate(username, password)
         user = User(
+            id='',
             full_name='',
-            osf_id='',
-            osf_login=username,
-            osf_local_folder_path='',
+            login=username,
             oauth_token=personal_access_token,
         )
         return (yield from self.populate_user_data(user))
@@ -100,8 +99,8 @@ class AuthClient(object):
             json_resp = yield from resp.json()
             data = json_resp['data']
 
+            user.id = data['id']
             user.full_name = data['attributes']['full_name']
-            user.osf_id = data['id']
 
             return user
 
@@ -127,7 +126,6 @@ class AuthClient(object):
         else:
             user = yield from self._create_user(username, password)
 
-        user.logged_in = True
         try:
             save(session, user)
         except SQLAlchemyError:

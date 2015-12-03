@@ -3,7 +3,6 @@ import logging
 
 from watchdog.observers import Observer
 
-from osfoffline.tasks import operations
 from osfoffline.sync.ext.watchdog import ConsolidatedEventHandler
 
 
@@ -14,7 +13,7 @@ class LocalSync(ConsolidatedEventHandler):
 
     def __init__(self, user, operation_queue, intervention_queue):
         super().__init__()
-        self.folder = user.osf_local_folder_path
+        self.folder = user.folder
 
         self.observer = Observer()
         self.operation_queue = operation_queue

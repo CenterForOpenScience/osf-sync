@@ -37,7 +37,7 @@ class LocalCreateFile(BaseOperation):
     @asyncio.coroutine
     def run(self):
         logger.info("Create Local File: {}".format(self.remote))
-        db_parent = session.query(models.File).filter(models.File.osf_id == self.remote.parent.id).one()
+        db_parent = session.query(models.File).filter(models.File.id == self.remote.parent.id).one()
         path = os.path.join(db_parent.path, self.remote.name)
         with open(path, 'wb') as fobj:
             resp = yield from self.remote.request_session.request('GET', self.remote.raw['links']['download'])
@@ -167,9 +167,9 @@ class DatabaseFolderCreate(BaseOperation):
     def run(self):
         logger.info("Database Folder Create: {}".format(self.remote))
         save(session, models.File(
+            id=self.remote.id,
             name=self.remote.name,
             type=self.remote.kind,
-            osf_id=self.remote.id,
             provider=self.remote.provider,
             osf_path=self.remote.id,
             user=session.query(models.User).one(),

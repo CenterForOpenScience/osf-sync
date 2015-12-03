@@ -60,7 +60,7 @@ class BaseAuditor(abc.ABC):
             if self.remote:
                 self.db = session.query(File).filter(
                     File.is_folder == self.remote.is_dir,
-                    File.osf_id == self.remote.id
+                    File.id == self.remote.id
                 ).one()
             else:
                 self.db = next((

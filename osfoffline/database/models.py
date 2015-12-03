@@ -2,15 +2,14 @@ import os
 import hashlib
 import datetime
 
-from sqlalchemy import ForeignKey, Enum
-from sqlalchemy.orm import relationship, backref, validates
 from sqlalchemy import Column, Integer, Boolean, String, DateTime
+from sqlalchemy import ForeignKey, Enum
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.ext.hybrid import hybrid_property
+from sqlalchemy.orm import relationship, backref, validates
 
-from osfoffline.database.types import JSONEncodedDict
-from osfoffline.utils.path import make_folder_name
 from osfoffline import settings
+from osfoffline.utils.path import make_folder_name
 
 
 Base = declarative_base()
@@ -19,40 +18,18 @@ Base = declarative_base()
 class User(Base):
     __tablename__ = 'user'
 
-    id = Column(Integer, primary_key=True)
-    full_name = Column(String)
-    osf_login = Column(String, unique=True)
-    osf_local_folder_path = Column(String)
-    oauth_token = Column(String)
-    osf_id = Column(String, unique=True, nullable=True, default=None)  # multiple things allowed to be null
+    id = Column(String, primary_key=True)
 
-    logged_in = Column(Boolean, default=False)
+    folder = Column(String)
+    full_name = Column(String, nullable=False)
+    login = Column(String, nullable=False)
+    oauth_token = Column(String, nullable=False)
 
-    guid_for_top_level_nodes_to_sync = Column(JSONEncodedDict(512), default=[])
-
-    nodes = relationship(
-        "Node",
-        backref=backref('user'),
-        cascade="all, delete-orphan"
-    )
-
-    files = relationship(
-        "File",
-        backref=backref('user'),
-        cascade="all, delete-orphan"
-    )
-
-    @hybrid_property
-    def top_level_nodes(self):
-        top_nodes = []
-        for node in self.nodes:
-            if node.top_level:
-                top_nodes.append(node)
-        return top_nodes
+    files = relationship('File', backref=backref('user'), cascade='all, delete-orphan')
+    nodes = relationship('Node', backref=backref('user'), cascade='all, delete-orphan')
 
     def __repr__(self):
-        return "<User(fullname={}, osf_local_folder_path={})>".format(
-            self.full_name, self.osf_local_folder_path)
+        return "<User(fullname={}, folder={})>".format(self.full_name, self.folder)
 
 
 class Node(Base):
@@ -81,7 +58,7 @@ class Node(Base):
         if self.parent:
             return os.path.join(self.parent.path, 'Components', make_folder_name(self.title, node_id=self.id))
         else:
-            return os.path.join(self.user.osf_local_folder_path, make_folder_name(self.title, node_id=self.id))
+            return os.path.join(self.user.folder, make_folder_name(self.title, node_id=self.id))
 
     @hybrid_property
     def top_level_file_folders(self):
@@ -94,7 +71,7 @@ class Node(Base):
     @validates('path')
     def validate_path(self, key, path):
         if not self.parent:
-            assert self.user.osf_local_folder_path
+            assert self.user.folder
         return path
 
     @validates('top_level')
@@ -115,34 +92,21 @@ class File(Base):
     FOLDER = 'folder'
     FILE = 'file'
 
-    DEFAULT_PROVIDER = 'osfstorage'
-
-    id = Column(Integer, primary_key=True)
+    id = Column(String, primary_key=True)
     name = Column(String)
-
-    hash = Column(String)
 
     md5 = Column(String)
     sha256 = Column(String)
 
+    size = Column(Integer)
+
     type = Column(Enum(FOLDER, FILE), nullable=False)
     date_modified = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
-    # todo: osf_id and osf_path are duplicates right now. One needs to be removed.
-    osf_id = Column(String, nullable=True,
-                    default=None)  # multiple things allowed to be null. #todo: unique=True (handle moved on osf)
-    provider = Column(String, default=DEFAULT_PROVIDER)
+    provider = Column(String, nullable=False)
 
     # NOTE: this is called path. It is not any type of file/folder path. Think of it just as an id.
     osf_path = Column(String, nullable=True,
                       default=None)  # todo: unique=True. (can't right now due to duplicates when moved on osf)
-
-    locally_created = Column(Boolean, default=False)
-    locally_deleted = Column(Boolean, default=False)
-    locally_renamed = Column(Boolean, default=False)
-    locally_moved = Column(Boolean, default=False)
-
-    previous_node_osf_id = Column(String, nullable=True, default=None)
-    previous_provider = Column(String, default=DEFAULT_PROVIDER)
 
     user_id = Column(Integer, ForeignKey('user.id'), nullable=False)
     node_id = Column(Integer, ForeignKey('node.id'), nullable=False)
@@ -157,15 +121,11 @@ class File(Base):
     #
     # remote_side is ONLY used with hierarchical relationships such as this.
 
-    files = relationship(
-        "File",
-        backref=backref('parent', remote_side=[id]),
-        cascade="all",
-    )
+    children = relationship('File', backref=backref('parent', remote_side=[id]), cascade='all')
 
     @hybrid_property
     def is_provider(self):
-        return (self.name == self.provider) and (self.parent is None) and (self.is_folder)
+        return (self.parent is None) and (self.is_folder)
 
     @hybrid_property
     def is_file(self):
@@ -202,13 +162,6 @@ class File(Base):
             self.hash = m.hexdigest()
             self.md5, self.sha256 = m.hexdigest(), s.hexdigest()
 
-    @hybrid_property
-    def size(self):
-        try:
-            return os.stat(self.path).st_size
-        except FileNotFoundError:  # file was deleted locally
-            return 0
-
     def locally_create_children(self):
         self.locally_created = True
         if self.is_folder:
@@ -232,24 +185,6 @@ class File(Base):
         if self.is_file:
             assert self.files == []
         return files
-
-    @validates('osf_id')
-    def validate_osf_id(self, key, osf_id):
-        # if self is provider or self does not have an osf id then all good.
-        if (self.is_provider) or (not self.osf_id):
-            return osf_id
-        else:
-            for peer in self.parent.files:
-                if self.id != peer.id:
-                    # peers cannot have same osf_id as self
-                    assert self.osf_id != peer.osf_id
-
-    @validates('locally_moved')
-    def validate_locally_moved(self, key, locally_moved):
-        if locally_moved:
-            assert self.previous_node_osf_id
-            assert self.previous_provider
-        return locally_moved
 
     def __repr__(self):
         return "<File ({}), type={}, name={}, path={}, parent_id={}>".format(

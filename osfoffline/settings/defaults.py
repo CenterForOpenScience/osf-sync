@@ -10,6 +10,7 @@ PROJECT_AUTHOR = 'cos'
 APPLICATION_SCOPES = 'osf.full_write'
 
 # Base URL for API server; used to fetch data
+OSF_URL = 'https://test.osf.io'
 API_BASE = 'https://test-api.osf.io'
 FILE_BASE = 'https://test-files.osf.io'
 

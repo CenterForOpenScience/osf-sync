@@ -59,7 +59,7 @@ class BackgroundWorker(threading.Thread):
         # self.loop.set_debug(True)
 
         self.user = session.query(models.User).one()
-        self.root_folder = self.user.osf_local_folder_path
+        self.root_folder = self.user.folder
 
         self.operation_queue = OperationsQueue()
         self.operation_queue_task = asyncio.ensure_future(self.operation_queue.start())

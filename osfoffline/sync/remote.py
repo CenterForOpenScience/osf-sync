@@ -26,7 +26,7 @@ class RemoteSync:
 
         self._sync_now_fut = asyncio.Future()
 
-        if not os.path.isdir(self.user.osf_local_folder_path):
+        if not os.path.isdir(self.user.folder):
             raise FolderNotInFileSystem
 
     @asyncio.coroutine

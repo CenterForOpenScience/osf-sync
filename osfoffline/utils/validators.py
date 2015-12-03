@@ -2,7 +2,7 @@ import os
 
 
 def validate_containing_folder(containing_folder):
-    if (not containing_folder) or (containing_folder == ''):
+    if not containing_folder:
         return False
 
     try:
