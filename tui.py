@@ -39,60 +39,6 @@ class StdWrapper:
         return self.std.fileno()
 
 
-class BackgroundWorker(threading.Thread):
-
-    def __init__(self):
-        super().__init__()
-        self.loop = None
-
-    def _ensure_event_loop(self):
-        try:
-            return asyncio.get_event_loop()
-        except (AssertionError, RuntimeError):
-            asyncio.set_event_loop(asyncio.new_event_loop())
-        return asyncio.get_event_loop()
-
-    def run(self):
-        self.loop = self._ensure_event_loop()
-
-        user = session.query(models.User).one()
-        root_folder = user.osf_local_folder_path
-
-        self.operation_queue = OperationsQueue()
-        self.operation_queue_task = asyncio.ensure_future(self.operation_queue.start())
-        self.operation_queue_task.add_done_callback(self._handle_exception)
-
-        self.intervention_queue = InterventionQueue()
-
-        self.remote_sync = RemoteSync(self.operation_queue, self.intervention_queue, user)
-        self.loop.run_until_complete(self.remote_sync.initialize())
-
-        self.local_sync = LocalSync(user, self.operation_queue, self.intervention_queue)
-        self.local_sync.start()
-
-        self.remote_sync_task = asyncio.ensure_future(self.remote_sync.start())
-        self.remote_sync_task.add_done_callback(self._handle_exception)
-
-        self.loop.run_forever()
-
-    def _handle_exception(self, future):
-        """
-        Handle exception raised while executing a coroutine
-        In present architecture this will not catch failures of individual tasks; an uncaught exception in a failed
-            task will halt execution of entire queue from that point onward
-        """
-        logger.info('In handle exception')
-        if future.exception():
-            logger.info('Sync.handle_exception')
-            # self.database_task.cancel()
-            # self.queue_task.cancel()
-            raise future.exception()
-
-    def stop(self):
-        if self.loop:
-            self.loop.stop()
-
-
 class DecisionForm(npyscreen.ActionPopup):
     SHOW_ATT = 2
     SHOW_ATX = 10
@@ -166,56 +112,22 @@ class LoginForm(npyscreen.ActionPopup):
         self.parentApp.setNextForm(None)
 
 
-# class SettingsForm(npyscreen.ActionPopup):
-#     SHOW_ATT = 2
-#     SHOW_ATX = 10
-#     DEFAULT_LINES = 12
-#     DEFAULT_COLUMNS = 60
-#     OK_BUTTON_TEXT = 'Save'
-#     CANCEL_BUTTON_BR_OFFSET = (2, 14)
-#
-#     def create(self):
-#         self.center_on_display()
-#
-#         self.name = 'Preferences'
-#
-#         self.folder = self.add(npyscreen.TitleFilename, name = "Folder:")
-#
-#         self.nodes = F.add(npyscreen.TitleMultiSelect, max_height =-2, value = [1,], name="Pick Several",
-#                 values = ["Option1","Option2","Option3"], scroll_exit=True)
-#
-#     def on_ok(self):
-#         log_in_task = asyncio.ensure_future(AuthClient().log_in(username=self.username.value, password=self.password.value))
-#
-#         try:
-#             asyncio.get_event_loop().run_until_complete(log_in_task)
-#             user = log_in_task.result()
-#         except AuthError as ex:
-#             logger.exception(ex.message)
-#             npyscreen.notify_confirm(ex.message, 'Log in Failed')
-#         else:
-#             logger.info('Successfully logged in user: {}'.format(user))
-#             self.parentApp.worker.start()
-#             self.parentApp.setNextForm('MAIN')
-#
-#     def on_cancel(self):
-#         self.parentApp.setNextForm(None)
-
-
 class MainForm(npyscreen.Form):
 
     def create(self):
-        self.queue_status = self.add(npyscreen.TitleText, name="Queue Status", max_height=3, value='0', editable=False, max_width=25)
+        self.queue_status = self.add(npyscreen.TitleText, name='Queue Status', max_height=3, value='0', editable=False, max_width=25)
 
         self.sync_now = self.add(npyscreen.ButtonPress, name='Sync Now', relx=-15, rely=2)
         self.sync_now.whenPressed = self._sync_now
 
-        self.queue = self.add(npyscreen.BoxTitle, name="Queue", rely=4, max_height=10)
+        self.queue = self.add(npyscreen.BoxTitle, name='Queue', rely=4, max_height=10)
         self.queue.entry_widget.scroll_exit = True
 
-        self.logs = self.add(npyscreen.BufferPager, name="Logs")
+        self.logs = self.add(npyscreen.BufferPager, name='Logs')
 
-        self.add_event_hander("STDWRITEEVENT", self.ev_std_write_event_handler)
+        self.add_event_hander('STDWRITEEVENT', self.ev_std_write_event_handler)
+        self.add_event_hander('INTERVENTIONEVENT', self.ev_intervention_event_handler)
+        self.add_event_hander('NOTIFICATIONEVENT', self.ev_notification_event_handler)
 
     def _sync_now(self):
         self.parentApp.worker.loop.call_soon_threadsafe(asyncio.ensure_future, self.parentApp.worker.remote_sync.sync_now())
@@ -225,24 +137,26 @@ class MainForm(npyscreen.Form):
         self.logs.buffer([msg])
         self.logs.display()
 
+    def ev_intervention_event_handler(self, event):
+        intervention = event.payload
+
+        df = DecisionForm(intervention, parentApp=self)
+        df.edit()
+
+        logger.info('Got decision {} for {}'.format(df.value, intervention))
+        intervention.resolve(df.value)
+
+    def ev_notification_event_handler(self, event):
+        notification = event.payload
+        self.logs.buffer([notification])
+        self.logs.display()
+
     def while_waiting(self):
         self.queue_status.value = '{}/{}'.format(self.parentApp.worker.operation_queue.qsize(), self.parentApp.worker.operation_queue.MAX_SIZE)
         self.queue_status.display()
         self.queue.values = list(self.parentApp.worker.operation_queue._queue)
         self.queue.display()
         self.logs.display()
-
-        try:
-            intervention = self.parentApp.worker.intervention_queue.get_nowait()
-        except asyncio.QueueEmpty:
-            pass
-        else:
-            df = DecisionForm(intervention, parentAppp=self)
-            df.edit()
-            logger.info('Got decision {} for {}'.format(df.value, intervention))
-            self.parentApp.worker.loop.call_soon_threadsafe(asyncio.ensure_future, intervention.resolve(df.value))
-            # self.worker.loop.call_soon_threadsafe(self.worker.intervention_queue.task_done)
-            self.parentApp.worker.intervention_queue.task_done()
 
 
 class App(npyscreen.StandardApp):
@@ -253,6 +167,9 @@ class App(npyscreen.StandardApp):
         self.worker = worker
         stdout_wrapper.on_write = self.on_std_write
         stderr_wrapper.on_write = self.on_std_write
+
+        self.worker.set_intervention_cb(self.on_intervention)
+        self.worker.set_notification_cb(self.on_notification)
 
     def onStart(self):
         self.keypress_timeout_default = 1
@@ -277,6 +194,12 @@ class App(npyscreen.StandardApp):
         if not msg == '\n':
             self.event_queues['MAINQUEUE'].interal_queue.appendleft(npyscreen.Event("STDWRITEEVENT", msg))
 
+    def on_intervention(self, intervention):
+        self.event_queues['MAINQUEUE'].interal_queue.appendleft(npyscreen.Event("INTERVENTIONEVENT", intervention))
+
+    def on_notification(self, notification):
+        self.event_queues['MAINQUEUE'].interal_queue.appendleft(npyscreen.Event("NOTIFICATIONEVENT", notification))
+
 
 if __name__ == '__main__':
     debug = 'debug' in sys.argv
@@ -295,9 +218,7 @@ if __name__ == '__main__':
     from osfoffline.database import session
     from osfoffline.exceptions import AuthError
     from osfoffline.utils.authentication import AuthClient
-    from osfoffline.sync.local import LocalSync
-    from osfoffline.sync.remote import RemoteSync
-    from osfoffline.tasks.queue import OperationsQueue, InterventionQueue
+    from osfoffline.application.background import BackgroundWorker
 
     worker = BackgroundWorker()
 

@@ -9,6 +9,7 @@ from osfoffline import settings
 from osfoffline.client.osf import Node
 from osfoffline.database import session
 from osfoffline.database.models import File
+from osfoffline.tasks import Intervention
 from osfoffline.tasks import interventions
 from osfoffline.tasks import operations
 from osfoffline.utils.path import ProperPath
@@ -41,12 +42,11 @@ class BaseAuditor(abc.ABC):
     def _on_local_changed(self):
         raise NotImplementedError
 
-    def __init__(self, node, operation_queue, intervention_queue, remote, local, decision=None, initial=False):
+    def __init__(self, node, operation_queue, remote, local, decision=None, initial=False):
         self.is_initial = initial
 
         self.node = node
         self.operation_queue = operation_queue
-        self.intervention_queue = intervention_queue
         self.decision = decision
 
         self.local = local
@@ -86,9 +86,9 @@ class BaseAuditor(abc.ABC):
 
     @asyncio.coroutine
     def _handle_sync_decision(self, intervention):
-        if self.decision is not None:
-            yield from intervention.resolve(self.decision)
-        yield from self.intervention_queue.put(intervention)
+        if self.decision is None:
+            self.decision = yield from Intervention().resolve(intervention)
+        yield from intervention.resolve(self.decision)
         return True  #  TODO: Replace w/ enum
 
 
@@ -248,7 +248,6 @@ class FolderAuditor(BaseAuditor):
         return cls(
             self.node,
             operation_queue or self.operation_queue,
-            self.intervention_queue,
             remote,
             local,
             decision=decision or self.decision,

@@ -16,13 +16,17 @@ class Decision(enum.Enum):
 # IE: RemoteCreated, BothDeleted, etc
 class BaseIntervention(abc.ABC):
 
+    def __init__(self, auditor):
+        self.auditor = auditor
+        self.future = asyncio.Future()
+
+    def set_result(self, decision):
+        self.future.set_result(decision)
+
     @abc.abstractmethod
     @asyncio.coroutine
     def resolve(self, decision):
         raise NotImplementedError
-
-    def __init__(self, auditor):
-        self.auditor = auditor
 
 
 class LocalFileDeleted(BaseIntervention):
@@ -41,7 +45,7 @@ class LocalFileDeleted(BaseIntervention):
         elif decision == Decision.THEIRS:
             yield from self.auditor.operation_queue.put(operations.LocalCreateFile(self.auditor.remote))
         else:
-            raise ValueError("Unknown decision")
+            raise ValueError('Unknown decision')
 
 
 class RemoteFileDeleted(BaseIntervention):
@@ -60,7 +64,7 @@ class RemoteFileDeleted(BaseIntervention):
         elif decision == Decision.THEIRS:
             yield from self.auditor.operation_queue.put(operations.LocalDeleteFile(self.auditor.local))
         else:
-            raise ValueError("Unknown decision")
+            raise ValueError('Unknown decision')
 
 
 class RemoteLocalFileConflict(BaseIntervention):
@@ -82,7 +86,7 @@ class RemoteLocalFileConflict(BaseIntervention):
             yield from self.auditor.operation_queue.put(operations.LocalKeepFile(self.auditor.local))
             yield from self.auditor.operation_queue.put(operations.LocalCreateFile(self.auditor.remote))
         else:
-            raise ValueError("Unknown decision")
+            raise ValueError('Unknown decision')
 
 
 class RemoteFolderDeleted(BaseIntervention):
@@ -113,4 +117,26 @@ class RemoteFolderDeleted(BaseIntervention):
         elif decision == Decision.THEIRS:
             yield from self.auditor.operation_queue.put(operations.LocalDeleteFolder(self.auditor.local))
         else:
-            raise ValueError("Unknown decision")
+            raise ValueError('Unknown decision')
+
+
+# TODO: Move to single util location
+class Singleton(type):
+    _instances = {}
+
+    def __call__(cls, *args, **kwargs):
+        if cls not in cls._instances:
+            cls._instances[cls] = super(Singleton, cls).__call__(*args, **kwargs)
+        return cls._instances[cls]
+
+
+class Intervention(metaclass=Singleton):
+
+    def set_callback(self, cb):
+        self.cb = cb
+
+    @asyncio.coroutine
+    def resolve(self, intervention):
+        yield from asyncio.get_event_loop().run_in_executor(None, self.cb, intervention)
+        yield from intervention.future
+        return intervention.future.result()

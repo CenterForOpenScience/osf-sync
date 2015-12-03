@@ -20,7 +20,6 @@ from osfoffline.database.models import User
 from osfoffline.database.utils import save
 from osfoffline.utils import path
 from osfoffline.views.rsc.preferences_rc import Ui_Settings  # REQUIRED FOR GUI
-import osfoffline.alerts as AlertHandler
 
 
 class Preferences(QDialog):
@@ -87,10 +86,12 @@ class Preferences(QDialog):
         event.accept()
 
     def alerts_changed(self):
-        if self.preferences_window.desktopNotifications.isChecked():
-            AlertHandler.show_alerts = True
-        else:
-            AlertHandler.show_alerts = False
+        # if self.preferences_window.desktopNotifications.isChecked():
+        #     AlertHandler.show_alerts = True
+        # else:
+        #     AlertHandler.show_alerts = False
+        pass
+
 
     def startup_changed(self):
         # todo: probably should give notification to show that this setting has been changed.
@@ -115,8 +116,8 @@ class Preferences(QDialog):
             os.makedirs(osf_path)
         elif os.path.isfile(osf_path):
             # FIXME: Consolidate redundant messages
-            AlertHandler.warn(
-                "An OSF file exists where you would like to create the OSF folder. Delete it, or choose a different location")
+            # AlertHandler.warn(
+            #     "An OSF file exists where you would like to create the OSF folder. Delete it, or choose a different location")
             logging.warning("An OSF file exists where you would like to create the OSF folder.")
             return
 

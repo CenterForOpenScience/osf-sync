@@ -12,7 +12,6 @@ from PyQt5.QtWidgets import QDialog
 from PyQt5.QtWidgets import QMenu
 from PyQt5.QtWidgets import QSystemTrayIcon
 
-from osfoffline import alerts as AlertHandler
 from osfoffline.utils.validators import validate_containing_folder
 # need this import for the logo to work properly.
 import osfoffline.views.rsc.resources  # noqa
@@ -86,5 +85,5 @@ class SystemTray(QDialog):
                     subprocess.Popen(['xdg-open', self.containing_folder])
                 except OSError:
                     raise NotImplementedError
-        else:
-            AlertHandler.warn('osf folder is not set')
+        # else:
+        #     AlertHandler.warn('osf folder is not set')

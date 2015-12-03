@@ -21,7 +21,6 @@ from osfoffline.utils.validators import validate_containing_folder
 from osfoffline.views.preferences import Preferences
 from osfoffline.views.start_screen import StartScreen
 from osfoffline.views.system_tray import SystemTray
-import osfoffline.alerts as AlertHandler
 
 
 # RUN_PATH = "HKEY_CURRENT_USER\\Software\\Microsoft\\Windows\\CurrentVersion\\Run"
@@ -46,11 +45,13 @@ class OSFApp(QDialog):
         self.start_screen = StartScreen()
         self.tray = SystemTray()
         self.preferences = Preferences()
-        AlertHandler.setup_alerts(self.tray.tray_icon, self.tray.tray_alert_signal)
+        # AlertHandler.setup_alerts(self.tray.tray_icon, self.tray.tray_alert_signal)
+
+        # worker
+        self.background_worker = BackgroundWorker()
 
         # connect all signal-slot pairs
         self.setup_connections()
-        self.background_worker = BackgroundWorker()
 
     def setup_connections(self):
         # [ (signal, slot) ]
@@ -127,7 +128,7 @@ class OSFApp(QDialog):
         containing_folder = os.path.dirname(user.osf_local_folder_path)
         while not validate_containing_folder(containing_folder):
             logger.warning('Invalid containing folder: {}'.format(containing_folder))
-            AlertHandler.warn('Invalid containing folder. Please choose another.')
+            # AlertHandler.warn('Invalid containing folder. Please choose another.')
             containing_folder = os.path.abspath(self.set_containing_folder_initial())
 
         user.osf_local_folder_path = os.path.join(containing_folder, 'OSF')
