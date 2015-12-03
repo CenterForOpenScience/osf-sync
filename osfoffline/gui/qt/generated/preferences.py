@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file 'osfoffline/views/rsc/gui/preferences_gui/preferences.ui'
+# Form implementation generated from reading ui file './osfoffline/gui/qt/static/preferences.ui'
 #
-# Created by: PyQt5 UI code generator 5.4.2
+# Created by: PyQt5 UI code generator 5.5.1
 #
 # WARNING! All changes made in this file will be lost!
 
@@ -11,7 +11,7 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 class Ui_Settings(object):
     def setupUi(self, Settings):
         Settings.setObjectName("Settings")
-        Settings.resize(704, 485)
+        Settings.resize(635, 485)
         self.gridLayout_3 = QtWidgets.QGridLayout(Settings)
         self.gridLayout_3.setObjectName("gridLayout_3")
         self.horizontalLayout = QtWidgets.QHBoxLayout()
@@ -69,19 +69,19 @@ class Ui_Settings(object):
         self.groupBox_5.setObjectName("groupBox_5")
         self.gridLayout_4 = QtWidgets.QGridLayout(self.groupBox_5)
         self.gridLayout_4.setObjectName("gridLayout_4")
-        self.pushButton_2 = QtWidgets.QPushButton(self.groupBox_5)
-        self.pushButton_2.setObjectName("pushButton_2")
-        self.gridLayout_4.addWidget(self.pushButton_2, 0, 1, 1, 1)
         self.pushButton = QtWidgets.QPushButton(self.groupBox_5)
         self.pushButton.setObjectName("pushButton")
         self.gridLayout_4.addWidget(self.pushButton, 0, 0, 1, 1)
+        self.changeFolderButton_2 = QtWidgets.QPushButton(self.groupBox_5)
+        self.changeFolderButton_2.setObjectName("changeFolderButton_2")
+        self.gridLayout_4.addWidget(self.changeFolderButton_2, 1, 2, 1, 1)
         self.treeWidget = QtWidgets.QTreeWidget(self.groupBox_5)
         self.treeWidget.setToolTipDuration(-1)
         self.treeWidget.setObjectName("treeWidget")
         self.gridLayout_4.addWidget(self.treeWidget, 1, 0, 1, 2)
-        self.changeFolderButton_2 = QtWidgets.QPushButton(self.groupBox_5)
-        self.changeFolderButton_2.setObjectName("changeFolderButton_2")
-        self.gridLayout_4.addWidget(self.changeFolderButton_2, 1, 2, 1, 1)
+        self.pushButton_2 = QtWidgets.QPushButton(self.groupBox_5)
+        self.pushButton_2.setObjectName("pushButton_2")
+        self.gridLayout_4.addWidget(self.pushButton_2, 0, 1, 1, 1)
         self.gridLayout_5.addWidget(self.groupBox_5, 0, 0, 1, 1)
         self.gridLayout.addWidget(self.groupBox_4, 1, 0, 1, 1)
         self.tabWidget.addTab(self.tab_2, "")
@@ -119,17 +119,17 @@ class Ui_Settings(object):
         self.accountLogOutButton.setText(_translate("Settings", "Log Out"))
         self.groupBox_4.setTitle(_translate("Settings", "Project"))
         self.groupBox_5.setTitle(_translate("Settings", "Choose Projects to Sync With"))
-        self.pushButton_2.setText(_translate("Settings", "Sync None"))
         self.pushButton.setText(_translate("Settings", "Sync All"))
+        self.changeFolderButton_2.setText(_translate("Settings", "Apply Settings"))
         self.treeWidget.headerItem().setText(0, _translate("Settings", "Sync"))
         self.treeWidget.headerItem().setText(1, _translate("Settings", "Projects"))
-        self.changeFolderButton_2.setText(_translate("Settings", "Apply Settings"))
+        self.pushButton_2.setText(_translate("Settings", "Sync None"))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_2), _translate("Settings", "OSF"))
         self.textEdit_2.setHtml(_translate("Settings", "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"
 "<html><head><meta name=\"qrichtext\" content=\"1\" /><style type=\"text/css\">\n"
 "p, li { white-space: pre-wrap; }\n"
 "</style></head><body style=\" font-family:\'.Helvetica Neue DeskInterface\'; font-size:13pt; font-weight:400; font-style:normal;\">\n"
-"<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-family:\'Ubuntu\'; font-size:11pt;\">This is OSF OFFLINE. Please go ahead and use it and make more software based off of it. Please and Thank You. </span></p><p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-family:\'Ubuntu\'; font-size:11pt;\">Version 0.1.0 (alpha)</p>\n"
+"<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-family:\'Ubuntu\'; font-size:11pt;\">This is OSF OFFLINE. Please go ahead and use it and make more software based off of it. Please and Thank You. </span></p>\n"
 "<p style=\"-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-family:\'Ubuntu\'; font-size:11pt;\"><br /></p>\n"
 "<p align=\"center\" style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-family:\'Ubuntu\'; font-size:11pt;\">© Center for Open Science</span></p></body></html>"))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_5), _translate("Settings", "About"))

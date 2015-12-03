@@ -11,13 +11,10 @@ from osfoffline.database.models import User
 from osfoffline.database.utils import save
 from osfoffline.exceptions import AuthError
 from osfoffline.utils.authentication import AuthClient
-from osfoffline.views.rsc.startscreen import Ui_startscreen
+from osfoffline.gui.qt.generated.login import Ui_login
 
 
-class LoginScreen(QDialog, Ui_startscreen):
-    """
-    This class is a wrapper for the Ui_startscreen and its controls
-    """
+class LoginScreen(QDialog, Ui_login):
 
     def __init__(self):
         super().__init__()

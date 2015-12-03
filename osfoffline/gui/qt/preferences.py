@@ -17,10 +17,10 @@ from osfoffline.database import session
 from osfoffline.database.models import User, Node
 from osfoffline.database.utils import save
 from osfoffline.utils import path
-from osfoffline.views.rsc.preferences_rc import Ui_Settings  # REQUIRED FOR GUI
+from osfoffline.gui.qt.generated.preferences import Ui_Settings
 
 
-class Preferences(QDialog):
+class Preferences(QDialog, Ui_Settings):
     """
     This class is a wrapper for the Ui_Preferences and its controls
     """
@@ -37,15 +37,14 @@ class Preferences(QDialog):
 
     def __init__(self):
         super().__init__()
-        self._translate = QCoreApplication.translate
+        self.setupUi(self)
         self.containing_folder = ''
-        self.ui = Ui_Settings()
-        self.ui.setupUi(self)
+        self._translate = QCoreApplication.translate
 
-        self.ui.changeFolderButton_2.clicked.connect(self.update_sync_nodes)
-        self.ui.pushButton.clicked.connect(self.sync_all)
-        self.ui.pushButton_2.clicked.connect(self.sync_none)
-        self.ui.tabWidget.currentChanged.connect(self.selector)
+        self.changeFolderButton_2.clicked.connect(self.update_sync_nodes)
+        self.pushButton.clicked.connect(self.sync_all)
+        self.pushButton_2.clicked.connect(self.sync_none)
+        self.tabWidget.currentChanged.connect(self.selector)
 
         self.tree_items = []
         self.selected_nodes = []
@@ -69,10 +68,6 @@ class Preferences(QDialog):
         self.reset_tree_widget()
         event.accept()
 
-    def alerts_changed(self):
-        # AlertHandler.show_alerts = self.ui.desktopNotifications.isChecked()
-        pass
-
     def set_containing_folder(self):
         new_containing_folder = QFileDialog.getExistingDirectory(self, "Choose where to place OSF folder")
         osf_path = os.path.join(new_containing_folder, "OSF")
@@ -92,7 +87,7 @@ class Preferences(QDialog):
         user = session.query(User).one()
         user.folder = os.path.join(osf_path)
 
-        self.ui.containingFolderTextEdit.setText(self._translate("Preferences", self.containing_folder))
+        self.containingFolderTextEdit.setText(self._translate("Preferences", self.containing_folder))
         self.open_window(tab=Preferences.GENERAL)  # todo: dynamically update ui????
         self.containing_folder_updated_signal.emit(new_containing_folder)
 
@@ -125,10 +120,10 @@ class Preferences(QDialog):
 
     def open_window(self, tab=GENERAL):
         if self.isVisible():
-            self.ui.tabWidget.setCurrentIndex(tab)
+            self.tabWidget.setCurrentIndex(tab)
             self.selector(tab)
         else:
-            self.ui.tabWidget.setCurrentIndex(tab)
+            self.tabWidget.setCurrentIndex(tab)
             self.selector(tab)
             self.show()
         self.raise_()
@@ -138,13 +133,13 @@ class Preferences(QDialog):
         user = session.query(User).one()
         if selected_index == self.GENERAL:
             containing_folder = os.path.dirname(user.folder)
-            self.ui.containingFolderTextEdit.setText(self._translate("Preferences", containing_folder))
+            self.containingFolderTextEdit.setText(self._translate("Preferences", containing_folder))
         elif selected_index == self.OSF:
-            self.ui.label.setText(self._translate("Preferences", user.full_name))
+            self.label.setText(self._translate("Preferences", user.full_name))
 
             self._executor = QtCore.QThread()
             self.node_fetcher = NodeFetcher()
-            self.ui.treeWidget.setCursor(QtCore.Qt.BusyCursor)
+            self.treeWidget.setCursor(QtCore.Qt.BusyCursor)
             self.node_fetcher.finished[list].connect(self.populate_item_tree)
             self.node_fetcher.moveToThread(self._executor)
             self._executor.started.connect(self.node_fetcher.fetch)
@@ -152,7 +147,7 @@ class Preferences(QDialog):
 
     def reset_tree_widget(self):
         self.tree_items.clear()
-        self.ui.treeWidget.clear()
+        self.treeWidget.clear()
 
     @QtCore.pyqtSlot(list)
     def populate_item_tree(self, nodes):
@@ -161,15 +156,15 @@ class Preferences(QDialog):
         self.selected_nodes = [n.id for n in session.query(Node)]
 
         for node in nodes:
-            tree_item = QTreeWidgetItem(self.ui.treeWidget)
+            tree_item = QTreeWidgetItem(self.treeWidget)
             tree_item.setCheckState(self.PROJECT_SYNC_COLUMN, Qt.Checked if node.id in self.selected_nodes else Qt.Unchecked)
             tree_item.setText(self.PROJECT_NAME_COLUMN, _translate('Preferences', path.make_folder_name(node.title, node_id=node.id)))
 
             self.tree_items.append((tree_item, node))
 
-        self.ui.treeWidget.resizeColumnToContents(self.PROJECT_SYNC_COLUMN)
-        self.ui.treeWidget.resizeColumnToContents(self.PROJECT_NAME_COLUMN)
-        self.ui.treeWidget.unsetCursor()
+        self.treeWidget.resizeColumnToContents(self.PROJECT_SYNC_COLUMN)
+        self.treeWidget.resizeColumnToContents(self.PROJECT_NAME_COLUMN)
+        self.treeWidget.unsetCursor()
 
 
 class NodeFetcher(QtCore.QObject):

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file 'osfoffline/views/rsc/gui/startscreen_gui/startscreen.ui'
+# Form implementation generated from reading ui file './osfoffline/gui/qt/static/login.ui'
 #
 # Created by: PyQt5 UI code generator 5.5.1
 #
@@ -8,15 +8,15 @@
 
 from PyQt5 import QtCore, QtGui, QtWidgets
 
-class Ui_startscreen(object):
-    def setupUi(self, startscreen):
-        startscreen.setObjectName("startscreen")
-        startscreen.resize(280, 177)
-        self.gridLayout = QtWidgets.QGridLayout(startscreen)
+class Ui_login(object):
+    def setupUi(self, login):
+        login.setObjectName("login")
+        login.resize(280, 177)
+        self.gridLayout = QtWidgets.QGridLayout(login)
         self.gridLayout.setContentsMargins(11, 11, 11, 11)
         self.gridLayout.setSpacing(6)
         self.gridLayout.setObjectName("gridLayout")
-        self.groupBox_7 = QtWidgets.QGroupBox(startscreen)
+        self.groupBox_7 = QtWidgets.QGroupBox(login)
         self.groupBox_7.setObjectName("groupBox_7")
         self.gridLayout_2 = QtWidgets.QGridLayout(self.groupBox_7)
         self.gridLayout_2.setContentsMargins(11, 11, 11, 11)
@@ -42,7 +42,7 @@ class Ui_startscreen(object):
         self.label_6.setObjectName("label_6")
         self.gridLayout_2.addWidget(self.label_6, 0, 0, 1, 1)
         self.gridLayout.addWidget(self.groupBox_7, 1, 0, 1, 1)
-        self.label = QtWidgets.QLabel(startscreen)
+        self.label = QtWidgets.QLabel(login)
         font = QtGui.QFont()
         font.setPointSize(20)
         self.label.setFont(font)
@@ -50,16 +50,17 @@ class Ui_startscreen(object):
         self.label.setObjectName("label")
         self.gridLayout.addWidget(self.label, 0, 0, 1, 1)
 
-        self.retranslateUi(startscreen)
-        QtCore.QMetaObject.connectSlotsByName(startscreen)
-        startscreen.setTabOrder(self.usernameEdit, self.passwordEdit)
-        startscreen.setTabOrder(self.passwordEdit, self.logInButton)
+        self.retranslateUi(login)
+        QtCore.QMetaObject.connectSlotsByName(login)
+        login.setTabOrder(self.usernameEdit, self.passwordEdit)
+        login.setTabOrder(self.passwordEdit, self.logInButton)
 
-    def retranslateUi(self, startscreen):
+    def retranslateUi(self, login):
         _translate = QtCore.QCoreApplication.translate
-        startscreen.setWindowTitle(_translate("startscreen", "OSF-Offline | Log in"))
-        self.groupBox_7.setTitle(_translate("startscreen", "Log in"))
-        self.label_7.setText(_translate("startscreen", "Password:"))
-        self.logInButton.setText(_translate("startscreen", "Log In"))
-        self.label_6.setText(_translate("startscreen", " Email:"))
-        self.label.setText(_translate("startscreen", "Welcome to OSF Offline"))
+        login.setWindowTitle(_translate("login", "OSF-Offline | Log in"))
+        self.groupBox_7.setTitle(_translate("login", "Log in"))
+        self.label_7.setText(_translate("login", "Password:"))
+        self.logInButton.setText(_translate("login", "Log In"))
+        self.label_6.setText(_translate("login", " Email:"))
+        self.label.setText(_translate("login", "Welcome to OSF Offline"))
+
