@@ -1,8 +1,9 @@
 import contextlib
 
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker, scoped_session
-from osfoffline.database import models
+from sqlalchemy.orm import scoped_session
+from sqlalchemy.orm import sessionmaker
+
 from osfoffline.database.models import Base, User, Node, File
 from osfoffline.settings import PROJECT_DB_FILE
 

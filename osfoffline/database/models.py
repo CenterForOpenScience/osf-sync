@@ -55,41 +55,18 @@ class User(Base):
             self.full_name, self.osf_local_folder_path)
 
 
-# todo: make locally_created, locally_deleted enum's in a EVENTS fields rather than custom variables
 class Node(Base):
-    __tablename__ = "node"
+    __tablename__ = 'node'
 
-    PROJECT = 'project'
-    COMPONENT = 'component'
+    id = Column(String, primary_key=True)
 
-    id = Column(Integer, primary_key=True)
+    sync = Column(Boolean, default=False, nullable=False)
     title = Column(String)
-    hash = Column(String)
-    category = Column(Enum(PROJECT, COMPONENT))
-    date_modified = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
-    osf_id = Column(String, unique=True, nullable=True, default=None)  # multiple things allowed to be null
-
-    locally_created = Column(Boolean, default=False)
-    locally_deleted = Column(Boolean, default=False)
-    locally_moved = Column(Boolean, default=False)
-
     user_id = Column(Integer, ForeignKey('user.id'), nullable=False)
-    parent_id = Column(Integer, ForeignKey('node.id'))
-    child_nodes = relationship(
-        "Node",
-        backref=backref('parent', remote_side=[id]),
-        cascade="all"
-    )
-    files = relationship(
-        "File",
-        backref=backref('node'),
-        cascade="all, delete-orphan"
-    )
+    parent_id = Column(Integer, ForeignKey('node.id'), nullable=True)
 
-    # fixme: this feels wrong. self.top_level?? should recursively update all child nodes. then validate.
-    @hybrid_property
-    def should_sync(self):
-        return self.top_level and (self.osf_id in self.user.guid_for_top_level_nodes_to_sync)
+    children = relationship('Node', backref=backref('parent', remote_side=[id]), cascade='all')
+    files = relationship('File', backref=backref('node'), cascade='all, delete-orphan')
 
     @hybrid_property
     def top_level(self):
@@ -102,17 +79,9 @@ class Node(Base):
         # +os.path.sep+ instead of os.path.join: http://stackoverflow.com/a/14504695
 
         if self.parent:
-            return os.path.join(self.parent.path, 'Components', make_folder_name(self.title, node_id=self.osf_id))
+            return os.path.join(self.parent.path, 'Components', make_folder_name(self.title, node_id=self.id))
         else:
-            return os.path.join(self.user.osf_local_folder_path, make_folder_name(self.title, node_id=self.osf_id))
-
-    def locally_create_children(self):
-        self.locally_created = True
-        self.osf_id = None
-        for node in self.child_nodes:
-            node.locally_create_children()
-        for file_folder in self.files:
-            file_folder.locally_created = True
+            return os.path.join(self.user.osf_local_folder_path, make_folder_name(self.title, node_id=self.id))
 
     @hybrid_property
     def top_level_file_folders(self):
@@ -137,9 +106,7 @@ class Node(Base):
         return top_level
 
     def __repr__(self):
-        return "<Node ({}), category={}, title={}, path={}, parent_id={}>".format(
-            self.id, self.category, self.title, self.path, self.parent_id
-        )
+        return '<Node ({}, title={}, path={})>'.format(self.id, self.title, self.path)
 
 
 class File(Base):
