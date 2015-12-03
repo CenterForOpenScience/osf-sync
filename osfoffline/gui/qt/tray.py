@@ -49,32 +49,10 @@ class OSFApp(QSystemTrayIcon):
     def setup_connections(self):
         # [ (signal, slot) ]
         signal_slot_pairs = [
-
-            # system tray
-            (self.tray.open_osf_folder_action.triggered, self.tray.open_osf_folder),
-            (self.tray.launch_osf_action.triggered, self.tray.start_osf),
-            (self.tray.sync_now_action.triggered, self.sync_now),
-            # (self.tray.currently_synching_action.triggered, self.controller.currently_synching),
-            (self.tray.preferences_action.triggered, self.open_preferences),
-            (self.tray.about_action.triggered, self.start_about_screen),
-
-            (self.tray.quit_action.triggered, self.quit),
-            (self.tray.tray_alert_signal, self.tray.update_currently_synching),
-
-            # main events
-            # (self.login_signal, self.start_screen.open_window),
-            (self.start_tray_signal, self.tray.start),
-
             # preferences
             (self.preferences.ui.desktopNotifications.stateChanged, self.preferences.alerts_changed),
             (self.preferences.preferences_closed_signal, self.resume),
             (self.preferences.ui.accountLogOutButton.clicked, self.logout),
-            # (self.preferences.containing_folder_updated_signal, self.preferences.update_containing_folder_text_box),
-
-            # start screen
-            # (self.start_screen.done_logging_in_signal, self.start),
-            # (self.start_screen.quit_application_signal, self.quit),
-
         ]
         for signal, slot in signal_slot_pairs:
             signal.connect(slot)
@@ -137,9 +115,6 @@ class OSFApp(QSystemTrayIcon):
 
     def sync_now(self):
         self.background_worker.sync_now()
-
-    def set_containing_folder_initial(self):
-        return QFileDialog.getExistingDirectory(self, "Choose where to place OSF folder")
 
     def logout(self):
         # Will probably wipe out everything :shrug:
