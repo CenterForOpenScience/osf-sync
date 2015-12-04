@@ -1,6 +1,6 @@
 import os
 
-from osfoffline.exceptions.path_exceptions import InvalidPathError
+from osfoffline.exceptions import InvalidPathError
 
 
 class ProperPath(object):

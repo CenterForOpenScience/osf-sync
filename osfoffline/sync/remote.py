@@ -4,8 +4,10 @@ import logging
 
 from osfoffline import settings
 from osfoffline.client.osf import OSFClient
-from osfoffline.exceptions.item_exceptions import FolderNotInFileSystem
-from osfoffline.sync.audit import FolderAuditor
+from osfoffline.database import session
+from osfoffline.database.models import Node
+from osfoffline.sync.exceptions import FolderNotInFileSystem
+from osfoffline.sync.ext.audit import FolderAuditor
 from osfoffline.utils.path import ProperPath
 
 
@@ -16,15 +18,14 @@ class RemoteSync:
 
     COMPONENTS_FOLDER_NAME = 'Components'
 
-    def __init__(self, operation_queue, intervention_queue, user):
+    def __init__(self, operation_queue, user):
         self.operation_queue = operation_queue
-        self.intervention_queue = intervention_queue
         self.user = user
-        self.client = OSFClient(self.user.oauth_token)
 
+        self.client = OSFClient(self.user.oauth_token)
         self._sync_now_fut = asyncio.Future()
 
-        if not os.path.isdir(self.user.osf_local_folder_path):
+        if not os.path.isdir(self.user.folder):
             raise FolderNotInFileSystem
 
     @asyncio.coroutine
@@ -35,25 +36,18 @@ class RemoteSync:
 
     @asyncio.coroutine
     def _check(self, initial):
-        nodes = [
-            node for node in
-            self.user.top_level_nodes
-            if node.osf_id in self.user.guid_for_top_level_nodes_to_sync
-        ]
-        for node in nodes:
+        for node in session.query(Node).all():
             logger.info('Resyncing node {}'.format(node))
             remote, local = yield from self._preprocess_node(node)
-            auditor = FolderAuditor(node, self.operation_queue, self.intervention_queue, remote, local, initial=initial)
+            auditor = FolderAuditor(node, self.operation_queue, remote, local, initial=initial)
             yield from auditor.audit()
 
-        logger.info('Finishing intervention queue')
-        yield from self.intervention_queue.join()
         logger.info('Finishing operation queue')
         yield from self.operation_queue.join()
 
     @asyncio.coroutine
     def _preprocess_node(self, node):
-        remote_node = yield from self.client.get_node(node.osf_id)
+        remote_node = yield from self.client.get_node(node.id)
         remote = yield from remote_node.get_storage('osfstorage')
         local = ProperPath(os.path.join(node.path, settings.OSF_STORAGE_FOLDER), True)
         os.makedirs(local.full_path, exist_ok=True)
