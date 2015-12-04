@@ -101,14 +101,8 @@ class LocalCreateFile(BaseOperation):
         path = os.path.join(db_parent.path, self.remote.name)
         # TODO: Create temp file in target directory while downloading, and rename when done. (check that no temp file exists)
         with open(path, 'wb') as fobj:
-            # TODO: Flesh out remote object API client
-            resp = yield from self.remote.request_session.request('GET', self.remote.raw['links']['download'])
-            while True:
-                chunk = yield from resp.content.read(1024 * 64)
-                if not chunk:
-                    break
+            for chunk in self.remote.download():
                 fobj.write(chunk)
-        yield from resp.release()
 
         # After file is saved, create a new database object to track the file
         #   If the task fails, the database task will be kicked off separately by the auditor on a future cycle
