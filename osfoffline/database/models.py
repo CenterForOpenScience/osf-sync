@@ -100,7 +100,7 @@ class File(Base):
 
     size = Column(Integer)
 
-    type = Column(Enum(FOLDER, FILE), nullable=False)
+    kind = Column(Enum(FOLDER, FILE), nullable=False)
     date_modified = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
     provider = Column(String, nullable=False)
 
@@ -129,11 +129,11 @@ class File(Base):
 
     @hybrid_property
     def is_file(self):
-        return self.type == File.FILE
+        return self.kind == File.FILE
 
     @hybrid_property
     def is_folder(self):
-        return self.type == File.FOLDER
+        return self.kind == File.FOLDER
 
     @hybrid_property
     def has_parent(self):
