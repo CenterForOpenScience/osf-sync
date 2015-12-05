@@ -5,7 +5,7 @@ import logging
 from osfoffline import settings
 from osfoffline.client.osf import OSFClient
 from osfoffline.database import session
-from osfoffline.database.models import Node
+from osfoffline.database.models import Node, File
 from osfoffline.sync.exceptions import FolderNotInFileSystem
 from osfoffline.sync.ext.audit import FolderAuditor
 from osfoffline.utils.path import ProperPath
@@ -50,6 +50,8 @@ class RemoteSync:
         remote_node = yield from self.client.get_node(node.id)
         remote = yield from remote_node.get_storage(id='osfstorage')
         local = ProperPath(os.path.join(node.path, settings.OSF_STORAGE_FOLDER), True)
+        if not os.path.exists(local.full_path):
+            session.query(File).filter(File.node_id == node.id).delete()
         os.makedirs(local.full_path, exist_ok=True)
         return remote, local
 
