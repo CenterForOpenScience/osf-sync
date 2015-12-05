@@ -123,7 +123,7 @@ class FileAuditor(BaseAuditor):
         elif not self.remote and self.local:
             return (yield from self._handle_sync_decision(interventions.RemoteFileDeleted(self)))
         elif self.remote.extra['hashes']['sha256'] == (yield from self._get_local_sha256()):
-            return (yield from self.operation_queue.put(operations.DatabaseCreateFile(self.remote)))
+            return (yield from self.operation_queue.put(operations.DatabaseCreateFile(self.remote, self.node)))
         return (yield from self._handle_sync_decision(interventions.RemoteLocalFileConflict(self)))
 
     @asyncio.coroutine
@@ -183,7 +183,7 @@ class FolderAuditor(BaseAuditor):
 
     @asyncio.coroutine
     def _local_changed(self):
-        return (self.remote and not self.db) or (not self.remote and self.db)
+        return (self.local and not self.db) or (not self.local and self.db)
 
     @asyncio.coroutine
     def _on_both_changed(self):
@@ -216,7 +216,7 @@ class FolderAuditor(BaseAuditor):
                 return (yield from self._handle_sync_decision(interventions.RemoteFolderDeleted(self, q)))
             return (yield from self.operation_queue.put(operations.LocalDeleteFolder(self.local)))
         # Folder has been created remotely, we don't have it locally.
-        return (yield from self.operation_queue.put(operations.LocalCreateFolder(self.remote)))
+        return (yield from self.operation_queue.put(operations.LocalCreateFolder(self.remote, self.node)))
 
     @asyncio.coroutine
     def _on_local_changed(self):
