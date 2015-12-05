@@ -44,7 +44,7 @@ class OperationsQueue(Queue):
         logger.info('start processing queue')
         while True:
             job = yield from self.get()
-            logger.info('Running {}'.format(job))
+            logger.debug('Running {}'.format(job))
             try:
                 yield from job.run()
             finally:
