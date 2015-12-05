@@ -43,18 +43,18 @@ class BaseOperation(abc.ABC):
     @asyncio.coroutine
     def run(self):
         """Wrap internal run method with error handling"""
-        try:
-            self._run()
-        except Exception as e:
-            task_result = self._format_error(e)
-            logging.exception('Failed to perform operation {}: {}'.format(
-                task_result.event_type, str(task_result.exc)))
-        else:
-            # TODO: Add a report describing the event if it ran successfully
-            task_result = None
+        return (yield from self._run())
+        # try:
+        # except Exception as e:
+        #     task_result = self._format_error(e)
+        #     logging.exception('Failed to perform operation {}: {}'.format(
+        #         task_result.event_type, str(task_result.exc)))
+        # else:
+        #     # TODO: Add a report describing the event if it ran successfully
+        #     task_result = None
 
-        if self._done_callback is not None:
-                self._done_callback(task_result)
+        # if self._done_callback is not None:
+        #         self._done_callback(task_result)
 
     def _format_error(self, exc):
         """
@@ -100,33 +100,42 @@ class LocalCreateFile(BaseOperation):
         db_parent = session.query(models.File).filter(models.File.id == self.remote.parent.id).one()
         path = os.path.join(db_parent.path, self.remote.name)
         # TODO: Create temp file in target directory while downloading, and rename when done. (check that no temp file exists)
+        url = self.remote.raw['links']['download']
+        resp = yield from self.remote.request_session.request('GET', url)
         with open(path, 'wb') as fobj:
-            for chunk in self.remote.download():
+            while True:
+                chunk = yield from resp.content.read(1024 * 64)
+                if not chunk:
+                    break
                 fobj.write(chunk)
+        yield from resp.release()
 
         # After file is saved, create a new database object to track the file
         #   If the task fails, the database task will be kicked off separately by the auditor on a future cycle
         # TODO: How do we handle a filename being aliased in local storage (due to OS limitations)?
         #   TODO: To keep tasks decoupled, perhaps a shared rename function used by DB task?
-        db_task = DatabaseCreateFile(self.remote, self.node, done_callback=self._done_callback)
-        db_task.run()
+        yield from DatabaseCreateFile(self.remote, self.node).run()
 
         Notification().info("Downloaded File: {}".format(self.remote.name))
 
 
 class LocalCreateFolder(BaseOperation):
     """Create a folder, and populate the contents of that folder (all files to be downloaded)"""
-    def __init__(self, remote, *args, **kwargs):
+    def __init__(self, remote, node, *args, **kwargs):
         super(LocalCreateFolder, self).__init__(*args, **kwargs)
         self.remote = remote
+        self.node = node
 
     @asyncio.coroutine
     def _run(self):
         logger.info("Create Local Folder: {}".format(self.remote))
-        # db_parent = self.db_from_remote(remote.parent)
-        # new_folder = File()
-        # os.mkdir(new_folder.path)
-        # save(session, new_folder)
+        # TODO handle moves better
+        session.query(models.File).filter(models.File.id == self.remote.id).delete()
+        save(session)
+        db_parent = session.query(models.File).filter(models.File.id == self.remote.parent.id).one()
+        # TODO folder and file with same name
+        os.mkdir(os.path.join(db_parent.path, self.remote.name))
+        yield from DatabaseCreateFolder(self.remote, self.node).run()
 
 
 # Download File
@@ -140,6 +149,23 @@ class LocalUpdateFile(BaseOperation):
     def _run(self):
         logger.info("Update Local File: {}".format(self.remote))
 
+        db_file = session.query(models.File).filter(models.File.id == self.remote.id).one()
+        url = self.raw['links']['download']
+        path = os.path.join(db_parent.path, self.remote.name)
+        tmp_path = os.path.join(db_parent.path, '.~tmp.{}'.format(self.remote.name))
+
+        resp = yield from self.remote.request_session.request('GET', url)
+        with open(tmp_path, 'wb') as fobj:
+            while True:
+                chunk = yield from resp.content.read(1024 * 64)
+                if not chunk:
+                    break
+                fobj.write(chunk)
+        yield from resp.release()
+        shutil.move(tmp_path, path)
+
+        Notification().info('Updated File: {}'.format(self.remote.name))
+
 
 class LocalDeleteFile(BaseOperation):
 
@@ -150,6 +176,7 @@ class LocalDeleteFile(BaseOperation):
     @asyncio.coroutine
     def _run(self):
         logger.info("Delete Local File: {}".format(self.local))
+        os.remove(self.local.full_path)
 
 
 class LocalDeleteFolder(BaseOperation):
@@ -161,6 +188,7 @@ class LocalDeleteFolder(BaseOperation):
     @asyncio.coroutine
     def _run(self):
         logger.info("Delete Local Folder: {}".format(self.local))
+        os.remove(self.local.full_path)
 
 
 class RemoteCreateFile(BaseOperation):
@@ -173,6 +201,7 @@ class RemoteCreateFile(BaseOperation):
     @asyncio.coroutine
     def _run(self):
         logger.info("Create Remote File: {}".format(self.local))
+        return
 
         ## TODO: This is how we used to do it... move some upload logic to the new client.osf module
         #remote_file_folder = yield from self.osf_query.upload_file(local_file_folder)
@@ -181,8 +210,7 @@ class RemoteCreateFile(BaseOperation):
         #client.upload(node_target, self.local.pathstring)  # Pseudocode: Upload file from the specified path to self.node.osf_id target url
 
         # TODO: APIv2 will give back endpoint that can be parsed. Waterbutler may return something *similar* and need to coerce to work with task object
-        #db_task = DatabaseCreateFile(remote_response_dict, self.node, done_callback=self._done_callback)
-        #db_task.run()
+        yield from DatabaseCreateFile(remote_response_dict, self.node).run()
 
 
 class RemoteCreateFolder(BaseOperation):
@@ -239,9 +267,9 @@ class DatabaseCreateFile(BaseOperation):
         :param StorageObject remote: The response from the server describing a remote file
         :param Node node: Database object describing the parent node of the file
         """
-        super(DatabaseCreateFile, self).__init__(*args, **kwargs)
-        self.remote = remote
         self.node = node
+        self.remote = remote
+        super(DatabaseCreateFile, self).__init__(*args, **kwargs)
 
     @asyncio.coroutine
     def _run(self):
@@ -249,17 +277,18 @@ class DatabaseCreateFile(BaseOperation):
 
         parent = self.remote.parent.id if self.remote.parent else None
 
-        new_instance = models.File(
+        save(session, models.File(
+            id=self.remote.id,
             name=self.remote.name,
-            type=self.remote.kind,
-            osf_id=self.remote.id,
+            kind=self.remote.kind,
             provider=self.remote.provider,
             osf_path=self.remote.id,
             user=get_current_user(),
-            parent=parent,
-            node=self.node
-        )
-        save(session, new_instance)
+            parent_id=parent,
+            node_id=self.node.id,
+            md5=self.remote.extra['hashes']['md5'],
+            sha256=self.remote.extra['hashes']['sha256'],
+        ))
 
 
 class DatabaseCreateFolder(BaseOperation):
@@ -274,16 +303,15 @@ class DatabaseCreateFolder(BaseOperation):
         logger.info("Database Folder Create: {}".format(self.remote))
 
         parent = self.remote.parent.id if self.remote.parent else None
-        # TODO : Update task to work with API client. Where is remote.kind coming from?
         save(session, models.File(
             id=self.remote.id,
             name=self.remote.name,
-            type=self.remote.kind,
+            kind=self.remote.kind,
             provider=self.remote.provider,
             osf_path=self.remote.id,
             user=get_current_user(),
-            parent=parent,
-            node=self.node
+            parent_id=parent,
+            node_id=self.node.id
         ))
 
 
