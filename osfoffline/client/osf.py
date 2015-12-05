@@ -1,3 +1,5 @@
+"""APIv2 client library for interacting with the OSF API"""
+
 import abc
 import asyncio
 import iso8601
@@ -59,7 +61,7 @@ class BaseResource(abc.ABC):
 
 
 class User(BaseResource):
-
+    """Fetch API data relevant to a specific user"""
     RESOURCE = 'users'
 
     # def __init__(self, request_session, data):
@@ -77,7 +79,7 @@ class User(BaseResource):
 
 
 class Node(BaseResource):
-
+    """Fetch API data relevant to a specific Node"""
     RESOURCE = 'nodes'
 
     def __init__(self, request_session, data):
@@ -90,21 +92,22 @@ class Node(BaseResource):
         return '{}/{}/{}/{}/'.format(cls.OSF_HOST, cls.API_PREFIX, cls.RESOURCE, id)
 
     @asyncio.coroutine
-    def get_storage(self, id):
+    def get_storage(self, id='osfstorage'):
+        # TODO: At present only osfstorage is fully supported for syncing
         for storage in (yield from NodeStorage.load(self.request_session, self.id)):
             if storage.provider == id:
                 return storage
 
 
 class UserNode(Node):
-
+    """Fetch API data about nodes owned by a specific user"""
     @classmethod
     def get_url(cls, id):
         return '{}/{}/users/{}/nodes/'.format(cls.OSF_HOST, cls.API_PREFIX, id)
 
 
 class StorageObject(BaseResource):
-
+    """Represent API data for files or folders under a specific node"""
     @classmethod
     def get_url(cls, id):
         return '{}/{}/files/{}/'.format(cls.OSF_HOST, cls.API_PREFIX, id)
@@ -133,6 +136,7 @@ class StorageObject(BaseResource):
 
 
 class Folder(StorageObject):
+    """Represent API data for folders under a specific node"""
     is_dir = True
 
     @asyncio.coroutine
@@ -156,7 +160,7 @@ class Folder(StorageObject):
 
 
 class NodeStorage(Folder):
-
+    """Fetch API list of storage options under a node"""
     @classmethod
     def get_url(cls, node_id):
         # return Node.get_url(node_id) + 'files/' + storage_id + '/'
@@ -164,4 +168,18 @@ class NodeStorage(Folder):
 
 
 class File(StorageObject):
+    """Represent API data for files under a specific node"""
     is_dir = False
+
+    @asyncio.coroutine
+    def download(self):
+        """Download file content from the storage provider"""
+        # TODO: Can this be done without the coroutine? (while still using aiohttp) Make blocking maybe?
+        url = self.raw['links']['download']
+        resp = yield from self.request_session.request('GET', url)
+        while True:
+            chunk = yield from resp.content.read(1024 * 64)
+            if not chunk:
+                break
+            yield chunk
+        yield from resp.release()

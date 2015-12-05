@@ -10,11 +10,21 @@ from sqlalchemy.orm.exc import NoResultFound
 
 
 from osfoffline import settings
+
 from osfoffline.database import clear_models, session
-from osfoffline.database.models import User
+from osfoffline.database import models
 from osfoffline.database.utils import save
 from osfoffline.exceptions import AuthError
 
+
+def get_current_user():
+    """
+    Fetch the database object representing the currently active user
+    :return: A user object (raises exception if none found)
+    :rtype: User
+    :raises SQLAlchemyError
+    """
+    return session.query(models.User).one()
 
 class AuthClient(object):
     """Manages authorization flow """
@@ -39,7 +49,11 @@ class AuthClient(object):
         headers = {'content-type': 'application/json'}
 
         try:
-            resp = yield from aiohttp.request(method='POST', url=token_url.url, headers=headers, data=json.dumps(token_request_body), auth=(username, password))
+            resp = yield from aiohttp.request(method='POST',
+                                              url=token_url.url,
+                                              headers=headers,
+                                              data=json.dumps(token_request_body),
+                                              auth=(username, password))
         except (aiohttp.errors.ClientTimeoutError, aiohttp.errors.ClientConnectionError, aiohttp.errors.TimeoutError):
             # No internet connection
             raise AuthError('Unable to connect to server. Check your internet connection or try again later.')
@@ -67,7 +81,8 @@ class AuthClient(object):
         """
         logging.debug('User doesnt exist. Attempting to authenticate, then creating user.')
         personal_access_token = yield from self._authenticate(username, password)
-        user = User(
+
+        user = models.User(
             id='',
             full_name='',
             login=username,
@@ -105,7 +120,7 @@ class AuthClient(object):
             return user
 
     @asyncio.coroutine
-    def log_in(self, username=None, password=None):
+    def log_in(self, *, username=None, password=None):
         """ Takes standard auth credentials, returns authenticated user or raises AuthError.
         """
         if not username or not password:
@@ -113,7 +128,7 @@ class AuthClient(object):
 
         user = None
         try:
-            user = session.query(User).one()
+            user = session.query(models.User).one()
         except NoResultFound:
             pass
 

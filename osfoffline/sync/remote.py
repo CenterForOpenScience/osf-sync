@@ -48,7 +48,7 @@ class RemoteSync:
     @asyncio.coroutine
     def _preprocess_node(self, node):
         remote_node = yield from self.client.get_node(node.id)
-        remote = yield from remote_node.get_storage('osfstorage')
+        remote = yield from remote_node.get_storage(id='osfstorage')
         local = ProperPath(os.path.join(node.path, settings.OSF_STORAGE_FOLDER), True)
         os.makedirs(local.full_path, exist_ok=True)
         return remote, local

@@ -43,7 +43,8 @@ class LocalFileDeleted(BaseIntervention):
         if decision == Decision.MINE:
             yield from self.auditor.operation_queue.put(operations.RemoteDeleteFile(self.auditor.remote))
         elif decision == Decision.THEIRS:
-            yield from self.auditor.operation_queue.put(operations.LocalCreateFile(self.auditor.remote))
+            yield from self.auditor.operation_queue.put(operations.LocalCreateFile(self.auditor.remote,
+                                                                                   self.auditor.node))
         else:
             raise ValueError('Unknown decision')
 
@@ -84,7 +85,8 @@ class RemoteLocalFileConflict(BaseIntervention):
             yield from self.auditor.operation_queue.put(operations.LocalUpdateFile(self.auditor.remote))
         elif decision == Decision.KEEP_BOTH:
             yield from self.auditor.operation_queue.put(operations.LocalKeepFile(self.auditor.local))
-            yield from self.auditor.operation_queue.put(operations.LocalCreateFile(self.auditor.remote))
+            yield from self.auditor.operation_queue.put(operations.LocalCreateFile(self.auditor.remote,
+                                                                                   self.auditor.node))
         else:
             raise ValueError('Unknown decision')
 
