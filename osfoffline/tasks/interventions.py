@@ -3,6 +3,7 @@ import enum
 import asyncio
 
 from osfoffline.tasks import operations
+from osfoffline.utils import Singleton
 
 
 class Decision(enum.Enum):
@@ -122,17 +123,8 @@ class RemoteFolderDeleted(BaseIntervention):
             raise ValueError('Unknown decision')
 
 
-# TODO: Move to single util location
-class Singleton(type):
-    _instances = {}
-
-    def __call__(cls, *args, **kwargs):
-        if cls not in cls._instances:
-            cls._instances[cls] = super(Singleton, cls).__call__(*args, **kwargs)
-        return cls._instances[cls]
-
-
 class Intervention(metaclass=Singleton):
+    thread_safe = True
 
     def set_callback(self, cb):
         self.cb = cb
