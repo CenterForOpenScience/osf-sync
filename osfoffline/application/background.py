@@ -24,7 +24,6 @@ class BackgroundWorker(threading.Thread):
 
         # Start out with null variables for NoneType errors rather than Attribute Errors
         self.user = None
-        self.root_folder = None
 
         self.loop = None
         self.poller = None
@@ -67,7 +66,6 @@ class BackgroundWorker(threading.Thread):
         self.loop.set_debug(settings.DEBUG)
 
         self.user = session.query(models.User).one()
-        self.root_folder = self.user.folder
 
         self.operation_queue = OperationsQueue()
         self.operation_queue_task = asyncio.ensure_future(self.operation_queue.start())
@@ -90,7 +88,6 @@ class BackgroundWorker(threading.Thread):
             self.loop.run_forever()
         except Exception as e:
             logger.exception(e)
-            self.stop()
         logging.debug('Background event loop exited')
 
     def _handle_exception(self, future):
@@ -100,13 +97,20 @@ class BackgroundWorker(threading.Thread):
             task will halt execution of entire queue from that point onward
         """
         try:
-            exception = future.exception()
+            raise future.exception()
         except (CancelledError, InvalidStateError):
             pass
+        except Exception:
+            logger.exception('Unhandled exception from background worker task {}:'.format(future))
+
+        if self.remote_sync_task == future:
+            logger.info('Restarting remote sync task')
+            self.remote_sync_task = asyncio.ensure_future(self.remote_sync.start())
+            self.remote_sync_task.add_done_callback(self._handle_exception)
         else:
-            logger.info('Unhandled exception from background worker task')
-            self.stop()
-            raise exception
+            logger.info('Restarting operations queue')
+            self.operation_queue_task = asyncio.ensure_future(self.operation_queue.start())
+            self.operation_queue_task.add_done_callback(self._handle_exception)
 
     def sync_now(self):
         self.loop.call_soon_threadsafe(asyncio.ensure_future, self.remote_sync.sync_now())
@@ -114,14 +118,13 @@ class BackgroundWorker(threading.Thread):
     def stop(self):
         # Note: This method is **NOT called from this current thread**
         # All method/function/routines/etc MUST be thread safe from here out
-
         logger.debug('Stopping background worker')
 
-        # logger.debug('Stopping operation queue task')
-        # self.operation_queue_task.cancel()
-        #
-        # logger.debug('Stopping remote sync task')
-        # self.remote_sync_task.cancel()
+        logger.debug('Stopping operation queue task')
+        self.loop.call_soon_threadsafe(self.operation_queue_task.cancel)
+
+        logger.debug('Stopping remote sync task')
+        self.loop.call_soon_threadsafe(self.remote_sync_task.cancel)
 
         logger.debug('Stopping local sync task')
         self.local_sync.stop()
