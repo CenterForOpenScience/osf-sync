@@ -249,7 +249,7 @@ class RemoteCreateFolder(BaseOperation):
         assert resp.status == 201, '{}\n{}\n{}'.format(resp, url, data)
         remote = osf_client.File(None, data['data'])
         # WB id are <provider>/<id>/
-        remote.id = remote.id.replace(remote.provider + '/', '').lstrip('/')
+        remote.id = remote.id.replace(remote.provider + '/', '').rstrip('/')
         remote.parent = parent
         # TODO: APIv2 will give back endpoint that can be parsed. Waterbutler may return something *similar* and need to coerce to work with task object
         yield from DatabaseCreateFolder(remote, self.node).run()

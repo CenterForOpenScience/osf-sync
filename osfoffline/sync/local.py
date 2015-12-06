@@ -11,6 +11,7 @@ from osfoffline.database.models import File
 from osfoffline.database.models import Node
 from osfoffline.sync.ext.watchdog import ConsolidatedEventHandler
 from osfoffline.tasks import operations
+from osfoffline.utils import ensure_event_loop
 from osfoffline.utils.authentication import get_current_user
 from osfoffline.utils.path import ProperPath
 
@@ -46,9 +47,7 @@ def local_to_db(local, node):
 
 
 def db_to_remote(db):
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    return loop.run_until_complete(
+    return ensure_event_loop().run_until_complete(
         osf.StorageObject.load(osf.OSFClient().request_session, db.id)
     )
 
