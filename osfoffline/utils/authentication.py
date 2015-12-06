@@ -118,6 +118,8 @@ class AuthClient(object):
             user.full_name = data['attributes']['full_name']
 
             return user
+        finally:
+            yield from resp.release()
 
     @asyncio.coroutine
     def log_in(self, *, username=None, password=None):
