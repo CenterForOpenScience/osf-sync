@@ -24,9 +24,10 @@ class BaseIntervention(abc.ABC):
     def __init__(self, auditor):
         self.auditor = auditor
         self.future = asyncio.Future()
+        logger.info('Created Intervention {}'.format(self.__class__.__name__))
 
     def set_result(self, decision):
-        logger.info('{}: {}'.format(self.__class__.__name__, decision))
+        logger.info('Resolved Intervention {}: {}'.format(self.__class__.__name__, decision))
         self.future._loop.call_soon_threadsafe(self.future.set_result, decision)
 
     @abc.abstractmethod
