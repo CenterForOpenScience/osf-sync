@@ -144,8 +144,16 @@ class BackgroundWorker(threading.Thread):
         if self.loop.is_running():
             self.loop.call_soon_threadsafe(self.loop.stop)
             logging.debug('Stopped event loop')
-            self.join()
+            # TODO: This should be done in a way as to not cause an error
+            try:
+                self.join()
+            except RuntimeError:
+                pass
 
         if close:
-            self.loop.close()
-            logging.debug('Closed event loop')
+            # TODO: This should be done in a way as to not cause an error
+            try:
+                self.loop.close()
+                logging.debug('Closed event loop')
+            except RuntimeError:
+                pass

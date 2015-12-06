@@ -104,6 +104,7 @@ class LocalCreateFile(BaseOperation):
     @asyncio.coroutine
     def _run(self):
         logger.info("Create Local File: {}".format(self.remote))
+        Notification().info("Create Local File: {}".format(self.remote))
         db_parent = session.query(models.File).filter(models.File.id == self.remote.parent.id).one()
         path = os.path.join(db_parent.path, self.remote.name)
         # TODO: Create temp file in target directory while downloading, and rename when done. (check that no temp file exists)
@@ -209,6 +210,7 @@ class RemoteCreateFile(BaseOperation):
     @asyncio.coroutine
     def _run(self):
         logger.info("Create Remote File: {}".format(self.local))
+        Notification().info("Create Remote File: {}".format(self.local))
         parent = session.query(models.File).filter(models.File.parent == None, models.File.node == self.node).one()
         parts = self.local.full_path.replace(self.node.path, '').split('/')
         for part in parts:
