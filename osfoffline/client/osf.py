@@ -3,17 +3,22 @@
 import abc
 import asyncio
 import iso8601
+import threading
 
 import aiohttp
 
 from osfoffline import settings
+from osfoffline.utils import Singleton
+from osfoffline.utils.authentication import get_current_user
 
 
-class OSFClient:
+class OSFClient(metaclass=Singleton):
+    thread_safe = False
 
-    def __init__(self, bearer_token, limit=5):
+    def __init__(self, limit=5):
+        self.user = get_current_user()
         self.headers = {
-            'Authorization': 'Bearer {}'.format(bearer_token),
+            'Authorization': 'Bearer {}'.format(self.user.oauth_token),
         }
         self.throttler = asyncio.Semaphore(limit)
         self.request_session = aiohttp.ClientSession(headers=self.headers)
@@ -25,6 +30,10 @@ class OSFClient:
     @asyncio.coroutine
     def get_user(self, id='me'):
         return (yield from User.load(self.request_session, id))
+
+    @asyncio.coroutine
+    def request(self, *args, **kwargs):
+        return (yield from self.request_session.request(*args, **kwargs))
 
 
 class BaseResource(abc.ABC):
@@ -56,6 +65,7 @@ class BaseResource(abc.ABC):
                 resp = yield from request_session.request('GET', data['links']['next'], params={'page[size]': 250})
                 data = yield from resp.json()
                 l.extend(data['data'])
+                yield from resp.release()
             return [cls(request_session, item) for item in l]
         return cls(request_session, data['data'])
 
@@ -163,26 +173,12 @@ class NodeStorage(Folder):
     """Fetch API list of storage options under a node"""
     @classmethod
     def get_url(cls, node_id):
-        # return Node.get_url(node_id) + 'files/' + storage_id + '/'
         return Node.get_url(node_id) + 'files/'
 
 
 class File(StorageObject):
     """Represent API data for files under a specific node"""
     is_dir = False
-
-    @asyncio.coroutine
-    def download(self):
-        """Download file content from the storage provider"""
-        # TODO: Can this be done without the coroutine? (while still using aiohttp) Make blocking maybe?
-        url = self.raw['links']['download']
-        resp = yield from self.request_session.request('GET', url)
-        while True:
-            chunk = yield from resp.content.read(1024 * 64)
-            if not chunk:
-                break
-            yield chunk
-        yield from resp.release()
 
     def __repr__(self):
         return '<RemoteFile({}, {}, {}, {}>'.format(self.id, self.name, self.kind, self.parent.id)
