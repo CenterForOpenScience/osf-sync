@@ -6,6 +6,7 @@ import os
 import aiohttp
 
 from osfoffline.client import osf as osf_client
+from osfoffline.client.osf import OSFClient
 from osfoffline import settings
 from osfoffline.database import session
 from osfoffline.database import models
@@ -104,8 +105,7 @@ class LocalCreateFile(BaseOperation):
         db_parent = session.query(models.File).filter(models.File.id == self.remote.parent.id).one()
         path = os.path.join(db_parent.path, self.remote.name)
         # TODO: Create temp file in target directory while downloading, and rename when done. (check that no temp file exists)
-        url = self.remote.raw['links']['download']
-        resp = yield from self.remote.request_session.request('GET', url)
+        resp = yield from OSFClient().request('GET', self.remote.raw['links']['download'])
         with open(path, 'wb') as fobj:
             while True:
                 chunk = yield from resp.content.read(1024 * 64)
@@ -157,7 +157,7 @@ class LocalUpdateFile(BaseOperation):
         path = os.path.join(db_parent.path, self.remote.name)
         tmp_path = os.path.join(db_parent.path, '.~tmp.{}'.format(self.remote.name))
 
-        resp = yield from self.remote.request_session.request('GET', self.remote.raw['links']['download'])
+        resp = yield from OSFClient().request('GET', self.remote.raw['links']['download'])
         with open(tmp_path, 'wb') as fobj:
             while True:
                 chunk = yield from resp.content.read(1024 * 64)
@@ -211,21 +211,15 @@ class RemoteCreateFile(BaseOperation):
                 if child.name == part:
                     parent = child
 
-        if parent.parent is None:
-            parent_path = ''
-        else:
-            parent_path = parent.id + '/'
-
+        url = '{}/v1/resources/{}/providers/{}/{}'.format(settings.FILE_BASE, self.node.id, parent.provider, parent.osf_path)
         with open(self.local.full_path, 'rb') as fobj:
-            resp = yield from aiohttp.request(
-                'PUT',
-                '{}/v1/resources/{}/providers/{}/{}/'.format(settings.FILE_BASE, self.node.id, parent.provider, parent_path()),
-                data=fobj,
-                params={'name': self.local.name},
-                headers={'Authorization': 'Bearer {}'.format(get_current_user().oauth_token)},
-            )
+            resp = yield from OSFClient().request('PUT', url, data=fobj, params={'name': self.local.name})
         data = yield from resp.json()
+        yield from resp.release()
+        assert resp.status == 201, '{}\n{}\n{}'.format(resp, url, data)
         remote = osf_client.File(None, data['data'])
+        # WB id are <provider>/<id>
+        remote.id = remote.id.replace(remote.provider + '/', '')
         remote.parent = parent
         # TODO: APIv2 will give back endpoint that can be parsed. Waterbutler may return something *similar* and need to coerce to work with task object
         yield from DatabaseCreateFile(remote, self.node).run()
@@ -248,20 +242,14 @@ class RemoteCreateFolder(BaseOperation):
                 if child.name == part:
                     parent = child
 
-        if parent.parent is None:
-            parent_path = ''
-        else:
-            parent_path = parent.id + '/'
-
-        resp = yield from aiohttp.request(
-            'PUT',
-            '{}/v1/resources/{}/providers/{}/{}'.format(settings.FILE_BASE, self.node.id, parent.provider, parent_path),
-            params={'kind': 'folder', 'name': self.local.name},
-            headers={'Authorization': 'Bearer {}'.format(get_current_user().oauth_token)}
-        )
+        url = '{}/v1/resources/{}/providers/{}/{}'.format(settings.FILE_BASE, self.node.id, parent.provider, parent.osf_path)
+        resp = yield from OSFClient().request('PUT', url, params={'kind': 'folder', 'name': self.local.name})
         data = yield from resp.json()
-        print(data)
+        yield from resp.release()
+        assert resp.status == 201, '{}\n{}\n{}'.format(resp, url, data)
         remote = osf_client.File(None, data['data'])
+        # WB id are <provider>/<id>/
+        remote.id = remote.id.replace(remote.provider + '/', '').lstrip('/')
         remote.parent = parent
         # TODO: APIv2 will give back endpoint that can be parsed. Waterbutler may return something *similar* and need to coerce to work with task object
         yield from DatabaseCreateFolder(remote, self.node).run()
@@ -287,7 +275,10 @@ class RemoteDeleteFile(BaseOperation):
     @asyncio.coroutine
     def _run(self):
         logger.info("Delete Remote File: {}".format(self.remote))
-        resp = yield from self.remote.request_session.request('GET', self.remote.raw['links']['delete'])
+        resp = yield from osf_client.OSFClient().request('DELETE', self.remote.raw['links']['delete'])
+        yield from resp.release()
+        assert resp.status == 204, resp
+        yield from DatabaseDeleteFile(session.query(models.File).filter(models.File.id == self.remote.id).one()).run()
 
 
 class RemoteDeleteFolder(BaseOperation):
@@ -299,7 +290,10 @@ class RemoteDeleteFolder(BaseOperation):
     @asyncio.coroutine
     def _run(self):
         logger.info("Delete Remote Folder: {}".format(self.remote))
-        resp = yield from self.remote.request_session.request('GET', self.remote.raw['links']['delete'])
+        resp = yield from OSFClient().request('DELETE', self.remote.raw['links']['delete'])
+        yield from resp.release()
+        assert resp.status == 204, resp
+        yield from DatabaseDeleteFolder(session.query(models.File).filter(models.File.id == self.remote.id).one()).run()
 
 
 class DatabaseCreateFile(BaseOperation):
@@ -327,7 +321,6 @@ class DatabaseCreateFile(BaseOperation):
             name=self.remote.name,
             kind=self.remote.kind,
             provider=self.remote.provider,
-            osf_path=self.remote.id,
             user=get_current_user(),
             parent_id=parent,
             node_id=self.node.id,
@@ -354,7 +347,6 @@ class DatabaseCreateFolder(BaseOperation):
             name=self.remote.name,
             kind=self.remote.kind,
             provider=self.remote.provider,
-            osf_path=self.remote.id,
             user=get_current_user(),
             parent_id=parent,
             node_id=self.node.id
