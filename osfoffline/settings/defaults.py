@@ -9,6 +9,8 @@ PROJECT_NAME = 'osf-offline'
 PROJECT_AUTHOR = 'cos'
 APPLICATION_SCOPES = 'osf.full_write'
 
+DEBUG = True
+
 # Base URL for API server; used to fetch data
 OSF_URL = 'https://test.osf.io'
 API_BASE = 'https://test-api.osf.io'
@@ -18,7 +20,7 @@ FILE_BASE = 'https://test-files.osf.io'
 REMOTE_CHECK_INTERVAL = 60 * 5  # Every 5 minutes
 
 # Time to keep alert messages on screen (in milliseconds); may not be configurable on all platforms
-ALERT_TIME = 1000  # ms
+ALERT_TIME = 3000  # ms
 
 LOG_LEVEL = 'INFO'
 

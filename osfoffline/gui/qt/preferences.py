@@ -31,7 +31,6 @@ class Preferences(QDialog, Ui_Settings):
     PROJECT_SYNC_COLUMN = 0
 
     preferences_closed_signal = pyqtSignal()
-
     containing_folder_updated_signal = pyqtSignal((str,))
 
     def __init__(self):
