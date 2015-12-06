@@ -8,6 +8,8 @@ from PyQt5.QtCore import pyqtSignal
 from PyQt5.QtWidgets import QMessageBox
 from PyQt5.QtCore import QMutex
 from PyQt5.QtCore import QThread
+from PyQt5.QtCore import QEvent
+from PyQt5.QtWidgets import QTextEdit
 from PyQt5.QtWidgets import QApplication
 from PyQt5.QtWidgets import QFileDialog
 from PyQt5.QtWidgets import QSystemTrayIcon
@@ -25,6 +27,26 @@ from osfoffline.utils.validators import validate_containing_folder
 
 
 logger = logging.getLogger(__name__)
+
+
+class QResizableMessageBox(QMessageBox):
+
+    QWIDGETSIZE_MAX = 16777215
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.setMouseTracking(True)
+        self.setSizeGripEnabled(True)
+
+    def event(self, e):
+        if e.type() in (QEvent.MouseMove, QEvent.MouseButtonPress):
+            self.setMaximumSize(self.QWIDGETSIZE_MAX, self.QWIDGETSIZE_MAX)
+
+            details_box = self.findChild(QTextEdit)
+            if details_box is not None:
+                details_box.setFixedSize(details_box.sizeHint())
+        return QMessageBox.event(self, e)
 
 
 class OSFOfflineQT(QSystemTrayIcon):
@@ -80,9 +102,11 @@ class OSFOfflineQT(QSystemTrayIcon):
         return True
 
     def on_intervention(self, intervention):
-        message = QMessageBox()
+        message = QResizableMessageBox()
         message.setWindowTitle('OSF Offline')
-        message.setText(intervention.description)
+        message.setIcon(QMessageBox.Question)
+        message.setText(intervention.title)
+        message.setInformativeText(intervention.description)
         for option in intervention.options:
             message.addButton(str(option).split('.')[1], QMessageBox.YesRole)
         idx = message.exec()

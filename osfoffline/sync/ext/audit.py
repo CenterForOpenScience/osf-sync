@@ -219,8 +219,11 @@ class FolderAuditor(BaseAuditor):
     @asyncio.coroutine
     def _on_local_changed(self):
         if not self.local:
-            # Folder has been deleted locally, and remote exists.
-            return (yield from self._handle_sync_decision(interventions.LocalFolderDeleted(self)))
+            remote_children = yield from self.remote.get_children()
+            if len(remote_children) > 0:
+                # Folder has been deleted locally, and remote exists.
+                return (yield from self._handle_sync_decision(interventions.LocalFolderDeleted(self, remote_children)))
+            return (yield from self.operation_queue.put(operations.RemoteDeleteFolder(self.remote)))
         # Folder has been created locally, and remote does not exist
         return (yield from self.operation_queue.put(operations.RemoteCreateFolder(self.local, self.node)))
 

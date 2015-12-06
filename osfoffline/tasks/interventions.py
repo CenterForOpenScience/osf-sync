@@ -42,6 +42,7 @@ class LocalFileDeleted(BaseIntervention):
 
     def __init__(self, auditor):
         super().__init__(auditor)
+        self.title = 'Local File Deleted'
         self.description = 'This is the description'
         self.options = (Decision.MINE, Decision.THEIRS)
 
@@ -50,8 +51,29 @@ class LocalFileDeleted(BaseIntervention):
         if decision == Decision.MINE:
             yield from self.auditor.operation_queue.put(operations.RemoteDeleteFile(self.auditor.remote))
         elif decision == Decision.THEIRS:
-            yield from self.auditor.operation_queue.put(operations.LocalCreateFile(self.auditor.remote,
-                                                                                   self.auditor.node))
+            yield from self.auditor.operation_queue.put(operations.LocalCreateFile(self.auditor.remote, self.auditor.node))
+        else:
+            raise ValueError('Unknown decision')
+
+
+class LocalFolderDeleted(BaseIntervention):
+
+    DEFAULT_DECISION = Decision.THEIRS
+
+    def __init__(self, auditor, remote_children):
+        super().__init__(auditor)
+        self.title = 'Local Folder Deleted'
+        self.description = 'The Local Folder \'{}\' was Deleted, however it still exists in the Remote Project {}.\n' \
+            '\n' \
+            'The Remote Folder contains {} objects.'.format(self.auditor.db.path, self.auditor.node.id, len(remote_children))
+        self.options = (Decision.MINE, Decision.THEIRS)
+
+    @asyncio.coroutine
+    def resolve(self, decision):
+        if decision == Decision.MINE:
+            yield from self.auditor.operation_queue.put(operations.RemoteDeleteFolder(self.auditor.remote))
+        elif decision == Decision.THEIRS:
+            yield from self.auditor.operation_queue.put(operations.LocalCreateFolder(self.auditor.remote, self.auditor.node))
         else:
             raise ValueError('Unknown decision')
 
@@ -62,6 +84,7 @@ class RemoteFileDeleted(BaseIntervention):
 
     def __init__(self, auditor):
         super().__init__(auditor)
+        self.title = 'Remote File Deleted'
         self.description = 'This is the description'
         self.options = (Decision.MINE, Decision.THEIRS)
 
@@ -81,6 +104,7 @@ class RemoteLocalFileConflict(BaseIntervention):
 
     def __init__(self, auditor):
         super().__init__(auditor)
+        self.title = 'Remote Local File Conflict'
         self.description = 'This is the description'
         self.options = (Decision.MINE, Decision.THEIRS, Decision.KEEP_BOTH)
 
@@ -92,8 +116,7 @@ class RemoteLocalFileConflict(BaseIntervention):
             yield from self.auditor.operation_queue.put(operations.LocalUpdateFile(self.auditor.remote))
         elif decision == Decision.KEEP_BOTH:
             yield from self.auditor.operation_queue.put(operations.LocalKeepFile(self.auditor.local))
-            yield from self.auditor.operation_queue.put(operations.LocalCreateFile(self.auditor.remote,
-                                                                                   self.auditor.node))
+            yield from self.auditor.operation_queue.put(operations.LocalCreateFile(self.auditor.remote, self.auditor.node))
         else:
             raise ValueError('Unknown decision')
 
@@ -113,6 +136,7 @@ class RemoteFolderDeleted(BaseIntervention):
             else:
                 self.changed += 1
 
+        self.title = 'Remote Folder Deleted'
         self.description = 'This is the description'
         self.options = (Decision.MINE, Decision.THEIRS)
 
