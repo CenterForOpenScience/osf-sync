@@ -50,8 +50,8 @@ class LocalFileDeleted(BaseIntervention):
         if decision == Decision.MINE:
             yield from self.auditor.operation_queue.put(operations.RemoteDeleteFile(self.auditor.remote))
         elif decision == Decision.THEIRS:
-            yield from self.auditor.operation_queue.put(operations.LocalCreateFile(self.auditor.remote,
-                                                                                   self.auditor.node))
+            yield from self.auditor.operation_queue.put(operations.DatabaseDeleteFile(self.auditor.db))
+            yield from self.auditor.operation_queue.put(operations.LocalCreateFile(self.auditor.remote, self.auditor.node))
         else:
             raise ValueError('Unknown decision')
 
