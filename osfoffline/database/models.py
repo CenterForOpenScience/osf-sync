@@ -1,5 +1,4 @@
 import os
-import hashlib
 import datetime
 
 from sqlalchemy import Column, Integer, Boolean, String, DateTime
@@ -140,6 +139,12 @@ class File(Base):
         return self.parent is not None
 
     @property
+    def osf_path(self):
+        if not self.parent:
+            return ''
+        return self.id + ((self.is_folder and '/') or '')
+
+    @property
     def path(self):
         """Recursively walk up the path of the file/folder. Top level file/folder joins with the path of the containing node.
         """
@@ -148,19 +153,6 @@ class File(Base):
             return os.path.join(self.parent.path, self.name)
         else:
             return os.path.join(self.node.path, settings.OSF_STORAGE_FOLDER)
-
-    def update_hash(self, block_size=2 ** 20):
-        if self.is_file:
-            m, s = hashlib.md5(), hashlib.sha256()
-            with open(self.path, "rb") as f:
-                while True:
-                    buf = f.read(block_size)
-                    if not buf:
-                        break
-                    m.update(buf)
-                    s.update(buf)
-            self.hash = m.hexdigest()
-            self.md5, self.sha256 = m.hexdigest(), s.hexdigest()
 
     def locally_create_children(self):
         self.locally_created = True
