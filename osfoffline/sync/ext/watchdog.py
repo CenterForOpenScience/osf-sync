@@ -42,10 +42,10 @@ class ConsolidatedEventHandler(PatternMatchingEventHandler):
             for src_seg, dest_seg in zip(src_parent, dest_parent):
                 if not isinstance(cache, dict):
                     break
-                cache = cache.setdefault((event.event_type, src_seg, dest_seg), OrderedDict())
+                cache = cache.setdefault((src_seg, dest_seg), OrderedDict())
             else:
                 if isinstance(cache, dict):
-                    cache[(event.event_type, src_name, dest_name)] = event
+                    cache[(src_name, dest_name)] = event
 
             self.timer.cancel()
             self.timer = threading.Timer(2, self.flush)
