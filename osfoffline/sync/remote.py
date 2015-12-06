@@ -22,7 +22,6 @@ class RemoteSync:
         self.operation_queue = operation_queue
         self.user = user
 
-        self.client = OSFClient(self.user.oauth_token)
         self._sync_now_fut = asyncio.Future()
 
         if not os.path.isdir(self.user.folder):
@@ -47,7 +46,7 @@ class RemoteSync:
 
     @asyncio.coroutine
     def _preprocess_node(self, node):
-        remote_node = yield from self.client.get_node(node.id)
+        remote_node = yield from OSFClient().get_node(node.id)
         remote = yield from remote_node.get_storage(id='osfstorage')
         local = ProperPath(os.path.join(node.path, settings.OSF_STORAGE_FOLDER), True)
         if not os.path.exists(local.full_path):
