@@ -1,19 +1,11 @@
-import os
 import asyncio
 import logging
 
 from watchdog.observers import Observer
 
 from osfoffline import utils
-from osfoffline import settings
-from osfoffline.client import osf
-from osfoffline.database import session
-from osfoffline.database.models import File
-from osfoffline.database.models import Node
 from osfoffline.sync.ext.watchdog import ConsolidatedEventHandler
 from osfoffline.tasks import operations
-from osfoffline.utils import ensure_event_loop
-from osfoffline.utils.authentication import get_current_user
 from osfoffline.utils.path import ProperPath
 
 
@@ -47,6 +39,11 @@ class LocalSync(ConsolidatedEventHandler):
         logger.info('Created {}: {}'.format((event.is_directory and 'directory') or 'file', event.src_path))
         node = utils.extract_node(event.src_path)
         path = ProperPath(event.src_path, event.is_directory)
+
+        # If the file exists in the database, this is a modification
+        if utils.local_to_db(path, node):
+            return self.on_modified(event)
+
         if event.is_directory:
             return self.put_event(operations.RemoteCreateFolder(path, node))
         return self.put_event(operations.RemoteCreateFile(path, node))
