@@ -179,9 +179,8 @@ class NodeFetcher(QtCore.QObject):
 
     def fetch(self):
         loop = self.ensure_event_loop()
-        user = session.query(User).one()
         try:
-            client = OSFClient(bearer_token=user.oauth_token)
+            client = OSFClient()
             client_user = loop.run_until_complete(client.get_user())
             user_nodes = loop.run_until_complete(client_user.get_nodes())
         except Exception as e:

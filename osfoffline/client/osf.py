@@ -1,17 +1,24 @@
+"""APIv2 client library for interacting with the OSF API"""
+
 import abc
 import asyncio
 import iso8601
+import threading
 
 import aiohttp
 
 from osfoffline import settings
+from osfoffline.utils import Singleton
+from osfoffline.utils.authentication import get_current_user
 
 
-class OSFClient:
+class OSFClient(metaclass=Singleton):
+    thread_safe = False
 
-    def __init__(self, bearer_token, limit=5):
+    def __init__(self, limit=5):
+        self.user = get_current_user()
         self.headers = {
-            'Authorization': 'Bearer {}'.format(bearer_token),
+            'Authorization': 'Bearer {}'.format(self.user.oauth_token),
         }
         self.throttler = asyncio.Semaphore(limit)
         self.request_session = aiohttp.ClientSession(headers=self.headers)
@@ -23,6 +30,10 @@ class OSFClient:
     @asyncio.coroutine
     def get_user(self, id='me'):
         return (yield from User.load(self.request_session, id))
+
+    @asyncio.coroutine
+    def request(self, *args, **kwargs):
+        return (yield from self.request_session.request(*args, **kwargs))
 
 
 class BaseResource(abc.ABC):
@@ -54,12 +65,13 @@ class BaseResource(abc.ABC):
                 resp = yield from request_session.request('GET', data['links']['next'], params={'page[size]': 250})
                 data = yield from resp.json()
                 l.extend(data['data'])
+                yield from resp.release()
             return [cls(request_session, item) for item in l]
         return cls(request_session, data['data'])
 
 
 class User(BaseResource):
-
+    """Fetch API data relevant to a specific user"""
     RESOURCE = 'users'
 
     # def __init__(self, request_session, data):
@@ -77,7 +89,7 @@ class User(BaseResource):
 
 
 class Node(BaseResource):
-
+    """Fetch API data relevant to a specific Node"""
     RESOURCE = 'nodes'
 
     def __init__(self, request_session, data):
@@ -90,21 +102,22 @@ class Node(BaseResource):
         return '{}/{}/{}/{}/'.format(cls.OSF_HOST, cls.API_PREFIX, cls.RESOURCE, id)
 
     @asyncio.coroutine
-    def get_storage(self, id):
+    def get_storage(self, id='osfstorage'):
+        # TODO: At present only osfstorage is fully supported for syncing
         for storage in (yield from NodeStorage.load(self.request_session, self.id)):
             if storage.provider == id:
                 return storage
 
 
 class UserNode(Node):
-
+    """Fetch API data about nodes owned by a specific user"""
     @classmethod
     def get_url(cls, id):
         return '{}/{}/users/{}/nodes/'.format(cls.OSF_HOST, cls.API_PREFIX, id)
 
 
 class StorageObject(BaseResource):
-
+    """Represent API data for files or folders under a specific node"""
     @classmethod
     def get_url(cls, id):
         return '{}/{}/files/{}/'.format(cls.OSF_HOST, cls.API_PREFIX, id)
@@ -133,6 +146,7 @@ class StorageObject(BaseResource):
 
 
 class Folder(StorageObject):
+    """Represent API data for folders under a specific node"""
     is_dir = True
 
     @asyncio.coroutine
@@ -156,12 +170,15 @@ class Folder(StorageObject):
 
 
 class NodeStorage(Folder):
-
+    """Fetch API list of storage options under a node"""
     @classmethod
     def get_url(cls, node_id):
-        # return Node.get_url(node_id) + 'files/' + storage_id + '/'
         return Node.get_url(node_id) + 'files/'
 
 
 class File(StorageObject):
+    """Represent API data for files under a specific node"""
     is_dir = False
+
+    def __repr__(self):
+        return '<RemoteFile({}, {}, {}, {}>'.format(self.id, self.name, self.kind, self.parent.id)

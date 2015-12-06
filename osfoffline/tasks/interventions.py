@@ -4,6 +4,7 @@ import asyncio
 import logging
 
 from osfoffline.tasks import operations
+from osfoffline.utils import Singleton
 
 
 logger = logging.getLogger(__name__)
@@ -48,7 +49,8 @@ class LocalFileDeleted(BaseIntervention):
         if decision == Decision.MINE:
             yield from self.auditor.operation_queue.put(operations.RemoteDeleteFile(self.auditor.remote))
         elif decision == Decision.THEIRS:
-            yield from self.auditor.operation_queue.put(operations.LocalCreateFile(self.auditor.remote))
+            yield from self.auditor.operation_queue.put(operations.LocalCreateFile(self.auditor.remote,
+                                                                                   self.auditor.node))
         else:
             raise ValueError('Unknown decision')
 
@@ -89,7 +91,8 @@ class RemoteLocalFileConflict(BaseIntervention):
             yield from self.auditor.operation_queue.put(operations.LocalUpdateFile(self.auditor.remote))
         elif decision == Decision.KEEP_BOTH:
             yield from self.auditor.operation_queue.put(operations.LocalKeepFile(self.auditor.local))
-            yield from self.auditor.operation_queue.put(operations.LocalCreateFile(self.auditor.remote))
+            yield from self.auditor.operation_queue.put(operations.LocalCreateFile(self.auditor.remote,
+                                                                                   self.auditor.node))
         else:
             raise ValueError('Unknown decision')
 
@@ -125,17 +128,8 @@ class RemoteFolderDeleted(BaseIntervention):
             raise ValueError('Unknown decision')
 
 
-# TODO: Move to single util location
-class Singleton(type):
-    _instances = {}
-
-    def __call__(cls, *args, **kwargs):
-        if cls not in cls._instances:
-            cls._instances[cls] = super(Singleton, cls).__call__(*args, **kwargs)
-        return cls._instances[cls]
-
-
 class Intervention(metaclass=Singleton):
+    thread_safe = True
 
     def set_callback(self, cb):
         self.cb = cb

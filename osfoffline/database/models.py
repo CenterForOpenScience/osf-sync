@@ -1,5 +1,4 @@
 import os
-import hashlib
 import datetime
 
 from sqlalchemy import Column, Integer, Boolean, String, DateTime
@@ -100,7 +99,7 @@ class File(Base):
 
     size = Column(Integer)
 
-    type = Column(Enum(FOLDER, FILE), nullable=False)
+    kind = Column(Enum(FOLDER, FILE), nullable=False)
     date_modified = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
     provider = Column(String, nullable=False)
 
@@ -129,15 +128,21 @@ class File(Base):
 
     @hybrid_property
     def is_file(self):
-        return self.type == File.FILE
+        return self.kind == File.FILE
 
     @hybrid_property
     def is_folder(self):
-        return self.type == File.FOLDER
+        return self.kind == File.FOLDER
 
     @hybrid_property
     def has_parent(self):
         return self.parent is not None
+
+    @property
+    def osf_path(self):
+        if not self.parent:
+            return ''
+        return self.id + ((self.is_folder and '/') or '')
 
     @property
     def path(self):
@@ -148,19 +153,6 @@ class File(Base):
             return os.path.join(self.parent.path, self.name)
         else:
             return os.path.join(self.node.path, settings.OSF_STORAGE_FOLDER)
-
-    def update_hash(self, block_size=2 ** 20):
-        if self.is_file:
-            m, s = hashlib.md5(), hashlib.sha256()
-            with open(self.path, "rb") as f:
-                while True:
-                    buf = f.read(block_size)
-                    if not buf:
-                        break
-                    m.update(buf)
-                    s.update(buf)
-            self.hash = m.hexdigest()
-            self.md5, self.sha256 = m.hexdigest(), s.hexdigest()
 
     def locally_create_children(self):
         self.locally_created = True
@@ -187,6 +179,4 @@ class File(Base):
         return files
 
     def __repr__(self):
-        return "<File ({}), type={}, name={}, path={}, parent_id={}>".format(
-            self.id, self.type, self.name, self.path, self.parent
-        )
+        return '<DBFile({}, {}, {}, {}>'.format(self.id, self.name, self.kind, self.parent_id)
