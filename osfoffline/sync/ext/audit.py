@@ -99,7 +99,7 @@ class FileAuditor(BaseAuditor):
         if not self.remote and not self.db:
             return False
         if self.remote and self.db:
-            return self.remote.extra['hashes']['sha256'] == self.db.sha256
+            return self.remote.extra['hashes']['sha256'] != self.db.sha256
         return True
 
     @asyncio.coroutine
