@@ -132,25 +132,23 @@ class FileAuditor(BaseAuditor):
         if not self.remote:
             # TODO: Need remote un-delete feature w/ user notification.
             # File has been deleted on the remote and not changed locally.
-            return (yield from self.operation_queue.put(operations.RemoteDeleteFile(self.local)))
+            return (yield from self.operation_queue.put(operations.LocalDeleteFile(self.local)))
         if not self.local:
             # File has been updated remotely, we don't have it locally.
-            return (yield from self.operation_queue.put(operations.LocalCreateFile(self.remote,
-                                                                                   self.node)))
-            # File has been updated remotely, we have an old version.
+            return (yield from self.operation_queue.put(operations.LocalCreateFile(self.remote, self.node)))
+        # File has been updated remotely, we have an old version.
         return (yield from self.operation_queue.put(operations.LocalUpdateFile(self.remote)))
 
     @asyncio.coroutine
     def _on_local_changed(self):
         # Assumption: Either this is the initial sync, or watchdog missed this file somehow
-
         if not self.local:
             # File has been deleted locally, and remote exists.
             return (yield from self._handle_sync_decision(interventions.LocalFileDeleted(self)))
         if not self.remote:
             # File has been modified locally, and remote does not exist.
-            return (yield from self.operation_queue.put(operations.RemoteCreateFile(self.local)))
-            # File has been modified locally, and remote has not changed.
+            return (yield from self.operation_queue.put(operations.RemoteCreateFile(self.local, self.node)))
+        # File has been modified locally, and remote has not changed.
         return (yield from self.operation_queue.put(operations.RemoteUpdateFile(self.local)))
 
     @asyncio.coroutine
@@ -224,7 +222,7 @@ class FolderAuditor(BaseAuditor):
             # Folder has been deleted locally, and remote exists.
             return (yield from self._handle_sync_decision(interventions.LocalFolderDeleted(self)))
         # Folder has been created locally, and remote does not exist
-        return (yield from self.operation_queue.put(operations.RemoteCreateFolder(self.local)))
+        return (yield from self.operation_queue.put(operations.RemoteCreateFolder(self.local, self.node)))
 
     @asyncio.coroutine
     def crawl(self, operation_queue=None, decision=None):
