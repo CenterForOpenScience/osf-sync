@@ -1,18 +1,10 @@
 import asyncio
 import logging
 
-from asyncio.queues import Queue
-
-
 from osfoffline.tasks import operations
 
 
 logger = logging.getLogger(__name__)
-
-try:
-    asyncio.ensure_future
-except AttributeError:
-    asyncio.ensure_future = asyncio.async
 
 
 class Queue(getattr(asyncio, 'JoinableQueue', asyncio.Queue)):

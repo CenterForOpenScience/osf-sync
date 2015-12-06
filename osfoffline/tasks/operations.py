@@ -4,8 +4,6 @@ import logging
 import os
 import shutil
 
-import aiohttp
-
 from osfoffline.client import osf as osf_client
 from osfoffline.client.osf import OSFClient
 from osfoffline import settings
@@ -38,8 +36,7 @@ class LocalKeepFile(BaseOperation):
         will not be uploaded to the OSF
     """
 
-    def __init__(self, local, *args, **kwargs):
-        super(LocalKeepFile, self).__init__(*args, **kwargs)
+    def __init__(self, local):
         self.local = local
 
     @asyncio.coroutine
@@ -124,7 +121,7 @@ class LocalUpdateFile(BaseOperation):
         yield from resp.release()
         shutil.move(tmp_path, db_file.path)
 
-        yield from DatabaseUpdateFile(db_file, self.remote, self.db_file.node).run()
+        yield from DatabaseUpdateFile(db_file, self.remote, db_file.node).run()
         Notification().info('Updated File: {}'.format(self.remote.name))
 
 

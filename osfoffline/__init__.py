@@ -1,3 +1,6 @@
-__author__ = 'cos'
+import asyncio
+
 __version__ = '0.0.1'
-from osfoffline import *
+
+if not hasattr(asyncio, 'ensure_future'):
+    asyncio.ensure_future = asyncio.async

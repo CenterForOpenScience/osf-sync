@@ -3,18 +3,11 @@ import collections
 import logging
 import sys
 import textwrap
-import threading
 
 import npyscreen
 
 
 logger = logging.getLogger(__name__)
-
-
-try:
-    asyncio.ensure_future
-except AttributeError:
-    asyncio.ensure_future = asyncio.async
 
 
 class StdWrapper:
