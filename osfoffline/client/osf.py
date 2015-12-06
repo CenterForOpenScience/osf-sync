@@ -185,4 +185,4 @@ class File(StorageObject):
         yield from resp.release()
 
     def __repr__(self):
-        return "<File ({}), kind={}, name={}, parent_id={}>".format(self.id, self.kind, self.name, self.parent_id)
+        return '<RemoteFile({}, {}, {}, {}>'.format(self.id, self.name, self.kind, self.parent.id)

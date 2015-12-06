@@ -187,6 +187,4 @@ class File(Base):
         return files
 
     def __repr__(self):
-        return "<File ({}), type={}, name={}, path={}, parent_id={}>".format(
-            self.id, self.type, self.name, self.path, self.parent
-        )
+        return '<DBFile({}, {}, {}, {}>'.format(self.id, self.name, self.kind, self.parent_id)
