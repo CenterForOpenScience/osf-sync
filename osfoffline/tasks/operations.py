@@ -11,6 +11,7 @@ from osfoffline import settings
 from osfoffline.database import session
 from osfoffline.database import models
 from osfoffline.database.utils import save
+from osfoffline import utils
 from osfoffline.tasks.notifications import Notification
 from osfoffline.utils.authentication import get_current_user
 
@@ -172,26 +173,30 @@ class LocalUpdateFile(BaseOperation):
 
 class LocalDeleteFile(BaseOperation):
 
-    def __init__(self, local, *args, **kwargs):
+    def __init__(self, local, node, *args, **kwargs):
         super(LocalDeleteFile, self).__init__(*args, **kwargs)
         self.local = local
+        self.node = node
 
     @asyncio.coroutine
     def _run(self):
         logger.info("Delete Local File: {}".format(self.local))
         os.remove(self.local.full_path)
+        session.delete(utils.local_to_db(self.local, self.node))
 
 
 class LocalDeleteFolder(BaseOperation):
     """Delete a folder (and all containing files) locally"""
-    def __init__(self, local, *args, **kwargs):
+    def __init__(self, local, node, *args, **kwargs):
         super(LocalDeleteFolder, self).__init__(*args, **kwargs)
         self.local = local
+        self.node = node
 
     @asyncio.coroutine
     def _run(self):
         logger.info("Delete Local Folder: {}".format(self.local))
         os.remove(self.local.full_path)
+        session.delete(utils.local_to_db(self.local, self.node))
 
 
 class RemoteCreateFile(BaseOperation):
@@ -264,6 +269,20 @@ class RemoteUpdateFile(BaseOperation):
     @asyncio.coroutine
     def _run(self):
         logger.info("Update Remote File: {}".format(self.local))
+        db = local_to_db(self.local, self.node)
+
+        url = '{}/v1/resources/{}/providers/{}/{}'.format(settings.FILE_BASE, self.node.id, db.provider, db.osf_path)
+        with open(self.local.full_path, 'rb') as fobj:
+            resp = yield from OSFClient().request('PUT', url, data=fobj, params={'name': self.local.name})
+        data = yield from resp.json()
+        yield from resp.release()
+        assert resp.status == 201, '{}\n{}\n{}'.format(resp, url, data)
+        remote = osf_client.File(None, data['data'])
+        # WB id are <provider>/<id>
+        remote.id = remote.id.replace(remote.provider + '/', '')
+        remote.parent = parent
+        # TODO: APIv2 will give back endpoint that can be parsed. Waterbutler may return something *similar* and need to coerce to work with task object
+        yield from DatabaseCreateFile(remote, self.node).run()
 
 
 class RemoteDeleteFile(BaseOperation):
