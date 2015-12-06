@@ -123,6 +123,8 @@ class FileAuditor(BaseAuditor):
         elif not self.remote and self.local:
             return (yield from self._handle_sync_decision(interventions.RemoteFileDeleted(self)))
         elif self.remote.extra['hashes']['sha256'] == (yield from self._get_local_sha256()):
+            if self.db:
+                return (yield from self.operation_queue.put(operations.DatabaseUpdateFile(self.db, self.remote, self.node)))
             return (yield from self.operation_queue.put(operations.DatabaseCreateFile(self.remote, self.node)))
         return (yield from self._handle_sync_decision(interventions.RemoteLocalFileConflict(self)))
 
@@ -132,12 +134,12 @@ class FileAuditor(BaseAuditor):
         if not self.remote:
             # TODO: Need remote un-delete feature w/ user notification.
             # File has been deleted on the remote and not changed locally.
-            return (yield from self.operation_queue.put(operations.LocalDeleteFile(self.local)))
+            return (yield from self.operation_queue.put(operations.LocalDeleteFile(self.local, self.node)))
         if not self.local:
             # File has been updated remotely, we don't have it locally.
             return (yield from self.operation_queue.put(operations.LocalCreateFile(self.remote, self.node)))
         # File has been updated remotely, we have an old version.
-        return (yield from self.operation_queue.put(operations.LocalUpdateFile(self.remote)))
+        return (yield from self.operation_queue.put(operations.LocalUpdateFile(self.remote, self.node)))
 
     @asyncio.coroutine
     def _on_local_changed(self):
@@ -149,7 +151,7 @@ class FileAuditor(BaseAuditor):
             # File has been modified locally, and remote does not exist.
             return (yield from self.operation_queue.put(operations.RemoteCreateFile(self.local, self.node)))
         # File has been modified locally, and remote has not changed.
-        return (yield from self.operation_queue.put(operations.RemoteUpdateFile(self.local)))
+        return (yield from self.operation_queue.put(operations.RemoteUpdateFile(self.local, self.node)))
 
     @asyncio.coroutine
     def _get_local_sha256(self, chunk_size=64*1024):
@@ -212,7 +214,7 @@ class FolderAuditor(BaseAuditor):
             if changed or len(q) > settings.LOCAL_DELETE_THRESHOLD:
                 # TODO: Short circut child crawl
                 return (yield from self._handle_sync_decision(interventions.RemoteFolderDeleted(self, q)))
-            return (yield from self.operation_queue.put(operations.LocalDeleteFolder(self.local)))
+            return (yield from self.operation_queue.put(operations.LocalDeleteFolder(self.local, self.node)))
         # Folder has been created remotely, we don't have it locally.
         return (yield from self.operation_queue.put(operations.LocalCreateFolder(self.remote, self.node)))
 
