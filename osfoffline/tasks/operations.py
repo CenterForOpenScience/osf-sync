@@ -2,6 +2,7 @@ import abc
 import asyncio
 import logging
 import os
+import shutil
 
 import aiohttp
 
@@ -152,11 +153,10 @@ class LocalUpdateFile(BaseOperation):
 
     @asyncio.coroutine
     def _run(self):
-        logger.info("Update Local File: {}".format(self.remote))
+        logger.info('Update Local File: {}'.format(self.remote))
         db_file = session.query(models.File).filter(models.File.id == self.remote.id).one()
 
-        path = os.path.join(db_parent.path, self.remote.name)
-        tmp_path = os.path.join(db_parent.path, '.~tmp.{}'.format(self.remote.name))
+        tmp_path = os.path.join(db_file.parent.path, '.~tmp.{}'.format(db_file.name))
 
         resp = yield from OSFClient().request('GET', self.remote.raw['links']['download'])
         with open(tmp_path, 'wb') as fobj:
@@ -166,7 +166,7 @@ class LocalUpdateFile(BaseOperation):
                     break
                 fobj.write(chunk)
         yield from resp.release()
-        shutil.move(tmp_path, path)
+        shutil.move(tmp_path, db_file.path)
 
         Notification().info('Updated File: {}'.format(self.remote.name))
 
@@ -262,21 +262,22 @@ class RemoteCreateFolder(BaseOperation):
 
 class RemoteUpdateFile(BaseOperation):
     """Upload (already-tracked) file to the OSF (uploads new version)"""
-    def __init__(self, local, *args, **kwargs):
+    def __init__(self, local, node, *args, **kwargs):
         super(RemoteUpdateFile, self).__init__(*args, **kwargs)
+        self.node = node
         self.local = local
 
     @asyncio.coroutine
     def _run(self):
         logger.info("Update Remote File: {}".format(self.local))
-        db = local_to_db(self.local, self.node)
+        db = utils.local_to_db(self.local, self.node)
 
         url = '{}/v1/resources/{}/providers/{}/{}'.format(settings.FILE_BASE, self.node.id, db.provider, db.osf_path)
         with open(self.local.full_path, 'rb') as fobj:
             resp = yield from OSFClient().request('PUT', url, data=fobj, params={'name': self.local.name})
         data = yield from resp.json()
         yield from resp.release()
-        assert resp.status == 201, '{}\n{}\n{}'.format(resp, url, data)
+        assert resp.status == 200, '{}\n{}\n{}'.format(resp, url, data)
         remote = osf_client.File(None, data['data'])
         # WB id are <provider>/<id>
         remote.id = remote.id.replace(remote.provider + '/', '')
@@ -313,6 +314,17 @@ class RemoteDeleteFolder(BaseOperation):
         yield from resp.release()
         assert resp.status == 204, resp
         yield from DatabaseDeleteFolder(session.query(models.File).filter(models.File.id == self.remote.id).one()).run()
+
+
+class RemoteMoveFile(BaseOperation):
+    def __init__(self, src, dest, node):
+        self.src = src
+        self.dest = dest
+        self.node = node
+
+    @asyncio.coroutine
+    def _run(self):
+        logger.info("Move Remote File: {}".format(self.local))
 
 
 class DatabaseCreateFile(BaseOperation):
