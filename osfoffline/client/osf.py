@@ -183,3 +183,6 @@ class File(StorageObject):
                 break
             yield chunk
         yield from resp.release()
+
+    def __repr__(self):
+        return "<File ({}), kind={}, name={}, parent_id={}>".format(self.id, self.kind, self.name, self.parent_id)
