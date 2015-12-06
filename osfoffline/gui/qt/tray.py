@@ -1,14 +1,20 @@
 import logging
 import os
 
+from queue import Queue
+
 from PyQt5.Qt import QIcon
 from PyQt5.QtCore import pyqtSignal
+from PyQt5.QtWidgets import QMessageBox
+from PyQt5.QtCore import QMutex
+from PyQt5.QtCore import QThread
 from PyQt5.QtWidgets import QApplication
 from PyQt5.QtWidgets import QFileDialog
 from PyQt5.QtWidgets import QSystemTrayIcon
 
 from sqlalchemy.orm.exc import NoResultFound
 
+from osfoffline import settings
 from osfoffline.application.background import BackgroundWorker
 from osfoffline.database import session
 from osfoffline.database.models import User
@@ -18,33 +24,31 @@ from osfoffline.gui.qt.menu import OSFOfflineMenu
 from osfoffline.utils.validators import validate_containing_folder
 
 
-# RUN_PATH = "HKEY_CURRENT_USER\\Software\\Microsoft\\Windows\\CurrentVersion\\Run"
-
 logger = logging.getLogger(__name__)
 
 
 class OSFOfflineQT(QSystemTrayIcon):
-    login_signal = pyqtSignal()
-    containing_folder_updated_signal = pyqtSignal()
 
     def __init__(self, application):
         super().__init__(QIcon(':/tray_icon.png'), application)
+
         self.setContextMenu(OSFOfflineMenu(self))
         self.show()
+
+        self.intervention_handler = SyncEventHandler()
+        self.notification_handler = SyncEventHandler()
 
         # worker
         self.background_worker = BackgroundWorker()
 
-        # connect all signal-slot pairs
-        # self.setup_connections()
-
-    def setup_connections(self):
         # [ (signal, slot) ]
         signal_slot_pairs = [
             # preferences
-            (self.preferences.ui.desktopNotifications.stateChanged, self.preferences.alerts_changed),
-            (self.preferences.preferences_closed_signal, self.resume),
-            (self.preferences.ui.accountLogOutButton.clicked, self.logout),
+            # (self.preferences.ui.desktopNotifications.stateChanged, self.preferences.alerts_changed),
+            # (self.preferences.preferences_closed_signal, self.resume),
+            # (self.preferences.ui.accountLogOutButton.clicked, self.logout),
+            (self.intervention_handler.notify_signal, self.on_intervention),
+            (self.notification_handler.notify_signal, self.on_notification),
         ]
         for signal, slot in signal_slot_pairs:
             signal.connect(slot)
@@ -70,9 +74,37 @@ class OSFOfflineQT(QSystemTrayIcon):
 
         logger.debug('starting background worker from main.start')
         self.background_worker = BackgroundWorker()
+        self.background_worker.set_intervention_cb(self.intervention_handler.enqueue_signal.emit)
+        self.background_worker.set_notification_cb(self.notification_handler.enqueue_signal.emit)
         self.background_worker.start()
-
         return True
+
+    def on_intervention(self, intervention):
+        message = QMessageBox()
+        message.setWindowTitle('OSF Offline')
+        message.setText(intervention.description)
+        for option in intervention.options:
+            message.addButton(str(option).split('.')[1], QMessageBox.YesRole)
+        idx = message.exec()
+
+        intervention.set_result(intervention.options[idx])
+
+        self.intervention_handler.done()
+
+    def on_notification(self, notification):
+        # if (alert_icon is None) or (not show_alerts):
+        #     return
+
+        if not self.supportsMessages():
+            return
+
+        self.showMessage(
+            'Title of The Message!!!',
+            notification.msg,
+            QSystemTrayIcon.NoIcon
+        )
+
+        self.notification_handler.done()
 
     def resume(self):
         logger.debug('resuming')
@@ -112,3 +144,30 @@ class OSFOfflineQT(QSystemTrayIcon):
         # Will probably wipe out everything :shrug:
         session.query(User).delete()
         self.quit()
+
+
+class SyncEventHandler(QThread):
+
+    notify_signal = pyqtSignal(object)
+    enqueue_signal = pyqtSignal(object)
+    done_signal = pyqtSignal()
+
+    def __init__(self):
+        super().__init__()
+
+        self.queue = Queue()
+        self.mutex = QMutex()
+
+        self.enqueue_signal.connect(self.queue.put)
+        self.done_signal.connect(self.mutex.unlock)
+
+        self.start()
+
+    def done(self):
+        self.done_signal.emit()
+
+    def run(self):
+        while True:
+            event = self.queue.get()
+            self.mutex.lock()
+            self.notify_signal.emit(event)

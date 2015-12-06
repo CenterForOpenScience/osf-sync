@@ -5,6 +5,7 @@ import threading
 
 from asyncio import CancelledError, InvalidStateError
 
+from osfoffline import settings
 from osfoffline.database import models
 from osfoffline.database import session
 from osfoffline.sync.local import LocalSync
@@ -63,7 +64,7 @@ class BackgroundWorker(threading.Thread):
     def run(self):
         logger.debug('Background worker starting')
         self.loop = self._ensure_event_loop()
-        # self.loop.set_debug(True)
+        self.loop.set_debug(settings.DEBUG)
 
         self.user = session.query(models.User).one()
         self.root_folder = self.user.folder

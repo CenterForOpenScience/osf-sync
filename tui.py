@@ -144,7 +144,7 @@ class MainForm(npyscreen.Form):
         df.edit()
 
         logger.info('Got decision {} for {}'.format(df.value, intervention))
-        intervention.resolve(df.value)
+        intervention.set_result(df.value)
 
     def ev_notification_event_handler(self, event):
         notification = event.payload

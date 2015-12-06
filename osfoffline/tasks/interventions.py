@@ -1,8 +1,12 @@
 import abc
 import enum
 import asyncio
+import logging
 
 from osfoffline.tasks import operations
+
+
+logger = logging.getLogger(__name__)
 
 
 class Decision(enum.Enum):
@@ -21,7 +25,8 @@ class BaseIntervention(abc.ABC):
         self.future = asyncio.Future()
 
     def set_result(self, decision):
-        self.future.set_result(decision)
+        logger.info('{}: {}'.format(self.__class__.__name__, decision))
+        self.future._loop.call_soon_threadsafe(self.future.set_result, decision)
 
     @abc.abstractmethod
     @asyncio.coroutine
