@@ -3,6 +3,10 @@ import asyncio
 import logging
 import os
 
+import aiohttp
+
+from osfoffline.client import osf as osf_client
+from osfoffline import settings
 from osfoffline.database import session
 from osfoffline.database import models
 from osfoffline.database.utils import save
@@ -148,13 +152,12 @@ class LocalUpdateFile(BaseOperation):
     @asyncio.coroutine
     def _run(self):
         logger.info("Update Local File: {}".format(self.remote))
-
         db_file = session.query(models.File).filter(models.File.id == self.remote.id).one()
-        url = self.raw['links']['download']
+
         path = os.path.join(db_parent.path, self.remote.name)
         tmp_path = os.path.join(db_parent.path, '.~tmp.{}'.format(self.remote.name))
 
-        resp = yield from self.remote.request_session.request('GET', url)
+        resp = yield from self.remote.request_session.request('GET', self.remote.raw['links']['download'])
         with open(tmp_path, 'wb') as fobj:
             while True:
                 chunk = yield from resp.content.read(1024 * 64)
@@ -201,27 +204,67 @@ class RemoteCreateFile(BaseOperation):
     @asyncio.coroutine
     def _run(self):
         logger.info("Create Remote File: {}".format(self.local))
-        return
+        parent = session.query(models.File).filter(models.File.parent == None, models.File.node == self.node).one()
+        parts = self.local.full_path.replace(self.node.path, '').split('/')
+        for part in parts:
+            for child in parent.children:
+                if child.name == part:
+                    parent = child
 
-        ## TODO: This is how we used to do it... move some upload logic to the new client.osf module
-        #remote_file_folder = yield from self.osf_query.upload_file(local_file_folder)
+        if parent.parent is None:
+            parent_path = ''
+        else:
+            parent_path = parent.id + '/'
 
-        # TODO: Add pattern matching to filter ignored list
-        #client.upload(node_target, self.local.pathstring)  # Pseudocode: Upload file from the specified path to self.node.osf_id target url
-
+        with open(self.local.full_path, 'rb') as fobj:
+            resp = yield from aiohttp.request(
+                'PUT',
+                '{}/v1/resources/{}/providers/{}/{}/'.format(settings.FILE_BASE, self.node.id, parent.provider, parent_path()),
+                data=fobj,
+                params={'name': self.local.name},
+                headers={'Authorization': 'Bearer {}'.format(get_current_user().oauth_token)},
+            )
+        data = yield from resp.json()
+        remote = osf_client.File(None, data['data'])
+        remote.parent = parent
         # TODO: APIv2 will give back endpoint that can be parsed. Waterbutler may return something *similar* and need to coerce to work with task object
-        yield from DatabaseCreateFile(remote_response_dict, self.node).run()
+        yield from DatabaseCreateFile(remote, self.node).run()
 
 
 class RemoteCreateFolder(BaseOperation):
     """Upload a folder (and contents) to the OSF and create multiple DB instances to track changes"""
-    def __init__(self, local, *args, **kwargs):
+    def __init__(self, local, node, *args, **kwargs):
         super(RemoteCreateFolder, self).__init__(*args, **kwargs)
+        self.node = node
         self.local = local
 
     @asyncio.coroutine
     def _run(self):
         logger.info("Create Remote Folder: {}".format(self.local))
+        parent = session.query(models.File).filter(models.File.parent == None, models.File.node == self.node).one()
+        parts = self.local.full_path.replace(self.node.path, '').split('/')
+        for part in parts:
+            for child in parent.children:
+                if child.name == part:
+                    parent = child
+
+        if parent.parent is None:
+            parent_path = ''
+        else:
+            parent_path = parent.id + '/'
+
+        resp = yield from aiohttp.request(
+            'PUT',
+            '{}/v1/resources/{}/providers/{}/{}'.format(settings.FILE_BASE, self.node.id, parent.provider, parent_path),
+            params={'kind': 'folder', 'name': self.local.name},
+            headers={'Authorization': 'Bearer {}'.format(get_current_user().oauth_token)}
+        )
+        data = yield from resp.json()
+        print(data)
+        remote = osf_client.File(None, data['data'])
+        remote.parent = parent
+        # TODO: APIv2 will give back endpoint that can be parsed. Waterbutler may return something *similar* and need to coerce to work with task object
+        yield from DatabaseCreateFolder(remote, self.node).run()
 
 
 class RemoteUpdateFile(BaseOperation):
@@ -244,6 +287,7 @@ class RemoteDeleteFile(BaseOperation):
     @asyncio.coroutine
     def _run(self):
         logger.info("Delete Remote File: {}".format(self.remote))
+        resp = yield from self.remote.request_session.request('GET', self.remote.raw['links']['delete'])
 
 
 class RemoteDeleteFolder(BaseOperation):
@@ -255,6 +299,7 @@ class RemoteDeleteFolder(BaseOperation):
     @asyncio.coroutine
     def _run(self):
         logger.info("Delete Remote Folder: {}".format(self.remote))
+        resp = yield from self.remote.request_session.request('GET', self.remote.raw['links']['delete'])
 
 
 class DatabaseCreateFile(BaseOperation):
@@ -286,6 +331,7 @@ class DatabaseCreateFile(BaseOperation):
             user=get_current_user(),
             parent_id=parent,
             node_id=self.node.id,
+            size=self.remote.size,
             md5=self.remote.extra['hashes']['md5'],
             sha256=self.remote.extra['hashes']['sha256'],
         ))
@@ -324,6 +370,7 @@ class DatabaseDeleteFile(BaseOperation):
     @asyncio.coroutine
     def _run(self):
         logger.info("Database File Delete: {}".format(self.db))
+        session.delete(self.db)
 
 
 class DatabaseDeleteFolder(BaseOperation):
@@ -335,3 +382,4 @@ class DatabaseDeleteFolder(BaseOperation):
     @asyncio.coroutine
     def _run(self):
         logger.info("Database Folder Delete: {}".format(self.db))
+        session.delete(self.db)
