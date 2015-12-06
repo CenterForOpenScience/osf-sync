@@ -8,7 +8,6 @@ from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm import relationship, backref, validates
 
 from osfoffline import settings
-from osfoffline.utils.path import make_folder_name
 
 
 Base = declarative_base()
@@ -54,10 +53,11 @@ class Node(Base):
         """
         # +os.path.sep+ instead of os.path.join: http://stackoverflow.com/a/14504695
 
+        name = '{} - {}'.format(self.title, self.id)
         if self.parent:
-            return os.path.join(self.parent.path, 'Components', make_folder_name(self.title, node_id=self.id))
+            return os.path.join(self.parent.path, 'Components', name)
         else:
-            return os.path.join(self.user.folder, make_folder_name(self.title, node_id=self.id))
+            return os.path.join(self.user.folder, name)
 
     @hybrid_property
     def top_level_file_folders(self):

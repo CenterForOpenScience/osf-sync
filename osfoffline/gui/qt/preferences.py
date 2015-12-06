@@ -16,7 +16,6 @@ from osfoffline.client.osf import OSFClient
 from osfoffline.database import session
 from osfoffline.database.models import User, Node
 from osfoffline.database.utils import save
-from osfoffline.utils import path
 from osfoffline.gui.qt.generated.preferences import Ui_Settings
 
 
@@ -158,7 +157,7 @@ class Preferences(QDialog, Ui_Settings):
         for node in nodes:
             tree_item = QTreeWidgetItem(self.treeWidget)
             tree_item.setCheckState(self.PROJECT_SYNC_COLUMN, Qt.Checked if node.id in self.selected_nodes else Qt.Unchecked)
-            tree_item.setText(self.PROJECT_NAME_COLUMN, _translate('Preferences', path.make_folder_name(node.title, node_id=node.id)))
+            tree_item.setText(self.PROJECT_NAME_COLUMN, _translate('Preferences', '{} - {}'.format(node.title, node.id)))
 
             self.tree_items.append((tree_item, node))
 
