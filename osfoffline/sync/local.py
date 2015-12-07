@@ -14,11 +14,12 @@ logger = logging.getLogger(__name__)
 
 class LocalSync(ConsolidatedEventHandler):
 
-    def __init__(self, user, operation_queue):
+    def __init__(self, user, ignore_event, operation_queue):
         super().__init__()
         self.folder = user.folder
 
         self.observer = Observer()
+        self.ignore = ignore_event
         self.operation_queue = operation_queue
         self.observer.schedule(self, self.folder, recursive=True)
 
@@ -31,6 +32,11 @@ class LocalSync(ConsolidatedEventHandler):
         # observer is actually a separate child thread and must be join()ed
         self.observer.stop()
         self.observer.join()
+
+    def dispatch(self, event):
+        if self.ignore.is_set():
+            return logger.debug('Ignoring event {}'.format(event))
+        super().dispatch(event)
 
     def on_moved(self, event):
         logger.info('Moved {}: from {} to {}'.format((event.is_directory and 'directory') or 'file', event.src_path, event.dest_path))

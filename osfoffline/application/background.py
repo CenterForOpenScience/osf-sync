@@ -28,6 +28,7 @@ class BackgroundWorker(threading.Thread):
         self.loop = None
         self.poller = None
         self.observer = None
+        self._ignore_watchdog = threading.Event()
 
         # TODO: Find a good fix for ulimit setting
         # try:
@@ -72,11 +73,11 @@ class BackgroundWorker(threading.Thread):
         self.operation_queue_task.add_done_callback(self._handle_exception)
 
         logger.debug('Initializing Remote Sync')
-        self.remote_sync = RemoteSync(self.operation_queue, self.user)
+        self.remote_sync = RemoteSync(self.user, self._ignore_watchdog, self.operation_queue)
         self.loop.run_until_complete(self.remote_sync.initialize())
 
         logger.debug('Starting Local Sync')
-        self.local_sync = LocalSync(self.user, self.operation_queue)
+        self.local_sync = LocalSync(self.user, self._ignore_watchdog, self.operation_queue)
         self.local_sync.start()
 
         logger.debug('Starting Remote Sync')

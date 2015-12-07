@@ -18,7 +18,8 @@ class RemoteSync:
 
     COMPONENTS_FOLDER_NAME = 'Components'
 
-    def __init__(self, operation_queue, user):
+    def __init__(self, user, ignore_watchdog, operation_queue):
+        self.ignore_watchdog = ignore_watchdog
         self.operation_queue = operation_queue
         self.user = user
 
@@ -74,5 +75,7 @@ class RemoteSync:
                 self._sync_now_fut = asyncio.Future()
 
             logger.info('Beginning remote sync')
+            self.ignore_watchdog.set()
             yield from self._check(False)
+            self.ignore_watchdog.clear()
             logger.info('Finished remote sync')
