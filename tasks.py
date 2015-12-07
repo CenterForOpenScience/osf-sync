@@ -1,5 +1,9 @@
+import os
+import shutil
+
 from invoke import task, run
 
+from osfoffline import settings
 
 @task
 def flake():
@@ -11,6 +15,27 @@ def start():
     from start import start
     start()
 
+
+@task
+def start_for_tests(dropdb=True, droplog=False, dropdir=False):
+    """
+    Start the OSF offline client in a clean configuration suitable for testing
+
+    :param bool dropdb: Whether to delete the database. Defaults to True
+    :param bool droplog: Whether to delete pre-existing shared error log. Defaults to False.
+    :param bool dropdir: Whether to delete user data folder (a particular location for testing). Defaults to False.
+    """
+    if dropdb and os.path.exists(settings.PROJECT_DB_FILE):
+        os.remove(settings.PROJECT_DB_FILE)
+
+    if droplog and os.path.exists(settings.PROJECT_LOG_FILE):
+        os.remove(settings.PROJECT_LOG_FILE)
+
+    osf_dir = os.path.expanduser('~/Desktop/OSF')
+    if dropdir and os.path.exists(osf_dir):
+        shutil.rmtree(osf_dir)
+
+    start()
 
 @task
 def qt_gen():
