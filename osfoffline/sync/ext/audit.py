@@ -60,16 +60,29 @@ class BaseAuditor(abc.ABC):
             if self.remote:
                 self.db = session.query(File).filter(
                     File.is_folder == self.remote.is_dir,
-                    File.id == self.remote.id
+                    File.id == self.remote.id,
+                    File.name == self.remote.name,
+                    File.parent_id == ((self.remote.parent and self.remote.parent.id) or None),
                 ).one()
             else:
                 self.db = next((
                     f for f in
                     session.query(File).filter(File.is_folder == self.local.is_dir, File.name == self.local.name)
-                    if f.path == self.local.full_path
+                    if f.path == self.local.full_path.rstrip('/')
                 ))
         except (NoResultFound, StopIteration):
             pass
+        else:
+            if self.local and self.local.full_path.rstrip('/') != self.db.path:
+                self.db = None
+            elif self.remote:
+                parts = []
+                parent = self.remote
+                while parent.parent:
+                    parts = [parent.name] + parts
+                    parent = parent.parent
+                if os.path.join(self.node.path, settings.OSF_STORAGE_FOLDER, '/'.join(parts)).rstrip('/') != self.db.path:
+                    self.db = None
 
     @asyncio.coroutine
     def audit(self):
@@ -212,9 +225,12 @@ class FolderAuditor(BaseAuditor):
                     break
 
             if changed or len(q) > settings.LOCAL_DELETE_THRESHOLD:
-                # TODO: Short circut child crawl
-                return (yield from self._handle_sync_decision(interventions.RemoteFolderDeleted(self, q)))
-            return (yield from self.operation_queue.put(operations.LocalDeleteFolder(self.local, self.node)))
+                # Note: Short circuits child crawl
+                #return (yield from self._handle_sync_decision(interventions.RemoteFolderDeleted(self, q)))
+                ret = (yield from self._handle_sync_decision(interventions.RemoteFolderDeleted(self, q)))
+                return ret
+            yield from self.operation_queue.put(operations.LocalDeleteFolder(self.local, self.node))
+            return True  # Short circuits child crawl
         # Folder has been created remotely, we don't have it locally.
         return (yield from self.operation_queue.put(operations.LocalCreateFolder(self.remote, self.node)))
 
