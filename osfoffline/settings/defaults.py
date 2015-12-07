@@ -24,6 +24,8 @@ ALERT_TIME = 3000  # ms
 
 LOG_LEVEL = 'INFO'
 
+SENTRY_DSN = None
+
 # Logging configuration
 FILE_FORMATTER = '[%(asctime)s][%(threadName)s][%(filename)s][%(levelname)s][%(name)s]: %(message)s'
 
@@ -43,40 +45,3 @@ PROJECT_DB_FILE = os.path.join(PROJECT_DB_DIR, 'osf.db')
 
 PROJECT_LOG_DIR = user_log_dir(appname=PROJECT_NAME, appauthor=PROJECT_AUTHOR)
 PROJECT_LOG_FILE = os.path.join(PROJECT_LOG_DIR, 'osfoffline.log')
-
-LOGGING_CONFIG = {
-    'version': 1,
-    'disable_existing_loggers': False,
-    'formatters': {
-        'console': {'format': FILE_FORMATTER},
-        'file_log': {'format': FILE_FORMATTER}
-    },
-    'handlers': {
-        'console': {
-            'class': 'logging.StreamHandler',
-            'level': LOG_LEVEL,
-            'formatter': 'console'
-        },
-        'syslog': {
-            'class': 'logging.handlers.SysLogHandler',
-            'level': LOG_LEVEL
-        },
-        'logfile': {
-            'class': 'logging.FileHandler',
-            'level': LOG_LEVEL,
-            'filename': PROJECT_LOG_FILE,
-            'formatter': 'file_log'
-        },
-    },
-    'loggers': {
-        '': {
-            'handlers': ['console'],
-            'level': LOG_LEVEL,
-            'propagate': False
-        }
-    },
-    'root': {
-        'level': LOG_LEVEL,
-        'handlers': ['console', 'logfile']
-    }
-}
