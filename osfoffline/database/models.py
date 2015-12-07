@@ -2,6 +2,7 @@ import os
 import datetime
 
 from sqlalchemy import Column, Integer, Boolean, String, DateTime
+from sqlalchemy import UniqueConstraint
 from sqlalchemy import ForeignKey, Enum
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.ext.hybrid import hybrid_property
@@ -87,11 +88,13 @@ class Node(Base):
 
 class File(Base):
     __tablename__ = "file"
+    __table_args__ = (UniqueConstraint('id', 'parent_id', 'name', 'node_id'),)
 
-    FOLDER = 'folder'
     FILE = 'file'
+    FOLDER = 'folder'
 
-    id = Column(String, primary_key=True)
+    __id = Column(Integer, primary_key=True)
+    id = Column(String)
     name = Column(String)
 
     md5 = Column(String)
