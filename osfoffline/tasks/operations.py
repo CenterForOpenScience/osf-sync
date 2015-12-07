@@ -106,7 +106,7 @@ class LocalUpdateFile(BaseOperation):
 
     @asyncio.coroutine
     def _run(self):
-        logger.info('Update Local File: {}'.format(self.remote))
+        logger.info('LocalUpdateFile: {}'.format(self.remote))
         db_file = session.query(models.File).filter(models.File.id == self.remote.id).one()
 
         tmp_path = os.path.join(db_file.parent.path, '.~tmp.{}'.format(db_file.name))
@@ -148,7 +148,7 @@ class LocalDeleteFolder(BaseOperation):
     @asyncio.coroutine
     def _run(self):
         logger.info('LocalDeleteFolder: {}'.format(self.local))
-        os.remove(self.local.full_path)
+        shutil.rmtree(self.local.full_path)
         yield from DatabaseDeleteFile(utils.local_to_db(self.local, self.node)).run()
 
 
@@ -228,7 +228,7 @@ class RemoteUpdateFile(BaseOperation):
         remote = osf_client.File(None, data['data'])
         # WB id are <provider>/<id>
         remote.id = remote.id.replace(remote.provider + '/', '')
-        remote.parent = db
+        remote.parent = db.parent
         # TODO: APIv2 will give back endpoint that can be parsed. Waterbutler may return something *similar* and need to coerce to work with task object
         yield from DatabaseUpdateFile(db, remote, self.node).run()
         Notification().info('Update Remote File: {}'.format(self.local))
