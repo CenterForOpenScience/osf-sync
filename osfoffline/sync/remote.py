@@ -1,6 +1,9 @@
-import os
 import asyncio
+import hashlib
 import logging
+import os
+
+from pathlib import Path
 
 from osfoffline import settings
 from osfoffline.client.osf import OSFClient
@@ -9,6 +12,7 @@ from osfoffline.database.models import Node, File
 from osfoffline.sync.exceptions import FolderNotInFileSystem
 from osfoffline.sync.ext.audit import FolderAuditor
 from osfoffline.utils.path import ProperPath
+from osfoffline.utils.authentication import get_current_user
 
 
 logger = logging.getLogger(__name__)
@@ -79,3 +83,14 @@ class RemoteSync:
             yield from self._check(False)
             self.ignore_watchdog.clear()
             logger.info('Finished remote sync')
+
+    @asyncio.coroutine
+    def _check(self, initial):
+        for node in session.query(Node).all():
+            logger.info('Resyncing node {}'.format(node))
+            remote, local = yield from self._preprocess_node(node)
+            auditor = FolderAuditor(node, self.operation_queue, remote, local, initial=initial)
+            yield from auditor.audit()
+
+        logger.info('Finishing operation queue')
+        yield from self.operation_queue.join()
