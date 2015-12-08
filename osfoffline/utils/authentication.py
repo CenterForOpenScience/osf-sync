@@ -21,10 +21,11 @@ def get_current_user():
     """
     Fetch the database object representing the currently active user
     :return: A user object (raises exception if none found)
-    :rtype: User
+    :rtype: models.User
     :raises SQLAlchemyError
     """
     return session.query(models.User).one()
+
 
 class AuthClient(object):
     """Manages authorization flow """

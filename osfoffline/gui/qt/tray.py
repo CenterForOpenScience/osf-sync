@@ -23,6 +23,7 @@ from osfoffline.database.models import User
 from osfoffline.database.utils import save
 from osfoffline.gui.qt.login import LoginScreen
 from osfoffline.gui.qt.menu import OSFOfflineMenu
+from osfoffline.utils.log import remove_user_from_sentry_logs
 from osfoffline.utils.validators import validate_containing_folder
 
 
@@ -167,6 +168,8 @@ class OSFOfflineQT(QSystemTrayIcon):
     def logout(self):
         # Will probably wipe out everything :shrug:
         session.query(User).delete()
+        # Clear any user-specific context data that would be sent to Sentry
+        remove_user_from_sentry_logs()
         self.quit()
 
 

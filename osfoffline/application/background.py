@@ -12,7 +12,7 @@ from osfoffline.sync.local import LocalSync
 from osfoffline.sync.remote import RemoteSync
 from osfoffline.tasks import Intervention, Notification
 from osfoffline.tasks.queue import OperationsQueue
-
+from osfoffline.utils.authentication import get_current_user
 
 logger = logging.getLogger(__name__)
 
@@ -66,7 +66,7 @@ class BackgroundWorker(threading.Thread):
         self.loop = self._ensure_event_loop()
         self.loop.set_debug(settings.DEBUG)
 
-        self.user = session.query(models.User).one()
+        self.user = get_current_user()
 
         self.operation_queue = OperationsQueue()
         self.operation_queue_task = asyncio.ensure_future(self.operation_queue.start())

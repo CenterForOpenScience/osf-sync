@@ -2,10 +2,10 @@ import logging
 import logging.config
 
 # Must import in order to be included by PyInstaller
-import raven  # noqa
+import raven
+from raven.handlers.logging import SentryHandler
 
 from osfoffline.settings.defaults import *  # noqa
-
 
 logger = logging.getLogger(__name__)
 
@@ -44,24 +44,19 @@ LOGGING_CONFIG = {
             'filename': PROJECT_LOG_FILE,
             'formatter': 'file_log'
         },
-        'sentry': {
-            'level': 'ERROR',  # Don't fill server with debug messages
-            'class': 'raven.handlers.logging.SentryHandler',
-            'dsn': SENTRY_DSN,
-        },
-    },
-    'loggers': {
-        '': {
-            'handlers': ['console'],
-            'level': LOG_LEVEL,
-            'propagate': False
-        }
     },
     'root': {
         'level': LOG_LEVEL,
-        'handlers': ['console', 'logfile', 'sentry']
+        'handlers': ['console', 'logfile']
     }
 }
 
-# Log to both local file and Raven server
+# Set up basic (console and file) logging
 logging.config.dictConfig(LOGGING_CONFIG)
+
+# Add Sentry logging separately, so that we can access the client and modify context variables later
+# This allows us to send additional data to Sentry (like username, when the user is logged in)
+# TODO: We should allow the user to choose whether they log to sentry
+raven_client = raven.Client(dsn=SENTRY_DSN)
+handler = SentryHandler(raven_client, level='ERROR')
+raven.conf.setup_logging(handler)

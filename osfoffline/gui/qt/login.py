@@ -11,7 +11,11 @@ from osfoffline.database.models import User
 from osfoffline.database.utils import save
 from osfoffline.exceptions import AuthError
 from osfoffline.utils.authentication import AuthClient
+from osfoffline.utils.log import add_user_to_sentry_logs
 from osfoffline.gui.qt.generated.login import Ui_login
+
+
+logger = logging.getLogger(__name__)
 
 
 class LoginScreen(QDialog, Ui_login):
@@ -44,7 +48,7 @@ class LoginScreen(QDialog, Ui_login):
 
     def log_in(self):
         # self.start_screen.logInButton.setDisabled(True)  # Doesn't update until the asyncio call below returns
-        logging.debug('attempting to log in')
+        logger.debug('attempting to log in')
         username = self.usernameEdit.text().strip()
         password = self.passwordEdit.text().strip()
         auth_client = AuthClient()
@@ -52,9 +56,11 @@ class LoginScreen(QDialog, Ui_login):
         try:
             self.user = asyncio.get_event_loop().run_until_complete(auth_client.log_in(username=username, password=password))
         except AuthError as e:
-            logging.exception(e.message)
             QMessageBox.warning(None, 'Log in Failed', e.message)
             # self.start_screen.logInButton.setEnabled(True)
         else:
-            logging.info('Successfully logged in user: {}'.format(self.user))
+            logger.info('Successfully logged in user: {}'.format(self.user))
+            # Add the user id of the logged in user to Sentry logs
+            add_user_to_sentry_logs()
+
             self.accept()
