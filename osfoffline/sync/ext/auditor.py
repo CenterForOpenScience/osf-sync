@@ -11,6 +11,17 @@ from osfoffline.database.models import Node, File
 from osfoffline.utils.authentication import get_current_user
 
 
+class ModificationEvent:
+
+    def __init__(self, location, event_type, src_path, dest_path=None):
+        if dest_path:
+            self.dest_path = dest_path
+        self.location = location
+        self.src_path = src_path
+        self.event_type = event_type
+        self.is_dir = src_path.endswith(os.path.sep)
+
+
 class Auditor:
 
     def __init__(self):
@@ -25,14 +36,37 @@ class Auditor:
         local_diff = self._diff(local_map, db_map)
         remote_diff = self._diff(remote_map, db_map)
 
-        combined_changes = []
+        events = []
 
         for location, changes in (('Local', local_diff), ('Remote', remote_diff)):
             for change_type in ('moved', 'modified', 'deleted', 'created'):
                 for change in changes[change_type]:
-                    combined_changes.append((location, change_type, change, change.endswith(os.path.sep)))
+                    if isinstance(change, tuple):
+                        events.append(ModificationEvent(location, change_type, change[0], change[1]))
+                    else:
+                        events.append(ModificationEvent(location, change_type, change))
 
-        return combined_changes
+        changes = {}
+        for event in events:
+            if event.is_dir:
+                continue
+            tree = changes
+            head, tail = os.path.split(event.src_path)
+            for part in head.split(os.path.sep):
+                tree = tree.setdefault(part, {})
+            tree[tail] = event
+
+        for event in events:
+            if not event.is_dir:
+                continue
+            tree = changes
+            head, tail = os.path.split(event.src_path)
+            for part in head.split(os.path.sep):
+                tree = tree.setdefault(part, {})
+            tree[tail] = event
+
+
+        return changes
 
     def collect_all_db(self):
         return {db.path.replace(self.user_folder, ''): (db.id, db.sha256) for db in session.query(File)}
