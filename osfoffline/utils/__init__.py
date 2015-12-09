@@ -53,12 +53,12 @@ def extract_node(path):
 
 def local_to_db(local, node):
     db = session.query(models.File).filter(models.File.parent == None, models.File.node == node).one()
-    parts = local.full_path.replace(node.path, '').split('/')
+    parts = str(local).replace(node.path, '').split('/')
     for part in parts:
         for child in db.children:
             if child.name == part:
                 db = child
-    if db.path.rstrip('/') != local.full_path.rstrip('/') or db.is_folder != local.is_dir:
+    if db.path.rstrip('/') != str(local).rstrip('/') or db.is_folder != local.is_dir:
         return None
     return db
 

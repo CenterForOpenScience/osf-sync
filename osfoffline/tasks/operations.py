@@ -18,16 +18,60 @@ from osfoffline.utils.authentication import get_current_user
 logger = logging.getLogger(__name__)
 
 
+class OperationContext:
+    def __init__(self, local=None, db=None, remote=None, node=None):
+        self.db = db
+        self.local = local
+        self.remote = remote
+
+        if not node and self.db:
+            node = self.db.node
+        if not node and self.local:
+            pass  # TODO run extract node
+        if not node and self.remote:
+            pass  # TODO run extract node
+
+        self.node = node
+
+    def __repr__(self):
+        return '<{}({}, {}, {}, {})>'.format(self.__class__.__name__, self.node, self.local, self.db, self.remote)
+
+
 class BaseOperation(abc.ABC):
+
     @abc.abstractmethod
     def _run(self):
         """Internal implementation of run method; must be overridden in subclasses"""
         raise NotImplementedError
 
     @asyncio.coroutine
-    def run(self):
+    def run(self, dry=False):
         """Wrap internal run method"""
-        return (yield from self._run())
+        logger.info('{!r}'.format(self))
+        if not dry:
+            return (yield from self._run())
+
+    def __init__(self, context):
+        self._context = context
+
+    @property
+    def db(self):
+        return self._context.db
+
+    @property
+    def local(self):
+        return self._context.local
+
+    @property
+    def remote(self):
+        return self._context.remote
+
+    @property
+    def node(self):
+        return self._context.node
+
+    def __repr__(self):
+        return '<{}({})>'.format(self.__class__.__name__, self._context)
 
 
 class LocalKeepFile(BaseOperation):
@@ -35,9 +79,6 @@ class LocalKeepFile(BaseOperation):
     Keep the local copy of the file by making a backup, and ensure that the new (copy of) the file
         will not be uploaded to the OSF
     """
-
-    def __init__(self, local):
-        self.local = local
 
     @asyncio.coroutine
     def _run(self):
@@ -47,14 +88,6 @@ class LocalKeepFile(BaseOperation):
 # Download File
 class LocalCreateFile(BaseOperation):
     """Download an individual file from the OSF into a folder that already exists"""
-
-    def __init__(self, remote, node):
-        """
-        :param StorageObject remote: The response from the server describing a remote file
-        :param Node node: Database object describing the parent node of the file
-        """
-        self.node = node
-        self.remote = remote
 
     @asyncio.coroutine
     def _run(self):
@@ -83,10 +116,6 @@ class LocalCreateFile(BaseOperation):
 class LocalCreateFolder(BaseOperation):
     """Create a folder, and populate the contents of that folder (all files to be downloaded)"""
 
-    def __init__(self, remote, node):
-        self.node = node
-        self.remote = remote
-
     @asyncio.coroutine
     def _run(self):
         logger.info('LocalCreateFolder: {}'.format(self.remote))
@@ -100,9 +129,6 @@ class LocalCreateFolder(BaseOperation):
 # Download File
 class LocalUpdateFile(BaseOperation):
     """Download a file from the remote server and modify the database to show task completed"""
-
-    def __init__(self, remote):
-        self.remote = remote
 
     @asyncio.coroutine
     def _run(self):
@@ -127,10 +153,6 @@ class LocalUpdateFile(BaseOperation):
 
 class LocalDeleteFile(BaseOperation):
 
-    def __init__(self, local, node):
-        self.local = local
-        self.node = node
-
     @asyncio.coroutine
     def _run(self):
         logger.info('LocalDeleteFile: {}'.format(self.local))
@@ -141,10 +163,6 @@ class LocalDeleteFile(BaseOperation):
 class LocalDeleteFolder(BaseOperation):
     """Delete a folder (and all containing files) locally"""
 
-    def __init__(self, local, node):
-        self.local = local
-        self.node = node
-
     @asyncio.coroutine
     def _run(self):
         logger.info('LocalDeleteFolder: {}'.format(self.local))
@@ -154,10 +172,6 @@ class LocalDeleteFolder(BaseOperation):
 
 class RemoteCreateFile(BaseOperation):
     """Upload a file to the OSF, and update the database to reflect the new OSF id"""
-
-    def __init__(self, local, node):
-        self.local = local
-        self.node = node
 
     @asyncio.coroutine
     def _run(self):
@@ -183,10 +197,6 @@ class RemoteCreateFile(BaseOperation):
 class RemoteCreateFolder(BaseOperation):
     """Upload a folder (and contents) to the OSF and create multiple DB instances to track changes"""
 
-    def __init__(self, local, node):
-        self.node = node
-        self.local = local
-
     @asyncio.coroutine
     def _run(self):
         logger.info('RemoteCreateFolder: {}'.format(self.local))
@@ -209,10 +219,6 @@ class RemoteCreateFolder(BaseOperation):
 
 class RemoteUpdateFile(BaseOperation):
     """Upload (already-tracked) file to the OSF (uploads new version)"""
-
-    def __init__(self, local, node):
-        self.node = node
-        self.local = local
 
     @asyncio.coroutine
     def _run(self):
@@ -237,9 +243,6 @@ class RemoteUpdateFile(BaseOperation):
 class RemoteDeleteFile(BaseOperation):
     """Delete a file that is already known to exist remotely"""
 
-    def __init__(self, remote):
-        self.remote = remote
-
     @asyncio.coroutine
     def _run(self):
         logger.info('RemoteDeleteFile: {}'.format(self.remote))
@@ -253,9 +256,6 @@ class RemoteDeleteFile(BaseOperation):
 class RemoteDeleteFolder(BaseOperation):
     """Delete a file from the OSF and update the database"""
 
-    def __init__(self, remote):
-        self.remote = remote
-
     @asyncio.coroutine
     def _run(self):
         logger.info('RemoteDeleteFolder: {}'.format(self.remote))
@@ -266,29 +266,9 @@ class RemoteDeleteFolder(BaseOperation):
         Notification().info('Remote delete older: {}'.format(self.remote))
 
 
-class RemoteMoveFile(BaseOperation):
-
-    def __init__(self, src, dest, node):
-        self.src = src
-        self.dest = dest
-        self.node = node
-
-    @asyncio.coroutine
-    def _run(self):
-        logger.info('Move Remote File: {}'.format(self.local))
-
-
 class DatabaseCreateFile(BaseOperation):
     """Create a file in the database, based on information provided from the remote server,
         and attach the file to the specified node"""
-
-    def __init__(self, remote, node):
-        """
-        :param StorageObject remote: The response from the server describing a remote file
-        :param Node node: Database object describing the parent node of the file
-        """
-        self.node = node
-        self.remote = remote
 
     @asyncio.coroutine
     def _run(self):
@@ -312,10 +292,6 @@ class DatabaseCreateFile(BaseOperation):
 
 class DatabaseCreateFolder(BaseOperation):
 
-    def __init__(self, remote, node):
-        self.remote = remote
-        self.node = node
-
     @asyncio.coroutine
     def _run(self):
         logger.info('DatabaseCreateFolder: {}'.format(self.remote))
@@ -334,11 +310,6 @@ class DatabaseCreateFolder(BaseOperation):
 
 
 class DatabaseUpdateFile(BaseOperation):
-
-    def __init__(self, db, remote, node):
-        self.db = db
-        self.node = node
-        self.remote = remote
 
     @asyncio.coroutine
     def _run(self):
@@ -361,9 +332,6 @@ class DatabaseUpdateFile(BaseOperation):
 
 class DatabaseDeleteFile(BaseOperation):
 
-    def __init__(self, db):
-        self.db = db
-
     @asyncio.coroutine
     def _run(self):
         logger.info('DatabaseDeleteFile: {}'.format(self.db))
@@ -372,10 +340,35 @@ class DatabaseDeleteFile(BaseOperation):
 
 class DatabaseDeleteFolder(BaseOperation):
 
-    def __init__(self, db):
-        self.db = db
-
     @asyncio.coroutine
     def _run(self):
         logger.info('DatabaseDeleteFolder: {}'.format(self.db))
         session.delete(self.db)
+
+
+class RemoteMoveFolder(BaseOperation):
+
+    @asyncio.coroutine
+    def _run(self):
+        logger.info('RemoteMoveFolder: {}'.format(self.local))
+
+
+class RemoteMoveFile(BaseOperation):
+
+    @asyncio.coroutine
+    def _run(self):
+        logger.info('RemoteMoveFile: {}'.format(self.local))
+
+
+class LocalMoveFile(BaseOperation):
+
+    @asyncio.coroutine
+    def _run(self):
+        logger.info('LocalMoveFile: {}'.format(self.local))
+
+
+class LocalMoveFolder(BaseOperation):
+
+    @asyncio.coroutine
+    def _run(self):
+        logger.info('LocalMoveFolder: {}'.format(self.local))

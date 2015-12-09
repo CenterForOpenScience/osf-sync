@@ -1,5 +1,6 @@
 import asyncio
 import hashlib
+import itertools
 import logging
 import os
 
@@ -10,8 +11,8 @@ from osfoffline.client.osf import OSFClient
 from osfoffline.database import session
 from osfoffline.database.models import Node, File
 from osfoffline.sync.exceptions import FolderNotInFileSystem
-from osfoffline.sync.ext.audit import FolderAuditor
-from osfoffline.utils.path import ProperPath
+from osfoffline.sync.ext.auditor import Auditor
+from osfoffline.sync.ext.auditor import EventType
 from osfoffline.utils.authentication import get_current_user
 
 
@@ -19,8 +20,6 @@ logger = logging.getLogger(__name__)
 
 
 class RemoteSync:
-
-    COMPONENTS_FOLDER_NAME = 'Components'
 
     def __init__(self, user, ignore_watchdog, operation_queue):
         self.ignore_watchdog = ignore_watchdog
@@ -35,29 +34,17 @@ class RemoteSync:
     @asyncio.coroutine
     def initialize(self):
         logger.info('Beginning initial sync')
+        for node in session.query(Node).all():
+            self._preprocess_node(node)
         yield from self._check(True)
         logger.info('Initial sync finished')
 
     @asyncio.coroutine
-    def _check(self, initial):
-        for node in session.query(Node).all():
-            logger.info('Resyncing node {}'.format(node))
-            remote, local = yield from self._preprocess_node(node)
-            auditor = FolderAuditor(node, self.operation_queue, remote, local, initial=initial)
-            yield from auditor.audit()
-
-        logger.info('Finishing operation queue')
-        yield from self.operation_queue.join()
-
-    @asyncio.coroutine
     def _preprocess_node(self, node):
-        remote_node = yield from OSFClient().get_node(node.id)
-        remote = yield from remote_node.get_storage(id='osfstorage')
-        local = ProperPath(os.path.join(node.path, settings.OSF_STORAGE_FOLDER), True)
-        if not os.path.exists(local.full_path):
+        local = Path(os.path.join(node.path, settings.OSF_STORAGE_FOLDER))
+        if not local.exists():
             session.query(File).filter(File.node_id == node.id).delete()
         os.makedirs(local.full_path, exist_ok=True)
-        return remote, local
 
     @asyncio.coroutine
     def sync_now(self):
@@ -85,12 +72,23 @@ class RemoteSync:
             logger.info('Finished remote sync')
 
     @asyncio.coroutine
-    def _check(self, initial):
-        for node in session.query(Node).all():
-            logger.info('Resyncing node {}'.format(node))
-            remote, local = yield from self._preprocess_node(node)
-            auditor = FolderAuditor(node, self.operation_queue, remote, local, initial=initial)
-            yield from auditor.audit()
+    def _check(self, _):
+        resolutions = []
+        local_events, remote_events = yield from Auditor().audit()
 
-        logger.info('Finishing operation queue')
+        for conflict in set(local_events.keys()) & set(remote_events.keys()):
+            local, remote = local_events.pop(conflict), remote_events.pop(conflict)
+            if local == remote:
+                logging.warning('Ignoring event {}'.format(conflict))
+                continue
+            logger.error('Conflict at {} between {} and {}'.format(conflict, local, remote))
+            # TODO Handle conflicts
+
+        # TODO Events need to be dedupped
+        for event in itertools.chain(resolutions, local_events.values(), remote_events.values()):
+            if event.is_directory and event.event_type == EventType.UPDATE:
+                logging.warning('Ignoring event {}'.format(event.src_path))
+                continue
+            yield from self.operation_queue.put(event.operation())
+
         yield from self.operation_queue.join()

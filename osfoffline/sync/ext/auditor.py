@@ -1,6 +1,7 @@
-import os
+from enum import Enum
 import asyncio
 import hashlib
+import os
 
 from pathlib import Path
 
@@ -8,18 +9,58 @@ from osfoffline import settings
 from osfoffline.client.osf import OSFClient
 from osfoffline.database import session
 from osfoffline.database.models import Node, File
+from osfoffline.tasks import operations
+from osfoffline.tasks.operations import OperationContext
 from osfoffline.utils.authentication import get_current_user
 
 
+class Location(Enum):
+    LOCAL = 0
+    REMOTE = 1
+
+
+class EventType(Enum):
+    CREATE = 0
+    DELETE = 1
+    MOVE = 2
+    UPDATE = 3
+
+
+# Meant to emulate the watchdog FileSystemEvent
+# May want to subclass in the future
 class ModificationEvent:
 
-    def __init__(self, location, event_type, src_path, dest_path=None):
+    def __init__(self, location, event_type, context, src_path, dest_path=None):
         if dest_path:
             self.dest_path = dest_path
         self.location = location
         self.src_path = src_path
         self.event_type = event_type
-        self.is_dir = src_path.endswith(os.path.sep)
+        self.context = context
+        self.is_directory = src_path.endswith(os.path.sep)
+
+    def operation(self):
+        return getattr(
+            operations,
+            ''.join([
+                self.location.name.capitalize(),
+                self.event_type.name.capitalize(),
+                'Folder' if self.is_directory else 'File'
+            ])
+        )(self.context)
+
+    @property
+    def key(self):
+        return (self.event_type, self.src_path, self.is_directory)
+
+    def __eq__(self, event):
+        return self.key == event.key
+
+    def __ne__(self, event):
+        return self.key != event.key
+
+    def __hash__(self):
+        return hash(self.key)
 
 
 class Auditor:
@@ -33,43 +74,33 @@ class Auditor:
         remote_map = yield from self.collect_all_remote()
         local_map = self.collect_all_local(db_map)
 
-        local_diff = self._diff(local_map, db_map)
-        remote_diff = self._diff(remote_map, db_map)
+        def context_for(path):
+            return OperationContext(Path(path), db_map.get(path, (None, ))[-1], remote_map.get(path, (None, ))[-1])
 
-        events = []
+        diffs = {
+            Location.LOCAL: self._diff(local_map, db_map),
+            Location.REMOTE: self._diff(remote_map, db_map),
+        }
 
-        for location, changes in (('Local', local_diff), ('Remote', remote_diff)):
-            for change_type in ('moved', 'modified', 'deleted', 'created'):
-                for change in changes[change_type]:
-                    if isinstance(change, tuple):
-                        events.append(ModificationEvent(location, change_type, change[0], change[1]))
-                    else:
-                        events.append(ModificationEvent(location, change_type, change))
-
-        changes = {}
-        for event in events:
-            if event.is_dir:
-                continue
-            tree = changes
-            head, tail = os.path.split(event.src_path)
-            for part in head.split(os.path.sep):
-                tree = tree.setdefault(part, {})
-            tree[tail] = event
-
-        for event in events:
-            if not event.is_dir:
-                continue
-            tree = changes
-            head, tail = os.path.split(event.src_path)
-            for part in head.split(os.path.sep):
-                tree = tree.setdefault(part, {})
-            tree[tail] = event
-
-
-        return changes
+        modifications = {}
+        for location, changes in diffs.items():
+            modifications[location] = {}
+            for event_type in EventType:
+                for change in changes[event_type]:
+                    if not isinstance(change, tuple):
+                        change = (change, )
+                    for s in change:
+                        parts = s.split(os.path.sep)
+                        while parts:
+                            parts.pop(-1)
+                            path = os.path.sep.join(parts + [''])
+                            if path not in modifications[location]:
+                                modifications[location][path] = ModificationEvent(location, EventType.UPDATE, context_for(path), path)
+                        modifications[location][s] = ModificationEvent(location, event_type, context_for(change[0]), *change)
+        return modifications[Location.LOCAL], modifications[Location.REMOTE]
 
     def collect_all_db(self):
-        return {db.path.replace(self.user_folder, ''): (db.id, db.sha256) for db in session.query(File)}
+        return {db.path.replace(self.user_folder, ''): (db.id, db.sha256, db) for db in session.query(File)}
 
     @asyncio.coroutine
     def collect_all_remote(self):
@@ -86,7 +117,7 @@ class Auditor:
         if root.parent:
             rel_path = os.path.join(rel_path, root.name)
 
-        acc[rel_path + os.path.sep] = (root.id, None if root.is_dir else root.extra['hashes']['sha256'])
+        acc[rel_path + os.path.sep] = (root.id, None if root.is_dir else root.extra['hashes']['sha256'], root)
 
         for child in (yield from root.get_children()):
             # TODO replace with pattern matching
@@ -95,7 +126,7 @@ class Auditor:
             if child.kind == 'folder':
                 yield from self._collect_node_remote(child, acc, rel_path)
             else:
-                acc[os.path.join(rel_path, child.name)] = (child.id, child.extra['hashes']['sha256'])
+                acc[os.path.join(rel_path, child.name)] = (child.id, child.extra['hashes']['sha256'], child)
         return acc
 
     def collect_all_local(self, db_map):
@@ -107,14 +138,14 @@ class Auditor:
 
     def _collect_node_local(self, root, acc, db_map):
         rel_path = str(root).replace(self.user_folder, '') + os.path.sep
-        acc[rel_path] = (db_map.get(rel_path, (None, ))[0], None)
+        acc[rel_path] = (db_map.get(rel_path, (None, ))[0], None, rel_path)
 
         for child in root.iterdir():
             if child.is_dir():
                 self._collect_node_local(child, acc, db_map)
             else:
                 rel_path = str(child).replace(self.user_folder, '')
-                acc[rel_path] = (db_map.get(rel_path, (None, ))[0], self._hash_file(child))
+                acc[rel_path] = (db_map.get(rel_path, (None, ))[0], self._hash_file(child), rel_path)
         return acc
 
     def _hash_file(self, path, chunk_size=64*1024):
@@ -167,8 +198,8 @@ class Auditor:
                 modified.add(src)
 
         return {
-            'created': created,
-            'deleted': deleted,
-            'moved': moved,
-            'modified': modified
+            EventType.CREATE: created,
+            EventType.DELETE: deleted,
+            EventType.MOVE: moved,
+            EventType.UPDATE: modified,
         }

@@ -1,6 +1,7 @@
 import asyncio
 import logging
 
+from osfoffline import settings
 from osfoffline.tasks import operations
 
 
@@ -38,7 +39,7 @@ class OperationsQueue(Queue):
             job = yield from self.get()
             logger.debug('Running {}'.format(job))
             try:
-                yield from job.run()
+                yield from job.run(dry=settings.DRY)
             finally:
                 self.task_done()
 

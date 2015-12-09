@@ -1,12 +1,13 @@
 import asyncio
 import logging
 
+from pathlib import Path
 from watchdog.observers import Observer
 
 from osfoffline import utils
 from osfoffline.sync.ext.watchdog import ConsolidatedEventHandler
 from osfoffline.tasks import operations
-from osfoffline.utils.path import ProperPath
+from osfoffline.tasks.operations import OperationContext
 
 
 logger = logging.getLogger(__name__)
@@ -40,39 +41,50 @@ class LocalSync(ConsolidatedEventHandler):
 
     def on_moved(self, event):
         logger.info('Moved {}: from {} to {}'.format((event.is_directory and 'directory') or 'file', event.src_path, event.dest_path))
+        # Note: OperationContext should extrapolate all attributes from what it is given
+        return self.put_event(operations.RemoteCreateFile(OperationContext(
+            local=Path(event.src_path),
+            node=utils.extract_node(event.src_path)
+        )))
 
     def on_created(self, event):
         logger.info('Created {}: {}'.format((event.is_directory and 'directory') or 'file', event.src_path))
         node = utils.extract_node(event.src_path)
-        path = ProperPath(event.src_path, event.is_directory)
+        path = Path(event.src_path)
 
         # If the file exists in the database, this is a modification
+        # This logic may not be the most correct, #TODO re-evaluate
         if utils.local_to_db(path, node):
             return self.on_modified(event)
 
+        context = OperationContext(local=path, node=node)
+
         if event.is_directory:
-            return self.put_event(operations.RemoteCreateFolder(path, node))
-        return self.put_event(operations.RemoteCreateFile(path, node))
+            return self.put_event(operations.RemoteCreateFolder(context))
+        return self.put_event(operations.RemoteCreateFile(context))
 
     def on_deleted(self, event):
         logger.info('Deleted {}: {}'.format((event.is_directory and 'directory') or 'file', event.src_path))
         node = utils.extract_node(event.src_path)
-        local = ProperPath(event.src_path, event.is_directory)
+        local = Path(event.src_path)
         db = utils.local_to_db(local, node)
         remote = utils.db_to_remote(db)
+        context = OperationContext(local=local, db=db, remote=remote, node=node)
 
         if event.is_directory:
-            return self.put_event(operations.RemoteDeleteFolder(remote, node))
-        return self.put_event(operations.RemoteDeleteFile(remote, node))
+            return self.put_event(operations.RemoteDeleteFolder(context))
+        return self.put_event(operations.RemoteDeleteFile(context))
 
     def on_modified(self, event):
         logger.info('Modified {}: {}'.format((event.is_directory and 'directory') or 'file', event.src_path))
+        path = Path(event.src_path)
         node = utils.extract_node(event.src_path)
-        path = ProperPath(event.src_path, event.is_directory)
+        context = OperationContext(local=path, node=node)
+
         if event.is_directory:
             # WHAT DO
-            return self.put_event(operations.RemoteCreateFolder(path, node))
-        return self.put_event(operations.RemoteUpdateFile(path, node))
+            return self.put_event(operations.RemoteCreateFolder(context))
+        return self.put_event(operations.RemoteUpdateFile(context))
 
     def put_event(self, event):
         self.operation_queue._loop.call_soon_threadsafe(asyncio.ensure_future, self.operation_queue.put(event))

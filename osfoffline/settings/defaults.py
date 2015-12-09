@@ -10,6 +10,7 @@ PROJECT_AUTHOR = 'cos'
 APPLICATION_SCOPES = 'osf.full_write'
 
 DEBUG = True
+DRY = False
 
 # Base URL for API server; used to fetch data
 OSF_URL = 'https://test.osf.io'
