@@ -167,6 +167,7 @@ class OSFOfflineQT(QSystemTrayIcon):
     def logout(self):
         # Will probably wipe out everything :shrug:
         session.query(User).delete()
+        save(session)
         self.quit()
 
 
