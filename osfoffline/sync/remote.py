@@ -81,14 +81,75 @@ class RemoteSync:
             if local == remote:
                 logging.warning('Ignoring event {}'.format(conflict))
                 continue
-            logger.error('Conflict at {} between {} and {}'.format(conflict, local, remote))
+            logger.error('Conflict at {} between {} and {}'.format(conflict, local.context, remote.context))
             # TODO Handle conflicts
 
-        # TODO Events need to be dedupped
-        for event in itertools.chain(resolutions, local_events.values(), remote_events.values()):
+        td = TreeDict()
+        directories = []
+        for event in sorted(itertools.chain(resolutions, local_events.values(), remote_events.values()), key=lambda x: len(x.src_path)):
+            if event.is_directory:
+                directories.append(event)
+            else:
+                td[event.src_path.split(os.path.sep)] = event
+
+        for event in directories:
+            parts = event.src_path.split(os.path.sep)[:-1]
             if event.is_directory and event.event_type == EventType.UPDATE:
                 logging.warning('Ignoring event {}'.format(event.src_path))
                 continue
+            if parts in td and td[parts] == event:
+                logging.warning('Ignoring duplicate move event {}'.format(event.src_path))
+                continue
+            conflicts = [
+                child for child in td.children(parts)
+                if (event.location, event.event_type) != (child.location, child.event_type)
+            ]
+            if conflicts:
+                logger.error('Detected {} conflicts for folder {}. ({})'.format(len(conflicts), event.src_path, [x.context for x in conflicts]))
+            td[parts] = event
+
+        for event in td.children():
             yield from self.operation_queue.put(event.operation())
 
         yield from self.operation_queue.join()
+
+
+def flatten(dict_obj, acc):
+    for value in dict_obj.values():
+        if isinstance(value, dict):
+            flatten(value, acc)
+        else:
+            acc.append(value)
+    return acc
+
+
+class TreeDict:
+
+    def __init__(self):
+        self._inner = {}
+
+    def __setitem__(self, keys, value):
+        inner = self._inner
+        for key in keys[:-1]:
+            inner = inner.setdefault(key, {})
+        inner[keys[-1]] = value
+
+    def __getitem__(self, keys):
+        if not isinstance(keys, (tuple, list)):
+            keys = (keys,)
+        inner = self._inner
+        for key in keys:
+            inner = inner[key]
+        return inner
+
+    def children(self, keys=None):
+        sub_dict = self[keys] if keys is not None else self._inner
+        return flatten(sub_dict, [])
+
+    def __contains__(self, keys):
+        inner = self._inner
+        try:
+            self[keys]
+        except KeyError:
+            return False
+        return True
