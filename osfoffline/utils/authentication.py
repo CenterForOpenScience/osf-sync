@@ -84,13 +84,13 @@ class AuthClient(object):
             yield from resp.release()
 
     @asyncio.coroutine
-    def _create_user(self, username, password, *, otp=None):
+    def _create_user(self, username, password, personal_access_token):
         """ Tries to authenticate and create user.
 
-        :return: user or raise AuthError
+        :return models.User: user
+        :raise AuthError
         """
         logging.debug('User doesn\'t exist. Attempting to authenticate, then creating user.')
-        personal_access_token = yield from self._authenticate(username, password, otp=otp)
 
         user = models.User(
             id='',
@@ -102,10 +102,12 @@ class AuthClient(object):
 
     @asyncio.coroutine
     def populate_user_data(self, user):
-        """ Takes a user object, makes a request to ensure auth is working,
-            and fills in any missing user data.
+        """
+        Takes a user object, makes a request to ensure auth is working,
+        and fills in any missing user data.
 
-            :return: user or raise AuthError
+        :return models.User: user
+        :raise AuthError
         """
         me = furl.furl(settings.API_BASE)
         me.path.add('/v2/users/me/')
@@ -151,15 +153,17 @@ class AuthClient(object):
         except NoResultFound:
             pass
 
+        personal_access_token = yield from self._authenticate(username, password, otp=otp)
         if user:
-            user.oauth_token = yield from self._authenticate(username, password, otp=None)
             if user.osf_login != username:
                 # Different user authenticated, drop old user and allow login
                 clear_models()
                 # TODO: create_user should not need (always) need to call authenticate. Consolidate if possible.
-                user = yield from self._create_user(username, password, otp=otp)
+                user = yield from self._create_user(username, password, personal_access_token)
+            else:
+                user.oauth_token = personal_access_token
         else:
-            user = yield from self._create_user(username, password, otp=otp)
+            user = yield from self._create_user(username, password, personal_access_token)
 
         try:
             save(session, user)
