@@ -58,7 +58,7 @@ def local_to_db(local, node):
         for child in db.children:
             if child.name == part:
                 db = child
-    if db.path.rstrip('/') != str(local).rstrip('/') or db.is_folder != local.is_dir:
+    if db.path.rstrip('/') != str(local).rstrip('/') or db.is_folder != local.is_dir():
         return None
     return db
 
