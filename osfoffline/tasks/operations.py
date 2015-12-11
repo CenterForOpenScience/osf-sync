@@ -19,15 +19,17 @@ logger = logging.getLogger(__name__)
 
 
 class OperationContext:
-    def __init__(self, local=None, db=None, remote=None, node=None):
+    def __init__(self, local=None, db=None, remote=None, node=None, path=None):
         self.db = db
         self.local = local
         self.remote = remote
 
         if not node and self.db:
             node = self.db.node
-        if not node and self.local:
-            pass  # TODO run extract node
+        if not node and self.local and settings.OSF_STORAGE_FOLDER in str(local):
+            node = utils.extract_node(str(get_current_user().folder / self.local))
+        if not node and path:
+            node = utils.extract_node(path)
         if not node and self.remote:
             pass  # TODO run extract node
 
@@ -74,6 +76,13 @@ class BaseOperation(abc.ABC):
         return '<{}({})>'.format(self.__class__.__name__, self._context)
 
 
+class MoveOperation(BaseOperation):
+
+    def __init__(self, context, dest_context):
+        self._context = context
+        self._dest_context = dest_context
+
+
 class LocalKeepFile(BaseOperation):
     """
     Keep the local copy of the file by making a backup, and ensure that the new (copy of) the file
@@ -108,7 +117,7 @@ class LocalCreateFile(BaseOperation):
         #   If the task fails, the database task will be kicked off separately by the auditor on a future cycle
         # TODO: How do we handle a filename being aliased in local storage (due to OS limitations)?
         #   TODO: To keep tasks decoupled, perhaps a shared rename function used by DB task?
-        yield from DatabaseCreateFile(self.remote, self.node).run()
+        yield from DatabaseCreateFile(OperationContext(remote=self.remote, node=self.node)).run()
 
         Notification().info('Downloaded File: {}'.format(self.remote.name))
 
@@ -122,7 +131,7 @@ class LocalCreateFolder(BaseOperation):
         db_parent = session.query(models.File).filter(models.File.id == self.remote.parent.id).one()
         # TODO folder and file with same name
         os.mkdir(os.path.join(db_parent.path, self.remote.name))
-        yield from DatabaseCreateFolder(self.remote, self.node).run()
+        yield from DatabaseCreateFolder(OperationContext(remote=self.remote, node=self.node)).run()
         Notification().info('Downloaded Folder: {}'.format(self.remote.name))
 
 
@@ -147,7 +156,7 @@ class LocalUpdateFile(BaseOperation):
         yield from resp.release()
         shutil.move(tmp_path, db_file.path)
 
-        yield from DatabaseUpdateFile(db_file, self.remote, db_file.node).run()
+        yield from DatabaseUpdateFile(OperationContext(db=db_file, remote=self.remote, node=db_file.node)).run()
         Notification().info('Updated File: {}'.format(self.remote.name))
 
 
@@ -156,8 +165,9 @@ class LocalDeleteFile(BaseOperation):
     @asyncio.coroutine
     def _run(self):
         logger.info('LocalDeleteFile: {}'.format(self.local))
-        os.remove(self.local.full_path)
-        yield from DatabaseDeleteFile(utils.local_to_db(self.local, self.node)).run()
+
+        self.local.unlink()
+        yield from DatabaseDeleteFile(OperationContext(db=utils.local_to_db(self.local, self.node))).run()
 
 
 class LocalDeleteFolder(BaseOperation):
@@ -166,8 +176,8 @@ class LocalDeleteFolder(BaseOperation):
     @asyncio.coroutine
     def _run(self):
         logger.info('LocalDeleteFolder: {}'.format(self.local))
-        shutil.rmtree(self.local.full_path)
-        yield from DatabaseDeleteFile(utils.local_to_db(self.local, self.node)).run()
+        self.local.rmdir()
+        yield from DatabaseDeleteFolder(OperationContext(db=utils.local_to_db(self.local, self.node))).run()
 
 
 class RemoteCreateFile(BaseOperation):
@@ -190,7 +200,7 @@ class RemoteCreateFile(BaseOperation):
         remote.id = remote.id.replace(remote.provider + '/', '')
         remote.parent = parent
 
-        yield from DatabaseCreateFile(remote, self.node).run()
+        yield from DatabaseCreateFile(OperationContext(remote=remote, node=self.node)).run()
         Notification().info('Create Remote File: {}'.format(self.local))
 
 
@@ -213,7 +223,7 @@ class RemoteCreateFolder(BaseOperation):
         remote.id = remote.id.replace(remote.provider + '/', '').rstrip('/')
         remote.parent = parent
 
-        yield from DatabaseCreateFolder(remote, self.node).run()
+        yield from DatabaseCreateFolder(OperationContext(remote=remote, node=self.node)).run()
         Notification().info('Create Remote Folder: {}'.format(self.local))
 
 
@@ -236,7 +246,7 @@ class RemoteUpdateFile(BaseOperation):
         remote.id = remote.id.replace(remote.provider + '/', '')
         remote.parent = db.parent
         # TODO: APIv2 will give back endpoint that can be parsed. Waterbutler may return something *similar* and need to coerce to work with task object
-        yield from DatabaseUpdateFile(db, remote, self.node).run()
+        yield from DatabaseUpdateFile(OperationContext(remote=remote,  db=db,  node=self.node)).run()
         Notification().info('Update Remote File: {}'.format(self.local))
 
 
@@ -249,7 +259,7 @@ class RemoteDeleteFile(BaseOperation):
         resp = yield from osf_client.OSFClient().request('DELETE', self.remote.raw['links']['delete'])
         yield from resp.release()
         assert resp.status == 204, resp
-        yield from DatabaseDeleteFile(session.query(models.File).filter(models.File.id == self.remote.id).one()).run()
+        yield from DatabaseDeleteFile(OperationContext(db=session.query(models.File).filter(models.File.id == self.remote.id).one())).run()
         Notification().info('Remote delete file: {}'.format(self.remote))
 
 
@@ -262,7 +272,7 @@ class RemoteDeleteFolder(BaseOperation):
         resp = yield from OSFClient().request('DELETE', self.remote.raw['links']['delete'])
         yield from resp.release()
         assert resp.status == 204, resp
-        yield from DatabaseDeleteFolder(session.query(models.File).filter(models.File.id == self.remote.id).one()).run()
+        yield from DatabaseDeleteFolder(OperationContext(db=session.query(models.File).filter(models.File.id == self.remote.id).one())).run()
         Notification().info('Remote delete older: {}'.format(self.remote))
 
 
@@ -346,29 +356,29 @@ class DatabaseDeleteFolder(BaseOperation):
         session.delete(self.db)
 
 
-class RemoteMoveFolder(BaseOperation):
+class RemoteMoveFolder(MoveOperation):
 
     @asyncio.coroutine
     def _run(self):
-        logger.info('RemoteMoveFolder: {}'.format(self.local))
+        logger.info('RemoteMoveFolder: {}'.format(self._context))
 
 
-class RemoteMoveFile(BaseOperation):
-
-    @asyncio.coroutine
-    def _run(self):
-        logger.info('RemoteMoveFile: {}'.format(self.local))
-
-
-class LocalMoveFile(BaseOperation):
+class RemoteMoveFile(MoveOperation):
 
     @asyncio.coroutine
     def _run(self):
-        logger.info('LocalMoveFile: {}'.format(self.local))
+        logger.info('RemoteMoveFile: {}'.format(self._context))
 
 
-class LocalMoveFolder(BaseOperation):
+class LocalMoveFile(MoveOperation):
 
     @asyncio.coroutine
     def _run(self):
-        logger.info('LocalMoveFolder: {}'.format(self.local))
+        logger.info('LocalMoveFile: {}'.format(self._context))
+
+
+class LocalMoveFolder(MoveOperation):
+
+    @asyncio.coroutine
+    def _run(self):
+        logger.info('LocalMoveFolder: {}'.format(self._context))

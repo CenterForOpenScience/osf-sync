@@ -37,24 +37,29 @@ class ModificationEvent:
         self.src_path = src_path
         self.event_type = event_type
         self.context = context
-        self.is_directory = src_path.endswith(os.path.sep)
+        self.is_directory = src_path.endswith(os.path.sep) or not src_path
 
     def operation(self):
+        if self.event_type != EventType.MOVE:
+            args = (self.context, )
+        else:
+            args = (self.context, OperationContext(path=self.dest_path))
+        location = Location.LOCAL if self.location == Location.REMOTE else Location.REMOTE
         return getattr(
             operations,
             ''.join([
-                self.location.name.capitalize(),
+                location.name.capitalize(),
                 self.event_type.name.capitalize(),
                 'Folder' if self.is_directory else 'File'
             ])
-        )(self.context)
+        )(*args)
 
     @property
     def key(self):
         return (self.event_type, self.src_path, self.is_directory)
 
     def __eq__(self, event):
-        return self.key == event.key
+        return self.__class__ == event.__class__ and self.key == event.key
 
     def __ne__(self, event):
         return self.key != event.key

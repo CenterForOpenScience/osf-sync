@@ -14,6 +14,7 @@ from osfoffline.sync.exceptions import FolderNotInFileSystem
 from osfoffline.sync.ext.auditor import Auditor
 from osfoffline.sync.ext.auditor import EventType
 from osfoffline.utils.authentication import get_current_user
+from osfoffline.tasks.resolution import RESOLUTION_MAP
 
 
 logger = logging.getLogger(__name__)
@@ -36,15 +37,16 @@ class RemoteSync:
         logger.info('Beginning initial sync')
         for node in session.query(Node).all():
             self._preprocess_node(node)
+        session.commit()
         yield from self._check(True)
         logger.info('Initial sync finished')
 
-    @asyncio.coroutine
     def _preprocess_node(self, node):
         local = Path(os.path.join(node.path, settings.OSF_STORAGE_FOLDER))
         if not local.exists():
+            logger.warning('Clearing files for node {}'.format(node))
             session.query(File).filter(File.node_id == node.id).delete()
-        os.makedirs(local.full_path, exist_ok=True)
+        os.makedirs(str(local), exist_ok=True)
 
     @asyncio.coroutine
     def sync_now(self):
@@ -73,28 +75,52 @@ class RemoteSync:
 
     @asyncio.coroutine
     def _check(self, _):
+        files = []
         resolutions = []
         local_events, remote_events = yield from Auditor().audit()
 
-        for conflict in set(local_events.keys()) & set(remote_events.keys()):
-            local, remote = local_events.pop(conflict), remote_events.pop(conflict)
-            if local == remote:
-                logging.warning('Ignoring event {}'.format(conflict))
-                continue
-            logger.error('Conflict at {} between {} and {}'.format(conflict, local.context, remote.context))
-            # TODO Handle conflicts
+        for is_folder in (True, False):
+            for conflict in sorted(set(local_events.keys()) & set(remote_events.keys()), key=len):
+                if conflict.endswith(os.path.sep) == is_folder:
+                    continue
+                local, remote = local_events[conflict], remote_events[conflict]
+                res = RESOLUTION_MAP[(True, local.event_type, remote.event_type)](local, remote, local_events, remote_events)
+                if asyncio.iscoroutine(res):
+                    res = yield from res
+                if res:
+                    if isinstance(res, list):
+                        resolutions.extend(res)
+                    logger.error('Conflict at {} between {} and {}\nResolved with {}'.format(conflict, local.event_type, remote.event_type, res))
+                else:
+                    logger.warning('Conflict at {} between {} and {} required no resolution'.format(conflict, local.event_type, remote.event_type))
+
+        # for conflict in set(local_events.keys()) & set(remote_events.keys()):
+        #     if conflict.endswith(os.path.sep):
+        #         raise Exception()
+        #     local, remote = local_events.pop(conflict), remote_events.pop(conflict)
+        #     res = RESOLUTION_MAP[(False, local.event_type, remote.event_type)](local, remote, local_events, remote_events)
+        #     resolutions.extend(res)
+        #     if res:
+        #         logger.error('Conflict at {} between {} and {}\nResolved with {}'.format(conflict, local.event_type, remote.event_type, res))
+        #     else:
+        #         logger.warning('Conflict at {} between {} and {} required no resolution'.format(conflict, local.event_type, remote.event_type))
 
         td = TreeDict()
         directories = []
-        for event in sorted(itertools.chain(resolutions, local_events.values(), remote_events.values()), key=lambda x: len(x.src_path)):
+        for event in sorted(itertools.chain(local_events.values(), remote_events.values()), key=lambda x: x.src_path.count(os.path.sep)):
+        # for event in sorted(itertools.chain(local_events.values(), remote_events.values()), ):
             if event.is_directory:
-                directories.append(event)
+                if event.event_type == EventType.UPDATE:
+                    continue
+                if settings.OSF_STORAGE_FOLDER in event.src_path:
+                    directories.append(event)
             else:
                 td[event.src_path.split(os.path.sep)] = event
 
-        for event in directories:
+        # TODO Maybe not need to check for conflicts?
+        for event in sorted(directories, key=lambda x: x.src_path.count(os.path.sep), reverse=True):
             parts = event.src_path.split(os.path.sep)[:-1]
-            if event.is_directory and event.event_type == EventType.UPDATE:
+            if event.event_type not in (EventType.MOVE, EventType.DELETE):
                 logging.warning('Ignoring event {}'.format(event.src_path))
                 continue
             if parts in td and td[parts] == event:
@@ -106,10 +132,10 @@ class RemoteSync:
             ]
             if conflicts:
                 logger.error('Detected {} conflicts for folder {}. ({})'.format(len(conflicts), event.src_path, [x.context for x in conflicts]))
-            td[parts] = event
+            del td[parts]
 
-        for event in td.children():
-            yield from self.operation_queue.put(event.operation())
+        for operation in itertools.chain(resolutions, (event.operation() for event in directories), (event.operation() for event in td.children())):
+            yield from self.operation_queue.put(operation)
 
         yield from self.operation_queue.join()
 
@@ -143,7 +169,10 @@ class TreeDict:
         return inner
 
     def children(self, keys=None):
-        sub_dict = self[keys] if keys is not None else self._inner
+        try:
+            sub_dict = self[keys] if keys is not None else self._inner
+        except KeyError:
+            return []
         return flatten(sub_dict, [])
 
     def __contains__(self, keys):
@@ -153,3 +182,6 @@ class TreeDict:
         except KeyError:
             return False
         return True
+
+    def __delitem__(self, keys):
+        self[keys] = {}
