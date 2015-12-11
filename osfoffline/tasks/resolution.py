@@ -8,6 +8,8 @@ from osfoffline.utils.authentication import get_current_user
 
 
 def prompt_user(local, remote, local_events, remote_events):
+    if local.context.db and remote.context.remote and local.context.db.sha256 == remote.context.remote.extra['hashes'].sha256:
+        return db_create(local, remote, local_events, remote_events)
     return []
 
 
@@ -18,8 +20,10 @@ def upload_as_new(local, remote, local_events, remote_events):
 
 
 def db_create(local, remote, local_events, remote_events):
+    del local_events[local.src_path]
+    del remote_events[remote.src_path]
     if local.is_directory:
-        return [operations.DatabaseCreateFolder(remote.context)]
+        return [operations.DatabaseCreateFolder(remote.contexts[-1])]
     return [operations.DatabaseCreateFile(remote.context)]
 
 
@@ -81,14 +85,14 @@ RESOLUTION_MAP = {
     (False, EventType.DELETE, EventType.DELETE): db_delete,
     (False, EventType.UPDATE, EventType.DELETE): upload_as_new,
     (False, EventType.CREATE, EventType.MOVE): move_gate(None, prompt_user),
-    (False, EventType.DELETE, EventType.MOVE): move_gate(None, download_file),
+    (False, EventType.DELETE, EventType.MOVE): move_gate(lambda l,r,*_:[], download_file),
     (False, EventType.UPDATE, EventType.MOVE): move_gate('MoveThenUploadAsNew', prompt_user),
     (False, EventType.DELETE, EventType.UPDATE): download_file,
     (False, EventType.UPDATE, EventType.UPDATE): prompt_user,
     (True, EventType.CREATE, EventType.CREATE): db_create,
     (True, EventType.DELETE, EventType.DELETE): db_delete,
     (True, EventType.UPDATE, EventType.DELETE): 'PromptUserTheirs/Mine/Merge',
-    (True, EventType.CREATE, EventType.MOVE): move_gate('CreateFolder', 'CreateDBEntry'),
+    (True, EventType.CREATE, EventType.MOVE): move_gate('CreateFolder', db_create),
     (True, EventType.DELETE, EventType.MOVE): lambda local, remote, local_events, remote_events: operations.LocalMoveFolder(remote.context),
     (True, EventType.UPDATE, EventType.MOVE): move_gate(handle_move_src_update, 'PromptUserMerge'),
     (True, EventType.DELETE, EventType.UPDATE): 'DownloadFolder',
