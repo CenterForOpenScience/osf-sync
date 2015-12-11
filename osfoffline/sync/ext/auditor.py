@@ -30,31 +30,37 @@ class EventType(Enum):
 # May want to subclass in the future
 class ModificationEvent:
 
-    def __init__(self, location, event_type, context, src_path, dest_path=None):
+    def __init__(self, location, event_type, contexts, src_path, dest_path=None):
         if dest_path:
             self.dest_path = dest_path
         self.location = location
         self.src_path = src_path
         self.event_type = event_type
-        self.context = context
-        self.is_directory = src_path.endswith(os.path.sep)
+        self.contexts = contexts
+        self.context = contexts[0]
+        self.is_directory = src_path.endswith(os.path.sep) or not src_path
 
     def operation(self):
+        if self.event_type != EventType.MOVE:
+            args = (self.context, )
+        else:
+            args = (self.context, OperationContext(path=self.dest_path))
+        location = Location.LOCAL if self.location == Location.REMOTE else Location.REMOTE
         return getattr(
             operations,
             ''.join([
-                self.location.name.capitalize(),
+                location.name.capitalize(),
                 self.event_type.name.capitalize(),
                 'Folder' if self.is_directory else 'File'
             ])
-        )(self.context)
+        )(*self.contexts)
 
     @property
     def key(self):
         return (self.event_type, self.src_path, self.is_directory)
 
     def __eq__(self, event):
-        return self.key == event.key
+        return self.__class__ == event.__class__ and self.key == event.key
 
     def __ne__(self, event):
         return self.key != event.key
@@ -74,8 +80,11 @@ class Auditor:
         remote_map = yield from self.collect_all_remote()
         local_map = self.collect_all_local(db_map)
 
-        def context_for(path):
-            return OperationContext(Path(path), db_map.get(path, (None, ))[-1], remote_map.get(path, (None, ))[-1])
+        def context_for(paths):
+            if not isinstance(paths, tuple):
+                paths = (paths, )
+                #return OperationContext(Path(paths), db_map.get(paths, (None, ))[-1], remote_map.get(paths, (None, ))[-1])
+            return [OperationContext(self.user_folder / Path(path), db_map.get(path, (None, ))[-1], remote_map.get(path, (None, ))[-1]) for path in paths]
 
         diffs = {
             Location.LOCAL: self._diff(local_map, db_map),
@@ -91,12 +100,12 @@ class Auditor:
                         change = (change, )
                     for s in change:
                         parts = s.split(os.path.sep)
-                        while parts:
+                        while len(parts) > 2:
                             parts.pop(-1)
                             path = os.path.sep.join(parts + [''])
                             if path not in modifications[location]:
                                 modifications[location][path] = ModificationEvent(location, EventType.UPDATE, context_for(path), path)
-                        modifications[location][s] = ModificationEvent(location, event_type, context_for(change[0]), *change)
+                        modifications[location][s] = ModificationEvent(location, event_type, context_for(change), *change)
         return modifications[Location.LOCAL], modifications[Location.REMOTE]
 
     def collect_all_db(self):
