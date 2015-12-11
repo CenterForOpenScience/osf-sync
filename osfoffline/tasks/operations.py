@@ -189,7 +189,7 @@ class RemoteCreateFile(BaseOperation):
         parent = utils.local_to_db(self.local.parent, self.node)
 
         url = '{}/v1/resources/{}/providers/{}/{}'.format(settings.FILE_BASE, self.node.id, parent.provider, parent.osf_path)
-        with open(self.local.full_path, 'rb') as fobj:
+        with self.local.open(mode='rb') as fobj:
             resp = yield from OSFClient().request('PUT', url, data=fobj, params={'name': self.local.name})
         data = yield from resp.json()
         yield from resp.release()
@@ -340,6 +340,24 @@ class DatabaseUpdateFile(BaseOperation):
         save(session, self.db)
 
 
+class DatabaseUpdateFolder(BaseOperation):
+
+    @asyncio.coroutine
+    def _run(self):
+        logger.info('DatabaseUpdateFile: {}'.format(self.db))
+
+        parent = self.remote.parent.id if self.remote.parent else None
+
+        self.db.name = self.remote.name
+        self.db.kind = self.remote.kind
+        self.db.provider = self.remote.provider
+        self.db.user = get_current_user()
+        self.db.parent_id = parent
+        self.db.node_id = self.node.id
+
+        save(session, self.db)
+
+
 class DatabaseDeleteFile(BaseOperation):
 
     @asyncio.coroutine
@@ -375,10 +393,20 @@ class LocalMoveFile(MoveOperation):
     @asyncio.coroutine
     def _run(self):
         logger.info('LocalMoveFile: {}'.format(self._context))
+        shutil.move(str(self._context.local), str(self._dest_context.local))
+        self._context.db.parent_id = self._dest_context.remote.id
+        session.add(self._context.db.parent)
+        session.commit()
 
 
 class LocalMoveFolder(MoveOperation):
 
     @asyncio.coroutine
     def _run(self):
-        logger.info('LocalMoveFolder: {}'.format(self._context))
+        logger.info('LocalMoveFolder: {} -> {}'.format(self._context.local, self._dest_context.local))
+        shutil.move(str(self._context.local), str(self._dest_context.local))
+        # Note/TODO Cross Node moves will need to have node= specified to the DESTINATION Node below
+        yield from DatabaseUpdateFolder(OperationContext(
+            db=self._context.db,
+            remote=self._dest_context.remote
+        )).run()
