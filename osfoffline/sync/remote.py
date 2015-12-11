@@ -61,7 +61,7 @@ class RemoteSync:
             logger.info('Sleeping for {} seconds'.format(settings.REMOTE_CHECK_INTERVAL))
             try:
                 yield from asyncio.wait_for(self._sync_now_fut, timeout=settings.REMOTE_CHECK_INTERVAL)
-                logger.info('Sleep interruptted, syncing now')
+                logger.info('Sleep interrupted, syncing now')
             except asyncio.TimeoutError:
                 pass
             finally:
@@ -81,10 +81,13 @@ class RemoteSync:
 
         for is_folder in (True, False):
             for conflict in sorted(set(local_events.keys()) & set(remote_events.keys()), key=len):
-                if conflict.endswith(os.path.sep) == is_folder:
+                if conflict.endswith(os.path.sep) != is_folder:
                     continue
-                local, remote = local_events[conflict], remote_events[conflict]
-                res = RESOLUTION_MAP[(True, local.event_type, remote.event_type)](local, remote, local_events, remote_events)
+                try:
+                    local, remote = local_events[conflict], remote_events[conflict]
+                except KeyError:
+                    continue
+                res = RESOLUTION_MAP[(is_folder, local.event_type, remote.event_type)](local, remote, local_events, remote_events)
                 if asyncio.iscoroutine(res):
                     res = yield from res
                 if res:
@@ -107,7 +110,7 @@ class RemoteSync:
 
         td = TreeDict()
         directories = []
-        for event in sorted(itertools.chain(local_events.values(), remote_events.values()), key=lambda x: x.src_path.count(os.path.sep)):
+        for event in sorted(set(itertools.chain(local_events.values(), remote_events.values())), key=lambda x: x.src_path.count(os.path.sep)):
         # for event in sorted(itertools.chain(local_events.values(), remote_events.values()), ):
             if event.is_directory:
                 if event.event_type == EventType.UPDATE:
