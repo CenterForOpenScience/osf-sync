@@ -48,8 +48,8 @@ class LocalSync(ConsolidatedEventHandler):
                 OperationContext.create(local=Path(event.dest_path), is_folder=True),
             ))
         return self.put_event(operations.RemoteMoveFile(
-            OperationContext.create(local=Path(event.src_path), is_folder=True),
-            OperationContext.create(local=Path(event.dest_path), is_folder=True),
+            OperationContext.create(local=Path(event.src_path)),
+            OperationContext.create(local=Path(event.dest_path)),
         ))
 
     def on_created(self, event):

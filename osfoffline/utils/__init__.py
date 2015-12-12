@@ -51,7 +51,7 @@ def extract_node(path):
     return session.query(models.Node).filter(models.Node.id == node_id).one()
 
 
-def local_to_db(local, node, is_folder=None):
+def local_to_db(local, node, is_folder=False):
     db = session.query(models.File).filter(models.File.parent == None, models.File.node == node).one()
     parts = str(local).replace(node.path, '').split('/')
     for part in parts:

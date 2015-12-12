@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 class OperationContext:
 
     @classmethod
-    def create(cls, local=None, db=None, remote=None, node=None, is_folder=None):
+    def create(cls, local=None, db=None, remote=None, node=None, is_folder=False):
         if not node and db:
             node = db.node
         if not node and local:
