@@ -2,7 +2,10 @@ import abc
 import asyncio
 import logging
 import os
+import json
 import shutil
+
+from pathlib import Path
 
 from osfoffline.client import osf as osf_client
 from osfoffline.client.osf import OSFClient
@@ -19,21 +22,40 @@ logger = logging.getLogger(__name__)
 
 
 class OperationContext:
-    def __init__(self, local=None, db=None, remote=None, node=None, path=None):
-        self.db = db
-        self.local = local
-        self.remote = remote
 
-        if not node and self.db:
-            node = self.db.node
-        if not node and self.local and settings.OSF_STORAGE_FOLDER in str(local):
-            node = utils.extract_node(str(get_current_user().folder / self.local))
-        if not node and path:
-            node = utils.extract_node(path)
-        if not node and self.remote:
+    @classmethod
+    def create(cls, local=None, db=None, remote=None, node=None, is_folder=None):
+        if not node and db:
+            node = db.node
+        if not node and local:
+            node = utils.extract_node(str(local))
+        if not node and remote:
             pass  # TODO run extract node
 
+        if not local and db:
+            local = Path(db.path)
+
+        if local and not db:
+            db = utils.local_to_db(local, node, is_folder=is_folder)
+        if remote and not db:
+            db = session.query(models.File).filter(models.File.id == remote.id).one()
+
+        if not remote and db:
+            remote = utils.db_to_remote(db)
+        return cls(local=local, db=db, remote=remote, node=node)
+
+    def __init__(self, local=None, db=None, remote=None, node=None):
+        if not node and db:
+            node = db.node
+        if not node and local:
+            node = utils.extract_node(str(local))
+        if not node and remote:
+            pass  # TODO run extract node
+
+        self.db = db
         self.node = node
+        self.local = local
+        self.remote = remote
 
     def __repr__(self):
         return '<{}({}, {}, {}, {})>'.format(self.__class__.__name__, self.node, self.local, self.db, self.remote)
@@ -245,7 +267,6 @@ class RemoteUpdateFile(BaseOperation):
         # WB id are <provider>/<id>
         remote.id = remote.id.replace(remote.provider + '/', '')
         remote.parent = db.parent
-        # TODO: APIv2 will give back endpoint that can be parsed. Waterbutler may return something *similar* and need to coerce to work with task object
         yield from DatabaseUpdateFile(OperationContext(remote=remote,  db=db,  node=self.node)).run()
         Notification().info('Update Remote File: {}'.format(self.local))
 
@@ -364,6 +385,7 @@ class DatabaseDeleteFile(BaseOperation):
     def _run(self):
         logger.info('DatabaseDeleteFile: {}'.format(self.db))
         session.delete(self.db)
+        session.commit()
 
 
 class DatabaseDeleteFolder(BaseOperation):
@@ -372,6 +394,7 @@ class DatabaseDeleteFolder(BaseOperation):
     def _run(self):
         logger.info('DatabaseDeleteFolder: {}'.format(self.db))
         session.delete(self.db)
+        session.commit()
 
 
 class RemoteMoveFolder(MoveOperation):
@@ -379,6 +402,23 @@ class RemoteMoveFolder(MoveOperation):
     @asyncio.coroutine
     def _run(self):
         logger.info('RemoteMoveFolder: {}'.format(self._context))
+        dest_parent = OperationContext.create(local=self._dest_context.local.parent)
+        # HACK, TODO Fix me
+        dest_parent.remote = yield from dest_parent.remote
+        resp = yield from OSFClient().request('POST', self.remote.raw['links']['move'], data=json.dumps({
+            'action': 'move',
+            'path': dest_parent.db.osf_path if dest_parent.db.parent else '/',
+            'rename': self._dest_context.local.name,
+        }))
+        data =yield from resp.json()
+        yield from resp.release()
+        assert resp.status in (201, 200), resp
+
+        remote = osf_client.File(None, data['data'])
+        # WB id are <provider>/<id>
+        remote.id = remote.id.replace(remote.provider + '/', '')
+        remote.parent = session.query(models.File).filter(models.File.id == dest_parent.db.id).one()
+        yield from DatabaseUpdateFolder(OperationContext(remote=remote,  db=self.db,  node=self.node)).run()
 
 
 class RemoteMoveFile(MoveOperation):
@@ -386,6 +426,23 @@ class RemoteMoveFile(MoveOperation):
     @asyncio.coroutine
     def _run(self):
         logger.info('RemoteMoveFile: {}'.format(self._context))
+        dest_parent = OperationContext.create(local=self._dest_context.local.parent)
+        # HACK, TODO Fix me
+        dest_parent.remote = yield from dest_parent.remote
+        resp = yield from OSFClient().request('POST', self.remote.raw['links']['move'], data=json.dumps({
+            'action': 'move',
+            'path': dest_parent.db.osf_path if dest_parent.db.parent else '/',
+            'rename': self._dest_context.local.name,
+        }))
+        data =yield from resp.json()
+        yield from resp.release()
+        assert resp.status in (201, 200), resp
+
+        remote = osf_client.File(None, data['data'])
+        # WB id are <provider>/<id>
+        remote.id = remote.id.replace(remote.provider + '/', '')
+        remote.parent = session.query(models.File).filter(models.File.id == dest_parent.db.id).one()
+        yield from DatabaseUpdateFile(OperationContext(remote=remote,  db=self.db,  node=self.node)).run()
 
 
 class LocalMoveFile(MoveOperation):
@@ -394,9 +451,11 @@ class LocalMoveFile(MoveOperation):
     def _run(self):
         logger.info('LocalMoveFile: {}'.format(self._context))
         shutil.move(str(self._context.local), str(self._dest_context.local))
-        self._context.db.parent_id = self._dest_context.remote.id
-        session.add(self._context.db.parent)
-        session.commit()
+        # TODO Handle moved files that were also updated
+        yield from DatabaseUpdateFolder(OperationContext(
+                db=self._context.db,
+                remote=self._context.remote
+        )).run()
 
 
 class LocalMoveFolder(MoveOperation):
