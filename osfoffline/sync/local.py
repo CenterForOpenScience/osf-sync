@@ -42,10 +42,15 @@ class LocalSync(ConsolidatedEventHandler):
     def on_moved(self, event):
         logger.info('Moved {}: from {} to {}'.format((event.is_directory and 'directory') or 'file', event.src_path, event.dest_path))
         # Note: OperationContext should extrapolate all attributes from what it is given
-        return self.put_event(operations.RemoteCreateFile(OperationContext(
-            local=Path(event.src_path),
-            node=utils.extract_node(event.src_path)
-        )))
+        if event.is_directory:
+            return self.put_event(operations.RemoteMoveFolder(
+                OperationContext.create(local=Path(event.src_path), is_folder=True),
+                OperationContext.create(local=Path(event.dest_path), is_folder=True),
+            ))
+        return self.put_event(operations.RemoteMoveFile(
+            OperationContext.create(local=Path(event.src_path), is_folder=True),
+            OperationContext.create(local=Path(event.dest_path), is_folder=True),
+        ))
 
     def on_created(self, event):
         logger.info('Created {}: {}'.format((event.is_directory and 'directory') or 'file', event.src_path))
@@ -57,7 +62,7 @@ class LocalSync(ConsolidatedEventHandler):
         if utils.local_to_db(path, node):
             return self.on_modified(event)
 
-        context = OperationContext(local=path, node=node)
+        context = OperationContext.create(local=path, node=node)
 
         if event.is_directory:
             return self.put_event(operations.RemoteCreateFolder(context))
@@ -65,11 +70,12 @@ class LocalSync(ConsolidatedEventHandler):
 
     def on_deleted(self, event):
         logger.info('Deleted {}: {}'.format((event.is_directory and 'directory') or 'file', event.src_path))
-        node = utils.extract_node(event.src_path)
-        local = Path(event.src_path)
-        db = utils.local_to_db(local, node)
-        remote = utils.db_to_remote(db)
-        context = OperationContext(local=local, db=db, remote=remote, node=node)
+        # node = utils.extract_node(event.src_path)
+        # local = Path(event.src_path)
+        # db = utils.local_to_db(local, node)
+        # remote = utils.db_to_remote(db)
+        # context = OperationContext(local=local, db=db, remote=remote, node=node)
+        context = OperationContext.create(local=Path(event.src_path))
 
         if event.is_directory:
             return self.put_event(operations.RemoteDeleteFolder(context))
@@ -77,9 +83,10 @@ class LocalSync(ConsolidatedEventHandler):
 
     def on_modified(self, event):
         logger.info('Modified {}: {}'.format((event.is_directory and 'directory') or 'file', event.src_path))
-        path = Path(event.src_path)
-        node = utils.extract_node(event.src_path)
-        context = OperationContext(local=path, node=node)
+        # path = Path(event.src_path)
+        # node = utils.extract_node(event.src_path)
+        # context = OperationContext(local=path, node=node)
+        context = OperationContext.create(local=Path(event.src_path))
 
         if event.is_directory:
             # WHAT DO
