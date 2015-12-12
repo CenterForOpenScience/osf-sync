@@ -150,6 +150,9 @@ class Auditor:
         acc[rel_path] = (db_map.get(rel_path, (None, ))[0], None, rel_path)
 
         for child in root.iterdir():
+            # TODO replace with pattern matching
+            if child.name in settings.IGNORED_NAMES:
+                continue
             if child.is_dir():
                 self._collect_node_local(child, acc, db_map)
             else:
