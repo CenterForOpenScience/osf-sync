@@ -51,14 +51,14 @@ def extract_node(path):
     return session.query(models.Node).filter(models.Node.id == node_id).one()
 
 
-def local_to_db(local, node):
+def local_to_db(local, node, is_folder=None):
     db = session.query(models.File).filter(models.File.parent == None, models.File.node == node).one()
     parts = str(local).replace(node.path, '').split('/')
     for part in parts:
         for child in db.children:
             if child.name == part:
                 db = child
-    if db.path.rstrip('/') != str(local).rstrip('/') or db.is_folder != local.is_dir():
+    if db.path.rstrip('/') != str(local).rstrip('/') or db.is_folder != (local.is_dir() or is_folder):
         return None
     return db
 
@@ -66,6 +66,24 @@ def local_to_db(local, node):
 def db_to_remote(db):
     # Fix circular import
     from osfoffline.client import osf
-    return ensure_event_loop().run_until_complete(
-        osf.StorageObject.load(osf.OSFClient().request_session, db.id)
+    loop = ensure_event_loop()
+
+    if db.parent is None:
+        coro = _remote_root(db)
+    else:
+        coro = osf.StorageObject.load(osf.OSFClient().request_session, db.id)
+
+    if loop.is_running():
+        return coro
+    return loop.run_until_complete(coro)
+
+@asyncio.coroutine
+def _remote_root(db):
+    # Fix circular import
+    from osfoffline.client import osf
+    return next(
+        storage
+        for storage in
+        (yield from osf.NodeStorage.load(osf.OSFClient().request_session, db.node.id))
+        if storage.provider == db.provider
     )
