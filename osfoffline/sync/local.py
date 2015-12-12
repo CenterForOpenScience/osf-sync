@@ -70,11 +70,6 @@ class LocalSync(ConsolidatedEventHandler):
 
     def on_deleted(self, event):
         logger.info('Deleted {}: {}'.format((event.is_directory and 'directory') or 'file', event.src_path))
-        # node = utils.extract_node(event.src_path)
-        # local = Path(event.src_path)
-        # db = utils.local_to_db(local, node)
-        # remote = utils.db_to_remote(db)
-        # context = OperationContext(local=local, db=db, remote=remote, node=node)
         context = OperationContext.create(local=Path(event.src_path))
 
         if event.is_directory:
@@ -83,9 +78,6 @@ class LocalSync(ConsolidatedEventHandler):
 
     def on_modified(self, event):
         logger.info('Modified {}: {}'.format((event.is_directory and 'directory') or 'file', event.src_path))
-        # path = Path(event.src_path)
-        # node = utils.extract_node(event.src_path)
-        # context = OperationContext(local=path, node=node)
         context = OperationContext.create(local=Path(event.src_path))
 
         if event.is_directory:

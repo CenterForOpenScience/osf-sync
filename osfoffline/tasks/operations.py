@@ -198,8 +198,8 @@ class LocalDeleteFolder(BaseOperation):
     @asyncio.coroutine
     def _run(self):
         logger.info('LocalDeleteFolder: {}'.format(self.local))
-        self.local.rmdir()
-        yield from DatabaseDeleteFolder(OperationContext(db=utils.local_to_db(self.local, self.node))).run()
+        shutil.rmtree(str(self.local))
+        yield from DatabaseDeleteFolder(self._context).run()
 
 
 class RemoteCreateFile(BaseOperation):
@@ -453,8 +453,8 @@ class LocalMoveFile(MoveOperation):
         shutil.move(str(self._context.local), str(self._dest_context.local))
         # TODO Handle moved files that were also updated
         yield from DatabaseUpdateFolder(OperationContext(
-                db=self._context.db,
-                remote=self._context.remote
+            db=self._context.db,
+            remote=self._dest_context.remote
         )).run()
 
 

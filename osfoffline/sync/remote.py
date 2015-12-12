@@ -70,12 +70,12 @@ class RemoteSync:
             logger.info('Beginning remote sync')
             self.ignore_watchdog.set()
             yield from self._check(False)
+            yield from asyncio.sleep(10)
             self.ignore_watchdog.clear()
             logger.info('Finished remote sync')
 
     @asyncio.coroutine
     def _check(self, _):
-        files = []
         resolutions = []
         local_events, remote_events = yield from Auditor().audit()
 
@@ -97,21 +97,9 @@ class RemoteSync:
                 else:
                     logger.warning('Conflict at {} between {} and {} required no resolution'.format(conflict, local.event_type, remote.event_type))
 
-        # for conflict in set(local_events.keys()) & set(remote_events.keys()):
-        #     if conflict.endswith(os.path.sep):
-        #         raise Exception()
-        #     local, remote = local_events.pop(conflict), remote_events.pop(conflict)
-        #     res = RESOLUTION_MAP[(False, local.event_type, remote.event_type)](local, remote, local_events, remote_events)
-        #     resolutions.extend(res)
-        #     if res:
-        #         logger.error('Conflict at {} between {} and {}\nResolved with {}'.format(conflict, local.event_type, remote.event_type, res))
-        #     else:
-        #         logger.warning('Conflict at {} between {} and {} required no resolution'.format(conflict, local.event_type, remote.event_type))
-
         td = TreeDict()
         directories = []
         for event in sorted(set(itertools.chain(local_events.values(), remote_events.values())), key=lambda x: x.src_path.count(os.path.sep)):
-        # for event in sorted(itertools.chain(local_events.values(), remote_events.values()), ):
             if event.is_directory:
                 if event.event_type == EventType.UPDATE:
                     continue
