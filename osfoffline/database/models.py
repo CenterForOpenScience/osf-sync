@@ -83,7 +83,7 @@ class Node(Base):
         return top_level
 
     def __repr__(self):
-        return '<Node ({}, title={}, path={})>'.format(self.id, self.title, self.path)
+        return '<Node({}, title={}, path={})>'.format(self.id, self.title, self.path)
 
 
 class File(Base):
