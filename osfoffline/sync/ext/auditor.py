@@ -44,7 +44,7 @@ class ModificationEvent:
         if self.event_type != EventType.MOVE:
             args = (self.context, )
         else:
-            args = (self.context, OperationContext(path=self.dest_path))
+            args = (self.context, OperationContext.create(local=Path(self.dest_path)))
         location = Location.LOCAL if self.location == Location.REMOTE else Location.REMOTE
         return getattr(
             operations,
