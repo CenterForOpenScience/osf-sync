@@ -28,6 +28,8 @@ def db_create(local, remote, local_events, remote_events):
 
 
 def db_delete(local, remote, local_events, remote_events):
+    del local_events[local.src_path]
+    del remote_events[remote.src_path]
     if local.is_directory:
         return [operations.DatabaseDeleteFolder(remote.context)]
     return [operations.DatabaseDeleteFile(remote.context)]
