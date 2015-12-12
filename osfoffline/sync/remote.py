@@ -84,7 +84,7 @@ class RemoteSync:
                 if conflict.endswith(os.path.sep) != is_folder:
                     continue
                 try:
-                    local, remote = local_events[conflict], remote_events[conflict]
+                    local, remote = local_events.pop(conflict), remote_events.pop(conflict)
                 except KeyError:
                     continue
                 res = RESOLUTION_MAP[(is_folder, local.event_type, remote.event_type)](local, remote, local_events, remote_events)
