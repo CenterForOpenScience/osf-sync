@@ -1,5 +1,6 @@
 import asyncio
 import os
+import hashlib
 
 from osfoffline.tasks import operations
 from osfoffline.database import session
@@ -7,8 +8,20 @@ from osfoffline.sync.ext.auditor import EventType
 from osfoffline.utils.authentication import get_current_user
 
 
+def hash_file(path, chunk_size=64*1024):
+    s = hashlib.sha256()
+    with path.open(mode='rb') as f:
+        while True:
+            chunk = f.read(chunk_size)
+            if not chunk:
+                break
+            s.update(chunk)
+    return s.hexdigest()
+
+
 def prompt_user(local, remote, local_events, remote_events):
-    if local.context.db and remote.context.remote and local.context.db.sha256 == remote.context.remote.extra['hashes'].sha256:
+    # TODO Pass around pre computed SHAs
+    if local.context.local and remote.context.remote and hash_file(local.context.local) == remote.context.remote.extra['hashes']['sha256']:
         return db_create(local, remote, local_events, remote_events)
     return []
 
@@ -20,19 +33,25 @@ def upload_as_new(local, remote, local_events, remote_events):
 
 
 def db_create(local, remote, local_events, remote_events):
-    del local_events[local.src_path]
-    del remote_events[remote.src_path]
+    #del local_events[local.src_path]
+    #del remote_events[remote.src_path]
     if local.is_directory:
         return [operations.DatabaseCreateFolder(remote.contexts[-1])]
     return [operations.DatabaseCreateFile(remote.context)]
 
 
 def db_delete(local, remote, local_events, remote_events):
-    del local_events[local.src_path]
-    del remote_events[remote.src_path]
+    #del local_events[local.src_path]
+    #del remote_events[remote.src_path]
     if local.is_directory:
         return [operations.DatabaseDeleteFolder(remote.context)]
     return [operations.DatabaseDeleteFile(remote.context)]
+
+
+def db_update(local, remote, local_events, remote_events):
+    if local.is_directory:
+        return [operations.DatabaseUpdateFolder(remote.context)]
+    return [operations.DatabaseUpdateFile(remote.context)]
 
 
 def download_file(local, remote, local_events, remote_events):
@@ -73,6 +92,25 @@ def handle_move_src_update(local, remote, local_events, remote_events):
     return True
 
 
+def move_to_conflict(local, remote, local_events, remote_events):
+    # TODO Pass around pre computed SHAs
+    if hash_file(local.context.local) == remote.contexts[1].remote.extra['hashes']['sha256']:
+        if remote.contexts[0].db:
+            if remote.is_directory:
+                return [operations.DatabaseUpdateFolder(operations.OperationContext(
+                    db=remote.contexts[0].db,
+                    remote=remote.contexts[1].remote
+                ))]
+            else:
+                return [operations.DatabaseUpdateFile(operations.OperationContext(
+                        db=remote.contexts[0].db,
+                    remote=remote.contexts[1].remote
+                ))]
+        return db_create(local, remote, local_events, remote_events)
+    # Ask User
+    return []
+
+
 def move_gate(event_src, event_dest):
     def gate(local, remote, *args, **kwargs):
         if local.src_path == remote.src_path:
@@ -86,7 +124,7 @@ RESOLUTION_MAP = {
     (False, EventType.CREATE, EventType.CREATE): prompt_user,
     (False, EventType.DELETE, EventType.DELETE): db_delete,
     (False, EventType.UPDATE, EventType.DELETE): upload_as_new,
-    (False, EventType.CREATE, EventType.MOVE): move_gate(None, prompt_user),
+    (False, EventType.CREATE, EventType.MOVE): move_gate(None, move_to_conflict),
     (False, EventType.DELETE, EventType.MOVE): move_gate(lambda l,r,*_:[], download_file),
     (False, EventType.UPDATE, EventType.MOVE): move_gate('MoveThenUploadAsNew', prompt_user),
     (False, EventType.DELETE, EventType.UPDATE): download_file,
