@@ -5,6 +5,7 @@ from pathlib import Path
 from watchdog.observers import Observer
 
 from osfoffline import utils
+from osfoffline.exceptions import NodeNotFound
 from osfoffline.sync.ext.watchdog import ConsolidatedEventHandler
 from osfoffline.tasks import operations
 from osfoffline.tasks.operations import OperationContext
@@ -43,14 +44,25 @@ class LocalSync(ConsolidatedEventHandler):
         logger.info('Moved {}: from {} to {}'.format((event.is_directory and 'directory') or 'file', event.src_path, event.dest_path))
         # Note: OperationContext should extrapolate all attributes from what it is given
         if event.is_directory:
-            return self.put_event(operations.RemoteMoveFolder(
-                OperationContext.create(local=Path(event.src_path), is_folder=True),
-                OperationContext.create(local=Path(event.dest_path), is_folder=True),
+            try:
+                return self.put_event(operations.RemoteMoveFolder(
+                    OperationContext.create(local=Path(event.src_path), is_folder=True),
+                    OperationContext.create(local=Path(event.dest_path), is_folder=True),
+                ))
+            except NodeNotFound:
+                return self.put_event(operations.RemoteCreateFolder(
+                    OperationContext.create(local=Path(event.dest_path), is_folder=True),
+                ))
+
+        try:
+            return self.put_event(operations.RemoteMoveFile(
+                OperationContext.create(local=Path(event.src_path)),
+                OperationContext.create(local=Path(event.dest_path)),
             ))
-        return self.put_event(operations.RemoteMoveFile(
-            OperationContext.create(local=Path(event.src_path)),
-            OperationContext.create(local=Path(event.dest_path)),
-        ))
+        except NodeNotFound:
+            return self.put_event(operations.RemoteCreateFile(
+                OperationContext.create(local=Path(event.dest_path)),
+            ))
 
     def on_created(self, event):
         logger.info('Created {}: {}'.format((event.is_directory and 'directory') or 'file', event.src_path))

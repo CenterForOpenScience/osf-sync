@@ -449,8 +449,8 @@ class LocalMoveFile(MoveOperation):
 
     @asyncio.coroutine
     def _run(self):
-        logger.info('LocalMoveFile: {}'.format(self._context))
-        shutil.move(str(self._context.local), str(self._dest_context.local))
+        logger.info('LocalMoveFile: {} -> {}'.format(self._context.db.path, self._dest_context.local))
+        shutil.move(str(self._context.db.path), str(self._dest_context.local))
         # TODO Handle moved files that were also updated
         yield from DatabaseUpdateFolder(OperationContext(
             db=self._context.db,
@@ -462,8 +462,8 @@ class LocalMoveFolder(MoveOperation):
 
     @asyncio.coroutine
     def _run(self):
-        logger.info('LocalMoveFolder: {} -> {}'.format(self._context.local, self._dest_context.local))
-        shutil.move(str(self._context.local), str(self._dest_context.local))
+        logger.info('LocalMoveFolder: {} -> {}'.format(self._context.db.path, self._dest_context.local))
+        shutil.move(str(self._context.db.path), str(self._dest_context.local))
         # Note/TODO Cross Node moves will need to have node= specified to the DESTINATION Node below
         yield from DatabaseUpdateFolder(OperationContext(
             db=self._context.db,

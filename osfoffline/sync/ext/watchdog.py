@@ -1,10 +1,15 @@
 from collections import OrderedDict
 import os
+import logging
 import threading
 
 from watchdog.events import PatternMatchingEventHandler
 
 from osfoffline import settings
+from osfoffline.exceptions import NodeNotFound
+
+
+logger = logging.getLogger(__name__)
 
 
 class ConsolidatedEventHandler(PatternMatchingEventHandler):
@@ -54,5 +59,10 @@ class ConsolidatedEventHandler(PatternMatchingEventHandler):
     def flush(self):
         with self.lock:
             for e in self._flatten(self._event_cache, []):
-                super().dispatch(e)
+                try:
+                    super().dispatch(e)
+                except (NodeNotFound, ) as ex:
+                    logger.warning(ex)
+                except Exception as ex:
+                    logger.exception(ex)
             self._event_cache = OrderedDict()

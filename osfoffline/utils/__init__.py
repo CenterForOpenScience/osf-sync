@@ -2,11 +2,13 @@ import os
 import asyncio
 import threading
 
+from sqlalchemy.orm.exc import NoResultFound
+
 from osfoffline import settings
 from osfoffline.database import session
 from osfoffline.database import models
+from osfoffline.exceptions import NodeNotFound
 from osfoffline.utils.authentication import get_current_user
-
 
 class Singleton(type):
     _instances = {}
@@ -39,16 +41,19 @@ def ensure_event_loop():
 def extract_node(path):
     """Given a file path extract the node id and return the loaded Database object
     Visual, how this method works:
-        '/root/OSF/Node - 1244/Components/Node -1482/OSF Storage/OSF Storage/OSF Storage/file.txt'
-        '/OSF/Node - 1244/Components/Node -1482/OSF Storage/OSF Storage/OSF Storage/file.txt'
-        ['/OSF/Node - 1244/Components/Node -1482/', '', '', '/file.txt']
-        '/OSF/Node - 1244/Components/Node -1482/'
+        '/root/OSF/Node - 1244/Components/Node - 1482/OSF Storage/OSF Storage/OSF Storage/file.txt'
+        '/OSF/Node - 1244/Components/Node - 1482/OSF Storage/OSF Storage/OSF Storage/file.txt'
+        ['/OSF/Node - 1244/Components/Node - 1482/', '', '', '/file.txt']
+        '/OSF/Node - 1244/Components/Node - 1482/'
         ['Node - 1244', 'Components', 'Node - 1482']
         'Node - 1482'
         1482
     """
-    node_id = path.replace(get_current_user().folder, '').split(settings.OSF_STORAGE_FOLDER)[0].strip(os.path.sep).split(os.path.sep)[-1].split('- ')[-1]
-    return session.query(models.Node).filter(models.Node.id == node_id).one()
+    node_id = path.replace(get_current_user().folder, '').split(settings.OSF_STORAGE_FOLDER)[0].strip(os.path.sep).split(os.path.sep)[-1].split(' - ')[-1]
+    try:
+        return session.query(models.Node).filter(models.Node.id == node_id).one()
+    except NoResultFound:
+        raise NodeNotFound(path)
 
 
 def local_to_db(local, node, is_folder=False):
