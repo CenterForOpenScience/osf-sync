@@ -82,7 +82,7 @@ class LocalSync(ConsolidatedEventHandler):
 
     def on_deleted(self, event):
         logger.info('Deleted {}: {}'.format((event.is_directory and 'directory') or 'file', event.src_path))
-        context = OperationContext.create(local=Path(event.src_path))
+        context = OperationContext.create(local=Path(event.src_path), is_folder=event.is_directory)
 
         if event.is_directory:
             return self.put_event(operations.RemoteDeleteFolder(context))
