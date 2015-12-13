@@ -404,6 +404,10 @@ class RemoteMoveFolder(MoveOperation):
         logger.info('RemoteMoveFolder: {}'.format(self._context))
         dest_parent = OperationContext.create(local=self._dest_context.local.parent)
         # HACK, TODO Fix me
+        if not self.remote or not self.db:
+            self._context = OperationContext.create(local=self.local, is_folder=True)
+            self._context.remote = yield from self._context.remote
+        # HACK, TODO Fix me
         dest_parent.remote = yield from dest_parent.remote
         resp = yield from OSFClient().request('POST', self.remote.raw['links']['move'], data=json.dumps({
             'action': 'move',
