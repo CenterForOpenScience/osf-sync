@@ -123,7 +123,16 @@ class RemoteSync:
             ]
             if conflicts:
                 logger.error('Detected {} conflicts for folder {}. ({})'.format(len(conflicts), event.src_path, [x.context for x in conflicts]))
-            del td[parts]
+            else:
+                td[parts] = event
+                directories.remove(event)
+
+        for child in td.children():
+            if child.is_directory:
+                del td[child.src_path.split(os.path.sep)[:-1]]
+                directories.append(child)
+
+        directories = sorted(directories, key=lambda x: x.src_path.count(os.path.sep))
 
         for operation in itertools.chain(resolutions, (event.operation() for event in directories), (event.operation() for event in td.children())):
             yield from self.operation_queue.put(operation)
