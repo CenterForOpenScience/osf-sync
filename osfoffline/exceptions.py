@@ -10,6 +10,12 @@ class OSFOfflineException(Exception):
     __str__ = __repr__
 
 class AuthError(OSFOfflineException):
+    """Generic authentication error while connecting to the OSF"""
+    pass
+
+
+class TwoFactorRequiredError(AuthError):
+    """Headers on request indicate that a two-factor authentication code must be provided to authenticate"""
     pass
 
 
