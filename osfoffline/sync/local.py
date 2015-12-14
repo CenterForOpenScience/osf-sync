@@ -50,7 +50,7 @@ class LocalSyncWorker(ConsolidatedEventHandler, metaclass=Singleton):
         # Note: OperationContext should extrapolate all attributes from what it is given
         if event.is_directory:
             try:
-                # TODO: can we avoid a lazy context load in this case to catch the NodeNotFound exception?
+                # TODO: avoid a lazy context load in this case to catch the NodeNotFound exception?
                 _ = OperationContext(local=Path(event.src_path), is_folder=True).remote
                 return self.put_event(operations.RemoteMoveFolder(
                     OperationContext(local=Path(event.src_path), is_folder=True),
@@ -62,6 +62,8 @@ class LocalSyncWorker(ConsolidatedEventHandler, metaclass=Singleton):
                 ))
 
         try:
+            # TODO: avoid a lazy context load in this case to catch the NodeNotFound exception?
+            _ = OperationContext(local=Path(event.src_path)).remote
             return self.put_event(operations.RemoteMoveFile(
                 OperationContext(local=Path(event.src_path)),
                 OperationContext(local=Path(event.dest_path)),
