@@ -18,6 +18,7 @@ from sqlalchemy.orm.exc import NoResultFound
 
 from osfoffline.application.background import BackgroundHandler
 from osfoffline.database import Session
+from osfoffline.database import drop_db
 from osfoffline.database.models import User
 from osfoffline.database.utils import save
 from osfoffline.gui.qt.login import LoginScreen
@@ -163,7 +164,7 @@ class OSFOfflineQT(QSystemTrayIcon):
 
     def logout(self):
         # Will probably wipe out everything :shrug:
-        Session().query(User).delete()
+        drop_db()
         self.quit()
 
 
