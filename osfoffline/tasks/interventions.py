@@ -1,7 +1,7 @@
 import abc
 import enum
-import asyncio
 import logging
+import threading
 
 from osfoffline.tasks import operations
 from osfoffline.utils import Singleton
@@ -21,18 +21,20 @@ class Decision(enum.Enum):
 # IE: RemoteCreated, BothDeleted, etc
 class BaseIntervention(abc.ABC):
 
-    def __init__(self, auditor):
-        self.auditor = auditor
-        self.future = asyncio.Future()
+    def __init__(self, local, remote):
+        self.local = local
+        self.remote = remote
+        self.decision = None
+        self.event = threading.Event()
         logger.warning('Created Intervention {}'.format(self.__class__.__name__))
 
     def set_result(self, decision):
         logger.info('Resolved Intervention {}: {}'.format(self.__class__.__name__, decision))
-        self.future._loop.call_soon_threadsafe(self.future.set_result, decision)
+        self.decision = decision
+        self.event.set()
 
     @abc.abstractmethod
-    @asyncio.coroutine
-    def resolve(self, decision):
+    def resolve(self):
         raise NotImplementedError
 
 
@@ -46,13 +48,14 @@ class LocalFileDeleted(BaseIntervention):
         self.description = 'This is the description'
         self.options = (Decision.MINE, Decision.THEIRS)
 
-    @asyncio.coroutine
-    def resolve(self, decision):
-        if decision == Decision.MINE:
-            yield from self.auditor.operation_queue.put(operations.RemoteDeleteFile(self.auditor.remote))
-        elif decision == Decision.THEIRS:
-            yield from self.auditor.operation_queue.put(operations.DatabaseDeleteFile(self.auditor.db))
-            yield from self.auditor.operation_queue.put(operations.LocalCreateFile(self.auditor.remote, self.auditor.node))
+    def resolve(self):
+        if self.decision == Decision.MINE:
+            return [operations.RemoteDeleteFile(self.remote.context)]
+        elif self.decision == Decision.THEIRS:
+            return [
+                operations.DatabaseDeleteFile(self.remote.context),
+                operations.LocalCreateFile(self.remote.context),
+            ]
         else:
             raise ValueError('Unknown decision')
 
@@ -61,20 +64,19 @@ class LocalFolderDeleted(BaseIntervention):
 
     DEFAULT_DECISION = Decision.THEIRS
 
-    def __init__(self, auditor, remote_children):
-        super().__init__(auditor)
+    def __init__(self, local, remote, remote_children):
+        super().__init__(local, remote)
         self.title = 'Local Folder Deleted'
         self.description = 'The Local Folder \'{}\' was Deleted, however it still exists in the Remote Project {}.\n' \
             '\n' \
-            'The Remote Folder contains {} objects.'.format(self.auditor.db.path, self.auditor.node.id, len(remote_children))
+            'The Remote Folder contains {} objects.'.format(self.remote.db.path, self.remote.node.id, len(remote_children))
         self.options = (Decision.MINE, Decision.THEIRS)
 
-    @asyncio.coroutine
-    def resolve(self, decision):
-        if decision == Decision.MINE:
-            yield from self.auditor.operation_queue.put(operations.RemoteDeleteFolder(self.auditor.remote))
-        elif decision == Decision.THEIRS:
-            yield from self.auditor.operation_queue.put(operations.LocalCreateFolder(self.auditor.remote, self.auditor.node))
+    def resolve(self):
+        if self.decision == Decision.MINE:
+            return [operations.RemoteDeleteFolder(self.remote)]
+        elif self.decision == Decision.THEIRS:
+            return [operations.LocalCreateFolder(self.remote)]
         else:
             raise ValueError('Unknown decision')
 
@@ -83,18 +85,17 @@ class RemoteFileDeleted(BaseIntervention):
 
     DEFAULT_DECISION = Decision.MINE
 
-    def __init__(self, auditor):
-        super().__init__(auditor)
+    def __init__(self, local, remote):
+        super().__init__(local, remote)
         self.title = 'Remote File Deleted'
         self.description = 'This is the description'
         self.options = (Decision.MINE, Decision.THEIRS)
 
-    @asyncio.coroutine
-    def resolve(self, decision):
-        if decision == Decision.MINE:
-            yield from self.auditor.operation_queue.put(operations.RemoteCreateFile(self.auditor.local, self.auditor.node))
-        elif decision == Decision.THEIRS:
-            yield from self.auditor.operation_queue.put(operations.LocalDeleteFile(self.auditor.local, self.auditor.node))
+    def resolve(self):
+        if self.decision == Decision.MINE:
+            return [operations.RemoteCreateFile(self.local)]
+        elif self.decision == Decision.THEIRS:
+            return [operations.LocalDeleteFile(self.local)]
         else:
             raise ValueError('Unknown decision')
 
@@ -103,21 +104,22 @@ class RemoteLocalFileConflict(BaseIntervention):
 
     DEFAULT_DECISION = Decision.KEEP_BOTH
 
-    def __init__(self, auditor):
-        super().__init__(auditor)
+    def __init__(self, local, remote):
+        super().__init__(local, remote)
         self.title = 'Remote Local File Conflict'
         self.description = 'This is the description'
         self.options = (Decision.MINE, Decision.THEIRS, Decision.KEEP_BOTH)
 
-    @asyncio.coroutine
-    def resolve(self, decision):
-        if decision == Decision.MINE:
-            yield from self.auditor.operation_queue.put(operations.RemoteUpdateFile(self.auditor.local, self.auditor.node))
-        elif decision == Decision.THEIRS:
-            yield from self.auditor.operation_queue.put(operations.LocalUpdateFile(self.auditor.remote))
-        elif decision == Decision.KEEP_BOTH:
-            yield from self.auditor.operation_queue.put(operations.LocalKeepFile(self.auditor.local))
-            yield from self.auditor.operation_queue.put(operations.LocalCreateFile(self.auditor.remote, self.auditor.node))
+    def resolve(self):
+        if self.decision == Decision.MINE:
+            return [operations.RemoteUpdateFile(self.local)]
+        elif self.decision == Decision.THEIRS:
+            return [operations.LocalUpdateFile(self.remote)]
+        elif self.decision == Decision.KEEP_BOTH:
+            return [
+                operations.LocalKeepFile(self.local),
+                operations.LocalCreateFile(self.remote),
+            ]
         else:
             raise ValueError('Unknown decision')
 
@@ -126,8 +128,8 @@ class RemoteFolderDeleted(BaseIntervention):
 
     DEFAULT_DECISION = Decision.MINE
 
-    def __init__(self, auditor, events):
-        super().__init__(auditor)
+    def __init__(self, local, remote, events):
+        super().__init__(local, remote)
         self.changed = 0
         self.deleted = 0
 
@@ -141,27 +143,24 @@ class RemoteFolderDeleted(BaseIntervention):
         self.description = 'This is the description'
         self.options = (Decision.MINE, Decision.THEIRS)
 
-    @asyncio.coroutine
-    def resolve(self, decision):
+    def resolve(self):
         # TODO: Validate logic
         # TODO Add all child tasks to queue
         # TODO implement the MERGE Option
-        if decision == Decision.MINE:
-            yield from self.auditor.operation_queue.put(operations.RemoteCreateFolder(self.auditor.local, self.auditor.node))
-        elif decision == Decision.THEIRS:
-            yield from self.auditor.operation_queue.put(operations.LocalDeleteFolder(self.auditor.local, self.auditor.node))
+        if self.decision == Decision.MINE:
+            return [operations.RemoteCreateFolder(self.local)]
+        elif self.decision == Decision.THEIRS:
+            return [operations.LocalDeleteFolder(self.local)]
         else:
             raise ValueError('Unknown decision')
 
 
 class Intervention(metaclass=Singleton):
-    thread_safe = True
 
     def set_callback(self, cb):
         self.cb = cb
 
-    @asyncio.coroutine
     def resolve(self, intervention):
-        yield from asyncio.get_event_loop().run_in_executor(None, self.cb, intervention)
-        yield from intervention.future
-        return intervention.future.result()
+        self.cb(intervention)
+        intervention.event.wait()
+        return intervention.resolve()
