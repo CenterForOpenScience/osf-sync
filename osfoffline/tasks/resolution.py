@@ -4,6 +4,8 @@ import hashlib
 from osfoffline.tasks import operations
 from osfoffline.database import session
 from osfoffline.sync.ext.auditor import EventType
+from osfoffline.tasks import interventions
+from osfoffline.tasks.interventions import Intervention
 
 
 def hash_file(path, chunk_size=64*1024):
@@ -21,7 +23,7 @@ def prompt_user(local, remote, local_events, remote_events):
     # TODO Pass around pre computed SHAs
     if local.context.local and remote.context.remote and hash_file(local.context.local) == remote.context.remote.extra['hashes']['sha256']:
         return db_create(local, remote, local_events, remote_events)
-    return []
+    return Intervention().resolve(interventions.RemoteLocalFileConflict(local, remote))
 
 
 def upload_as_new(local, remote, local_events, remote_events):
