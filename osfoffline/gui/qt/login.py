@@ -49,7 +49,7 @@ class LoginScreen(QDialog, Ui_login):
         auth_client = AuthClient()
 
         try:
-            self.user = auth_client.log_in(username=username, password=password)
+            self.user = auth_client.login(username=username, password=password)
         except AuthError as e:
             logging.exception(e.message)
             QMessageBox.warning(None, 'Login Failed', e.message)

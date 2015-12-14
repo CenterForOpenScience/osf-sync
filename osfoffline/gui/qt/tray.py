@@ -16,8 +16,7 @@ from PyQt5.QtWidgets import QSystemTrayIcon
 
 from sqlalchemy.orm.exc import NoResultFound
 
-from osfoffline import settings
-from osfoffline.application.background import BackgroundWorker
+from osfoffline.application.background import BackgroundHandler
 from osfoffline.database import session
 from osfoffline.database.models import User
 from osfoffline.database.utils import save
@@ -60,8 +59,8 @@ class OSFOfflineQT(QSystemTrayIcon):
         self.intervention_handler = SyncEventHandler()
         self.notification_handler = SyncEventHandler()
 
-        # worker
-        self.background_worker = BackgroundWorker()
+        # handler
+        self.background_handler = BackgroundHandler()
 
         # [ (signal, slot) ]
         signal_slot_pairs = [
@@ -94,11 +93,11 @@ class OSFOfflineQT(QSystemTrayIcon):
 
         self.ensure_folder(user)
 
-        logger.debug('starting background worker from main.start')
-        self.background_worker = BackgroundWorker()
-        self.background_worker.set_intervention_cb(self.intervention_handler.enqueue_signal.emit)
-        self.background_worker.set_notification_cb(self.notification_handler.enqueue_signal.emit)
-        self.background_worker.start()
+        logger.debug('starting background handler from main.start')
+        self.background_handler = BackgroundHandler()
+        self.background_handler.set_intervention_cb(self.intervention_handler.enqueue_signal.emit)
+        self.background_handler.set_notification_cb(self.notification_handler.enqueue_signal.emit)
+        self.background_handler.start()
         return True
 
     def on_intervention(self, intervention):
@@ -132,20 +131,20 @@ class OSFOfflineQT(QSystemTrayIcon):
 
     # def resume(self):
     #     logger.debug('resuming')
-    #     if self.background_worker.is_alive():
+    #     if self.background_handler.is_alive():
     #         raise RuntimeError('Resume called without first calling pause')
 
-    #     self.background_worker = BackgroundWorker()
-    #     self.background_worker.start()
+    #     self.background_handler = BackgroundHandler()
+    #     self.background_handler.start()
 
     # def pause(self):
     #     logger.debug('pausing')
-    #     if self.background_worker and self.background_worker.is_alive():
-    #         self.background_worker.stop()
+    #     if self.background_handler and self.background_handler.is_alive():
+    #         self.background_handler.stop()
 
     def quit(self):
         try:
-            self.background_worker.stop()
+            self.background_handler.stop()
 
             try:
                 user = session.query(User).one()
@@ -160,7 +159,7 @@ class OSFOfflineQT(QSystemTrayIcon):
             QApplication.instance().quit()
 
     def sync_now(self):
-        self.background_worker.sync_now()
+        self.background_handler.sync_now()
 
     def logout(self):
         # Will probably wipe out everything :shrug:
