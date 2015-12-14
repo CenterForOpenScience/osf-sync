@@ -51,22 +51,22 @@ class LocalSyncWorker(ConsolidatedEventHandler, metaclass=Singleton):
         if event.is_directory:
             try:
                 return self.put_event(operations.RemoteMoveFolder(
-                    OperationContext.create(local=Path(event.src_path), is_folder=True),
-                    OperationContext.create(local=Path(event.dest_path), is_folder=True),
+                    OperationContext(local=Path(event.src_path), is_folder=True),
+                    OperationContext(local=Path(event.dest_path), is_folder=True),
                 ))
             except NodeNotFound:
                 return self.put_event(operations.RemoteCreateFolder(
-                    OperationContext.create(local=Path(event.dest_path), is_folder=True),
+                    OperationContext(local=Path(event.dest_path), is_folder=True),
                 ))
 
         try:
             return self.put_event(operations.RemoteMoveFile(
-                OperationContext.create(local=Path(event.src_path)),
-                OperationContext.create(local=Path(event.dest_path)),
+                OperationContext(local=Path(event.src_path)),
+                OperationContext(local=Path(event.dest_path)),
             ))
         except NodeNotFound:
             return self.put_event(operations.RemoteCreateFile(
-                OperationContext.create(local=Path(event.dest_path)),
+                OperationContext(local=Path(event.dest_path)),
             ))
 
     def on_created(self, event):
@@ -79,7 +79,7 @@ class LocalSyncWorker(ConsolidatedEventHandler, metaclass=Singleton):
         if utils.local_to_db(path, node):
             return self.on_modified(event)
 
-        context = OperationContext.create(local=path, node=node)
+        context = OperationContext(local=path, node=node)
 
         if event.is_directory:
             return self.put_event(operations.RemoteCreateFolder(context))
@@ -87,7 +87,7 @@ class LocalSyncWorker(ConsolidatedEventHandler, metaclass=Singleton):
 
     def on_deleted(self, event):
         logger.info('Deleted {}: {}'.format((event.is_directory and 'directory') or 'file', event.src_path))
-        context = OperationContext.create(local=Path(event.src_path), is_folder=event.is_directory)
+        context = OperationContext(local=Path(event.src_path), is_folder=event.is_directory)
 
         if event.is_directory:
             return self.put_event(operations.RemoteDeleteFolder(context))
@@ -95,7 +95,7 @@ class LocalSyncWorker(ConsolidatedEventHandler, metaclass=Singleton):
 
     def on_modified(self, event):
         logger.info('Modified {}: {}'.format((event.is_directory and 'directory') or 'file', event.src_path))
-        context = OperationContext.create(local=Path(event.src_path))
+        context = OperationContext(local=Path(event.src_path))
 
         if event.is_directory:
             # WHAT DO
