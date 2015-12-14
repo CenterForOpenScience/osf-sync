@@ -115,22 +115,35 @@ def move_gate(event_src, event_dest):
     return gate
 
 
+# File A modified locally. File B renamed to File B remotely
+def fork_file(local, remote, local_events, remote_events):
+    del remote_events[remote.dest_path]
+    Session().remove(local.context.db)
+    Session().commit()
+    from osfoffline.sync.remote import RemoteSyncWorker
+    RemoteSyncWorker().sync_now()
+
+
+def remote_folder_delete(local, remote, local_events, remote_events):
+    return Intervention().resolve(interventions.RemoteFolderDeleted(local, remote, local_events, remote_events))
+
+
 # (is directory, local event type, remote event type)
 RESOLUTION_MAP = {
     (False, EventType.CREATE, EventType.CREATE): prompt_user,
     (False, EventType.DELETE, EventType.DELETE): db_delete,
     (False, EventType.UPDATE, EventType.DELETE): upload_as_new,
     (False, EventType.CREATE, EventType.MOVE): move_gate(None, move_to_conflict),
-    (False, EventType.DELETE, EventType.MOVE): move_gate(lambda l, r, *_: [], download_file),
-    (False, EventType.UPDATE, EventType.MOVE): move_gate('MoveThenUploadAsNew', prompt_user),
+    (False, EventType.DELETE, EventType.MOVE): move_gate(lambda *_: [], download_file),
+    (False, EventType.UPDATE, EventType.MOVE): move_gate(fork_file, prompt_user),
     (False, EventType.DELETE, EventType.UPDATE): download_file,
     (False, EventType.UPDATE, EventType.UPDATE): prompt_user,
     (True, EventType.CREATE, EventType.CREATE): db_create,
     (True, EventType.DELETE, EventType.DELETE): db_delete,
-    (True, EventType.UPDATE, EventType.DELETE): 'PromptUserTheirs/Mine/Merge',
-    (True, EventType.CREATE, EventType.MOVE): move_gate('CreateFolder', db_create),
-    (True, EventType.DELETE, EventType.MOVE): lambda local, remote, local_events, remote_events: operations.LocalMoveFolder(remote.context),
+    (True, EventType.UPDATE, EventType.DELETE): remote_folder_delete,
+    (True, EventType.CREATE, EventType.MOVE): move_gate(create_folder, db_create),
+    (True, EventType.DELETE, EventType.MOVE): lambda local, remote,  *_: [remote.operation()],
     (True, EventType.UPDATE, EventType.MOVE): move_gate(handle_move_src_update, 'PromptUserMerge'),
-    (True, EventType.DELETE, EventType.UPDATE): 'DownloadFolder',
-    (True, EventType.UPDATE, EventType.UPDATE): lambda *args, **kwargs: [],
+    (True, EventType.DELETE, EventType.UPDATE): lambda *_: [],
+    (True, EventType.UPDATE, EventType.UPDATE): lambda *_: [],
 }

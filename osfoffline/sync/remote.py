@@ -49,11 +49,11 @@ class RemoteSyncWorker(threading.Thread, metaclass=Singleton):
         while not self.__stop.is_set():
             # Note: CHECK_INTERVAL must be < 24 hours
             logger.info('Sleeping for {} seconds'.format(settings.REMOTE_CHECK_INTERVAL))
-            self._sync_now_event.clear()
             if self._sync_now_event.wait(timeout=settings.REMOTE_CHECK_INTERVAL):
                 if self.__stop.is_set():
                     break
                 logger.info('Sleep interrupted, syncing now')
+            self._sync_now_event.clear()
 
             logger.info('Beginning remote sync')
             LocalSyncWorker().ignore.set()

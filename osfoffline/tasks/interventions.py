@@ -39,63 +39,63 @@ class BaseIntervention(abc.ABC):
         raise NotImplementedError
 
 
-class LocalFileDeleted(BaseIntervention):
+# class LocalFileDeleted(BaseIntervention):
 
-    DEFAULT_DECISION = Decision.THEIRS
+#     DEFAULT_DECISION = Decision.THEIRS
 
-    def __init__(self, auditor):
-        super().__init__(auditor)
-        self.title = 'Local File Deleted'
-        self.description = 'This is the description'
-        self.options = (Decision.MINE, Decision.THEIRS)
+#     def __init__(self, auditor):
+#         super().__init__(auditor)
+#         self.title = 'Local File Deleted'
+#         self.description = 'This is the description'
+#         self.options = (Decision.MINE, Decision.THEIRS)
 
-    def resolve(self):
-        if self.decision == Decision.MINE:
-            return [operations.RemoteDeleteFile(self.remote.context)]
-        elif self.decision == Decision.THEIRS:
-            return [
-                operations.DatabaseDeleteFile(self.remote.context),
-                operations.LocalCreateFile(self.remote.context),
-            ]
-        raise ValueError('Unknown decision')
-
-
-class LocalFolderDeleted(BaseIntervention):
-
-    DEFAULT_DECISION = Decision.THEIRS
-
-    def __init__(self, local, remote, remote_children):
-        super().__init__(local, remote)
-        self.title = 'Local Folder Deleted'
-        self.description = 'The Local Folder \'{}\' was Deleted, however it still exists in the Remote Project {}.\n' \
-            '\n' \
-            'The Remote Folder contains {} objects.'.format(self.remote.db.path, self.remote.node.id, len(remote_children))
-        self.options = (Decision.MINE, Decision.THEIRS)
-
-    def resolve(self):
-        if self.decision == Decision.MINE:
-            return [operations.RemoteDeleteFolder(self.remote)]
-        elif self.decision == Decision.THEIRS:
-            return [operations.LocalCreateFolder(self.remote)]
-        raise ValueError('Unknown decision')
+#     def resolve(self):
+#         if self.decision == Decision.MINE:
+#             return [operations.RemoteDeleteFile(self.remote.context)]
+#         elif self.decision == Decision.THEIRS:
+#             return [
+#                 operations.DatabaseDeleteFile(self.remote.context),
+#                 operations.LocalCreateFile(self.remote.context),
+#             ]
+#         raise ValueError('Unknown decision')
 
 
-class RemoteFileDeleted(BaseIntervention):
+# class LocalFolderDeleted(BaseIntervention):
 
-    DEFAULT_DECISION = Decision.MINE
+#     DEFAULT_DECISION = Decision.THEIRS
 
-    def __init__(self, local, remote):
-        super().__init__(local, remote)
-        self.title = 'Remote File Deleted'
-        self.description = 'This is the description'
-        self.options = (Decision.MINE, Decision.THEIRS)
+#     def __init__(self, local, remote, remote_children):
+#         super().__init__(local, remote)
+#         self.title = 'Local Folder Deleted'
+#         self.description = 'The Local Folder \'{}\' was Deleted, however it still exists in the Remote Project {}.\n' \
+#             '\n' \
+#             'The Remote Folder contains {} objects.'.format(self.remote.db.path, self.remote.node.id, len(remote_children))
+#         self.options = (Decision.MINE, Decision.THEIRS)
 
-    def resolve(self):
-        if self.decision == Decision.MINE:
-            return [operations.RemoteCreateFile(self.local)]
-        elif self.decision == Decision.THEIRS:
-            return [operations.LocalDeleteFile(self.local)]
-        raise ValueError('Unknown decision')
+#     def resolve(self):
+#         if self.decision == Decision.MINE:
+#             return [operations.RemoteDeleteFolder(self.remote)]
+#         elif self.decision == Decision.THEIRS:
+#             return [operations.LocalCreateFolder(self.remote)]
+#         raise ValueError('Unknown decision')
+
+
+# class RemoteFileDeleted(BaseIntervention):
+
+#     DEFAULT_DECISION = Decision.MINE
+
+#     def __init__(self, local, remote):
+#         super().__init__(local, remote)
+#         self.title = 'Remote File Deleted'
+#         self.description = 'This is the description'
+#         self.options = (Decision.MINE, Decision.THEIRS)
+
+#     def resolve(self):
+#         if self.decision == Decision.MINE:
+#             return [operations.RemoteCreateFile(self.local)]
+#         elif self.decision == Decision.THEIRS:
+#             return [operations.LocalDeleteFile(self.local)]
+#         raise ValueError('Unknown decision')
 
 
 class RemoteLocalFileConflict(BaseIntervention):
@@ -109,6 +109,8 @@ class RemoteLocalFileConflict(BaseIntervention):
         self.options = (Decision.MINE, Decision.THEIRS, Decision.KEEP_BOTH)
 
     def resolve(self):
+        from osfoffline.sync.remote import RemoteSyncWorker
+
         if self.decision == Decision.MINE:
             if self.local.event_type == EventType.CREATE and self.remote.event_type == EventType.CREATE:
                 return [
@@ -124,10 +126,18 @@ class RemoteLocalFileConflict(BaseIntervention):
                 ]
             return [operations.LocalUpdateFile(self.remote.context)]
         elif self.decision == Decision.KEEP_BOTH:
-            return [
-                operations.LocalKeepFile(self.local.context),
-                operations.LocalCreateFile(self.remote.context),
-            ]
+            parent = self.local.context.local.parent
+            i = 1
+            while True:
+                new = (parent / '{} ({}){}'.format(self.local.context.local.stem, i, self.local.context.local.suffix))
+                if not new.exists():
+                    break
+                i += 1
+            self.local.context.local.rename(new)
+            RemoteSyncWorker().sync_now()
+            if self.local.event_type == EventType.CREATE:
+                return []
+            return [operations.DatabaseDeleteFile(self.remote.context)]
         raise ValueError('Unknown decision')
 
 
@@ -135,30 +145,44 @@ class RemoteFolderDeleted(BaseIntervention):
 
     DEFAULT_DECISION = Decision.MINE
 
-    def __init__(self, local, remote, events):
+    def __init__(self, local, remote, local_events, remote_events):
         super().__init__(local, remote)
-        self.changed = 0
-        self.deleted = 0
+        self.changed = []
+        self.deleted = []
+        self.local_events = local_events
+        self.remote_events = remote_events
 
-        for event in events:
-            if isinstance(event, (operations.LocalDeleteFile, operations.LocalDeleteFolder)):
-                self.deleted += 1
-            else:
-                self.changed += 1
+        for event in remote_events.values():
+            if event.src_path.startswith(remote.src_path) and event.event_type == EventType.DELETE:
+                self.deleted.append(event)
+
+        for event in local_events.values():
+            if event.src_path.startswith(local.src_path) and event.event_type in (EventType.UPDATE, EventType.CREATE):
+                self.changed.append(event)
 
         self.title = 'Remote Folder Deleted'
-        self.description = 'This is the description'
-        self.options = (Decision.MINE, Decision.THEIRS)
+        self.description = self.local.src_path
+        self.options = (Decision.MINE, Decision.THEIRS, Decision.MERGE)
 
     def resolve(self):
-        # TODO: Validate logic
-        # TODO Add all child tasks to queue
-        # TODO implement the MERGE Option
+        from osfoffline.sync.remote import RemoteSyncWorker
+
         if self.decision == Decision.MINE:
-            return [operations.RemoteCreateFolder(self.local)]
+            for event in self.changed:
+                del self.local_events[event.src_path]
+            for event in self.deleted:
+                del self.remote_events[event.src_path]
         elif self.decision == Decision.THEIRS:
-            return [operations.LocalDeleteFolder(self.local)]
-        raise ValueError('Unknown decision')
+            for event in self.changed:
+                del self.local_events[event.src_path]
+            self.remote_events[self.remote.src_path] = self.remote
+            return []
+        elif self.decision == Decision.MERGE:
+            for event in self.changed:
+                del self.local_events[event.src_path]
+                self.remote_events.pop(event.src_path, None)
+        RemoteSyncWorker().sync_now()
+        return [operations.DatabaseDeleteFolder(self.remote.context)]
 
 
 class Intervention(metaclass=Singleton):

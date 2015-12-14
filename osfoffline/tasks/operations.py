@@ -116,17 +116,6 @@ class MoveOperation(BaseOperation):
         self._dest_context = dest_context
 
 
-class LocalKeepFile(BaseOperation):
-    """
-    Keep the local copy of the file by making a backup, and ensure that the new (copy of) the file
-        will not be uploaded to the OSF
-    """
-
-    def _run(self):
-        # TODO: handle events where neither exist in the db (e.g. create/create)
-        logger.info("Local Keep File: {}".format(self.local))
-
-
 # Download File
 class LocalCreateFile(BaseOperation):
     """Download an individual file from the OSF into a folder that already exists"""
@@ -209,9 +198,6 @@ class RemoteCreateFile(BaseOperation):
         logger.info('RemoteCreateFile: {}'.format(self.local))
         parent = utils.local_to_db(self.local.parent, self.node)
 
-        if not parent:
-            i = 0
-
         url = '{}/v1/resources/{}/providers/{}/{}'.format(settings.FILE_BASE, self.node.id, parent.provider, parent.osf_path)
         with self.local.open(mode='rb') as fobj:
             resp = OSFClient().request('PUT', url, data=fobj, params={'name': self.local.name})
@@ -233,9 +219,6 @@ class RemoteCreateFolder(BaseOperation):
     def _run(self):
         logger.info('RemoteCreateFolder: {}'.format(self.local))
         parent = utils.local_to_db(self.local.parent, self.node)
-
-        if not parent:
-            i = 9
 
         url = '{}/v1/resources/{}/providers/{}/{}'.format(settings.FILE_BASE, self.node.id, parent.provider, parent.osf_path)
         resp = OSFClient().request('PUT', url, params={'kind': 'folder', 'name': self.local.name})
