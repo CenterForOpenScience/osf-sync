@@ -135,14 +135,11 @@ class LocalCreateFile(BaseOperation):
         db_parent = session.query(models.File).filter(models.File.id == self.remote.parent.id).one()
         path = os.path.join(db_parent.path, self.remote.name)
         # TODO: Create temp file in target directory while downloading, and rename when done. (check that no temp file exists)
-        resp = OSFClient().request('GET', self.remote.raw['links']['download'])
+        resp = OSFClient().request('GET', self.remote.raw['links']['download'], stream=True)
         with open(path, 'wb') as fobj:
-            while True:
-                chunk = resp.content.read(1024 * 64)
-                if not chunk:
-                    break
-                fobj.write(chunk)
-        resp.release()
+            for chunk in resp.iter_lines(chunk_size=1024 * 64):
+                if chunk:
+                    fobj.write(chunk)
 
         # After file is saved, create a new database object to track the file
         #   If the task fails, the database task will be kicked off separately by the auditor on a future cycle
@@ -175,14 +172,11 @@ class LocalUpdateFile(BaseOperation):
 
         tmp_path = os.path.join(db_file.parent.path, '.~tmp.{}'.format(db_file.name))
 
-        resp = OSFClient().request('GET', self.remote.raw['links']['download'])
+        resp = OSFClient().request('GET', self.remote.raw['links']['download'], stream=True)
         with open(tmp_path, 'wb') as fobj:
-            while True:
-                chunk = resp.content.read(1024 * 64)
-                if not chunk:
-                    break
-                fobj.write(chunk)
-        resp.release()
+            for chunk in resp.iter_lines(chunk_size=1024 * 64):
+                if chunk:
+                    fobj.write(chunk)
         shutil.move(tmp_path, db_file.path)
 
         DatabaseUpdateFile(OperationContext(db=db_file, remote=self.remote, node=db_file.node)).run()
