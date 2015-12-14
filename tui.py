@@ -170,7 +170,7 @@ class App(npyscreen.StandardApp):
 
         self.user = None
         try:
-            self.user = session.query(models.User).one()
+            self.user = Session().query(models.User).one()
         except NoResultFound:
             pass
         else:
@@ -206,7 +206,7 @@ if __name__ == '__main__':
     from sqlalchemy.orm.exc import NoResultFound
 
     from osfoffline.database import models
-    from osfoffline.database import session
+    from osfoffline.database import Session
     from osfoffline.exceptions import AuthError
     from osfoffline.utils.authentication import AuthClient
     from osfoffline.application.background import BackgroundHandler

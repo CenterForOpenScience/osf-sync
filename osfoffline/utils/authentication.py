@@ -10,7 +10,7 @@ from sqlalchemy.orm.exc import NoResultFound
 
 from osfoffline import settings
 
-from osfoffline.database import clear_models, session
+from osfoffline.database import clear_models, Session
 from osfoffline.database import models
 from osfoffline.database.utils import save
 from osfoffline.exceptions import AuthError
@@ -23,7 +23,7 @@ def get_current_user():
     :rtype: User
     :raises SQLAlchemyError
     """
-    return session.query(models.User).one()
+    return Session().query(models.User).one()
 
 
 class AuthClient(object):
@@ -116,7 +116,7 @@ class AuthClient(object):
             raise AuthError('Username and password required for login.')
 
         try:
-            user = session.query(models.User).one()
+            user = Session().query(models.User).one()
         except NoResultFound:
             user = None
 
@@ -130,7 +130,7 @@ class AuthClient(object):
             user = self._create_user(username, password)
 
         try:
-            save(session, user)
+            save(Session(), user)
         except SQLAlchemyError:
             raise AuthError('Unable to save user data. Please try again later')
         return user

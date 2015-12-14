@@ -11,7 +11,7 @@ from osfoffline import utils
 from osfoffline.client import osf as osf_client
 from osfoffline.client.osf import OSFClient
 from osfoffline.database import models
-from osfoffline.database import session
+from osfoffline.database import Session
 from osfoffline.database.utils import save
 from osfoffline.tasks.notifications import Notification
 from osfoffline.utils.authentication import get_current_user
@@ -43,7 +43,7 @@ class OperationContext:
         if self._local:
             self._db = utils.local_to_db(self._local, self.node, is_folder=self._is_folder)
         elif self._remote:
-            self._db = session.query(models.File).filter(models.File.id == self._remote.id).one()
+            self._db = Session().query(models.File).filter(models.File.id == self._remote.id).one()
         return self._db
 
     @property
@@ -133,12 +133,12 @@ class LocalCreateFile(BaseOperation):
 
     def _run(self):
         logger.info('LocalCreateFile: {}'.format(self.remote))
-        db_parent = session.query(models.File).filter(models.File.id == self.remote.parent.id).one()
+        db_parent = Session().query(models.File).filter(models.File.id == self.remote.parent.id).one()
         path = os.path.join(db_parent.path, self.remote.name)
         # TODO: Create temp file in target directory while downloading, and rename when done. (check that no temp file exists)
         resp = OSFClient().request('GET', self.remote.raw['links']['download'], stream=True)
         with open(path, 'wb') as fobj:
-            for chunk in resp.iter_lines(chunk_size=1024 * 64):
+            for chunk in resp.iter_content(chunk_size=1024 * 64):
                 if chunk:
                     fobj.write(chunk)
 
@@ -156,7 +156,7 @@ class LocalCreateFolder(BaseOperation):
 
     def _run(self):
         logger.info('LocalCreateFolder: {}'.format(self.remote))
-        db_parent = session.query(models.File).filter(models.File.id == self.remote.parent.id).one()
+        db_parent = Session().query(models.File).filter(models.File.id == self.remote.parent.id).one()
         # TODO folder and file with same name
         os.mkdir(os.path.join(db_parent.path, self.remote.name))
         DatabaseCreateFolder(OperationContext(remote=self.remote, node=self.node)).run()
@@ -169,13 +169,13 @@ class LocalUpdateFile(BaseOperation):
 
     def _run(self):
         logger.info('LocalUpdateFile: {}'.format(self.remote))
-        db_file = session.query(models.File).filter(models.File.id == self.remote.id).one()
+        db_file = Session().query(models.File).filter(models.File.id == self.remote.id).one()
 
         tmp_path = os.path.join(db_file.parent.path, '.~tmp.{}'.format(db_file.name))
 
         resp = OSFClient().request('GET', self.remote.raw['links']['download'], stream=True)
         with open(tmp_path, 'wb') as fobj:
-            for chunk in resp.iter_lines(chunk_size=1024 * 64):
+            for chunk in resp.iter_content(chunk_size=1024 * 64):
                 if chunk:
                     fobj.write(chunk)
         shutil.move(tmp_path, db_file.path)
@@ -209,6 +209,9 @@ class RemoteCreateFile(BaseOperation):
         logger.info('RemoteCreateFile: {}'.format(self.local))
         parent = utils.local_to_db(self.local.parent, self.node)
 
+        if not parent:
+            i = 0
+
         url = '{}/v1/resources/{}/providers/{}/{}'.format(settings.FILE_BASE, self.node.id, parent.provider, parent.osf_path)
         with self.local.open(mode='rb') as fobj:
             resp = OSFClient().request('PUT', url, data=fobj, params={'name': self.local.name})
@@ -231,6 +234,9 @@ class RemoteCreateFolder(BaseOperation):
         logger.info('RemoteCreateFolder: {}'.format(self.local))
         parent = utils.local_to_db(self.local.parent, self.node)
 
+        if not parent:
+            i = 9
+
         url = '{}/v1/resources/{}/providers/{}/{}'.format(settings.FILE_BASE, self.node.id, parent.provider, parent.osf_path)
         resp = OSFClient().request('PUT', url, params={'kind': 'folder', 'name': self.local.name})
         data = resp.json()
@@ -250,9 +256,8 @@ class RemoteUpdateFile(BaseOperation):
 
     def _run(self):
         logger.info('RemoteUpdateFile: {}'.format(self.local))
-        db = utils.local_to_db(self.local, self.node)
 
-        url = '{}/v1/resources/{}/providers/{}/{}'.format(settings.FILE_BASE, self.node.id, db.provider, db.osf_path)
+        url = '{}/v1/resources/{}/providers/{}/{}'.format(settings.FILE_BASE, self.node.id, self.db.provider, self.db.osf_path)
         with open(str(self.local), 'rb') as fobj:
             resp = OSFClient().request('PUT', url, data=fobj, params={'name': self.local.name})
         data = resp.json()
@@ -260,8 +265,8 @@ class RemoteUpdateFile(BaseOperation):
         remote = osf_client.File(None, data['data'])
         # WB id are <provider>/<id>
         remote.id = remote.id.replace(remote.provider + '/', '')
-        remote.parent = db.parent
-        DatabaseUpdateFile(OperationContext(remote=remote,  db=db,  node=self.node)).run()
+        remote.parent = self.db.parent
+        DatabaseUpdateFile(OperationContext(remote=remote,  db=self.db,  node=self.node)).run()
         Notification().info('Update Remote File: {}'.format(self.local))
 
 
@@ -272,7 +277,7 @@ class RemoteDeleteFile(BaseOperation):
         logger.info('RemoteDeleteFile: {}'.format(self.remote))
         resp = osf_client.OSFClient().request('DELETE', self.remote.raw['links']['delete'])
         assert resp.status_code == 204, resp
-        DatabaseDeleteFile(OperationContext(db=session.query(models.File).filter(models.File.id == self.remote.id).one())).run()
+        DatabaseDeleteFile(OperationContext(db=Session().query(models.File).filter(models.File.id == self.remote.id).one())).run()
         Notification().info('Remote delete file: {}'.format(self.remote))
 
 
@@ -283,7 +288,7 @@ class RemoteDeleteFolder(BaseOperation):
         logger.info('RemoteDeleteFolder: {}'.format(self.remote))
         resp = OSFClient().request('DELETE', self.remote.raw['links']['delete'])
         assert resp.status_code == 204, resp
-        DatabaseDeleteFolder(OperationContext(db=session.query(models.File).filter(models.File.id == self.remote.id).one())).run()
+        DatabaseDeleteFolder(OperationContext(db=Session().query(models.File).filter(models.File.id == self.remote.id).one())).run()
         Notification().info('Remote delete older: {}'.format(self.remote))
 
 
@@ -296,7 +301,7 @@ class DatabaseCreateFile(BaseOperation):
 
         parent = self.remote.parent.id if self.remote.parent else None
 
-        save(session, models.File(
+        save(Session(), models.File(
             id=self.remote.id,
             name=self.remote.name,
             kind=self.remote.kind,
@@ -317,7 +322,7 @@ class DatabaseCreateFolder(BaseOperation):
 
         parent = self.remote.parent.id if self.remote.parent else None
 
-        save(session, models.File(
+        save(Session(), models.File(
             id=self.remote.id,
             name=self.remote.name,
             kind=self.remote.kind,
@@ -345,7 +350,7 @@ class DatabaseUpdateFile(BaseOperation):
         self.db.md5 = self.remote.extra['hashes']['md5']
         self.db.sha256 = self.remote.extra['hashes']['sha256']
 
-        save(session, self.db)
+        save(Session(), self.db)
 
 
 class DatabaseUpdateFolder(BaseOperation):
@@ -362,23 +367,23 @@ class DatabaseUpdateFolder(BaseOperation):
         self.db.parent_id = parent
         self.db.node_id = self.node.id
 
-        save(session, self.db)
+        save(Session(), self.db)
 
 
 class DatabaseDeleteFile(BaseOperation):
 
     def _run(self):
         logger.info('DatabaseDeleteFile: {}'.format(self.db))
-        session.delete(self.db)
-        session.commit()
+        Session().delete(self.db)
+        Session().commit()
 
 
 class DatabaseDeleteFolder(BaseOperation):
 
     def _run(self):
         logger.info('DatabaseDeleteFolder: {}'.format(self.db))
-        session.delete(self.db)
-        session.commit()
+        Session().delete(self.db)
+        Session().commit()
 
 
 class RemoteMoveFolder(MoveOperation):
@@ -397,7 +402,7 @@ class RemoteMoveFolder(MoveOperation):
         remote = osf_client.File(None, data['data'])
         # WB id are <provider>/<id>
         remote.id = remote.id.replace(remote.provider + '/', '')
-        remote.parent = session.query(models.File).filter(models.File.id == dest_parent.db.id).one()
+        remote.parent = Session().query(models.File).filter(models.File.id == dest_parent.db.id).one()
         DatabaseUpdateFolder(OperationContext(remote=remote,  db=self.db,  node=self.node)).run()
 
 
@@ -418,7 +423,7 @@ class RemoteMoveFile(MoveOperation):
         remote = osf_client.File(None, data['data'])
         # WB id are <provider>/<id>
         remote.id = remote.id.replace(remote.provider + '/', '')
-        remote.parent = session.query(models.File).filter(models.File.id == dest_parent.db.id).one()
+        remote.parent = Session().query(models.File).filter(models.File.id == dest_parent.db.id).one()
         DatabaseUpdateFile(OperationContext(remote=remote,  db=self.db,  node=self.node)).run()
 
 

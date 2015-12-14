@@ -7,7 +7,7 @@ import threading
 from pathlib import Path
 
 from osfoffline import settings
-from osfoffline.database import session
+from osfoffline.database import Session
 from osfoffline.database.models import Node, File
 from osfoffline.sync.exceptions import FolderNotInFileSystem
 from osfoffline.sync.ext.auditor import Auditor
@@ -35,9 +35,9 @@ class RemoteSyncWorker(threading.Thread, metaclass=Singleton):
 
     def initialize(self):
         logger.info('Beginning initial sync')
-        for node in session.query(Node).all():
+        for node in Session().query(Node).all():
             self._preprocess_node(node)
-        session.commit()
+        Session().commit()
         # TODO No need for this check
         self._check()
         logger.info('Initial sync finished')
@@ -73,7 +73,7 @@ class RemoteSyncWorker(threading.Thread, metaclass=Singleton):
         local = Path(os.path.join(node.path, settings.OSF_STORAGE_FOLDER))
         if not local.exists():
             logger.warning('Clearing files for node {}'.format(node))
-            session.query(File).filter(File.node_id == node.id).delete()
+            Session().query(File).filter(File.node_id == node.id).delete()
         os.makedirs(str(local), exist_ok=True)
 
     def _check(self):

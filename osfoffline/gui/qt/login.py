@@ -5,7 +5,7 @@ from PyQt5.QtWidgets import QMessageBox
 
 from sqlalchemy.orm.exc import NoResultFound
 
-from osfoffline.database import session
+from osfoffline.database import Session
 from osfoffline.database.models import User
 from osfoffline.database.utils import save
 from osfoffline.exceptions import AuthError
@@ -23,22 +23,22 @@ class LoginScreen(QDialog, Ui_login):
 
     def get_user(self):
         try:
-            self.user = session.query(User).one()
+            self.user = Session().query(User).one()
             self.user = AuthClient().populate_user_data(self.user)
-            save(session, self.user)
+            save(Session(), self.user)
             return self.user
 
             self.usernameEdit.setText(self.user.osf_login)
             self.passwordEdit.setFocus()
         except AuthError:
-            session.query(User).delete()
+            Session().query(User).delete()
         except NoResultFound:
             self.usernameEdit.setFocus()
 
         self.exec_()
 
         if self.user:
-            save(session, self.user)
+            save(Session(), self.user)
         return self.user
 
     def login(self):

@@ -3,7 +3,7 @@ import os
 from sqlalchemy.orm.exc import NoResultFound
 
 from osfoffline import settings
-from osfoffline.database import session
+from osfoffline.database import Session
 from osfoffline.database import models
 from osfoffline.exceptions import NodeNotFound
 from osfoffline.utils.authentication import get_current_user
@@ -31,13 +31,13 @@ def extract_node(path):
     """
     node_id = path.replace(get_current_user().folder, '').split(settings.OSF_STORAGE_FOLDER)[0].strip(os.path.sep).split(os.path.sep)[-1].split(' - ')[-1]
     try:
-        return session.query(models.Node).filter(models.Node.id == node_id).one()
+        return Session().query(models.Node).filter(models.Node.id == node_id).one()
     except NoResultFound:
         raise NodeNotFound(path)
 
 
 def local_to_db(local, node, is_folder=False):
-    db = session.query(models.File).filter(models.File.parent == None, models.File.node == node).one()
+    db = Session().query(models.File).filter(models.File.parent == None, models.File.node == node).one()
     parts = str(local).replace(node.path, '').split('/')
     for part in parts:
         for child in db.children:

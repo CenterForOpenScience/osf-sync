@@ -17,7 +17,7 @@ from PyQt5.QtWidgets import QSystemTrayIcon
 from sqlalchemy.orm.exc import NoResultFound
 
 from osfoffline.application.background import BackgroundHandler
-from osfoffline.database import session
+from osfoffline.database import Session
 from osfoffline.database.models import User
 from osfoffline.database.utils import save
 from osfoffline.gui.qt.login import LoginScreen
@@ -83,7 +83,7 @@ class OSFOfflineQT(QSystemTrayIcon):
 
         user.folder = os.path.join(containing_folder, 'OSF')
         os.makedirs(user.folder, exist_ok=True)
-        save(session, user)
+        save(Session(), user)
 
     def start(self):
         logger.debug('Start in main called.')
@@ -147,13 +147,13 @@ class OSFOfflineQT(QSystemTrayIcon):
             self.background_handler.stop()
 
             try:
-                user = session.query(User).one()
+                user = Session().query(User).one()
             except NoResultFound:
                 pass
             else:
                 logger.info('Saving user data')
-                save(session, user)
-            session.close()
+                save(Session(), user)
+            Session().close()
         finally:
             logger.info('Quitting application')
             QApplication.instance().quit()
@@ -163,7 +163,7 @@ class OSFOfflineQT(QSystemTrayIcon):
 
     def logout(self):
         # Will probably wipe out everything :shrug:
-        session.query(User).delete()
+        Session().query(User).delete()
         self.quit()
 
 

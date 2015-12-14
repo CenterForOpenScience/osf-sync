@@ -12,7 +12,7 @@ from PyQt5.QtWidgets import QTreeWidgetItem
 from sqlalchemy.orm.exc import NoResultFound
 
 from osfoffline.client.osf import OSFClient
-from osfoffline.database import session
+from osfoffline.database import Session
 from osfoffline.database.models import User, Node
 from osfoffline.database.utils import save
 from osfoffline.gui.qt.generated.preferences import Ui_Settings
@@ -81,7 +81,7 @@ class Preferences(QDialog, Ui_Settings):
             logging.warning("An OSF file exists where you would like to create the OSF folder.")
             return
 
-        user = session.query(User).one()
+        user = Session().query(User).one()
         user.folder = os.path.join(osf_path)
 
         self.containingFolderTextEdit.setText(self._translate("Preferences", self.containing_folder))
@@ -90,21 +90,21 @@ class Preferences(QDialog, Ui_Settings):
 
     def update_sync_nodes(self):
         self.selected_nodes = []
-        user = session.query(User).one()
+        user = Session().query(User).one()
         for tree_item, node in self.tree_items:
             checked = tree_item.checkState(self.PROJECT_SYNC_COLUMN) == Qt.Checked
             try:
-                db_node = session.query(Node).filter(Node.id == node.id).one()
+                db_node = Session().query(Node).filter(Node.id == node.id).one()
             except NoResultFound:
                 db_node = None
 
             if checked:
                 self.selected_nodes.append(node.id)
                 if not db_node:
-                    session.add(Node(id=node.id, title=node.title, user=user))
+                    Session().add(Node(id=node.id, title=node.title, user=user))
             elif db_node:
-                session.delete(db_node)
-        save(session)
+                Session().delete(db_node)
+        save(Session())
         self.close()
 
     def sync_all(self):
@@ -127,7 +127,7 @@ class Preferences(QDialog, Ui_Settings):
         self.activateWindow()
 
     def selector(self, selected_index):
-        user = session.query(User).one()
+        user = Session().query(User).one()
         if selected_index == self.GENERAL:
             containing_folder = os.path.dirname(user.folder)
             self.containingFolderTextEdit.setText(self._translate("Preferences", containing_folder))
@@ -150,7 +150,7 @@ class Preferences(QDialog, Ui_Settings):
     def populate_item_tree(self, nodes):
         self.reset_tree_widget()
         _translate = QCoreApplication.translate
-        self.selected_nodes = [n.id for n in session.query(Node)]
+        self.selected_nodes = [n.id for n in Session().query(Node)]
 
         for node in nodes:
             tree_item = QTreeWidgetItem(self.treeWidget)

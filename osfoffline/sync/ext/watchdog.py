@@ -1,8 +1,8 @@
 from collections import OrderedDict
-import os
+from itertools import repeat, chain
 import logging
+import os
 import threading
-from itertools import repeat
 
 from watchdog.events import PatternMatchingEventHandler
 
@@ -18,7 +18,8 @@ class ConsolidatedEventHandler(PatternMatchingEventHandler):
     def __init__(self):
         super().__init__(ignore_patterns=settings.IGNORED_PATTERNS)
         self._event_cache = TreeDict()
-        self.timer = threading.Timer(2, self.flush)
+        self._create_cache = []
+        self.timer = threading.Timer(5, self.flush)
         self.timer.start()
         self.lock = threading.RLock()
 
@@ -33,7 +34,15 @@ class ConsolidatedEventHandler(PatternMatchingEventHandler):
             else:
                 dest_parts = event.dest_path.split(os.path.sep)
 
-            self._event_cache[list(zip(repeat(event.event_type), src_parts, dest_parts))] = event
+            parts = list(zip(src_parts, dest_parts))
+
+            try:
+                if event.is_directory and event.event_type == 'created':
+                    self._create_cache.extend(self._event_cache.children(parts))
+                self._event_cache[parts] = event
+            except (TypeError, AttributeError):  # A parent event had already been processed
+                if event.event_type == 'created':
+                    self._create_cache.append(event)
 
             self.timer.cancel()
             self.timer = threading.Timer(2, self.flush)
@@ -41,13 +50,14 @@ class ConsolidatedEventHandler(PatternMatchingEventHandler):
 
     def flush(self):
         with self.lock:
-            for e in self._event_cache.children():
+            for e in chain(self._event_cache.children(), sorted(self._create_cache, key=lambda x: x.src_path.count(os.path.sep))):
                 try:
                     super().dispatch(e)
                 except (NodeNotFound, ) as ex:
                     logger.warning(ex)
                 except Exception as ex:
                     logger.exception(ex)
+            self._create_cache = []
             self._event_cache = TreeDict()
 
 

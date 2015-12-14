@@ -1,16 +1,17 @@
+from concurrent.futures import ThreadPoolExecutor
 from enum import Enum
+from pathlib import Path
 import hashlib
 import os
 
-from pathlib import Path
-
 from osfoffline import settings
 from osfoffline.client.osf import OSFClient
-from osfoffline.database import session
+from osfoffline.database import Session
 from osfoffline.database.models import Node, File
 from osfoffline.tasks import operations
 from osfoffline.tasks.operations import OperationContext
 from osfoffline.utils.authentication import get_current_user
+
 
 
 class Location(Enum):
@@ -103,18 +104,20 @@ class Auditor:
         return modifications[Location.LOCAL], modifications[Location.REMOTE]
 
     def collect_all_db(self):
-        return {db.path.replace(self.user_folder, ''): (db.id, db.sha256, db) for db in session.query(File)}
+        return {db.path.replace(self.user_folder, ''): (db.id, db.sha256, db) for db in Session().query(File)}
 
     def collect_all_remote(self):
         ret = {}
-        for node in session.query(Node):
-            remote_node = OSFClient().get_node(node.id)
-            remote = remote_node.get_storage(id='osfstorage')
-            rel_path = os.path.join('{} - {}'.format(node.title, node.id), settings.OSF_STORAGE_FOLDER)
-            self._collect_node_remote(remote, ret, rel_path)
+        with ThreadPoolExecutor(max_workers=5) as tpe:
+            for node in Session().query(Node):
+                remote_node = OSFClient().get_node(node.id)
+                remote = remote_node.get_storage(id='osfstorage')
+                rel_path = os.path.join('{} - {}'.format(node.title, node.id), settings.OSF_STORAGE_FOLDER)
+                tpe.submit(self._collect_node_remote, remote, ret, rel_path, tpe)
+            tpe._work_queue.join()
         return ret
 
-    def _collect_node_remote(self, root, acc, rel_path):
+    def _collect_node_remote(self, root, acc, rel_path, tpe):
         if root.parent:
             rel_path = os.path.join(rel_path, root.name)
 
@@ -125,14 +128,16 @@ class Auditor:
             if child.name in settings.IGNORED_NAMES:
                 continue
             if child.kind == 'folder':
-                self._collect_node_remote(child, acc, rel_path)
+                #self._collect_node_remote(child, acc, rel_path, tpe)
+                tpe.submit(self._collect_node_remote, child, acc, rel_path, tpe)
             else:
                 acc[os.path.join(rel_path, child.name)] = (child.id, child.extra['hashes']['sha256'], child)
-        return acc
+        tpe._work_queue.task_done()
+        #return acc
 
     def collect_all_local(self, db_map):
         ret = {}
-        for node in session.query(Node):
+        for node in Session().query(Node):
             node_path = Path(os.path.join(node.path, settings.OSF_STORAGE_FOLDER))
             self._collect_node_local(node_path, ret, db_map)
         return ret

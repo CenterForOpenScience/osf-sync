@@ -9,7 +9,7 @@ from PyQt5.QtWidgets import QAction
 from PyQt5.QtWidgets import QMenu
 
 from osfoffline import settings
-from osfoffline.database import session
+from osfoffline.database import Session
 from osfoffline.database.models import User
 from osfoffline.gui.qt.preferences import Preferences
 from osfoffline.utils.validators import validate_containing_folder
@@ -47,7 +47,7 @@ class OSFOfflineMenu(QMenu):
         self.status.setText(str(val))
 
     def open_folder(self):
-        user = session.query(User).one()
+        user = Session().query(User).one()
         logger.debug("containing folder is :{}".format(user.folder))
         if validate_containing_folder(user.folder):
             if sys.platform == 'win32':

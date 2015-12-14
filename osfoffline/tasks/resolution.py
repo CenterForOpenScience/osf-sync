@@ -2,7 +2,7 @@ import os
 import hashlib
 
 from osfoffline.tasks import operations
-from osfoffline.database import session
+from osfoffline.database import Session
 from osfoffline.sync.ext.auditor import EventType
 from osfoffline.tasks import interventions
 from osfoffline.tasks.interventions import Intervention
@@ -83,8 +83,8 @@ def handle_move_src_update(local, remote, local_events, remote_events):
         elif child.endswith(os.path.sep):
             handle_move_src_update(llocal, lremote, local_events, remote_events)
 
-    session.delete(local.context.db)
-    session.commit()
+    Session().delete(local.context.db)
+    Session().commit()
     return True
 
 
