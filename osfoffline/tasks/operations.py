@@ -22,42 +22,55 @@ logger = logging.getLogger(__name__)
 
 class OperationContext:
 
-    @classmethod
-    def create(cls, local=None, db=None, remote=None, node=None, is_folder=False):
-        if not node and db:
-            node = db.node
-        if not node and local:
-            node = utils.extract_node(str(local))
-        if not node and remote:
+    @property
+    def node(self):
+        if self._node:
+            return self._node
+
+        if self._db:
+            self._node = self._db.node
+        elif self._local:
+            self._node = utils.extract_node(str(self._local))
+        elif self._remote:
             pass  # TODO run extract node
 
-        if not local and db:
-            local = Path(db.path)
+        return self._node
 
-        if local and not db:
-            db = utils.local_to_db(local, node, is_folder=is_folder)
-        if remote and not db:
-            db = session.query(models.File).filter(models.File.id == remote.id).one()
+    @property
+    def db(self):
+        if self._db:
+            return self._db
+        if self._local:
+            self._db = utils.local_to_db(self._local, self.node, is_folder=self._is_folder)
+        elif self._remote:
+            self._db = session.query(models.File).filter(models.File.id == self._remote.id).one()
+        return self._db
 
-        if not remote and db:
-            remote = utils.db_to_remote(db)
-        return cls(local=local, db=db, remote=remote, node=node)
+    @property
+    def remote(self):
+        if self._remote:
+            return self._remote
+        if self._db or self._local:
+            self._remote = utils.db_to_remote(self.db)
+        return self._remote
 
-    def __init__(self, local=None, db=None, remote=None, node=None):
-        if not node and db:
-            node = db.node
-        if not node and local:
-            node = utils.extract_node(str(local))
-        if not node and remote:
-            pass  # TODO run extract node
+    @property
+    def local(self):
+        if self._local:
+            return self._local
+        if self._db:
+            self._local = Path(self._db.path)
+        return self._local
 
-        self.db = db
-        self.node = node
-        self.local = local
-        self.remote = remote
+    def __init__(self, local=None, db=None, remote=None, node=None, is_folder=None):
+        self._db = db
+        self._node = node
+        self._local = local
+        self._remote = remote
+        self._is_folder = is_folder
 
     def __repr__(self):
-        return '<{}({}, {}, {}, {})>'.format(self.__class__.__name__, self.node, self.local, self.db, self.remote)
+        return '<{}({}, {}, {}, {})>'.format(self.__class__.__name__, self._node, self._local, self._db, self._remote)
 
 
 class BaseOperation(abc.ABC):
