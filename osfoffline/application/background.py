@@ -1,4 +1,5 @@
 import logging
+import threading
 
 from osfoffline.sync.local import LocalSyncWorker
 from osfoffline.sync.remote import RemoteSyncWorker
@@ -27,6 +28,10 @@ class BackgroundHandler(metaclass=Singleton):
         Notification().set_callback(cb)
 
     def start(self):
+        # Avoid blocking the UI thread, Remote Sync initialization can request user intervention.
+        threading.Thread(target=self._start).start()
+
+    def _start(self):
         OperationWorker().start()
 
         RemoteSyncWorker().initialize()
