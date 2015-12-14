@@ -57,8 +57,7 @@ class LocalFileDeleted(BaseIntervention):
                 operations.DatabaseDeleteFile(self.remote.context),
                 operations.LocalCreateFile(self.remote.context),
             ]
-        else:
-            raise ValueError('Unknown decision')
+        raise ValueError('Unknown decision')
 
 
 class LocalFolderDeleted(BaseIntervention):
@@ -78,8 +77,7 @@ class LocalFolderDeleted(BaseIntervention):
             return [operations.RemoteDeleteFolder(self.remote)]
         elif self.decision == Decision.THEIRS:
             return [operations.LocalCreateFolder(self.remote)]
-        else:
-            raise ValueError('Unknown decision')
+        raise ValueError('Unknown decision')
 
 
 class RemoteFileDeleted(BaseIntervention):
@@ -97,8 +95,7 @@ class RemoteFileDeleted(BaseIntervention):
             return [operations.RemoteCreateFile(self.local)]
         elif self.decision == Decision.THEIRS:
             return [operations.LocalDeleteFile(self.local)]
-        else:
-            raise ValueError('Unknown decision')
+        raise ValueError('Unknown decision')
 
 
 class RemoteLocalFileConflict(BaseIntervention):
@@ -161,8 +158,7 @@ class RemoteFolderDeleted(BaseIntervention):
             return [operations.RemoteCreateFolder(self.local)]
         elif self.decision == Decision.THEIRS:
             return [operations.LocalDeleteFolder(self.local)]
-        else:
-            raise ValueError('Unknown decision')
+        raise ValueError('Unknown decision')
 
 
 class Intervention(metaclass=Singleton):
