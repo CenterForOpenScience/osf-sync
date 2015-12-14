@@ -119,6 +119,7 @@ class RemoteSyncWorker(threading.Thread, metaclass=Singleton):
             conflicts = [
                 child for child in td.children(parts)
                 if (event.location, event.event_type) != (child.location, child.event_type)
+                or (child.event_type == EventType.MOVE and not child.dest_path.startswith(event.dest_path))
             ]
             if conflicts:
                 logger.error('Detected {} conflicts for folder {}. ({})'.format(len(conflicts), event.src_path, [x.context for x in conflicts]))
@@ -131,7 +132,7 @@ class RemoteSyncWorker(threading.Thread, metaclass=Singleton):
                 del td[child.src_path.split(os.path.sep)[:-1]]
                 directories.append(child)
 
-        directories = sorted(directories, key=lambda x: x.src_path.count(os.path.sep))
+        directories = sorted(directories, key=lambda x: getattr(x, 'dest_path', x.src_path).count(os.path.sep))
 
         for operation in itertools.chain(resolutions, (event.operation() for event in directories), (event.operation() for event in td.children())):
             OperationWorker().put(operation)
