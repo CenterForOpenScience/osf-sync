@@ -1,4 +1,3 @@
-import asyncio
 import logging
 
 from PyQt5.QtWidgets import QDialog
@@ -20,12 +19,12 @@ class LoginScreen(QDialog, Ui_login):
         super().__init__()
         self.user = None
         self.setupUi(self)
-        self.logInButton.clicked.connect(self.log_in)
+        self.logInButton.clicked.connect(self.login)
 
     def get_user(self):
         try:
             self.user = session.query(User).one()
-            self.user = asyncio.get_event_loop().run_until_complete(AuthClient().populate_user_data(self.user))
+            self.user = AuthClient().populate_user_data(self.user)
             save(session, self.user)
             return self.user
 
@@ -42,18 +41,18 @@ class LoginScreen(QDialog, Ui_login):
             save(session, self.user)
         return self.user
 
-    def log_in(self):
+    def login(self):
         # self.start_screen.logInButton.setDisabled(True)  # Doesn't update until the asyncio call below returns
-        logging.debug('attempting to log in')
+        logging.debug('attempting to login')
         username = self.usernameEdit.text().strip()
         password = self.passwordEdit.text().strip()
         auth_client = AuthClient()
 
         try:
-            self.user = asyncio.get_event_loop().run_until_complete(auth_client.log_in(username=username, password=password))
+            self.user = auth_client.log_in(username=username, password=password)
         except AuthError as e:
             logging.exception(e.message)
-            QMessageBox.warning(None, 'Log in Failed', e.message)
+            QMessageBox.warning(None, 'Login Failed', e.message)
             # self.start_screen.logInButton.setEnabled(True)
         else:
             logging.info('Successfully logged in user: {}'.format(self.user))

@@ -130,24 +130,22 @@ class OSFOfflineQT(QSystemTrayIcon):
 
         self.notification_handler.done()
 
-    def resume(self):
-        logger.debug('resuming')
-        if self.background_worker.is_alive():
-            raise RuntimeError('Resume called without first calling pause')
+    # def resume(self):
+    #     logger.debug('resuming')
+    #     if self.background_worker.is_alive():
+    #         raise RuntimeError('Resume called without first calling pause')
 
-        self.background_worker = BackgroundWorker()
-        self.background_worker.start()
+    #     self.background_worker = BackgroundWorker()
+    #     self.background_worker.start()
 
-    def pause(self):
-        logger.debug('pausing')
-        if self.background_worker and self.background_worker.is_alive():
-            self.background_worker.stop()
+    # def pause(self):
+    #     logger.debug('pausing')
+    #     if self.background_worker and self.background_worker.is_alive():
+    #         self.background_worker.stop()
 
     def quit(self):
         try:
-            if self.background_worker.is_alive():
-                logger.info('Stopping background worker')
-                self.background_worker.stop()
+            self.background_worker.stop()
 
             try:
                 user = session.query(User).one()

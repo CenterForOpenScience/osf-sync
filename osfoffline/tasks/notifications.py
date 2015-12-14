@@ -1,4 +1,4 @@
-import asyncio
+import queue
 import enum
 import logging
 
@@ -24,7 +24,7 @@ class Notification(metaclass=Singleton):
             self.msg = msg
 
     def __init__(self):
-        self.queue = asyncio.Queue()
+        self.queue = queue.Queue()
 
     def set_callback(self, cb):
         self.cb = cb
@@ -32,14 +32,14 @@ class Notification(metaclass=Singleton):
     def info(self, msg):
         event = self.Event(self.Type.INFO, msg)
         logger.info('Notification: {}'.format(event))
-        asyncio.get_event_loop().run_in_executor(None, self.cb, event)
+        # asyncio.get_event_loop().run_in_executor(None, self.cb, event)
 
     def warn(self, msg):
         event = self.Event(self.Type.WARNING, msg)
         logger.warn('Notification: {}'.format(event))
-        asyncio.get_event_loop().run_in_executor(None, self.cb, event)
+        # asyncio.get_event_loop().run_in_executor(None, self.cb, event)
 
     def error(self, msg):
         event = self.Event(self.Type.ERROR, msg)
         logger.error('Notification: {}'.format(event))
-        asyncio.get_event_loop().run_in_executor(None, self.cb, event)
+        # asyncio.get_event_loop().run_in_executor(None, self.cb, event)

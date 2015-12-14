@@ -1,11 +1,9 @@
-import asyncio
 import os
 import hashlib
 
 from osfoffline.tasks import operations
 from osfoffline.database import session
 from osfoffline.sync.ext.auditor import EventType
-from osfoffline.utils.authentication import get_current_user
 
 
 def hash_file(path, chunk_size=64*1024):
@@ -33,16 +31,12 @@ def upload_as_new(local, remote, local_events, remote_events):
 
 
 def db_create(local, remote, local_events, remote_events):
-    #del local_events[local.src_path]
-    #del remote_events[remote.src_path]
     if local.is_directory:
         return [operations.DatabaseCreateFolder(remote.contexts[-1])]
     return [operations.DatabaseCreateFile(remote.context)]
 
 
 def db_delete(local, remote, local_events, remote_events):
-    #del local_events[local.src_path]
-    #del remote_events[remote.src_path]
     if local.is_directory:
         return [operations.DatabaseDeleteFolder(remote.context)]
     return [operations.DatabaseDeleteFile(remote.context)]
@@ -67,7 +61,6 @@ def create_folder(local, remote, local_events, remote_events):
 #     local.context.db = None
 #     return operations.RemoteCreateFile(local.context)
 
-@asyncio.coroutine
 def handle_move_src_update(local, remote, local_events, remote_events):
     os.makedirs(remote.dest_path, exist_ok=True)
     local_events.pop(local.src_path)
@@ -83,9 +76,9 @@ def handle_move_src_update(local, remote, local_events, remote_events):
         if child not in (getattr(llocal, 'src_path', None), getattr(lremote, 'src_path', None)):
             continue
         if lremote and not llocal:
-            yield from lremote.operation().run()
+            lremote.operation().run()
         elif child.endswith(os.path.sep):
-            yield from handle_move_src_update(llocal, lremote, local_events, remote_events)
+            handle_move_src_update(llocal, lremote, local_events, remote_events)
 
     session.delete(local.context.db)
     session.commit()
@@ -103,7 +96,7 @@ def move_to_conflict(local, remote, local_events, remote_events):
                 ))]
             else:
                 return [operations.DatabaseUpdateFile(operations.OperationContext(
-                        db=remote.contexts[0].db,
+                    db=remote.contexts[0].db,
                     remote=remote.contexts[1].remote
                 ))]
         return db_create(local, remote, local_events, remote_events)
@@ -125,7 +118,7 @@ RESOLUTION_MAP = {
     (False, EventType.DELETE, EventType.DELETE): db_delete,
     (False, EventType.UPDATE, EventType.DELETE): upload_as_new,
     (False, EventType.CREATE, EventType.MOVE): move_gate(None, move_to_conflict),
-    (False, EventType.DELETE, EventType.MOVE): move_gate(lambda l,r,*_:[], download_file),
+    (False, EventType.DELETE, EventType.MOVE): move_gate(lambda l, r, *_: [], download_file),
     (False, EventType.UPDATE, EventType.MOVE): move_gate('MoveThenUploadAsNew', prompt_user),
     (False, EventType.DELETE, EventType.UPDATE): download_file,
     (False, EventType.UPDATE, EventType.UPDATE): prompt_user,

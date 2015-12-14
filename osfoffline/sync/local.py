@@ -1,28 +1,30 @@
-import asyncio
 import logging
+import threading
 
 from pathlib import Path
 from watchdog.observers import Observer
 
 from osfoffline import utils
+from osfoffline.utils.authentication import get_current_user
 from osfoffline.exceptions import NodeNotFound
 from osfoffline.sync.ext.watchdog import ConsolidatedEventHandler
 from osfoffline.tasks import operations
 from osfoffline.tasks.operations import OperationContext
+from osfoffline.utils import Singleton
+from osfoffline.tasks.queue import OperationWorker
 
 
 logger = logging.getLogger(__name__)
 
 
-class LocalSync(ConsolidatedEventHandler):
+class LocalSyncWorker(ConsolidatedEventHandler, metaclass=Singleton):
 
-    def __init__(self, user, ignore_event, operation_queue):
+    def __init__(self):
         super().__init__()
-        self.folder = user.folder
+        self.folder = get_current_user().folder
 
         self.observer = Observer()
-        self.ignore = ignore_event
-        self.operation_queue = operation_queue
+        self.ignore = threading.Event()
         self.observer.schedule(self, self.folder, recursive=True)
 
     def start(self):
@@ -30,10 +32,13 @@ class LocalSync(ConsolidatedEventHandler):
         self.observer.start()
 
     def stop(self):
-        logger.debug('Stopping observer thread')
+        logger.info('Stopping LocalSyncWorker')
         # observer is actually a separate child thread and must be join()ed
         self.observer.stop()
+
+    def join(self):
         self.observer.join()
+        logger.info('LocalSyncWorker Stopped')
 
     def dispatch(self, event):
         if self.ignore.is_set():
@@ -98,4 +103,4 @@ class LocalSync(ConsolidatedEventHandler):
         return self.put_event(operations.RemoteUpdateFile(context))
 
     def put_event(self, event):
-        self.operation_queue._loop.call_soon_threadsafe(asyncio.ensure_future, self.operation_queue.put(event))
+        OperationWorker().put(event)

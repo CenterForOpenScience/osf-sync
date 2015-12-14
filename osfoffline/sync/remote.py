@@ -1,45 +1,73 @@
-import asyncio
-import hashlib
+import time
 import itertools
 import logging
 import os
+import threading
 
 from pathlib import Path
 
 from osfoffline import settings
-from osfoffline.client.osf import OSFClient
 from osfoffline.database import session
 from osfoffline.database.models import Node, File
 from osfoffline.sync.exceptions import FolderNotInFileSystem
 from osfoffline.sync.ext.auditor import Auditor
 from osfoffline.sync.ext.auditor import EventType
-from osfoffline.utils.authentication import get_current_user
 from osfoffline.tasks.resolution import RESOLUTION_MAP
+from osfoffline.utils import Singleton
+from osfoffline.utils.authentication import get_current_user
+from osfoffline.tasks.queue import OperationWorker
+from osfoffline.sync.local import LocalSyncWorker
 
 
 logger = logging.getLogger(__name__)
 
 
-class RemoteSync:
+class RemoteSyncWorker(threading.Thread, metaclass=Singleton):
 
-    def __init__(self, user, ignore_watchdog, operation_queue):
-        self.ignore_watchdog = ignore_watchdog
-        self.operation_queue = operation_queue
-        self.user = user
-
-        self._sync_now_fut = asyncio.Future()
+    def __init__(self):
+        super().__init__()
+        self.user = get_current_user()
+        self.__stop = threading.Event()
+        self._sync_now_event = threading.Event()
 
         if not os.path.isdir(self.user.folder):
             raise FolderNotInFileSystem
 
-    @asyncio.coroutine
     def initialize(self):
         logger.info('Beginning initial sync')
         for node in session.query(Node).all():
             self._preprocess_node(node)
         session.commit()
-        yield from self._check(True)
+        # TODO No need for this check
+        self._check()
         logger.info('Initial sync finished')
+
+    def sync_now(self):
+        self._sync_now_event.set()
+
+    def run(self):
+        while not self.__stop.is_set():
+            # Note: CHECK_INTERVAL must be < 24 hours
+            logger.info('Sleeping for {} seconds'.format(settings.REMOTE_CHECK_INTERVAL))
+            self._sync_now_event.clear()
+            if self._sync_now_event.wait(timeout=settings.REMOTE_CHECK_INTERVAL):
+                if self.__stop.is_set():
+                    break
+                logger.info('Sleep interrupted, syncing now')
+
+            logger.info('Beginning remote sync')
+            LocalSyncWorker().ignore.set()
+            OperationWorker().join_queue()
+            self._check()
+            time.sleep(10)  # TODO Fix me
+            LocalSyncWorker().ignore.clear()
+            logger.info('Finished remote sync')
+        logger.info('Stopped RemoteSyncWorker')
+
+    def stop(self):
+        logger.info('Stopping RemoteSyncWorker')
+        self.__stop.set()
+        self.sync_now()
 
     def _preprocess_node(self, node):
         local = Path(os.path.join(node.path, settings.OSF_STORAGE_FOLDER))
@@ -48,36 +76,9 @@ class RemoteSync:
             session.query(File).filter(File.node_id == node.id).delete()
         os.makedirs(str(local), exist_ok=True)
 
-    @asyncio.coroutine
-    def sync_now(self):
-        if self._sync_now_fut.done():
-            return
-        self._sync_now_fut.set_result(None)
-
-    @asyncio.coroutine
-    def start(self):
-        while True:
-            # Note: CHECK_INTERVAL must be < 24 hours
-            logger.info('Sleeping for {} seconds'.format(settings.REMOTE_CHECK_INTERVAL))
-            try:
-                yield from asyncio.wait_for(self._sync_now_fut, timeout=settings.REMOTE_CHECK_INTERVAL)
-                logger.info('Sleep interrupted, syncing now')
-            except asyncio.TimeoutError:
-                pass
-            finally:
-                self._sync_now_fut = asyncio.Future()
-
-            logger.info('Beginning remote sync')
-            self.ignore_watchdog.set()
-            yield from self._check(False)
-            yield from asyncio.sleep(10)
-            self.ignore_watchdog.clear()
-            logger.info('Finished remote sync')
-
-    @asyncio.coroutine
-    def _check(self, _):
+    def _check(self):
         resolutions = []
-        local_events, remote_events = yield from Auditor().audit()
+        local_events, remote_events = Auditor().audit()
 
         for is_folder in (True, False):
             for conflict in sorted(set(local_events.keys()) & set(remote_events.keys()), key=len):
@@ -88,8 +89,6 @@ class RemoteSync:
                 except KeyError:
                     continue
                 res = RESOLUTION_MAP[(is_folder, local.event_type, remote.event_type)](local, remote, local_events, remote_events)
-                if asyncio.iscoroutine(res):
-                    res = yield from res
                 if res:
                     if isinstance(res, list):
                         resolutions.extend(res)
@@ -135,9 +134,9 @@ class RemoteSync:
         directories = sorted(directories, key=lambda x: x.src_path.count(os.path.sep))
 
         for operation in itertools.chain(resolutions, (event.operation() for event in directories), (event.operation() for event in td.children())):
-            yield from self.operation_queue.put(operation)
+            OperationWorker().put(operation)
 
-        yield from self.operation_queue.join()
+        OperationWorker().join_queue()
 
 
 def flatten(dict_obj, acc):
@@ -176,7 +175,6 @@ class TreeDict:
         return flatten(sub_dict, [])
 
     def __contains__(self, keys):
-        inner = self._inner
         try:
             self[keys]
         except KeyError:

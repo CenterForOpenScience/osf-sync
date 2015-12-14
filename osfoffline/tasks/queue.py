@@ -1,50 +1,49 @@
-import asyncio
 import logging
+import queue
+import threading
 
 from osfoffline import settings
-from osfoffline.tasks import operations
+from osfoffline.utils import Singleton
 
 
 logger = logging.getLogger(__name__)
 
 
-class Queue(getattr(asyncio, 'JoinableQueue', asyncio.Queue)):
-    """(Joinable)?Queue is broken in pretty much every version of python thus far
-    This should fix it in >= 3.4.X and <= 3.5.0
-    put/_put/__put_internal screws up _unfinished_tasks in a different way every version
-    """
+class OperationWorker(threading.Thread, metaclass=Singleton):
 
-    def _put(self, item):
-        self._queue.append(item)
-        self._unfinished_tasks += 1
-        self._finished.clear()
+    def __init__(self):
+        super().__init__()
+        self._queue = queue.Queue()
+        self.__stop = threading.Event()
 
-    def _Queue__put_internal(self, item):
-        self._put(item)
-        self._finished.clear()
+    def start(self, *args, **kwargs):
+        logger.info('Starting OperationWorker')
+        super().start(*args, **kwargs)
 
-
-class OperationsQueue(Queue):
-
-    MAX_SIZE = 15
-
-    # TODO Maybe fixme Could just ignore and give up on using MAX_SIZE
-    # def __init__(self):
-    #     super().__init__(maxsize=self.MAX_SIZE)
-
-    @asyncio.coroutine
-    def start(self):
-        logger.info('start processing queue')
-        while True:
-            job = yield from self.get()
+    def run(self):
+        logger.info('Start processing queue')
+        while not self.__stop.is_set():
+            job = self._queue.get()
+            if job is None:
+                self._queue.task_done()
+                continue
             logger.debug('Running {}'.format(job))
             try:
-                yield from job.run(dry=settings.DRY)
+                job.run(dry=settings.DRY)
+            except Exception as e:
+                logger.exception(e)
             finally:
-                self.task_done()
+                self._queue.task_done()
+        logger.info('OperationWorker stopped')
 
-    @asyncio.coroutine
-    def put(self, event):
-        if not isinstance(event, operations.BaseOperation):
-            raise Exception('Invalid Event Type')
-        yield from super().put(event)
+    def stop(self):
+        logger.info('Stopping OperationWorker')
+        self.__stop.set()
+        self._queue.put(None)
+        self.join_queue()
+
+    def put(self, operation):
+        self._queue.put(operation)
+
+    def join_queue(self):
+        return self._queue.join()

@@ -1,5 +1,4 @@
 from enum import Enum
-import asyncio
 import hashlib
 import os
 
@@ -41,10 +40,6 @@ class ModificationEvent:
         self.is_directory = src_path.endswith(os.path.sep) or not src_path
 
     def operation(self):
-        if self.event_type != EventType.MOVE:
-            args = (self.context, )
-        else:
-            args = (self.context, OperationContext.create(local=Path(self.dest_path)))
         location = Location.LOCAL if self.location == Location.REMOTE else Location.REMOTE
         return getattr(
             operations,
@@ -74,16 +69,15 @@ class Auditor:
     def __init__(self):
         self.user_folder = get_current_user().folder + os.path.sep
 
-    @asyncio.coroutine
     def audit(self):
         db_map = self.collect_all_db()
-        remote_map = yield from self.collect_all_remote()
+        remote_map = self.collect_all_remote()
         local_map = self.collect_all_local(db_map)
 
         def context_for(paths):
             if not isinstance(paths, tuple):
                 paths = (paths, )
-                #return OperationContext(Path(paths), db_map.get(paths, (None, ))[-1], remote_map.get(paths, (None, ))[-1])
+                # return OperationContext(Path(paths), db_map.get(paths, (None, ))[-1], remote_map.get(paths, (None, ))[-1])
             return [OperationContext(self.user_folder / Path(path), db_map.get(path, (None, ))[-1], remote_map.get(path, (None, ))[-1]) for path in paths]
 
         diffs = {
@@ -111,29 +105,27 @@ class Auditor:
     def collect_all_db(self):
         return {db.path.replace(self.user_folder, ''): (db.id, db.sha256, db) for db in session.query(File)}
 
-    @asyncio.coroutine
     def collect_all_remote(self):
         ret = {}
         for node in session.query(Node):
-            remote_node = yield from OSFClient().get_node(node.id)
-            remote = yield from remote_node.get_storage(id='osfstorage')
+            remote_node = OSFClient().get_node(node.id)
+            remote = remote_node.get_storage(id='osfstorage')
             rel_path = os.path.join('{} - {}'.format(node.title, node.id), settings.OSF_STORAGE_FOLDER)
-            yield from self._collect_node_remote(remote, ret, rel_path)
+            self._collect_node_remote(remote, ret, rel_path)
         return ret
 
-    @asyncio.coroutine
     def _collect_node_remote(self, root, acc, rel_path):
         if root.parent:
             rel_path = os.path.join(rel_path, root.name)
 
         acc[rel_path + os.path.sep] = (root.id, None if root.is_dir else root.extra['hashes']['sha256'], root)
 
-        for child in (yield from root.get_children()):
+        for child in root.get_children():
             # TODO replace with pattern matching
             if child.name in settings.IGNORED_NAMES:
                 continue
             if child.kind == 'folder':
-                yield from self._collect_node_remote(child, acc, rel_path)
+                self._collect_node_remote(child, acc, rel_path)
             else:
                 acc[os.path.join(rel_path, child.name)] = (child.id, child.extra['hashes']['sha256'], child)
         return acc
@@ -175,9 +167,6 @@ class Auditor:
         # target == ref
         id_target = {v[0]: k for k, v in target.items()}
         id_source = {v[0]: k for k, v in source.items()}
-
-        sha_target = {v[1]: k for k, v in target.items()}
-        sha_source = {v[1]: k for k, v in source.items()}
 
         created = set(source.keys()) - set(target.keys())
         deleted = set(target.keys()) - set(source.keys())

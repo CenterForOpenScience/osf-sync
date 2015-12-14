@@ -1,4 +1,3 @@
-import asyncio
 import os
 import logging
 
@@ -169,19 +168,11 @@ class NodeFetcher(QtCore.QObject):
 
     finished = QtCore.pyqtSignal(list)
 
-    def ensure_event_loop(self):
-        try:
-            return asyncio.get_event_loop()
-        except (AssertionError, RuntimeError):
-            asyncio.set_event_loop(asyncio.new_event_loop())
-        return asyncio.get_event_loop()
-
     def fetch(self):
-        loop = self.ensure_event_loop()
         try:
             client = OSFClient()
-            client_user = loop.run_until_complete(client.get_user())
-            user_nodes = loop.run_until_complete(client_user.get_nodes())
+            client_user = client.get_user()
+            user_nodes = client_user.get_nodes()
         except Exception as e:
             logging.warning(e)
 

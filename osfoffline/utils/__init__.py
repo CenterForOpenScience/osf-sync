@@ -1,6 +1,4 @@
 import os
-import asyncio
-import threading
 
 from sqlalchemy.orm.exc import NoResultFound
 
@@ -10,32 +8,14 @@ from osfoffline.database import models
 from osfoffline.exceptions import NodeNotFound
 from osfoffline.utils.authentication import get_current_user
 
+
 class Singleton(type):
     _instances = {}
 
     def __call__(cls, *args, **kwargs):
-        key = (getattr(cls, 'thread_safe', False) and cls) or (threading.get_ident(), cls)
-        if key not in cls._instances:
-            cls._instances[key] = super(Singleton, cls).__call__(*args, **kwargs)
-        return cls._instances[key]
-
-
-def ensure_event_loop():
-    """Ensure the existance of an eventloop
-    Useful for contexts where get_event_loop() may raise an exception.
-    Such as multithreaded applications
-
-    :returns: The new event loop
-    :rtype: BaseEventLoop
-    """
-    try:
-        return asyncio.get_event_loop()
-    except (AssertionError, RuntimeError):
-        asyncio.set_event_loop(asyncio.new_event_loop())
-
-    # Note: No clever tricks are used here to dry up code
-    # This avoids an infinite loop if settings the event loop ever fails
-    return asyncio.get_event_loop()
+        if cls not in cls._instances:
+            cls._instances[cls] = super(Singleton, cls).__call__(*args, **kwargs)
+        return cls._instances[cls]
 
 
 def extract_node(path):
@@ -71,24 +51,18 @@ def local_to_db(local, node, is_folder=False):
 def db_to_remote(db):
     # Fix circular import
     from osfoffline.client import osf
-    loop = ensure_event_loop()
 
     if db.parent is None:
-        coro = _remote_root(db)
-    else:
-        coro = osf.StorageObject.load(osf.OSFClient().request_session, db.id)
+        return _remote_root(db)
+    return osf.StorageObject.load(osf.OSFClient().request_session, db.id)
 
-    if loop.is_running():
-        return coro
-    return loop.run_until_complete(coro)
 
-@asyncio.coroutine
 def _remote_root(db):
     # Fix circular import
     from osfoffline.client import osf
     return next(
         storage
         for storage in
-        (yield from osf.NodeStorage.load(osf.OSFClient().request_session, db.node.id))
+        osf.NodeStorage.load(osf.OSFClient().request_session, db.node.id)
         if storage.provider == db.provider
     )
