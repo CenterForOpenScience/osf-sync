@@ -390,10 +390,7 @@ class RemoteMoveFolder(MoveOperation):
 
     def _run(self):
         logger.info('RemoteMoveFolder: {}'.format(self._context))
-        dest_parent = OperationContext.create(local=self._dest_context.local.parent)
-        # HACK, TODO Fix me
-        if not self.remote or not self.db:
-            self._context = OperationContext.create(local=self.local, is_folder=True)
+        dest_parent = OperationContext(local=self._dest_context.local.parent)
         resp = OSFClient().request('POST', self.remote.raw['links']['move'], data=json.dumps({
             'action': 'move',
             'path': dest_parent.db.osf_path if dest_parent.db.parent else '/',
@@ -413,9 +410,8 @@ class RemoteMoveFile(MoveOperation):
 
     def _run(self):
         logger.info('RemoteMoveFile: {}'.format(self._context))
-        dest_parent = OperationContext.create(local=self._dest_context.local.parent)
-        # HACK, TODO Fix me
-        dest_parent.remote = dest_parent.remote
+        dest_parent = OperationContext(local=self._dest_context.local.parent)
+
         resp = OSFClient().request('POST', self.remote.raw['links']['move'], data=json.dumps({
             'action': 'move',
             'path': dest_parent.db.osf_path if dest_parent.db.parent else '/',
