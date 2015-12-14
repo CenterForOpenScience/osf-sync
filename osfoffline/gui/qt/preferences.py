@@ -16,6 +16,7 @@ from osfoffline.database import Session
 from osfoffline.database.models import User, Node
 from osfoffline.database.utils import save
 from osfoffline.gui.qt.generated.preferences import Ui_Settings
+from osfoffline.sync.remote import RemoteSyncWorker
 
 
 class Preferences(QDialog, Ui_Settings):
@@ -105,6 +106,7 @@ class Preferences(QDialog, Ui_Settings):
             elif db_node:
                 Session().delete(db_node)
         save(Session())
+        RemoteSyncWorker().sync_now()
         self.close()
 
     def sync_all(self):

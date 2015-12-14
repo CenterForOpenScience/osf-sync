@@ -55,6 +55,11 @@ class RemoteSyncWorker(threading.Thread, metaclass=Singleton):
                 logger.info('Sleep interrupted, syncing now')
             self._sync_now_event.clear()
 
+            # Ensure selected node directories exist
+            for node in Session().query(Node).all():
+                local = Path(os.path.join(node.path, settings.OSF_STORAGE_FOLDER))
+                os.makedirs(str(local), exist_ok=True)
+
             logger.info('Beginning remote sync')
             LocalSyncWorker().ignore.set()
             OperationWorker().join_queue()
