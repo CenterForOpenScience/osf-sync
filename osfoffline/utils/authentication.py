@@ -2,8 +2,8 @@ import datetime
 import json
 import logging
 
-import requests
 import furl
+import requests
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm.exc import NoResultFound
 
@@ -14,6 +14,9 @@ from osfoffline.database import clear_models, Session
 from osfoffline.database import models
 from osfoffline.database.utils import save
 from osfoffline.exceptions import AuthError, TwoFactorRequiredError
+
+
+logger = logging.getLogger(__name__)
 
 
 def get_current_user():
@@ -78,13 +81,13 @@ class AuthClient(object):
                 json_resp = resp.json()
                 return json_resp['data']['attributes']['token_id']
 
-    def _create_user(self, username, password, personal_access_token):
+    def _create_user(self, username, personal_access_token):
         """ Tries to authenticate and create user.
 
         :return models.User: user
         :raise AuthError
         """
-        logging.debug('User doesn\'t exist. Attempting to authenticate, then creating user.')
+        logger.debug('User doesn\'t exist. Attempting to authenticate, then creating user.')
 
         user = models.User(
             id='',
@@ -143,11 +146,11 @@ class AuthClient(object):
             if user.osf_login != username:
                 # Different user authenticated, drop old user and allow login
                 clear_models()
-                user = self._create_user(username, password, personal_access_token)
+                user = self._create_user(username, personal_access_token)
             else:
                 user.oauth_token = personal_access_token
         else:
-            user = self._create_user(username, password, personal_access_token)
+            user = self._create_user(username, personal_access_token)
 
         try:
             save(Session(), user)

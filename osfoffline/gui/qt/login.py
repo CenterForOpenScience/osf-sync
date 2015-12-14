@@ -43,7 +43,7 @@ class LoginScreen(QDialog, Ui_login):
             save(Session(), self.user)
         return self.user
 
-    def log_in(self, *, otp=None):
+    def login(self, *, otp=None):
         # self.start_screen.logInButton.setDisabled(True)  # Doesn't update until the asyncio call below returns
         logger.debug('attempting to log in')
         username = self.usernameEdit.text().strip()
@@ -58,9 +58,9 @@ class LoginScreen(QDialog, Ui_login):
                                                'Please enter a two-factor authentication code.\n'
                                                '(check your mobile device)')
             if ok:
-                return self.log_in(otp=otp_val)
+                return self.login(otp=otp_val)
         except AuthError as e:
-            logging.exception(e.message)
+            logger.exception(e.message)
             QMessageBox.warning(None, 'Login Failed', e.message)
             # self.start_screen.logInButton.setEnabled(True)
         else:
