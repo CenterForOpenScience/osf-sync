@@ -34,13 +34,6 @@ class BackgroundHandler(metaclass=Singleton):
         RemoteSyncWorker().start()
         LocalSyncWorker().start()
 
-        # logger.debug('Starting Remote Sync')
-        # try:
-        #     self.remote_sync.start()
-        # except Exception as e:
-        #     logger.exception(e)
-        # logging.debug('Background event loop exited')
-
     def sync_now(self):
         RemoteSyncWorker().sync_now()
 
