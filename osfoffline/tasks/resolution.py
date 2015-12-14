@@ -61,6 +61,7 @@ def create_folder(local, remote, local_events, remote_events):
 #     local.context.db = None
 #     return operations.RemoteCreateFile(local.context)
 
+
 def handle_move_src_update(local, remote, local_events, remote_events):
     os.makedirs(remote.dest_path, exist_ok=True)
     local_events.pop(local.src_path)
