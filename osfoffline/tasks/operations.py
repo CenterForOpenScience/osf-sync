@@ -62,7 +62,7 @@ class OperationContext:
             self._local = Path(self._db.path)
         return self._local
 
-    def __init__(self, local=None, db=None, remote=None, node=None, is_folder=None):
+    def __init__(self, local=None, db=None, remote=None, node=None, is_folder=False):
         self._db = db
         self._node = node
         self._local = local
@@ -252,7 +252,7 @@ class RemoteUpdateFile(BaseOperation):
         db = utils.local_to_db(self.local, self.node)
 
         url = '{}/v1/resources/{}/providers/{}/{}'.format(settings.FILE_BASE, self.node.id, db.provider, db.osf_path)
-        with open(self.local.full_path, 'rb') as fobj:
+        with open(str(self.local), 'rb') as fobj:
             resp = OSFClient().request('PUT', url, data=fobj, params={'name': self.local.name})
         data = resp.json()
         assert resp.status_code == 200, '{}\n{}\n{}'.format(resp, url, data)
