@@ -106,7 +106,7 @@ class UserNode(Node):
     """Fetch API data about nodes owned by a specific user"""
     @classmethod
     def get_url(cls, id):
-        return '{}/{}/users/{}/nodes/'.format(cls.OSF_HOST, cls.API_PREFIX, id)
+        return '{}/{}/users/{}/nodes/?filter[registration]=false'.format(cls.OSF_HOST, cls.API_PREFIX, id)
 
 
 class StorageObject(BaseResource):
