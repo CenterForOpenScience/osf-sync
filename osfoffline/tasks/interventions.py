@@ -3,6 +3,7 @@ import enum
 import logging
 import threading
 
+from osfoffline.sync.ext.auditor import EventType
 from osfoffline.tasks import operations
 from osfoffline.utils import Singleton
 
@@ -112,16 +113,25 @@ class RemoteLocalFileConflict(BaseIntervention):
 
     def resolve(self):
         if self.decision == Decision.MINE:
-            return [operations.RemoteUpdateFile(self.local)]
+            if self.local.event_type == EventType.CREATE and self.remote.event_type == EventType.CREATE:
+                return [
+                    operations.DatabaseCreateFile(self.local.context),
+                    operations.RemoteUpdateFile(self.local.context),
+                ]
+            return [operations.RemoteUpdateFile(self.local.context)]
         elif self.decision == Decision.THEIRS:
-            return [operations.LocalUpdateFile(self.remote)]
+            if self.local.event_type == EventType.CREATE and self.remote.event_type == EventType.CREATE:
+                return [
+                    operations.DatabaseCreateFile(self.remote.context),
+                    operations.LocalUpdateFile(self.remote.context),
+                ]
+            return [operations.LocalUpdateFile(self.remote.context)]
         elif self.decision == Decision.KEEP_BOTH:
             return [
-                operations.LocalKeepFile(self.local),
-                operations.LocalCreateFile(self.remote),
+                operations.LocalKeepFile(self.local.context),
+                operations.LocalCreateFile(self.remote.context),
             ]
-        else:
-            raise ValueError('Unknown decision')
+        raise ValueError('Unknown decision')
 
 
 class RemoteFolderDeleted(BaseIntervention):

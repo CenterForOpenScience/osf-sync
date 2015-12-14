@@ -123,6 +123,7 @@ class LocalKeepFile(BaseOperation):
     """
 
     def _run(self):
+        # TODO: handle events where neither exist in the db (e.g. create/create)
         logger.info("Local Keep File: {}".format(self.local))
 
 
