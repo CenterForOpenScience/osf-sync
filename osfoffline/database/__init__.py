@@ -11,19 +11,11 @@ from osfoffline.settings import PROJECT_DB_FILE
 CORE_OSFO_MODELS = [User, Node, File]
 URL = 'sqlite:///{}'.format(PROJECT_DB_FILE)
 
-# sqlite+pysqlcipher://:passphrase/file_path
-# URL = 'sqlite+pysqlcipher://:PASSWORD/{DB_FILE_PATH}'.format(DB_FILE_PATH=DB_FILE_PATH)
-
-engine = create_engine(
-    URL,
-    # poolclass=SingletonThreadPool,
-    connect_args={'check_same_thread': False},
-)
+engine = create_engine(URL, connect_args={'check_same_thread': False},)
 Base.metadata.create_all(engine)
 session_factory = sessionmaker(bind=engine)
-Session = scoped_session(session_factory)
-
-session = Session()
+_Session = scoped_session(session_factory)()
+Session = lambda: _Session
 
 
 def drop_db():
@@ -36,4 +28,4 @@ def drop_db():
 
 def clear_models():
     for model in CORE_OSFO_MODELS:
-        session.query(model).delete()
+        Session().query(model).delete()

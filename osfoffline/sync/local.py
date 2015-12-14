@@ -1,26 +1,30 @@
-import asyncio
 import logging
+import threading
 
+from pathlib import Path
 from watchdog.observers import Observer
 
 from osfoffline import utils
+from osfoffline.utils.authentication import get_current_user
+from osfoffline.exceptions import NodeNotFound
 from osfoffline.sync.ext.watchdog import ConsolidatedEventHandler
 from osfoffline.tasks import operations
-from osfoffline.utils.path import ProperPath
+from osfoffline.tasks.operations import OperationContext
+from osfoffline.utils import Singleton
+from osfoffline.tasks.queue import OperationWorker
 
 
 logger = logging.getLogger(__name__)
 
 
-class LocalSync(ConsolidatedEventHandler):
+class LocalSyncWorker(ConsolidatedEventHandler, metaclass=Singleton):
 
-    def __init__(self, user, ignore_event, operation_queue):
+    def __init__(self):
         super().__init__()
-        self.folder = user.folder
+        self.folder = get_current_user().folder
 
         self.observer = Observer()
-        self.ignore = ignore_event
-        self.operation_queue = operation_queue
+        self.ignore = threading.Event()
         self.observer.schedule(self, self.folder, recursive=True)
 
     def start(self):
@@ -28,10 +32,13 @@ class LocalSync(ConsolidatedEventHandler):
         self.observer.start()
 
     def stop(self):
-        logger.debug('Stopping observer thread')
+        logger.info('Stopping LocalSyncWorker')
         # observer is actually a separate child thread and must be join()ed
         self.observer.stop()
+
+    def join(self):
         self.observer.join()
+        logger.info('LocalSyncWorker Stopped')
 
     def dispatch(self, event):
         if self.ignore.is_set():
@@ -40,39 +47,64 @@ class LocalSync(ConsolidatedEventHandler):
 
     def on_moved(self, event):
         logger.info('Moved {}: from {} to {}'.format((event.is_directory and 'directory') or 'file', event.src_path, event.dest_path))
+        # Note: OperationContext should extrapolate all attributes from what it is given
+        if event.is_directory:
+            try:
+                # TODO: avoid a lazy context load in this case to catch the NodeNotFound exception?
+                _ = OperationContext(local=Path(event.src_path), is_folder=True).remote
+                return self.put_event(operations.RemoteMoveFolder(
+                    OperationContext(local=Path(event.src_path), is_folder=True),
+                    OperationContext(local=Path(event.dest_path), is_folder=True),
+                ))
+            except NodeNotFound:
+                return self.put_event(operations.RemoteCreateFolder(
+                    OperationContext(local=Path(event.dest_path), is_folder=True),
+                ))
+
+        try:
+            # TODO: avoid a lazy context load in this case to catch the NodeNotFound exception?
+            _ = OperationContext(local=Path(event.src_path)).remote
+            return self.put_event(operations.RemoteMoveFile(
+                OperationContext(local=Path(event.src_path)),
+                OperationContext(local=Path(event.dest_path)),
+            ))
+        except NodeNotFound:
+            return self.put_event(operations.RemoteCreateFile(
+                OperationContext(local=Path(event.dest_path)),
+            ))
 
     def on_created(self, event):
         logger.info('Created {}: {}'.format((event.is_directory and 'directory') or 'file', event.src_path))
         node = utils.extract_node(event.src_path)
-        path = ProperPath(event.src_path, event.is_directory)
+        path = Path(event.src_path)
 
         # If the file exists in the database, this is a modification
+        # This logic may not be the most correct, #TODO re-evaluate
         if utils.local_to_db(path, node):
             return self.on_modified(event)
 
+        context = OperationContext(local=path, node=node)
+
         if event.is_directory:
-            return self.put_event(operations.RemoteCreateFolder(path, node))
-        return self.put_event(operations.RemoteCreateFile(path, node))
+            return self.put_event(operations.RemoteCreateFolder(context))
+        return self.put_event(operations.RemoteCreateFile(context))
 
     def on_deleted(self, event):
         logger.info('Deleted {}: {}'.format((event.is_directory and 'directory') or 'file', event.src_path))
-        node = utils.extract_node(event.src_path)
-        local = ProperPath(event.src_path, event.is_directory)
-        db = utils.local_to_db(local, node)
-        remote = utils.db_to_remote(db)
+        context = OperationContext(local=Path(event.src_path), is_folder=event.is_directory)
 
         if event.is_directory:
-            return self.put_event(operations.RemoteDeleteFolder(remote, node))
-        return self.put_event(operations.RemoteDeleteFile(remote, node))
+            return self.put_event(operations.RemoteDeleteFolder(context))
+        return self.put_event(operations.RemoteDeleteFile(context))
 
     def on_modified(self, event):
         logger.info('Modified {}: {}'.format((event.is_directory and 'directory') or 'file', event.src_path))
-        node = utils.extract_node(event.src_path)
-        path = ProperPath(event.src_path, event.is_directory)
+        context = OperationContext(local=Path(event.src_path))
+
         if event.is_directory:
             # WHAT DO
-            return self.put_event(operations.RemoteCreateFolder(path, node))
-        return self.put_event(operations.RemoteUpdateFile(path, node))
+            return self.put_event(operations.RemoteCreateFolder(context))
+        return self.put_event(operations.RemoteUpdateFile(context))
 
     def put_event(self, event):
-        self.operation_queue._loop.call_soon_threadsafe(asyncio.ensure_future, self.operation_queue.put(event))
+        OperationWorker().put(event)
