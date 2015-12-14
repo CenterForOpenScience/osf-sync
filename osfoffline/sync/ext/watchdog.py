@@ -53,10 +53,10 @@ class ConsolidatedEventHandler(PatternMatchingEventHandler):
             for e in chain(self._event_cache.children(), sorted(self._create_cache, key=lambda x: x.src_path.count(os.path.sep))):
                 try:
                     super().dispatch(e)
-                except (NodeNotFound, ) as ex:
-                    logger.warning(ex)
-                except Exception as ex:
-                    logger.exception(ex)
+                except (NodeNotFound, ) as e:
+                    logger.warning(e)
+                except Exception as e:
+                    logger.exception(e)
             self._create_cache = []
             self._event_cache = TreeDict()
 

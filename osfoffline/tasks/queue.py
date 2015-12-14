@@ -3,6 +3,7 @@ import queue
 import threading
 
 from osfoffline import settings
+from osfoffline.exceptions import NodeNotFound
 from osfoffline.utils import Singleton
 
 
@@ -30,6 +31,8 @@ class OperationWorker(threading.Thread, metaclass=Singleton):
             logger.debug('Running {}'.format(job))
             try:
                 job.run(dry=settings.DRY)
+            except (NodeNotFound, ) as e:
+                logger.warning(e)
             except Exception as e:
                 logger.exception(e)
             finally:
