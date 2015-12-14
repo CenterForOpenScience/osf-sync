@@ -1,9 +1,5 @@
 import logging
-import threading
 
-from osfoffline import settings
-from osfoffline.database import models
-from osfoffline.database import session
 from osfoffline.sync.local import LocalSyncWorker
 from osfoffline.sync.remote import RemoteSyncWorker
 from osfoffline.tasks import Intervention, Notification
@@ -14,7 +10,7 @@ from osfoffline.utils import Singleton
 logger = logging.getLogger(__name__)
 
 
-class BackgroundWorker(metaclass=Singleton):
+class BackgroundHandler(metaclass=Singleton):
 
     # TODO: Find a good fix for ulimit setting
     # try:
