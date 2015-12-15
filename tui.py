@@ -1,4 +1,3 @@
-import asyncio
 import collections
 import logging
 import sys
@@ -92,13 +91,13 @@ class LoginForm(npyscreen.ActionPopup):
 
     def on_ok(self):
         try:
-            user = asyncio.get_event_loop().run_until_complete(AuthClient().log_in(username=self.username.value, password=self.password.value))
+            user = AuthClient().login(username=self.username.value, password=self.password.value)
         except AuthError as ex:
             logger.exception(ex.message)
             npyscreen.notify_confirm(ex.message, 'Log in Failed')
         else:
             logger.info('Successfully logged in user: {}'.format(user))
-            self.parentApp.worker.start()
+            self.parentApp.background_handler.start()
             self.parentApp.setNextForm('MAIN')
 
     def on_cancel(self):
@@ -123,7 +122,7 @@ class MainForm(npyscreen.Form):
         self.add_event_hander('NOTIFICATIONEVENT', self.ev_notification_event_handler)
 
     def _sync_now(self):
-        self.parentApp.worker.loop.call_soon_threadsafe(asyncio.ensure_future, self.parentApp.worker.remote_sync.sync_now())
+        RemoteSyncWorker().sync_now()
 
     def ev_std_write_event_handler(self, event):
         msg = event.payload
@@ -145,24 +144,23 @@ class MainForm(npyscreen.Form):
         self.logs.display()
 
     def while_waiting(self):
-        self.queue_status.value = '{}/{}'.format(self.parentApp.worker.operation_queue.qsize(), self.parentApp.worker.operation_queue.MAX_SIZE)
+        self.queue_status.value = '{}'.format(OperationWorker()._queue.qsize())
         self.queue_status.display()
-        self.queue.values = list(self.parentApp.worker.operation_queue._queue)
+        self.queue.values = list(OperationWorker()._queue.queue)
         self.queue.display()
         self.logs.display()
 
 
 class App(npyscreen.StandardApp):
 
-    def __init__(self, worker):
+    def __init__(self, background_handler):
         super().__init__()
-        self.loop = asyncio.get_event_loop()
-        self.worker = worker
+        self.background_handler = background_handler
         stdout_wrapper.on_write = self.on_std_write
         stderr_wrapper.on_write = self.on_std_write
 
-        self.worker.set_intervention_cb(self.on_intervention)
-        self.worker.set_notification_cb(self.on_notification)
+        self.background_handler.set_intervention_cb(self.on_intervention)
+        self.background_handler.set_notification_cb(self.on_notification)
 
     def onStart(self):
         self.keypress_timeout_default = 1
@@ -172,16 +170,16 @@ class App(npyscreen.StandardApp):
 
         self.user = None
         try:
-            self.user = session.query(models.User).one()
+            self.user = Session().query(models.User).one()
         except NoResultFound:
             pass
         else:
             try:
-                asyncio.get_event_loop().run_until_complete(AuthClient().populate_user_data(self.user))
+                AuthClient().populate_user_data(self.user)
             except AuthError:
                 return self.setNextForm('LOGIN')
 
-        self.worker.start()
+        self.background_handler.start()
 
     def on_std_write(self, msg):
         if not msg == '\n':
@@ -208,17 +206,19 @@ if __name__ == '__main__':
     from sqlalchemy.orm.exc import NoResultFound
 
     from osfoffline.database import models
-    from osfoffline.database import session
+    from osfoffline.database import Session
     from osfoffline.exceptions import AuthError
     from osfoffline.utils.authentication import AuthClient
-    from osfoffline.application.background import BackgroundWorker
+    from osfoffline.application.background import BackgroundHandler
+    from osfoffline.tasks.queue import OperationWorker
+    from osfoffline.sync.remote import RemoteSyncWorker
 
-    worker = BackgroundWorker()
+    background_handler = BackgroundHandler()
 
     try:
         if not debug:
             try:
-                app = App(worker)
+                app = App(background_handler)
                 app.run()
             finally:
                 sys.stdout = sys.__stdout__
@@ -226,7 +226,7 @@ if __name__ == '__main__':
                 sys.stdout.write(stdout_wrapper.get_text())
                 sys.stderr.write(stderr_wrapper.get_text())
         else:
-            worker.start()
-            worker.join()
+            background_handler.start()
+            RemoteSyncWorker().join()
     except KeyboardInterrupt:
-        worker.stop()
+        background_handler.stop()

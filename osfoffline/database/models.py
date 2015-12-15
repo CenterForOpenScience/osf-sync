@@ -83,18 +83,16 @@ class Node(Base):
         return top_level
 
     def __repr__(self):
-        return '<Node ({}, title={}, path={})>'.format(self.id, self.title, self.path)
+        return '<Node({}, title={}, path={})>'.format(self.id, self.title, self.path)
 
 
 class File(Base):
     __tablename__ = "file"
-    __table_args__ = (UniqueConstraint('id', 'parent_id', 'name', 'node_id'),)
 
     FILE = 'file'
     FOLDER = 'folder'
 
-    __id = Column(Integer, primary_key=True)
-    id = Column(String)
+    id = Column(String, primary_key=True)
     name = Column(String)
 
     md5 = Column(String)
@@ -153,9 +151,9 @@ class File(Base):
         """
         # +os.path.sep+ instead of os.path.join: http://stackoverflow.com/a/14504695
         if self.parent:
-            return os.path.join(self.parent.path, self.name)
+            return os.path.join(self.parent.path, self.name) + ('/' if self.is_folder else '')
         else:
-            return os.path.join(self.node.path, settings.OSF_STORAGE_FOLDER)
+            return os.path.join(self.node.path, settings.OSF_STORAGE_FOLDER) + ('/' if self.is_folder else '')
 
     def locally_create_children(self):
         self.locally_created = True

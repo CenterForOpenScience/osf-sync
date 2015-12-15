@@ -1,11 +1,10 @@
 """APIv2 client library for interacting with the OSF API"""
 
 import abc
-import asyncio
 import iso8601
 import threading
 
-import aiohttp
+import requests
 
 from osfoffline import settings
 from osfoffline.utils import Singleton
@@ -13,27 +12,24 @@ from osfoffline.utils.authentication import get_current_user
 
 
 class OSFClient(metaclass=Singleton):
-    thread_safe = False
 
     def __init__(self, limit=5):
         self.user = get_current_user()
         self.headers = {
             'Authorization': 'Bearer {}'.format(self.user.oauth_token),
         }
-        self.throttler = asyncio.Semaphore(limit)
-        self.request_session = aiohttp.ClientSession(headers=self.headers)
+        self.throttler = threading.Semaphore(limit)
+        self.request_session = requests.Session()
+        self.request_session.headers.update(self.headers)
 
-    @asyncio.coroutine
     def get_node(self, id):
-        return (yield from Node.load(self.request_session, id))
+        return Node.load(self.request_session, id)
 
-    @asyncio.coroutine
     def get_user(self, id='me'):
-        return (yield from User.load(self.request_session, id))
+        return User.load(self.request_session, id)
 
-    @asyncio.coroutine
     def request(self, *args, **kwargs):
-        return (yield from self.request_session.request(*args, **kwargs))
+        return self.request_session.request(*args, **kwargs)
 
 
 class BaseResource(abc.ABC):
@@ -53,19 +49,16 @@ class BaseResource(abc.ABC):
         return '{}/{}/'.format(cls.OSF_HOST, cls.API_PREFIX)
 
     @classmethod
-    @asyncio.coroutine
     def load(cls, request_session, *args):
-        resp = yield from request_session.request('GET', cls.get_url(*args), params={'page[size]': 250})
-        data = yield from resp.json()
-        yield from resp.release()
+        resp = request_session.get(cls.get_url(*args), params={'page[size]': 250})
+        data = resp.json()
 
         if isinstance(data['data'], list):
             l = data['data']
             while data['links'].get('next'):
-                resp = yield from request_session.request('GET', data['links']['next'], params={'page[size]': 250})
-                data = yield from resp.json()
+                resp = request_session.get(data['links']['next'], params={'page[size]': 250})
+                data = resp.json()
                 l.extend(data['data'])
-                yield from resp.release()
             return [cls(request_session, item) for item in l]
         return cls(request_session, data['data'])
 
@@ -83,9 +76,8 @@ class User(BaseResource):
     def get_url(cls, id='me'):
         return '{}/{}/{}/{}/'.format(cls.OSF_HOST, cls.API_PREFIX, cls.RESOURCE, id)
 
-    @asyncio.coroutine
     def get_nodes(self):
-        return (yield from UserNode.load(self.request_session, self.id))
+        return UserNode.load(self.request_session, self.id)
 
 
 class Node(BaseResource):
@@ -101,19 +93,20 @@ class Node(BaseResource):
     def get_url(cls, id):
         return '{}/{}/{}/{}/'.format(cls.OSF_HOST, cls.API_PREFIX, cls.RESOURCE, id)
 
-    @asyncio.coroutine
     def get_storage(self, id='osfstorage'):
         # TODO: At present only osfstorage is fully supported for syncing
-        for storage in (yield from NodeStorage.load(self.request_session, self.id)):
-            if storage.provider == id:
-                return storage
+        return next(
+            storage
+            for storage in NodeStorage.load(self.request_session, self.id)
+            if storage.provider == id
+        )
 
 
 class UserNode(Node):
     """Fetch API data about nodes owned by a specific user"""
     @classmethod
     def get_url(cls, id):
-        return '{}/{}/users/{}/nodes/'.format(cls.OSF_HOST, cls.API_PREFIX, id)
+        return '{}/{}/users/{}/nodes/?filter[registration]=false'.format(cls.OSF_HOST, cls.API_PREFIX, id)
 
 
 class StorageObject(BaseResource):
@@ -123,11 +116,9 @@ class StorageObject(BaseResource):
         return '{}/{}/files/{}/'.format(cls.OSF_HOST, cls.API_PREFIX, id)
 
     @classmethod
-    @asyncio.coroutine
     def load(cls, request_session, *args):
-        resp = yield from request_session.request('GET', cls.get_url(*args), params={'page[size]': 250})
-        data = yield from resp.json()
-        yield from resp.release()
+        resp = request_session.get(cls.get_url(*args), params={'page[size]': 250})
+        data = resp.json()
 
         if isinstance(data['data'], list):
             return [
@@ -149,18 +140,15 @@ class Folder(StorageObject):
     """Represent API data for folders under a specific node"""
     is_dir = True
 
-    @asyncio.coroutine
     def get_children(self):
-        resp = yield from self.request_session.request('GET', self.raw['relationships']['files']['links']['related']['href'], params={'page[size]': 250})
-        data = yield from resp.json()
-        yield from resp.release()
+        resp = self.request_session.get(self.raw['relationships']['files']['links']['related']['href'], params={'page[size]': 250})
+        data = resp.json()
 
         if isinstance(data['data'], list):
             l = data['data']
             while data['links'].get('next'):
-                resp = yield from self.request_session.request('GET', data['links']['next'], params={'page[size]': 250})
-                data = yield from resp.json()
-                yield from resp.release()
+                resp = self.request_session.get(data['links']['next'], params={'page[size]': 250})
+                data = resp.json()
                 l.extend(data['data'])
             return [
                 (Folder if item['attributes']['kind'] == 'folder' else File)(self.request_session, item, parent=self)

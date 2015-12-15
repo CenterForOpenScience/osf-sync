@@ -1,15 +1,13 @@
-import asyncio
 import logging
 
-from PyQt5.QtWidgets import QDialog
-from PyQt5.QtWidgets import QMessageBox
+from PyQt5.QtWidgets import QDialog, QInputDialog, QMessageBox
 
 from sqlalchemy.orm.exc import NoResultFound
 
-from osfoffline.database import session
+from osfoffline.database import Session
 from osfoffline.database.models import User
 from osfoffline.database.utils import save
-from osfoffline.exceptions import AuthError
+from osfoffline.exceptions import AuthError, TwoFactorRequiredError
 from osfoffline.utils.authentication import AuthClient
 from osfoffline.utils.log import add_user_to_sentry_logs
 from osfoffline.gui.qt.generated.login import Ui_login
@@ -24,29 +22,29 @@ class LoginScreen(QDialog, Ui_login):
         super().__init__()
         self.user = None
         self.setupUi(self)
-        self.logInButton.clicked.connect(self.log_in)
+        self.logInButton.clicked.connect(self.login)
 
     def get_user(self):
         try:
-            self.user = session.query(User).one()
-            self.user = asyncio.get_event_loop().run_until_complete(AuthClient().populate_user_data(self.user))
-            save(session, self.user)
+            self.user = Session().query(User).one()
+            self.user = AuthClient().populate_user_data(self.user)
+            save(Session(), self.user)
             return self.user
 
             self.usernameEdit.setText(self.user.osf_login)
             self.passwordEdit.setFocus()
         except AuthError:
-            session.query(User).delete()
+            Session().query(User).delete()
         except NoResultFound:
             self.usernameEdit.setFocus()
 
         self.exec_()
 
         if self.user:
-            save(session, self.user)
+            save(Session(), self.user)
         return self.user
 
-    def log_in(self):
+    def login(self, *, otp=None):
         # self.start_screen.logInButton.setDisabled(True)  # Doesn't update until the asyncio call below returns
         logger.debug('attempting to log in')
         username = self.usernameEdit.text().strip()
@@ -54,9 +52,17 @@ class LoginScreen(QDialog, Ui_login):
         auth_client = AuthClient()
 
         try:
-            self.user = asyncio.get_event_loop().run_until_complete(auth_client.log_in(username=username, password=password))
+            self.user = auth_client.login(username=username, password=password, otp=otp)
+        except TwoFactorRequiredError:
+            # Prompt user for 2FA code, then re-try authentication
+            otp_val, ok = QInputDialog.getText(self, 'Enter one-time code',
+                                               'Please enter a two-factor authentication code.\n'
+                                               '(check your mobile device)')
+            if ok:
+                return self.login(otp=otp_val)
         except AuthError as e:
-            QMessageBox.warning(None, 'Log in Failed', e.message)
+            logger.exception(e.message)
+            QMessageBox.warning(None, 'Login Failed', e.message)
             # self.start_screen.logInButton.setEnabled(True)
         else:
             logger.info('Successfully logged in user: {}'.format(self.user))
