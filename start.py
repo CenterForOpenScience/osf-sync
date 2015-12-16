@@ -8,18 +8,11 @@ from PyQt5.QtWidgets import QSystemTrayIcon
 from osfoffline.database import drop_db
 from osfoffline.gui.qt import OSFOfflineQT
 from osfoffline.utils.singleton import SingleInstance
+from osfoffline.settings import *
 
 from updater4pyi import upd_source, upd_core
 from updater4pyi.upd_iface_pyqt4 import UpdatePyQt4Interface
-
-
-swu_source = upd_source.UpdateGithubReleasesSource('CenterForOpenScience/OSF-Offline')
-swu_updater = upd_core.Updater(current_version="0.1.1",
-                               update_source=swu_source)
-swu_interface = UpdatePyQt4Interface(swu_updater,
-                                     progname='OSF-Offline',
-                                     ask_before_checking=True,
-                                     parent=QApplication.instance())
+from updater4pyi.upd_defs import Updater4PyiError
 
 
 def running_warning():
@@ -30,6 +23,18 @@ def running_warning():
 
 def start():
     SingleInstance(callback=running_warning)  # will end application if an instance is already running
+    
+    if not DEBUG:
+        try:
+            swu_source = upd_source.UpdateGithubReleasesSource('CenterForOpenScience/OSF-Offline')
+            swu_updater = upd_core.Updater(current_version="0.1.1",
+                                           update_source=swu_source)
+            swu_interface = UpdatePyQt4Interface(updater=swu_updater,
+                                                 progname='OSF-Offline',
+                                                 ask_before_checking=True,
+                                                 parent=QApplication.instance())
+        except Updater4PyiError:
+            pass
 
     # Start logging all events
     if '--drop' in sys.argv:
