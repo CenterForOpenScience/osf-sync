@@ -175,8 +175,8 @@ class OSFOfflineQT(QSystemTrayIcon):
                     self._show_notifications(notification_list)
                 else:
                     self.showMessage(
-                        'Updating multiple',
-                        'Updating {} files and folders'.format(len(notification_list)),
+                        'Updated multiple',
+                        'Updated {} files and folders'.format(len(notification_list)),
                         QSystemTrayIcon.NoIcon,
                         msecs=settings.ALERT_DURATION / 1000.
                     )
@@ -240,6 +240,6 @@ class SyncEventHandler(QThread):
 
     def run(self):
         while True:
-            event = self.queue.get()
             self.mutex.lock()
+            event = self.queue.get()
             self.notify_signal.emit(event)
