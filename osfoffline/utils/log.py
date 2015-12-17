@@ -1,10 +1,7 @@
 """Utilities related to error logging"""
 
-from sqlalchemy.orm.exc import NoResultFound
-
-
 from osfoffline import settings
-from .authentication import get_current_user
+from osfoffline.utils.authentication import get_current_user
 
 
 def add_user_to_sentry_logs():
@@ -13,8 +10,7 @@ def add_user_to_sentry_logs():
 
     # Set user id across all threads globally
     data = settings.raven_client.extra.setdefault('data', {})
-    context = {'osf_user_id': user.id,
-               'osf_user_name': user.full_name}
+    context = {'osf_user_id': user.id}
     data.update(context)
 
     # Alternate mechanism based on thread locals
@@ -25,7 +21,7 @@ def remove_user_from_sentry_logs():
     """Remove the ID of the current user from all sentry error events"""
     extra_data = settings.raven_client.extra.get('data', {})
 
-    for k in ('osf_user_id', 'osf_user_name'):
+    for k in ('osf_user_id',):
         extra_data.pop(k, None)
 
     # Alternate mechanism based on thread-locals

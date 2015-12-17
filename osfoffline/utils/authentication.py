@@ -7,9 +7,7 @@ import requests
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm.exc import NoResultFound
 
-
 from osfoffline import settings
-
 from osfoffline.database import clear_models, Session
 from osfoffline.database import models
 from osfoffline.database.utils import save
@@ -27,7 +25,6 @@ def get_current_user():
     :raises SQLAlchemyError
     """
     return Session().query(models.User).one()
-
 
 
 class AuthClient(object):
@@ -144,7 +141,7 @@ class AuthClient(object):
 
         personal_access_token = self._authenticate(username, password, otp=otp)
         if user:
-            if user.osf_login != username:
+            if user.login != username:
                 # Different user authenticated, drop old user and allow login
                 clear_models()
                 user = self._create_user(username, personal_access_token)

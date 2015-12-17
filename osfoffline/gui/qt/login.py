@@ -29,19 +29,22 @@ class LoginScreen(QDialog, Ui_login):
             self.user = Session().query(User).one()
             self.user = AuthClient().populate_user_data(self.user)
             save(Session(), self.user)
-            return self.user
-
-            self.usernameEdit.setText(self.user.osf_login)
-            self.passwordEdit.setFocus()
         except AuthError:
-            Session().query(User).delete()
+            self.usernameEdit.setText(self.user.login)
+            self.passwordEdit.setFocus()
         except NoResultFound:
             self.usernameEdit.setFocus()
+        else:
+            # Add the user id of the logged in user to Sentry logs
+            add_user_to_sentry_logs()
+            return self.user
 
         self.exec_()
 
         if self.user:
-            save(Session(), self.user)
+            # Add the user id of the logged in user to Sentry logs
+            add_user_to_sentry_logs()
+
         return self.user
 
     def login(self, *, otp=None):
@@ -66,7 +69,4 @@ class LoginScreen(QDialog, Ui_login):
             # self.start_screen.logInButton.setEnabled(True)
         else:
             logger.info('Successfully logged in user: {}'.format(self.user))
-            # Add the user id of the logged in user to Sentry logs
-            add_user_to_sentry_logs()
-
             self.accept()
