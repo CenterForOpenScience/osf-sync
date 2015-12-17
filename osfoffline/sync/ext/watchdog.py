@@ -39,6 +39,10 @@ class ConsolidatedEventHandler(PatternMatchingEventHandler):
             try:
                 if event.is_directory and event.event_type == 'created':
                     self._create_cache.extend(self._event_cache.children(parts))
+                if parts in self._event_cache and self._event_cache[parts].event_type == 'deleted':
+                    # Would technically be more correct to create a modified event but only event_type is checked, not the type
+                    # Turn deletes followed by creates into updates IE saving in vim or replacing a file in finder
+                    event.event_type = 'modified'
                 self._event_cache[parts] = event
             except (TypeError, AttributeError):  # A parent event had already been processed
                 if event.event_type == 'created':
