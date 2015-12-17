@@ -37,7 +37,7 @@ def extract_node(path):
 
 
 def local_to_db(local, node, is_folder=False):
-    db = Session().query(models.File).filter(models.File.parent == None, models.File.node == node).one()
+    db = Session().query(models.File).filter(models.File.parent == None, models.File.node == node).one()  # noqa
     parts = str(local).replace(node.path, '').split('/')
     for part in parts:
         for child in db.children:

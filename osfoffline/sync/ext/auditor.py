@@ -13,7 +13,6 @@ from osfoffline.tasks.operations import OperationContext
 from osfoffline.utils.authentication import get_current_user
 
 
-
 class Location(Enum):
     LOCAL = 0
     REMOTE = 1

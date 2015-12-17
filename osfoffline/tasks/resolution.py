@@ -9,6 +9,7 @@ from osfoffline.tasks.interventions import Intervention
 
 
 def hash_file(path, chunk_size=64*1024):
+    # TODO: This function is duplicated across multiple files
     s = hashlib.sha256()
     with path.open(mode='rb') as f:
         while True:
@@ -142,7 +143,7 @@ RESOLUTION_MAP = {
     (True, EventType.DELETE, EventType.DELETE): db_delete,
     (True, EventType.UPDATE, EventType.DELETE): remote_folder_delete,
     (True, EventType.CREATE, EventType.MOVE): move_gate(create_folder, db_create),
-    (True, EventType.DELETE, EventType.MOVE): lambda local, remote,  *_: [remote.operation()],
+    (True, EventType.DELETE, EventType.MOVE): lambda local, remote, *_: [remote.operation()],
     (True, EventType.UPDATE, EventType.MOVE): move_gate(handle_move_src_update, 'PromptUserMerge'),
     (True, EventType.DELETE, EventType.UPDATE): lambda *_: [],
     (True, EventType.UPDATE, EventType.UPDATE): lambda *_: [],
