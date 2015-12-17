@@ -1,7 +1,6 @@
 from concurrent.futures import ThreadPoolExecutor
 from enum import Enum
 from pathlib import Path
-import hashlib
 import os
 
 from osfoffline import settings
@@ -10,6 +9,7 @@ from osfoffline.database import Session
 from osfoffline.database.models import Node, File
 from osfoffline.tasks import operations
 from osfoffline.tasks.operations import OperationContext
+from osfoffline.utils import hash_file
 from osfoffline.utils.authentication import get_current_user
 
 
@@ -153,18 +153,8 @@ class Auditor:
                 self._collect_node_local(child, acc, db_map)
             else:
                 rel_path = str(child).replace(self.user_folder, '')
-                acc[rel_path] = (db_map.get(rel_path, (None, ))[0], self._hash_file(child), rel_path)
+                acc[rel_path] = (db_map.get(rel_path, (None, ))[0], hash_file(child), rel_path)
         return acc
-
-    def _hash_file(self, path, chunk_size=64*1024):
-        s = hashlib.sha256()
-        with path.open(mode='rb') as f:
-            while True:
-                chunk = f.read(chunk_size)
-                if not chunk:
-                    break
-                s.update(chunk)
-        return s.hexdigest()
 
     def _diff(self, source, target):
         # source == snapshot

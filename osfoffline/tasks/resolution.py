@@ -1,23 +1,11 @@
 import os
-import hashlib
 
 from osfoffline.tasks import operations
 from osfoffline.database import Session
 from osfoffline.sync.ext.auditor import EventType
 from osfoffline.tasks import interventions
 from osfoffline.tasks.interventions import Intervention
-
-
-def hash_file(path, chunk_size=64*1024):
-    # TODO: This function is duplicated across multiple files
-    s = hashlib.sha256()
-    with path.open(mode='rb') as f:
-        while True:
-            chunk = f.read(chunk_size)
-            if not chunk:
-                break
-            s.update(chunk)
-    return s.hexdigest()
+from osfoffline.utils import hash_file
 
 
 def prompt_user(local, remote, local_events, remote_events):

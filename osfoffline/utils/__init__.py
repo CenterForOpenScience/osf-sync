@@ -1,3 +1,4 @@
+import hashlib
 import os
 
 from sqlalchemy.orm.exc import NoResultFound
@@ -16,6 +17,24 @@ class Singleton(type):
         if cls not in cls._instances:
             cls._instances[cls] = super(Singleton, cls).__call__(*args, **kwargs)
         return cls._instances[cls]
+
+
+def hash_file(path, chunk_size=65536):
+    """
+    Return the SHA256 hash of a file
+
+    :param pathlib.Path path:
+    :param int chunk_size: Read chunk size, in bytes
+    :return:
+    """
+    s = hashlib.sha256()
+    with path.open(mode='rb') as f:
+        while True:
+            chunk = f.read(chunk_size)
+            if not chunk:
+                break
+            s.update(chunk)
+    return s.hexdigest()
 
 
 def extract_node(path):
