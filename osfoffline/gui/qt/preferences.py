@@ -19,6 +19,9 @@ from osfoffline.gui.qt.generated.preferences import Ui_Settings
 from osfoffline.sync.remote import RemoteSyncWorker
 
 
+logger = logging.getLogger(__name__)
+
+
 class Preferences(QDialog, Ui_Settings):
     """
     This class is a wrapper for the Ui_Preferences and its controls
@@ -79,7 +82,7 @@ class Preferences(QDialog, Ui_Settings):
             # FIXME: Consolidate redundant messages
             # AlertHandler.warn(
             #     "An OSF file exists where you would like to create the OSF folder. Delete it, or choose a different location")
-            logging.warning("An OSF file exists where you would like to create the OSF folder.")
+            logger.warning("An OSF file exists where you would like to create the OSF folder.")
             return
 
         user = Session().query(User).one()
@@ -176,6 +179,6 @@ class NodeFetcher(QtCore.QObject):
             client_user = client.get_user()
             user_nodes = client_user.get_nodes()
         except Exception as e:
-            logging.exception(e)
+            logger.exception(e)
 
         self.finished.emit([node for node in user_nodes if 'parent' not in node.raw['relationships']])

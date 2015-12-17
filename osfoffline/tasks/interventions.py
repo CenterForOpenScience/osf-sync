@@ -27,7 +27,7 @@ class BaseIntervention(abc.ABC):
         self.remote = remote
         self.decision = None
         self.event = threading.Event()
-        logger.warning('Created Intervention {}'.format(self.__class__.__name__))
+        logger.info('Created Intervention {}'.format(self.__class__.__name__))
 
     def set_result(self, decision):
         logger.info('Resolved Intervention {}: {}'.format(self.__class__.__name__, decision))

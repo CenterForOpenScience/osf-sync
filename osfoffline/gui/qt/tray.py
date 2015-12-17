@@ -152,7 +152,7 @@ class OSFOfflineQT(QSystemTrayIcon):
             except NoResultFound:
                 pass
             else:
-                logger.info('Saving user data')
+                logger.debug('Saving user data')
                 save(Session(), user)
             Session().close()
         finally:

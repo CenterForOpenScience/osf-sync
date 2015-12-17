@@ -18,7 +18,7 @@ class OperationWorker(threading.Thread, metaclass=Singleton):
         self.__stop = threading.Event()
 
     def start(self, *args, **kwargs):
-        logger.info('Starting OperationWorker')
+        logger.debug('Starting OperationWorker')
         super().start(*args, **kwargs)
 
     def run(self):
@@ -37,10 +37,10 @@ class OperationWorker(threading.Thread, metaclass=Singleton):
                 logger.exception(e)
             finally:
                 self._queue.task_done()
-        logger.info('OperationWorker stopped')
+        logger.debug('OperationWorker stopped')
 
     def stop(self):
-        logger.info('Stopping OperationWorker')
+        logger.debug('Stopping OperationWorker')
         self.__stop.set()
         self._queue.put(None)
         self.join_queue()
