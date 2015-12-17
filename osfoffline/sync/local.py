@@ -102,6 +102,7 @@ class LocalSyncWorker(ConsolidatedEventHandler, metaclass=Singleton):
         context = OperationContext(local=Path(event.src_path))
 
         if event.is_directory:
+            # FIXME: Clarify this comment (w/ @chrisseto)
             # WHAT DO
             return self.put_event(operations.RemoteCreateFolder(context))
         return self.put_event(operations.RemoteUpdateFile(context))
