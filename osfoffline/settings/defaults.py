@@ -47,5 +47,5 @@ PROJECT_LOG_FILE = os.path.join(PROJECT_LOG_DIR, 'osfoffline.log')
 
 #updater
 REPO = 'CenterForOpenScience/OSF-Offline'
-VERSION = '0.1.1'
+VERSION = '0.1.0'
 NAME = 'OSF-Offline'
