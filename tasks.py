@@ -5,9 +5,9 @@ from invoke import task, run
 
 from osfoffline import settings
 
-@task
+@task(aliases=['flake8'])
 def flake():
-    run('flake8 . --config=./setup.cfg', pty=True)
+    run('flake8 osfoffline/', echo=True)
 
 
 @task
