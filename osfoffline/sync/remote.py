@@ -86,7 +86,7 @@ class RemoteSyncWorker(threading.Thread, metaclass=Singleton):
         local_events, remote_events = Auditor().audit()
 
         for is_folder in (True, False):
-            for conflict in sorted(set(local_events.keys()) & set(remote_events.keys()), key=len):
+            for conflict in sorted(set(local_events.keys()) & set(remote_events.keys()), key=lambda x: x.count(os.path.sep)):
                 if conflict.endswith(os.path.sep) != is_folder:
                     continue
                 try:
