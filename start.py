@@ -38,8 +38,8 @@ def start():
     except Updater4PyiError:
         pass
 
-        # Then, if the current version is too old, close the program
-    r = requests.get('https://raw.githubusercontent.com/chennan47/OSF-Offline/feature/auto_updater/deploy/Offline-version.json')
+    # Then, if the current version is too old, close the program
+    r = requests.get(MIN_VERSION_URL)
 
     min_version = r.json()['version']
     if StrictVersion(VERSION) < StrictVersion(min_version):
