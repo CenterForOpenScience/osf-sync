@@ -1,7 +1,7 @@
 import logging
 import os
-
-from queue import Queue
+from queue import Empty, Queue
+import threading
 
 from PyQt5.Qt import QIcon
 from PyQt5.QtCore import pyqtSignal
@@ -24,6 +24,8 @@ from osfoffline.database.utils import save
 from osfoffline.gui.qt.login import LoginScreen
 from osfoffline.gui.qt.menu import OSFOfflineMenu
 from osfoffline.utils.log import remove_user_from_sentry_logs
+from osfoffline import settings
+from osfoffline.tasks.notifications import group_events, Level
 from osfoffline.utils.validators import validate_containing_folder
 
 
@@ -117,19 +119,18 @@ class OSFOfflineQT(QSystemTrayIcon):
         self.intervention_handler.done()
 
     def on_notification(self, notification):
-        # if (alert_icon is None) or (not show_alerts):
-        #     return
+        """
+        Display user-facing event notifications.
 
+        :param notification: An individual notification event
+        :return:
+        """
         if not self.supportsMessages():
             return
 
-        self.showMessage(
-            'Title of The Message!!!',
-            notification.msg,
-            QSystemTrayIcon.NoIcon
-        )
-
-        self.notification_handler.done()
+        # Wait for more notifications, then grab all events and display
+        t = threading.Timer(settings.ALERT_DURATION * 2, self._consolidate_notifications, args=[notification])
+        t.start()
 
     # def resume(self):
     #     logger.debug('resuming')
@@ -143,6 +144,55 @@ class OSFOfflineQT(QSystemTrayIcon):
     #     logger.debug('pausing')
     #     if self.background_handler and self.background_handler.is_alive():
     #         self.background_handler.stop()
+
+    def _consolidate_notifications(self, first_notification):
+        """
+        Consolidates notifications and groups them together. Releases a burst of all notifications that occur in
+        a given window of time after the first message is received.
+        Error messages are always displayed individually.
+
+        :param first_notification: The first notification that triggered the consolidation cycle
+        :return:
+        """
+        # Grab all available events, including the one that kicked off this consolidation cycle
+        available_notifications = [first_notification]
+        while True:
+            try:
+                event = self.notification_handler.queue.get_nowait()
+            except Empty:
+                break
+            else:
+                available_notifications.append(event)
+
+        # Display notifications
+        if len(available_notifications) == 1:
+            # If there's only one message, show it regardless of level
+            self._show_notifications(available_notifications)
+        else:
+            consolidated = group_events(available_notifications)
+            for level, notification_list in consolidated.items():
+                # Group info notifications, but display errors and warnings individually
+                if level > Level.INFO:
+                    self._show_notifications(notification_list)
+                else:
+                    self.showMessage(
+                        'Updated multiple',
+                        'Updated {} files and folders'.format(len(notification_list)),
+                        QSystemTrayIcon.NoIcon,
+                        msecs=settings.ALERT_DURATION / 1000.
+                    )
+
+        self.notification_handler.done()
+
+    def _show_notifications(self, notifications_list):
+        """Show a message bubble for each notification in the list provided"""
+        for n in notifications_list:
+            self.showMessage(
+                'Synchronizing...',
+                n.msg,
+                QSystemTrayIcon.NoIcon,
+                msecs=settings.ALERT_DURATION / 1000.
+            )
 
     def quit(self):
         try:
@@ -193,6 +243,6 @@ class SyncEventHandler(QThread):
 
     def run(self):
         while True:
-            event = self.queue.get()
             self.mutex.lock()
+            event = self.queue.get()
             self.notify_signal.emit(event)
