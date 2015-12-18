@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 import sys
 import requests
-import json
+from distutils.version import StrictVersion
 
 from PyQt5.QtWidgets import QApplication
 from PyQt5.QtWidgets import QMessageBox
@@ -27,9 +27,6 @@ def start():
     SingleInstance(callback=running_warning)  # will end application if an instance is already running
 
     # Check for updates first and give user a way to get new version
-
-
-
     try:
         swu_source = upd_source.UpdateGithubReleasesSource(REPO)
         swu_updater = upd_core.Updater(current_version=VERSION,
@@ -42,11 +39,10 @@ def start():
         pass
 
         # Then, if the current version is too old, close the program
-    r = requests.get('https://github.com/CenterForOpenScience/OSF-Offline/blob/develop/deploy/Offline-version.json')
-    with open(r) as data_file:
-        data = json.load(data_file)
-    min_version = int(data['version'])
-    if VERSION < min_version:
+    r = requests.get('https://raw.githubusercontent.com/chennan47/OSF-Offline/feature/auto_updater/deploy/Offline-version.json')
+
+    min_version = r.json()['version']
+    if StrictVersion(VERSION) < StrictVersion(min_version):
         # User error message
         warn_app = QApplication(sys.argv)
         QMessageBox.information(
@@ -55,7 +51,6 @@ def start():
             "Your OSF-Offline version is too old that you need to update before you can use."
         )
         warn_app.quit()
-
         sys.exit(1)
 
     # Start logging all events
