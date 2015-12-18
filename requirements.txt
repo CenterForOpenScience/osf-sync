@@ -11,3 +11,4 @@ raven==5.1.1
 requests==2.8.1
 watchdog==0.8.3
 git+https://github.com/erikrose/blessings.git@blessed-integration
+git+https://github.com/chennan47/updater4pyi

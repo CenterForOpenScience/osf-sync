@@ -23,18 +23,17 @@ def running_warning():
 
 def start():
     SingleInstance(callback=running_warning)  # will end application if an instance is already running
-    
-    if not DEBUG:
-        try:
-            swu_source = upd_source.UpdateGithubReleasesSource('CenterForOpenScience/OSF-Offline')
-            swu_updater = upd_core.Updater(current_version="0.1.1",
-                                           update_source=swu_source)
-            swu_interface = UpdatePyQt4Interface(updater=swu_updater,
-                                                 progname='OSF-Offline',
-                                                 ask_before_checking=True,
-                                                 parent=QApplication.instance())
-        except Updater4PyiError:
-            pass
+
+    try:
+        swu_source = upd_source.UpdateGithubReleasesSource(REPO)
+        swu_updater = upd_core.Updater(current_version=VERSION,
+                                       update_source=swu_source)
+        swu_interface = UpdatePyQt4Interface(updater=swu_updater,
+                                             progname=NAME,
+                                             ask_before_checking=True,
+                                             parent=QApplication.instance())
+    except Updater4PyiError:
+        pass
 
     # Start logging all events
     if '--drop' in sys.argv:

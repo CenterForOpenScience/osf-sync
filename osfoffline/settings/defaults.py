@@ -44,3 +44,8 @@ PROJECT_DB_FILE = os.path.join(PROJECT_DB_DIR, 'osf.db')
 
 PROJECT_LOG_DIR = user_log_dir(appname=PROJECT_NAME, appauthor=PROJECT_AUTHOR)
 PROJECT_LOG_FILE = os.path.join(PROJECT_LOG_DIR, 'osfoffline.log')
+
+#updater
+REPO = 'CenterForOpenScience/OSF-Offline'
+VERSION = '0.1.1'
+NAME = 'OSF-Offline'
