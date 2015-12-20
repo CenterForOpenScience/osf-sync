@@ -17,14 +17,15 @@ from updater4pyi.upd_iface_pyqt4 import UpdatePyQt4Interface
 from updater4pyi.upd_defs import Updater4PyiError
 
 
-def running_warning():
+def running_warning(message):
     warn_app = QApplication(sys.argv)
-    QMessageBox.information(None, 'Systray', 'OSF-Offline is already running. Check out the system tray.')
+    QMessageBox.information(None, 'Systray', message)
     warn_app.quit()
 
 
 def start():
-    SingleInstance(callback=running_warning)  # will end application if an instance is already running
+    # will end application if an instance is already running
+    SingleInstance(callback=running_warning('OSF-Offline is already running. Check out the system tray.'))
 
     # Check for updates first and give user a way to get new version
     try:
@@ -44,14 +45,7 @@ def start():
     min_version = r.json()['version']
     if StrictVersion(VERSION) < StrictVersion(min_version):
         # User error message
-        warn_app = QApplication(sys.argv)
-        QMessageBox.information(
-            None,
-            "Systray",
-            "Your OSF-Offline version is too old that you need to update before you can use."
-        )
-        warn_app.quit()
-        sys.exit(1)
+        running_warning('Your OSF-Offline version is too old that you need to update before you can use.')
 
     # Start logging all events
     if '--drop' in sys.argv:
