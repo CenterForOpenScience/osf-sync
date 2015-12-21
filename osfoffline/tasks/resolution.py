@@ -1,22 +1,11 @@
 import os
-import hashlib
 
 from osfoffline.tasks import operations
 from osfoffline.database import Session
 from osfoffline.sync.ext.auditor import EventType
 from osfoffline.tasks import interventions
 from osfoffline.tasks.interventions import Intervention
-
-
-def hash_file(path, chunk_size=64*1024):
-    s = hashlib.sha256()
-    with path.open(mode='rb') as f:
-        while True:
-            chunk = f.read(chunk_size)
-            if not chunk:
-                break
-            s.update(chunk)
-    return s.hexdigest()
+from osfoffline.utils import hash_file
 
 
 def prompt_user(local, remote, local_events, remote_events):
@@ -142,7 +131,7 @@ RESOLUTION_MAP = {
     (True, EventType.DELETE, EventType.DELETE): db_delete,
     (True, EventType.UPDATE, EventType.DELETE): remote_folder_delete,
     (True, EventType.CREATE, EventType.MOVE): move_gate(create_folder, db_create),
-    (True, EventType.DELETE, EventType.MOVE): lambda local, remote,  *_: [remote.operation()],
+    (True, EventType.DELETE, EventType.MOVE): lambda local, remote, *_: [remote.operation()],
     (True, EventType.UPDATE, EventType.MOVE): move_gate(handle_move_src_update, 'PromptUserMerge'),
     (True, EventType.DELETE, EventType.UPDATE): lambda *_: [],
     (True, EventType.UPDATE, EventType.UPDATE): lambda *_: [],

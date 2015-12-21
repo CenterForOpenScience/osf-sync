@@ -2,7 +2,6 @@ import os
 import datetime
 
 from sqlalchemy import Column, Integer, Boolean, String, DateTime
-from sqlalchemy import UniqueConstraint
 from sqlalchemy import ForeignKey, Enum
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.ext.hybrid import hybrid_property

@@ -9,6 +9,7 @@ from osfoffline.database.models import User
 from osfoffline.database.utils import save
 from osfoffline.exceptions import AuthError, TwoFactorRequiredError
 from osfoffline.utils.authentication import AuthClient
+from osfoffline.utils.log import add_user_to_sentry_logs
 from osfoffline.gui.qt.generated.login import Ui_login
 
 
@@ -28,19 +29,22 @@ class LoginScreen(QDialog, Ui_login):
             self.user = Session().query(User).one()
             self.user = AuthClient().populate_user_data(self.user)
             save(Session(), self.user)
-            return self.user
-
-            self.usernameEdit.setText(self.user.osf_login)
-            self.passwordEdit.setFocus()
         except AuthError:
-            Session().query(User).delete()
+            self.usernameEdit.setText(self.user.login)
+            self.passwordEdit.setFocus()
         except NoResultFound:
             self.usernameEdit.setFocus()
+        else:
+            # Add the user id of the logged in user to Sentry logs
+            add_user_to_sentry_logs()
+            return self.user
 
         self.exec_()
 
         if self.user:
-            save(Session(), self.user)
+            # Add the user id of the logged in user to Sentry logs
+            add_user_to_sentry_logs()
+
         return self.user
 
     def login(self, *, otp=None):

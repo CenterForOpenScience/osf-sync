@@ -63,7 +63,7 @@ class LocalSyncWorker(ConsolidatedEventHandler, metaclass=Singleton):
 
         try:
             # TODO: avoid a lazy context load in this case to catch the NodeNotFound exception?
-            _ = OperationContext(local=Path(event.src_path)).remote
+            _ = OperationContext(local=Path(event.src_path)).remote  # noqa
             return self.put_event(operations.RemoteMoveFile(
                 OperationContext(local=Path(event.src_path)),
                 OperationContext(local=Path(event.dest_path)),

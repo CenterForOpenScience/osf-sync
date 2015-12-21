@@ -239,7 +239,7 @@ class RemoteUpdateFile(BaseOperation):
         # WB id are <provider>/<id>
         remote.id = remote.id.replace(remote.provider + '/', '')
         remote.parent = self.db.parent
-        DatabaseUpdateFile(OperationContext(remote=remote,  db=self.db,  node=self.node)).run()
+        DatabaseUpdateFile(OperationContext(remote=remote, db=self.db, node=self.node)).run()
         Notification().info('Update Remote File: {}'.format(self.local))
 
 
@@ -363,7 +363,7 @@ class RemoteMoveFolder(MoveOperation):
         # WB id are <provider>/<id>
         remote.id = remote.id.replace(remote.provider + '/', '')
         remote.parent = Session().query(models.File).filter(models.File.id == dest_parent.db.id).one()
-        DatabaseUpdateFolder(OperationContext(remote=remote,  db=self.db,  node=self.node)).run()
+        DatabaseUpdateFolder(OperationContext(remote=remote, db=self.db, node=self.node)).run()
 
 
 class RemoteMoveFile(MoveOperation):
@@ -383,7 +383,7 @@ class RemoteMoveFile(MoveOperation):
         # WB id are <provider>/<id>
         remote.id = remote.id.replace(remote.provider + '/', '')
         remote.parent = Session().query(models.File).filter(models.File.id == dest_parent.db.id).one()
-        DatabaseUpdateFile(OperationContext(remote=remote,  db=self.db,  node=self.node)).run()
+        DatabaseUpdateFile(OperationContext(remote=remote, db=self.db, node=self.node)).run()
 
 
 class LocalMoveFile(MoveOperation):
