@@ -54,7 +54,8 @@ class Preferences(QDialog, Ui_Settings):
         self.node_fetcher = NodeFetcher()
 
     def closeEvent(self, event):
-        if set(self.selected_nodes) != set([node.id for tree_item, node in self.tree_items if tree_item.checkState(self.PROJECT_SYNC_COLUMN) == Qt.Checked]):
+        if set(self.selected_nodes) != set([node.id for tree_item, node in self.tree_items
+                                            if tree_item.checkState(self.PROJECT_SYNC_COLUMN) == Qt.Checked]):
             reply = QMessageBox()
             reply.setText('Unsaved changes')
             reply.setIcon(QMessageBox.Warning)
@@ -143,6 +144,7 @@ class Preferences(QDialog, Ui_Settings):
             self.node_fetcher = NodeFetcher()
             self.treeWidget.setCursor(QtCore.Qt.BusyCursor)
             self.node_fetcher.finished[list].connect(self.populate_item_tree)
+            self.node_fetcher.finished[int].connect(self.item_load_error)
             self.node_fetcher.moveToThread(self._executor)
             self._executor.started.connect(self.node_fetcher.fetch)
             self._executor.start()
@@ -168,17 +170,31 @@ class Preferences(QDialog, Ui_Settings):
         self.treeWidget.resizeColumnToContents(self.PROJECT_NAME_COLUMN)
         self.treeWidget.unsetCursor()
 
+    @QtCore.pyqtSlot(int)
+    def item_load_error(self, error_code):
+        """If the list of nodes does not load, warn the user, then close prefs panel without saving changes"""
+        # TODO: Is there a more elegant way to pass errors across signal or thread boundaries?
+        QMessageBox.critical(None,
+                             'Error fetching projects',
+                             'Could not fetch list of projects; the preferences window will be closed without saving changes. Please try again later.')
+        self.reset_tree_widget()
+        self.reject()
+
 
 class NodeFetcher(QtCore.QObject):
 
-    finished = QtCore.pyqtSignal(list)
+    finished = QtCore.pyqtSignal([list], [int])
 
     def fetch(self):
+        """Fetch the list of nodes associated with a user. Returns either a list, or an (int) error code."""
         try:
             client = OSFClient()
             client_user = client.get_user()
             user_nodes = client_user.get_nodes()
-        except Exception as e:
-            logger.exception(e)
+        except:
+            logger.exception('Error fetching list of nodes')
+            result = -1
+        else:
+            result = [node for node in user_nodes if 'parent' not in node.raw['relationships']]
 
-        self.finished.emit([node for node in user_nodes if 'parent' not in node.raw['relationships']])
+        self.finished[type(result)].emit(result)

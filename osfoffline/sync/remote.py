@@ -75,7 +75,7 @@ class RemoteSyncWorker(threading.Thread, metaclass=Singleton):
                 # TODO: Add user-facing notification?
                 msg = 'Error encountered in remote sync operation; will try again later'
                 Notification().error(msg)
-                logging.exception(msg)
+                logger.exception(msg)
 
             time.sleep(10)  # FIXME Per icereval, this is "due to watchdog not clearing its event evaluation when the lock is cleared"
             LocalSyncWorker().ignore.clear()
