@@ -83,7 +83,13 @@ class OSFOfflineQT(QSystemTrayIcon):
         while not validate_containing_folder(containing_folder):
             logger.warning('Invalid containing folder: {}'.format(containing_folder))
             # AlertHandler.warn('Invalid containing folder. Please choose another.')
-            containing_folder = os.path.abspath(QFileDialog.getExistingDirectory(caption='Choose where to place OSF folder'))
+            res = QFileDialog.getExistingDirectory(caption='Choose where to place OSF folder')
+            if not res:
+                # Do not accept an empty string (dialog box dismissed without selection)
+                # FIXME: This fixes overt errors, but user gets infinite loop of pickers until they select a folder
+                continue
+            else:
+                containing_folder = os.path.abspath(res)
 
         user.folder = os.path.join(containing_folder, 'OSF')
         os.makedirs(user.folder, exist_ok=True)
