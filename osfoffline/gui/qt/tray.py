@@ -3,7 +3,7 @@ import os
 from queue import Empty, Queue
 import threading
 
-from PyQt5.Qt import QIcon
+from PyQt5.QtGui import QIcon
 from PyQt5.QtCore import pyqtSignal
 from PyQt5.QtWidgets import QMessageBox
 from PyQt5.QtCore import QMutex
@@ -57,7 +57,8 @@ class OSFOfflineQT(QSystemTrayIcon):
     def __init__(self, application):
         super().__init__(QIcon(':/tray_icon.png'), application)
 
-        self.setContextMenu(OSFOfflineMenu(self))
+        self._context_menu = OSFOfflineMenu(self)
+        self.setContextMenu(self._context_menu)
         self.show()
 
         self.intervention_handler = SyncEventHandler()
@@ -71,7 +72,7 @@ class OSFOfflineQT(QSystemTrayIcon):
             # preferences
             # (self.preferences.ui.desktopNotifications.stateChanged, self.preferences.alerts_changed),
             # (self.preferences.preferences_closed_signal, self.resume),
-            # (self.preferences.ui.accountLogOutButton.clicked, self.logout),
+            (self._context_menu.preferences.accountLogOutButton.clicked, self.logout),
             (self.intervention_handler.notify_signal, self.on_intervention),
             (self.notification_handler.notify_signal, self.on_notification),
         ]
@@ -81,12 +82,11 @@ class OSFOfflineQT(QSystemTrayIcon):
     def ensure_folder(self, user):
         containing_folder = os.path.dirname(user.folder or '')
         while not validate_containing_folder(containing_folder):
-            logger.warning('Invalid containing folder: {}'.format(containing_folder))
-            # AlertHandler.warn('Invalid containing folder. Please choose another.')
+            logger.warning('Invalid containing folder: "{}"'.format(containing_folder))
             res = QFileDialog.getExistingDirectory(caption='Choose where to place OSF folder')
             if not res:
                 # Do not accept an empty string (dialog box dismissed without selection)
-                # FIXME: This fixes overt errors, but user gets infinite loop of pickers until they select a folder
+                # FIXME: This fixes overt errors, but user gets folder picker endlessly until they select a folder
                 continue
             else:
                 containing_folder = os.path.abspath(res)
