@@ -1,7 +1,8 @@
 from concurrent.futures import ThreadPoolExecutor
 from enum import Enum
-from pathlib import Path
+import logging
 import os
+from pathlib import Path
 
 from osfoffline import settings
 from osfoffline.client.osf import OSFClient
@@ -11,6 +12,9 @@ from osfoffline.tasks import operations
 from osfoffline.tasks.operations import OperationContext
 from osfoffline.utils import hash_file
 from osfoffline.utils.authentication import get_current_user
+
+
+logger = logging.getLogger(__name__)
 
 
 class Location(Enum):
@@ -77,8 +81,10 @@ class Auditor:
         def context_for(paths):
             if not isinstance(paths, tuple):
                 paths = (paths, )
-                # return OperationContext(Path(paths), db_map.get(paths, (None, ))[-1], remote_map.get(paths, (None, ))[-1])
-            return [OperationContext(self.user_folder / Path(path), db_map.get(path, (None, ))[-1], remote_map.get(path, (None, ))[-1]) for path in paths]
+            return [OperationContext(self.user_folder / Path(path),
+                                     db_map.get(path, (None, ))[-1],
+                                     remote_map.get(path, (None, ))[-1])
+                    for path in paths]
 
         diffs = {
             Location.LOCAL: self._diff(local_map, db_map),
@@ -103,15 +109,24 @@ class Auditor:
         return modifications[Location.LOCAL], modifications[Location.REMOTE]
 
     def collect_all_db(self):
-        return {db.path.replace(self.user_folder, ''): (db.id, db.sha256, db) for db in Session().query(File)}
+        return {db.path.replace(self.user_folder, ''): (db.id, db.sha256, db)
+                for db in Session().query(File)}
 
     def collect_all_remote(self):
         ret = {}
         with ThreadPoolExecutor(max_workers=5) as tpe:
             for node in Session().query(Node):
-                remote_node = OSFClient().get_node(node.id)
+                try:
+                    remote_node = OSFClient().get_node(node.id)
+                except Exception as e:
+                    # If the node can't be reached, skip auditing of this project and go on to the next node
+                    # TODO: The client should be made smart enough to check return code before parsing and yield a custom exception
+                    # TODO: The user should be notified about projects that failed to sync, and given a way to deselect them
+                    logger.exception(e)
+                    continue
                 remote = remote_node.get_storage(id='osfstorage')
                 rel_path = os.path.join('{} - {}'.format(node.title, node.id), settings.OSF_STORAGE_FOLDER)
+                # TODO: Use futures to catch exceptions in processing a node
                 tpe.submit(self._collect_node_remote, remote, ret, rel_path, tpe)
             tpe._work_queue.join()
         return ret
