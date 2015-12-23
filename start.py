@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+import logging
 import sys
 import requests
 from distutils.version import StrictVersion
@@ -10,11 +11,14 @@ from PyQt5.QtWidgets import QSystemTrayIcon
 from osfoffline.database import drop_db
 from osfoffline.gui.qt import OSFOfflineQT
 from osfoffline.utils.singleton import SingleInstance
-from osfoffline.settings import *
+from osfoffline import settings
 
 from updater4pyi import upd_source, upd_core
 from updater4pyi.upd_iface_pyqt4 import UpdatePyQt4Interface
 from updater4pyi.upd_defs import Updater4PyiError
+
+
+logger = logging.getLogger(__name__)
 
 
 def running_warning(message):
@@ -29,23 +33,31 @@ def start():
 
     # Check for updates first and give user a way to get new version
     try:
-        swu_source = upd_source.UpdateGithubReleasesSource(REPO)
-        swu_updater = upd_core.Updater(current_version=VERSION,
+        swu_source = upd_source.UpdateGithubReleasesSource(settings.REPO)
+        swu_updater = upd_core.Updater(current_version=settings.VERSION,
                                        update_source=swu_source)
         swu_interface = UpdatePyQt4Interface(updater=swu_updater,
-                                             progname=NAME,
+                                             progname=settings.NAME,
                                              ask_before_checking=True,
                                              parent=QApplication.instance())
-    except Updater4PyiError:
-        pass
+    except Updater4PyiError as e:
+        logger.exception(e.updater_msg)
 
+    min_version = None
     # Then, if the current version is too old, close the program
-    r = requests.get(MIN_VERSION_URL)
+    try:
+        r = requests.get(settings.MIN_VERSION_URL)
+        min_version = r.json()['min-version']
+    except requests.exceptions.ConnectionError:
+        running_warning('Check for minimun verion requirements for OSF-Offline failed '
+                        'becasue you have no Internet connection')
 
-    min_version = r.json()['version']
-    if StrictVersion(VERSION) < StrictVersion(min_version):
-        # User error message
-        running_warning('Your OSF-Offline version is too old that you need to update before you can use.')
+    if min_version:
+        if StrictVersion(settings.VERSION) < StrictVersion(min_version):
+            # User error message
+            running_warning('You must update to a newer version. You are currently using version {}. '
+                            'The minimum required version is {}.'.format(settings.VERSION, min_version))
+            sys.exit(1)
 
     # Start logging all events
     if '--drop' in sys.argv:
