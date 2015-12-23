@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 import sys
+import signal
 
 from PyQt5.QtWidgets import QApplication
 from PyQt5.QtWidgets import QMessageBox
@@ -9,6 +10,7 @@ from osfoffline.database import drop_db
 from osfoffline.gui.qt import OSFOfflineQT
 from osfoffline.utils.singleton import SingleInstance
 
+signal.signal(signal.SIGINT, signal.SIG_DFL)
 
 def running_warning():
     warn_app = QApplication(sys.argv)
