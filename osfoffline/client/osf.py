@@ -35,7 +35,8 @@ class OSFClient(metaclass=Singleton):
 class BaseResource(abc.ABC):
 
     OSF_HOST = settings.API_BASE
-    API_PREFIX = 'v2'
+    API_PREFIX = settings.API_VERSION
+    BASE_URL = '{}/{}/'.format(OSF_HOST, API_PREFIX)
 
     def __init__(self, request_session, data):
         self.request_session = request_session
@@ -45,8 +46,8 @@ class BaseResource(abc.ABC):
         self.raw = data
 
     @classmethod
-    def get_url(cls, id):
-        return '{}/{}/'.format(cls.OSF_HOST, cls.API_PREFIX)
+    def get_url(cls, *args):
+        return cls.BASE_URL
 
     @classmethod
     def load(cls, request_session, *args):
@@ -74,7 +75,7 @@ class User(BaseResource):
 
     @classmethod
     def get_url(cls, id='me'):
-        return '{}/{}/{}/{}/'.format(cls.OSF_HOST, cls.API_PREFIX, cls.RESOURCE, id)
+        return '{}/{}/{}/'.format(cls.BASE_URL, cls.RESOURCE, id)
 
     def get_nodes(self):
         return UserNode.load(self.request_session, self.id)
@@ -91,7 +92,7 @@ class Node(BaseResource):
 
     @classmethod
     def get_url(cls, id):
-        return '{}/{}/{}/{}/'.format(cls.OSF_HOST, cls.API_PREFIX, cls.RESOURCE, id)
+        return '{}/{}/{}/'.format(cls.BASE_URL, cls.RESOURCE, id)
 
     def get_storage(self, id='osfstorage'):
         # TODO: At present only osfstorage is fully supported for syncing
@@ -106,14 +107,14 @@ class UserNode(Node):
     """Fetch API data about nodes owned by a specific user"""
     @classmethod
     def get_url(cls, id):
-        return '{}/{}/users/{}/nodes/?filter[registration]=false'.format(cls.OSF_HOST, cls.API_PREFIX, id)
+        return '{}/users/{}/nodes/?filter[registration]=false'.format(cls.BASE_URL, id)
 
 
 class StorageObject(BaseResource):
     """Represent API data for files or folders under a specific node"""
     @classmethod
     def get_url(cls, id):
-        return '{}/{}/files/{}/'.format(cls.OSF_HOST, cls.API_PREFIX, id)
+        return '{}/files/{}/'.format(cls.BASE_URL, id)
 
     @classmethod
     def load(cls, request_session, *args):

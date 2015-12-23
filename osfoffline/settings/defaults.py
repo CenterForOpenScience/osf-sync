@@ -14,6 +14,7 @@ DRY = False
 # Base URL for API server; used to fetch data
 OSF_URL = 'https://test.osf.io'
 API_BASE = 'https://test-api.osf.io'
+API_VERSION = 'v2'
 FILE_BASE = 'https://test-files.osf.io'
 
 # Interval (in seconds) to poll the OSF for server-side file changes
