@@ -11,6 +11,7 @@ from PyQt5.QtWidgets import QSystemTrayIcon
 from osfoffline.database import drop_db
 from osfoffline.gui.qt import OSFOfflineQT
 from osfoffline.utils.singleton import SingleInstance
+from osfoffline.tasks.notifications import Notification
 from osfoffline import settings
 
 from updater4pyi import upd_source, upd_core
@@ -42,6 +43,8 @@ def start():
                                              parent=QApplication.instance())
     except Updater4PyiError as e:
         logger.exception(e.updater_msg)
+        if 'Connection Error' in e.updater_msg:
+            Notification().error('Cannot check for updates because you have no Internet connection.')
 
     min_version = None
     # Then, if the current version is too old, close the program
@@ -49,7 +52,7 @@ def start():
         r = requests.get(settings.MIN_VERSION_URL)
         min_version = r.json()['min-version']
     except requests.exceptions.ConnectionError:
-        running_warning('Check for minimun verion requirements for OSF-Offline failed '
+        Notification().error('Check for minimun verion requirements for OSF-Offline failed '
                         'becasue you have no Internet connection')
 
     if min_version:
