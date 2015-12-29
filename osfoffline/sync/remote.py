@@ -4,19 +4,31 @@ import logging
 import os
 import threading
 
+from sqlalchemy.sql.expression import true
+from sqlalchemy.orm.exc import NoResultFound
+
 from pathlib import Path
 
 from osfoffline import settings
+
+from osfoffline.client.osf import OSFClient
+
 from osfoffline.database import Session
 from osfoffline.database.models import Node, File
+from osfoffline.database.utils import save
+
+from osfoffline.sync.local import LocalSyncWorker
 from osfoffline.sync.exceptions import FolderNotInFileSystem
-from osfoffline.sync.ext.auditor import Auditor
-from osfoffline.sync.ext.auditor import EventType
+from osfoffline.sync.ext.auditor import (
+    Auditor,
+    EventType
+)
+
 from osfoffline.tasks.resolution import RESOLUTION_MAP
+from osfoffline.tasks.queue import OperationWorker
+
 from osfoffline.utils import Singleton
 from osfoffline.utils.authentication import get_current_user
-from osfoffline.tasks.queue import OperationWorker
-from osfoffline.sync.local import LocalSyncWorker
 
 
 logger = logging.getLogger(__name__)
@@ -55,10 +67,12 @@ class RemoteSyncWorker(threading.Thread, metaclass=Singleton):
                 logger.info('Sleep interrupted, syncing now')
             self._sync_now_event.clear()
 
-            # Ensure selected node directories exist
-            for node in Session().query(Node).all():
-                local = Path(os.path.join(node.path, settings.OSF_STORAGE_FOLDER))
-                os.makedirs(str(local), exist_ok=True)
+            # Ensure selected node directories exist and db entries created
+            selected_nodes = list(
+                Session().query(Node).filter(Node.sync == true()).all()
+            )
+            for node in selected_nodes:
+                self._preprocess_node(node, delete=False)
 
             logger.info('Beginning remote sync')
             LocalSyncWorker().ignore.set()
@@ -74,12 +88,41 @@ class RemoteSyncWorker(threading.Thread, metaclass=Singleton):
         self.__stop.set()
         self.sync_now()
 
-    def _preprocess_node(self, node):
-        local = Path(os.path.join(node.path, settings.OSF_STORAGE_FOLDER))
-        if not local.exists():
-            logger.warning('Clearing files for node {}'.format(node))
-            Session().query(File).filter(File.node_id == node.id).delete()
-        os.makedirs(str(local), exist_ok=True)
+    def _preprocess_node(self, node, delete=True):
+        nodes = [node]
+        remote_node = OSFClient().get_node(node.id)
+        stack = remote_node.get_children(lazy=False)
+        while len(stack):
+            child = stack.pop(0)
+            try:
+                db_child = Session().query(Node).filter(
+                    Node.id == child.id
+                ).one()
+            except NoResultFound:
+                db_child = Node(
+                    id=child.id,
+                    title=child.title,
+                    user=node.user,
+                    parent_id=Session().query(Node).filter(
+                        Node.id == child.parent.id
+                    ).one().id
+                )
+                Session().add(db_child)
+            nodes.append(db_child)
+            children = child.get_children(lazy=False)
+            # TODO(samchrisinger): delete children not mirrored remotely?
+            # children_ids = map(lambda c: c.id, children)
+            # for record in child.children:
+            #     if record.id not in children_ids:
+            #         Session.delete(record)
+            stack = stack + children
+        save(Session())
+        for node in nodes:
+            local = Path(os.path.join(node.path, settings.OSF_STORAGE_FOLDER))
+            if delete and not local.exists():
+                logger.warning('Clearing files for node {}'.format(node))
+                Session().query(File).filter(File.node_id == node.id).delete()
+                os.makedirs(str(local), exist_ok=True)
 
     def _check(self):
         resolutions = []
