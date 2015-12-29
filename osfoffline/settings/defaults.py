@@ -9,6 +9,8 @@ PROJECT_NAME = 'osf-offline'
 PROJECT_AUTHOR = 'cos'
 APPLICATION_SCOPES = 'osf.full_write'
 
+DEBUG = False
+
 DRY = False
 
 # Base URL for API server; used to fetch data
