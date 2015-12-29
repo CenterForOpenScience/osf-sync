@@ -152,7 +152,7 @@ class Auditor:
         ret = {}
         with ThreadPoolExecutor(max_workers=5) as tpe:
             # first get top level nodes selected in settings
-            for node in Session().query(Node).filter(Node.sync == true()):
+            for node in Session().query(Node).filter(Node.sync):
                 remote_node = OSFClient().get_node(node.id)
                 remote = remote_node.get_storage(id='osfstorage')
 
@@ -210,7 +210,7 @@ class Auditor:
 
     def collect_all_local(self, db_map):
         ret = {}
-        for node in Session().query(Node).filter(Node.sync == true()):
+        for node in Session().query(Node).filter(Node.sync):
             node_path = Path(os.path.join(node.path, settings.OSF_STORAGE_FOLDER))
             self._collect_node_local(node_path, ret, db_map)
 

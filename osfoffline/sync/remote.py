@@ -68,10 +68,7 @@ class RemoteSyncWorker(threading.Thread, metaclass=Singleton):
             self._sync_now_event.clear()
 
             # Ensure selected node directories exist and db entries created
-            selected_nodes = list(
-                Session().query(Node).filter(Node.sync == true()).all()
-            )
-            for node in selected_nodes:
+            for node in Session().query(Node).filter(Node.sync).all():
                 self._preprocess_node(node, delete=False)
 
             logger.info('Beginning remote sync')
