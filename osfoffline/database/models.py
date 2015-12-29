@@ -49,15 +49,22 @@ class Node(Base):
 
     @property
     def path(self):
+        return os.path.join(self.user.folder, self.rel_path)
+
+    @property
+    def rel_path(self):
         """Recursively walk up the path of the node. Top level node joins with the osf folder path of the user
         """
         # +os.path.sep+ instead of os.path.join: http://stackoverflow.com/a/14504695
-
         name = '{} - {}'.format(self.title, self.id)
         if self.parent:
-            return os.path.join(self.parent.path, 'Components', name)
+            return os.path.join(
+                self.parent.rel_path,
+                settings.COMPONENTS_FOLDER,
+                name
+            )
         else:
-            return os.path.join(self.user.folder, name)
+            return name
 
     @hybrid_property
     def top_level_file_folders(self):
