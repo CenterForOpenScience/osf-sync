@@ -74,17 +74,18 @@ class BaseResource(abc.ABC):
             yield item
         if data['links'].get('next'):
             for item in self.fetch_related(
-                    self.request_session,
-                    relationship
+                self.request_session,
+                relationship,
+                next_url=data['links']['next']
             ):
                 yield item
 
-    def fetch_related(self, relationship, query=None):
+    def fetch_related(self, relationship, query=None, next_url=None):
         relation = self.raw['relationships'].get(relationship)
         if not relation:
             return None
 
-        url = self.raw['relationships'][relationship]['links']['related']['href']
+        url = next_url or self.raw['relationships'][relationship]['links']['related']['href']
         params = {'page[size]': 250}
         params.update(query or {})
         resp = self.request_session.get(
@@ -152,7 +153,7 @@ class Node(BaseResource):
         if lazy:
             return related
         else:
-            return [item for item in related]
+            return list(related)
 
 class UserNode(Node):
     """Fetch API data about nodes owned by a specific user"""
@@ -203,7 +204,7 @@ class Folder(StorageObject):
         if lazy:
             return related
         else:
-            return [item for item in related]
+            return list(related)
 
 class NodeStorage(Folder):
     """Fetch API list of storage options under a node"""
