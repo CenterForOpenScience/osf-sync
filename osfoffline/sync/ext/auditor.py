@@ -269,13 +269,13 @@ class Auditor:
             fid = target[path].fid
             if fid in id_source:
                 deleted.remove(path)
-                moved.add((path, id_source[id]))
+                moved.add((path, id_source[fid]))
 
         for path in set(created):
             fid = source[path].fid
             if fid in id_target:
                 created.remove(path)
-                moved.add((id_target[id], path))
+                moved.add((id_target[fid], path))
 
         modified = set()
         for path in set(target.keys()) & set(source.keys()):
