@@ -50,6 +50,10 @@ class BaseResource(abc.ABC):
         return cls.BASE_URL
 
     @classmethod
+    def from_data(cls, request_session, data):
+        return cls(request_session, data)
+
+    @classmethod
     def load(cls, request_session, *args):
         resp = request_session.get(cls.get_url(*args), params={'page[size]': 250})
         data = resp.json()
@@ -60,9 +64,38 @@ class BaseResource(abc.ABC):
                 resp = request_session.get(data['links']['next'], params={'page[size]': 250})
                 data = resp.json()
                 l.extend(data['data'])
-            return [cls(request_session, item) for item in l]
-        return cls(request_session, data['data'])
+            return [cls.from_data(request_session, item) for item in l]
+        return cls.from_data(request_session, data['data'])
 
+    def _fetch_related(self, relationship, data):
+        items = data['data']
+        for item in items:
+            yield item
+        if data['links'].get('next'):
+            for item in self.fetch_related(
+                    self.request_session,
+                    relationship
+            ):
+                yield item
+
+    def fetch_related(self, relationship, query=None):
+        relation = self.raw['relationships'].get(relationship)
+        if not relation:
+            return None
+
+        url = self.raw['relationships'][relationship]['links']['related']['href']
+        params = {'page[size]': 250}
+        params.update(query or {})
+        resp = self.request_session.get(
+            url,
+            params=params
+        )
+        data = resp.json()
+        items = data['data']
+        if not isinstance(items, list):
+            return items
+        else:
+            return self._fetch_related(relationship, data)
 
 class User(BaseResource):
     """Fetch API data relevant to a specific user"""
@@ -89,6 +122,15 @@ class Node(BaseResource):
         super().__init__(request_session, data)
         self.date_created = iso8601.parse_date(self.date_created)
         self.date_modified = iso8601.parse_date(self.date_modified)
+        self.title = data['attributes']['title']
+
+        self.parent = Node(
+            request_session,
+            data['embeds']['parent']['data']
+        ) if (
+            'embeds' in data and
+            data['embeds']['parent'].get('data')
+        ) else None
 
     @classmethod
     def get_url(cls, id):
@@ -102,6 +144,15 @@ class Node(BaseResource):
             if storage.provider == id
         )
 
+    def get_children(self, lazy=False):
+        related = map(
+            lambda data: Node(self.request_session, data),
+            self.fetch_related('children', {'embed': 'parent'})
+        )
+        if lazy:
+            return related
+        else:
+            return [item for item in related]
 
 class UserNode(Node):
     """Fetch API data about nodes owned by a specific user"""
@@ -141,22 +192,24 @@ class Folder(StorageObject):
     """Represent API data for folders under a specific node"""
     is_dir = True
 
-    def get_children(self):
-        resp = self.request_session.get(self.raw['relationships']['files']['links']['related']['href'], params={'page[size]': 250})
-        data = resp.json()
+    def __init__(self, request_session, data, *args):
+        super(Folder, self).__init__(request_session, data, *args)
 
-        if isinstance(data['data'], list):
-            l = data['data']
-            while data['links'].get('next'):
-                resp = self.request_session.get(data['links']['next'], params={'page[size]': 250})
-                data = resp.json()
-                l.extend(data['data'])
-            return [
-                (Folder if item['attributes']['kind'] == 'folder' else File)(self.request_session, item, parent=self)
-                for item in l
-            ]
-        return StorageObject(self.request_session, data['data'], parent=self)
+        self.name = data['attributes']['name']
+        self.path = data['attributes']['path']
 
+    def __repr__(self):
+        return '<Folder {0} name={1} path={2}>'.format(id(self), self.name, self.path)
+
+    def get_children(self, lazy=False):
+        related = map(
+            lambda item: (Folder if item['attributes']['kind'] == 'folder' else File)(self.request_session, item, parent=self),
+            self.fetch_related('files')
+        )
+        if lazy:
+            return related
+        else:
+            return [item for item in related]
 
 class NodeStorage(Folder):
     """Fetch API list of storage options under a node"""
