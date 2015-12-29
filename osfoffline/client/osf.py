@@ -36,7 +36,7 @@ class BaseResource(abc.ABC):
 
     OSF_HOST = settings.API_BASE
     API_PREFIX = settings.API_VERSION
-    BASE_URL = '{}/{}/'.format(OSF_HOST, API_PREFIX)
+    BASE_URL = '{}/{}'.format(OSF_HOST, API_PREFIX)
 
     def __init__(self, request_session, data):
         self.request_session = request_session
@@ -92,7 +92,7 @@ class Node(BaseResource):
 
     @classmethod
     def get_url(cls, id):
-        return '{}/{}/{}/'.format(cls.BASE_URL, cls.RESOURCE, id)
+        return '{}/{}/{}/?embed=parent'.format(cls.BASE_URL, cls.RESOURCE, id)
 
     def get_storage(self, id='osfstorage'):
         # TODO: At present only osfstorage is fully supported for syncing
@@ -162,7 +162,11 @@ class NodeStorage(Folder):
     """Fetch API list of storage options under a node"""
     @classmethod
     def get_url(cls, node_id):
-        return Node.get_url(node_id) + 'files/'
+        return '{}/{}/{}/files/'.format(
+            cls.BASE_URL,
+            Node.RESOURCE,
+            node_id
+        )
 
 
 class File(StorageObject):
