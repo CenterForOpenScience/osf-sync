@@ -224,6 +224,7 @@ class Auditor:
                     )
                 )
                 self._collect_node_local(child_path, ret, db_map)
+                stack = stack + child.children
         return ret
 
     def _collect_node_local(self, root, acc, db_map):
