@@ -28,7 +28,7 @@ class OperationWorker(threading.Thread, metaclass=Singleton):
             if job is None:
                 self._queue.task_done()
                 continue
-            logger.debug('Running {}'.format(job))
+            #logger.debug('Running {}'.format(job))
             try:
                 job.run(dry=settings.DRY)
             except (NodeNotFound, ) as e:
