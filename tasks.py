@@ -42,3 +42,14 @@ def qt_gen():
     run('pyuic5 ./osfoffline/gui/qt/static/login.ui -o ./osfoffline/gui/qt/generated/login.py')
     run('pyuic5 ./osfoffline/gui/qt/static/preferences.ui -o ./osfoffline/gui/qt/generated/preferences.py')
     run('pyrcc5 ./osfoffline/gui/qt/static/resources.qrc -o ./osfoffline/gui/qt/generated/resources.py')
+
+@task
+def wipe(hard=True):
+    db_cmd = "rm -r '{0}'".format(settings.PROJECT_DB_FILE)
+    log_cmd = "rm -r '{0}'".format(settings.PROJECT_LOG_FILE)
+    if hard:
+        run(db_cmd)
+        run(log_cmd)
+    else:
+        print(db_cmd)
+        print(log_cmd)
