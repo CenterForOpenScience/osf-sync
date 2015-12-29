@@ -40,10 +40,11 @@ class BaseResource(abc.ABC):
 
     def __init__(self, request_session, data):
         self.request_session = request_session
-        self.__dict__.update(data['attributes'])
         self.id = data['id']
         self.type = data['type']
         self.raw = data
+        for attribute, value in data['attributes'].items():
+            setattr(self, attribute, value)
 
     @classmethod
     def get_url(cls, *args):
@@ -122,7 +123,6 @@ class Node(BaseResource):
         super().__init__(request_session, data)
         self.date_created = iso8601.parse_date(self.date_created)
         self.date_modified = iso8601.parse_date(self.date_modified)
-        self.title = data['attributes']['title']
 
         self.parent = Node(
             request_session,
@@ -192,14 +192,8 @@ class Folder(StorageObject):
     """Represent API data for folders under a specific node"""
     is_dir = True
 
-    def __init__(self, request_session, data, *args):
-        super(Folder, self).__init__(request_session, data, *args)
-
-        self.name = data['attributes']['name']
-        self.path = data['attributes']['path']
-
     def __repr__(self):
-        return '<Folder {0} name={1} path={2}>'.format(id(self), self.name, self.path)
+        return '<{0} {1} name={2} path={2}>'.format(__class__.__name__, id(self), self.name, self.path)
 
     def get_children(self, lazy=False):
         related = map(
