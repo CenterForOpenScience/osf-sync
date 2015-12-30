@@ -3,8 +3,6 @@ from enum import Enum
 from pathlib import Path
 import os
 
-from sqlalchemy.sql.expression import true
-
 from osfoffline import settings
 from osfoffline.client.osf import OSFClient
 from osfoffline.database import Session
@@ -140,7 +138,7 @@ class Auditor:
 
     def collect_all_db(self):
         return {
-            entry.path.replace(self.user_folder, ''): Audit(
+            entry.rel_path: Audit(
                 entry.id,
                 entry.sha256,
                 entry
@@ -154,23 +152,32 @@ class Auditor:
             # first get top level nodes selected in settings
             for node in Session().query(Node).filter(Node.sync):
                 remote_node = OSFClient().get_node(node.id)
-                remote = remote_node.get_storage(id='osfstorage')
-
+                remote_files = remote_node.get_storage(id='osfstorage')
                 rel_path = os.path.join(
                     node.rel_path,
                     settings.OSF_STORAGE_FOLDER
                 )
-                tpe.submit(self._collect_node_remote, remote, ret, rel_path, tpe)
+                tpe.submit(
+                    self._collect_node_remote,
+                    remote_files,
+                    ret,
+                    rel_path,
+                    tpe
+                )
+
                 stack = remote_node.get_children(lazy=False)
                 while len(stack):
                     remote_child = stack.pop(0)
-                    child_storage = remote_child.get_storage(id='osfstorage')
+                    child_files = remote_child.get_storage(id='osfstorage')
+                    # RemoteSyncWorker's _preprocess_node guarentess a db entry exists
+                    # for each Node in the remote project heirarchy. Use the db Node's
+                    # path representation to ensure consistent path naming conventions.
                     child_path = Session().query(Node).filter(
                         Node.id == remote_child.id
                     ).one().rel_path
                     tpe.submit(
                         self._collect_node_remote,
-                        child_storage,
+                        child_files,
                         ret,
                         os.path.join(
                             child_path,
@@ -197,7 +204,6 @@ class Auditor:
             if child.name in settings.IGNORED_NAMES:
                 continue
             if child.kind == 'folder':
-                #self._collect_node_remote(child, acc, rel_path, tpe)
                 tpe.submit(self._collect_node_remote, child, acc, rel_path, tpe)
             else:
                 acc[os.path.join(rel_path, child.name)] = Audit(
@@ -206,7 +212,6 @@ class Auditor:
                     child
                 )
         tpe._work_queue.task_done()
-        #return acc
 
     def collect_all_local(self, db_map):
         ret = {}
