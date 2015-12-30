@@ -35,7 +35,18 @@ class Node(Base):
 
     id = Column(String, primary_key=True)
 
+    # True if the node has been explicitly selected for sync by the user. Generally
+    # components will have sync = False. For all Nodes with sync = False there exists
+    # some ancestor with sync = True.
+    #
+    # TODO: If we plan to support syncing subsets of a project heirarchy it may be
+    # convienent to cast this to in Integer or Enum field with 3 accepted states:
+    # 1: Explicitly selected for sync
+    # 0: Implicitly synced-- descendant of some explicitly synced Node
+    # -1 (or 2 if we prefer unsigned): Explicitly ignored-- should have no children
+    # without sync = 1
     sync = Column(Boolean, default=False, nullable=False)
+
     title = Column(String)
     user_id = Column(Integer, ForeignKey('user.id'), nullable=False)
     parent_id = Column(Integer, ForeignKey('node.id'), nullable=True)
@@ -87,6 +98,13 @@ class Node(Base):
         else:
             assert self.parent is not None
         return top_level
+
+    @validates('sync')
+    def validate_sync(self):
+        if not self.parent_id:
+            assert self.sync == 1
+        else:
+            assert self.sync == 0
 
     def __repr__(self):
         return '<Node({}, title={}, path={})>'.format(self.id, self.title, self.path)
