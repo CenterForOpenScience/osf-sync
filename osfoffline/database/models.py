@@ -49,6 +49,9 @@ class Node(Base):
 
     title = Column(String)
     user_id = Column(Integer, ForeignKey('user.id'), nullable=False)
+    # The id of the parent Node. Should be None if either:
+    # - the Node has no parent
+    # - syncing a child Node but not its parent
     parent_id = Column(Integer, ForeignKey('node.id'), nullable=True)
 
     children = relationship('Node', backref=backref('parent', remote_side=[id]), cascade='all')
