@@ -218,7 +218,7 @@ class OSFOfflineQT(QSystemTrayIcon):
         drop_db()
         # Clear any user-specific context data that would be sent to Sentry
         remove_user_from_sentry_logs()
-        self.quit()
+        self.start()
 
 
 class SyncEventHandler(QThread):
