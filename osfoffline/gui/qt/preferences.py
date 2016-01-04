@@ -110,6 +110,8 @@ class Preferences(QDialog, Ui_Settings):
                             sync=True
                         )
                     )
+                else:
+                    db_node.sync = True
             elif db_node:
                 Session().delete(db_node)
         save(Session())
