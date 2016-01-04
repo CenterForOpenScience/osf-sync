@@ -22,6 +22,16 @@ logger = logging.getLogger(__name__)
 
 class OperationContext:
 
+    def __init__(self, local=None, db=None, remote=None, node=None, is_folder=False):
+        self._db = db
+        self._node = node
+        self._local = local
+        self._remote = remote
+        self._is_folder = is_folder
+
+    def __repr__(self):
+        return '<{}(node={}, local={}, db={}, remote={})>'.format(self.__class__.__name__, self._node, self._local, self._db, self._remote)
+
     @property
     def node(self):
         if self._node:
@@ -61,16 +71,6 @@ class OperationContext:
         if self._db:
             self._local = Path(self._db.path)
         return self._local
-
-    def __init__(self, local=None, db=None, remote=None, node=None, is_folder=False):
-        self._db = db
-        self._node = node
-        self._local = local
-        self._remote = remote
-        self._is_folder = is_folder
-
-    def __repr__(self):
-        return '<{}({}, {}, {}, {})>'.format(self.__class__.__name__, self._node, self._local, self._db, self._remote)
 
 
 class BaseOperation(abc.ABC):
@@ -378,6 +378,7 @@ class RemoteMoveFolder(MoveOperation):
             'action': 'move',
             'path': dest_parent.db.osf_path if dest_parent.db.parent else '/',
             'rename': self._dest_context.local.name,
+            'resource': self._dest_context.node.id,
         }))
         data = resp.json()
         assert resp.status_code in (201, 200), resp
@@ -393,12 +394,17 @@ class RemoteMoveFile(MoveOperation):
 
     def _run(self):
         logger.info('RemoteMoveFile: {}'.format(self._context))
-        dest_parent = OperationContext(local=self._dest_context.local.parent)
+
+        dest_parent = OperationContext(
+            local=self._dest_context.local.parent,
+            node=self._dest_context.node
+        )
 
         resp = OSFClient().request('POST', self.remote.raw['links']['move'], data=json.dumps({
             'action': 'move',
             'path': dest_parent.db.osf_path if dest_parent.db.parent else '/',
             'rename': self._dest_context.local.name,
+            'resource': self._dest_context.node.id,
         }))
         data = resp.json()
         assert resp.status_code in (201, 200), resp
@@ -416,9 +422,10 @@ class LocalMoveFile(MoveOperation):
         logger.info('LocalMoveFile: {} -> {}'.format(self._context.db.path, self._dest_context.local))
         shutil.move(str(self._context.db.path), str(self._dest_context.local))
         # TODO Handle moved files that were also updated
-        DatabaseUpdateFolder(OperationContext(
+        DatabaseUpdateFile(OperationContext(
             db=self._context.db,
-            remote=self._dest_context.remote
+            remote=self._dest_context.remote,
+            node=self._dest_context.node
         )).run()
 
 
@@ -430,5 +437,6 @@ class LocalMoveFolder(MoveOperation):
         # Note/TODO Cross Node moves will need to have node= specified to the DESTINATION Node below
         DatabaseUpdateFolder(OperationContext(
             db=self._context.db,
-            remote=self._dest_context.remote
+            remote=self._dest_context.remote,
+            node=self._dest_context.node
         )).run()
