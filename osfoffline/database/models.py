@@ -181,6 +181,10 @@ class File(Base):
 
     @property
     def path(self):
+        return self.rel_path.replace(self.node.rel_path, self.node.path)
+
+    @property
+    def rel_path(self):
         """
         Local filesystem path to the file or folder.
 
@@ -188,9 +192,9 @@ class File(Base):
         """
         # +os.path.sep+ instead of os.path.join: http://stackoverflow.com/a/14504695
         if self.parent:
-            return os.path.join(self.parent.path, self.name) + (os.path.sep if self.is_folder else '')
+            return os.path.join(self.parent.rel_path, self.name) + (os.path.sep if self.is_folder else '')
         else:
-            return os.path.join(self.node.path, settings.OSF_STORAGE_FOLDER) + (os.path.sep if self.is_folder else '')
+            return os.path.join(self.node.rel_path, settings.OSF_STORAGE_FOLDER) + (os.path.sep if self.is_folder else '')
 
     def locally_create_children(self):
         self.locally_created = True
