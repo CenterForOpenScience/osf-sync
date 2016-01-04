@@ -86,16 +86,17 @@ class RemoteSyncWorker(threading.Thread, metaclass=Singleton):
         self.sync_now()
 
     def _orphan_children(self, node, remote_children):
-        """It's a hard world out there..."""
-        # Delete the database record for any descendant not mirrored remotely.
-        # Via cascade this will also remove any descedant Nodes and Files.
-        # The effect of this action is that any files associated with a child Node
-        # locally for which the remote Node has been deleted are explicitly removed
-        # from OSFO's auditing and will be ignored.
+        """It's a hard world out there...
+        Delete the database record for any descendant not mirrored remotely.
+        Via cascade this will also remove any descedant Nodes and Files.
+        The effect of this action is that any files associated with a child Node
+        locally for which the remote Node has been deleted are explicitly removed
+        from OSFO's auditing and will be ignored.
+        """
         children_ids = map(lambda c: c.id, remote_children)
         for record in node.children:
             if record.id not in children_ids:
-                Session.delete(record)
+                Session().delete(record)
 
     def _preprocess_node(self, node, delete=True):
         nodes = [node]
