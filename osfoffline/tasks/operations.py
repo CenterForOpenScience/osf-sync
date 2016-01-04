@@ -387,7 +387,7 @@ class RemoteMoveFolder(MoveOperation):
         # WB id are <provider>/<id>
         remote.id = remote.id.replace(remote.provider + '/', '')
         remote.parent = Session().query(models.File).filter(models.File.id == dest_parent.db.id).one()
-        DatabaseUpdateFolder(OperationContext(remote=remote, db=self.db, node=self.node)).run()
+        DatabaseUpdateFolder(OperationContext(remote=remote, db=self.db, node=remote.parent.node)).run()
 
 
 class RemoteMoveFile(MoveOperation):
@@ -413,7 +413,7 @@ class RemoteMoveFile(MoveOperation):
         # WB id are <provider>/<id>
         remote.id = remote.id.replace(remote.provider + '/', '')
         remote.parent = Session().query(models.File).filter(models.File.id == dest_parent.db.id).one()
-        DatabaseUpdateFile(OperationContext(remote=remote, db=self.db, node=self.node)).run()
+        DatabaseUpdateFile(OperationContext(remote=remote, db=self.db, node=remote.parent.node)).run()
 
 
 class LocalMoveFile(MoveOperation):
@@ -434,7 +434,6 @@ class LocalMoveFolder(MoveOperation):
     def _run(self):
         logger.info('LocalMoveFolder: {} -> {}'.format(self._context.db.path, self._dest_context.local))
         shutil.move(str(self._context.db.path), str(self._dest_context.local))
-        # Note/TODO Cross Node moves will need to have node= specified to the DESTINATION Node below
         DatabaseUpdateFolder(OperationContext(
             db=self._context.db,
             remote=self._dest_context.remote,
