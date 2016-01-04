@@ -115,14 +115,14 @@ class RemoteSyncWorker(threading.Thread, metaclass=Singleton):
                 ).one()
             except NoResultFound:
                 # Setting sync=False notes that the node is implicity synced
+                parent = Session().query(Node).filter(
+                    Node.id == child.parent.id
+                ).one()
                 db_child = Node(
                     id=child.id,
                     title=child.title,
                     user=node.user,
-                    parent_id=Session().query(Node).filter(
-                        Node.id == child.parent.id
-                    ).one().id,
-                    sync=False
+                    parent_id=parent.id
                 )
                 Session().add(db_child)
             nodes.append(db_child)

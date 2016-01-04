@@ -106,11 +106,12 @@ class Node(Base):
         return top_level
 
     @validates('sync')
-    def validate_sync(self):
+    def validate_sync(self, key, sync):
         if not self.parent_id:
-            assert self.sync == 1
+            assert sync is True
         else:
-            assert self.sync == 0
+            assert sync is False
+        return sync
 
     def __repr__(self):
         return '<Node({}, title={}, path={})>'.format(self.id, self.title, self.path)
