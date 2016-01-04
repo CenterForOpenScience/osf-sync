@@ -47,7 +47,7 @@ class RemoteSyncWorker(threading.Thread, metaclass=Singleton):
 
     def initialize(self):
         logger.info('Beginning initial sync')
-        for node in Session().query(Node).all():
+        for node in Session().query(Node).filter(Node.sync).all():
             self._preprocess_node(node)
         Session().commit()
         # TODO No need for this check

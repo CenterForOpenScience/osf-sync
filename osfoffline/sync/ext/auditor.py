@@ -95,7 +95,6 @@ class Auditor:
         def context_for(paths):
             if not isinstance(paths, tuple):
                 paths = (paths, )
-                # return OperationContext(Path(paths), db_map.get(paths, (None, ))[-1], remote_map.get(paths, (None, ))[-1])
             return [
                 OperationContext(
                     local=self.user_folder / Path(path),
@@ -128,6 +127,7 @@ class Auditor:
                                     context_for(path),
                                     path
                                 )
+                        # *change always adds the src_path kwarg and sometime adds dest_path
                         modifications[location][s] = ModificationEvent(
                             location,
                             event_type,
