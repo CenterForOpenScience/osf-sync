@@ -5,11 +5,11 @@ from invoke import task, run
 
 from osfoffline import settings
 
-def drop_db(self):
+def drop_db():
     if os.path.exists(settings.PROJECT_DB_FILE):
         os.remove(settings.PROJECT_DB_FILE)
 
-def drop_log(self):
+def drop_log():
     if os.path.exists(settings.PROJECT_LOG_FILE):
         os.remove(settings.PROJECT_LOG_FILE)
 
