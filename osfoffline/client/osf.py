@@ -18,7 +18,7 @@ class OSFClient(metaclass=Singleton):
         self.headers = {
             'Authorization': 'Bearer {}'.format(self.user.oauth_token),
         }
-        self.throttler = threading.Semaphore(limit)
+        self.throttler = threading.Semaphore(limit)  # TODO: Is throttling active?
         self.request_session = requests.Session()
         self.request_session.headers.update(self.headers)
 
@@ -111,6 +111,14 @@ class UserNode(Node):
 
 class StorageObject(BaseResource):
     """Represent API data for files or folders under a specific node"""
+    def __init__(self, request_session, data, parent=None):
+        super().__init__(request_session, data)
+        self.parent = parent
+        if hasattr(self, 'date_modified') and self.date_modified:
+            self.date_modified = iso8601.parse_date(self.date_modified)
+        if hasattr(self, 'last_touched') and self.last_touched:
+            self.last_touched = iso8601.parse_date(self.last_touched)
+
     @classmethod
     def get_url(cls, id):
         return '{}/{}/files/{}/'.format(cls.OSF_HOST, cls.API_PREFIX, id)
@@ -126,14 +134,6 @@ class StorageObject(BaseResource):
                 for item in data['data']
             ]
         return cls(request_session, data['data'])
-
-    def __init__(self, request_session, data, parent=None):
-        super().__init__(request_session, data)
-        self.parent = parent
-        if hasattr(self, 'date_modified') and self.date_modified:
-            self.date_modified = iso8601.parse_date(self.date_modified)
-        if hasattr(self, 'last_touched') and self.last_touched:
-            self.last_touched = iso8601.parse_date(self.last_touched)
 
 
 class Folder(StorageObject):

@@ -21,6 +21,13 @@ logger = logging.getLogger(__name__)
 
 
 class OperationContext:
+    """Store common data describing an operation"""
+    def __init__(self, local=None, db=None, remote=None, node=None, is_folder=False):
+        self._db = db
+        self._node = node
+        self._local = local
+        self._remote = remote
+        self._is_folder = is_folder
 
     @property
     def node(self):
@@ -61,13 +68,6 @@ class OperationContext:
         if self._db:
             self._local = Path(self._db.path)
         return self._local
-
-    def __init__(self, local=None, db=None, remote=None, node=None, is_folder=False):
-        self._db = db
-        self._node = node
-        self._local = local
-        self._remote = remote
-        self._is_folder = is_folder
 
     def __repr__(self):
         return '<{}({}, {}, {}, {})>'.format(self.__class__.__name__, self._node, self._local, self._db, self._remote)
@@ -272,7 +272,7 @@ class RemoteDeleteFolder(BaseOperation):
         resp = OSFClient().request('DELETE', self.remote.raw['links']['delete'])
         assert resp.status_code == 204, resp
         DatabaseDeleteFolder(OperationContext(db=Session().query(models.File).filter(models.File.id == self.remote.id).one())).run()
-        Notification().info('Remote delete older: {}'.format(self.remote))
+        Notification().info('Remote delete folder: {}'.format(self.remote))
 
 
 class DatabaseCreateFile(BaseOperation):
