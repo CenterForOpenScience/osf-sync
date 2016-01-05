@@ -133,7 +133,6 @@ class LocalCreateFile(BaseOperation):
         # After file is saved, create a new database object to track the file
         #   If the task fails, the database task will be kicked off separately by the auditor on a future cycle
         # TODO: How do we handle a filename being aliased in local storage (due to OS limitations)?
-        #   TODO: To keep tasks decoupled, perhaps a shared rename function used by DB task?
         DatabaseCreateFile(OperationContext(remote=self.remote, node=self.node)).run()
 
         Notification().info('Downloaded File: {}'.format(self.remote.name))
@@ -243,24 +242,21 @@ class RemoteUpdateFile(BaseOperation):
         Notification().info('Update Remote File: {}'.format(self.local))
 
 
-class RemoteDeleteFile(BaseOperation):
-    """Delete a file that is already known to exist remotely"""
-
-    def _run(self):
-        resp = osf_client.OSFClient().request('DELETE', self.remote.raw['links']['delete'])
-        assert resp.status_code == 204, resp
-        DatabaseDeleteFile(OperationContext(db=Session().query(models.File).filter(models.File.id == self.remote.id).one())).run()
-        Notification().info('Remote delete file: {}'.format(self.remote))
-
-
-class RemoteDeleteFolder(BaseOperation):
-    """Delete a file from the OSF and update the database"""
+class RemoteDelete(BaseOperation):
+    """Delete a file or folder that is already known to exist remotely"""
 
     def _run(self):
         resp = OSFClient().request('DELETE', self.remote.raw['links']['delete'])
         assert resp.status_code == 204, resp
-        DatabaseDeleteFolder(OperationContext(db=Session().query(models.File).filter(models.File.id == self.remote.id).one())).run()
-        Notification().info('Remote delete folder: {}'.format(self.remote))
+        db_model = Session().query(models.File).filter(models.File.id == self.remote.id).one()
+        DatabaseDelete(
+            OperationContext(db=db_model)
+        ).run()
+        Notification().info('Remote delete {}: {}'.format(db_model.kind.lower(), self.remote))
+
+
+# Auditor looks for operations by specific names; DRY redundant implementations
+RemoteDeleteFile = RemoteDeleteFolder = RemoteDelete
 
 
 class DatabaseCreateFile(BaseOperation):
@@ -333,29 +329,32 @@ class DatabaseUpdateFolder(BaseOperation):
         save(Session(), self.db)
 
 
-class DatabaseDeleteFile(BaseOperation):
+class DatabaseDelete(BaseOperation):
 
     def _run(self):
         Session().delete(self.db)
         Session().commit()
 
 
-class DatabaseDeleteFolder(BaseOperation):
-
-    def _run(self):
-        Session().delete(self.db)
-        Session().commit()
+# Auditor looks for operations by specific names; DRY redundant implementations
+DatabaseDeleteFolder = DatabaseDeleteFile = DatabaseDelete
 
 
-class RemoteMoveFolder(MoveOperation):
+class RemoteMove(MoveOperation):
+    """Move an item on the OSF; subclass for file or folder variants"""
+
+    DB_CLASS = None
 
     def _run(self):
         dest_parent = OperationContext(local=self._dest_context.local.parent)
-        resp = OSFClient().request('POST', self.remote.raw['links']['move'], data=json.dumps({
-            'action': 'move',
-            'path': dest_parent.db.osf_path if dest_parent.db.parent else '/',
-            'rename': self._dest_context.local.name,
-        }))
+
+        resp = OSFClient().request('POST',
+                                   self.remote.raw['links']['move'],
+                                   json={
+                                       'action': 'move',
+                                       'path': dest_parent.db.osf_path if dest_parent.db.parent else '/',
+                                       'rename': self._dest_context.local.name
+                                   })
         data = resp.json()
         assert resp.status_code in (201, 200), resp
 
@@ -363,46 +362,38 @@ class RemoteMoveFolder(MoveOperation):
         # WB id are <provider>/<id>
         remote.id = remote.id.replace(remote.provider + '/', '')
         remote.parent = Session().query(models.File).filter(models.File.id == dest_parent.db.id).one()
-        DatabaseUpdateFolder(OperationContext(remote=remote, db=self.db, node=self.node)).run()
+        self.DB_CLASS(OperationContext(
+            remote=remote, db=self.db, node=self.node
+        )).run()
 
 
-class RemoteMoveFile(MoveOperation):
-
-    def _run(self):
-        dest_parent = OperationContext(local=self._dest_context.local.parent)
-
-        resp = OSFClient().request('POST', self.remote.raw['links']['move'], data=json.dumps({
-            'action': 'move',
-            'path': dest_parent.db.osf_path if dest_parent.db.parent else '/',
-            'rename': self._dest_context.local.name,
-        }))
-        data = resp.json()
-        assert resp.status_code in (201, 200), resp
-
-        remote = osf_client.File(None, data['data'])
-        # WB id are <provider>/<id>
-        remote.id = remote.id.replace(remote.provider + '/', '')
-        remote.parent = Session().query(models.File).filter(models.File.id == dest_parent.db.id).one()
-        DatabaseUpdateFile(OperationContext(remote=remote, db=self.db, node=self.node)).run()
+class RemoteMoveFolder(RemoteMove):
+    DB_CLASS = DatabaseUpdateFolder
 
 
-class LocalMoveFile(MoveOperation):
+class RemoteMoveFile(RemoteMove):
+    DB_CLASS = DatabaseUpdateFile
+
+
+class LocalMove(MoveOperation):
+    """
+    Move a local item. Subclass for file or folder variants.
+    """
+    DB_CLASS = None
 
     def _run(self):
         shutil.move(str(self._context.db.path), str(self._dest_context.local))
         # TODO Handle moved files that were also updated
-        DatabaseUpdateFolder(OperationContext(
-            db=self._context.db,
-            remote=self._dest_context.remote
-        )).run()
-
-
-class LocalMoveFolder(MoveOperation):
-
-    def _run(self):
-        shutil.move(str(self._context.db.path), str(self._dest_context.local))
         # Note/TODO Cross Node moves will need to have node= specified to the DESTINATION Node below
-        DatabaseUpdateFolder(OperationContext(
+        self.DB_CLASS(OperationContext(
             db=self._context.db,
             remote=self._dest_context.remote
         )).run()
+
+
+class LocalMoveFile(LocalMove):
+    DB_CLASS = DatabaseUpdateFile
+
+
+class LocalMoveFolder(LocalMove):
+    DB_CLASS = DatabaseUpdateFolder
