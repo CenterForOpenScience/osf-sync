@@ -94,6 +94,8 @@ class LocalSyncWorker(ConsolidatedEventHandler, metaclass=Singleton):
         context = OperationContext(local=Path(event.src_path), is_folder=event.is_directory)
 
         if event.is_directory:
+            # TODO: May not be able to identify deletion event type on Windows; may rely on auditor to clean up
+            #   https://pythonhosted.org/watchdog/installation.html#supported-platforms-and-caveats
             return self.put_event(operations.RemoteDeleteFolder(context))
         return self.put_event(operations.RemoteDeleteFile(context))
 

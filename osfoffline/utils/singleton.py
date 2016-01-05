@@ -22,7 +22,7 @@ class SingleInstance:
         basename = os.path.splitext(os.path.abspath(sys.argv[0]))[0].replace(
             "/", "-").replace(":", "").replace("\\", "-") + '-%s' % flavor_id + '.lock'
         self.lockfile = os.path.normpath(
-            tempfile.gettempdir() + '/' + basename)
+            os.path.join(tempfile.gettempdir(), basename))
 
         logger.debug("SingleInstance lockfile: " + self.lockfile)
         if sys.platform == 'win32':

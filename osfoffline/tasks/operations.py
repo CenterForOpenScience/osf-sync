@@ -82,7 +82,7 @@ class BaseOperation(abc.ABC):
 
     def run(self, dry=False):
         """Wrap internal run method"""
-        logger.debug('{!r}'.format(self))
+        logger.debug('Running {!r}'.format(self))
         if not dry:
             return self._run()
 
