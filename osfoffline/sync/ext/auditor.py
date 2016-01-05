@@ -1,7 +1,8 @@
 from concurrent.futures import ThreadPoolExecutor
 from enum import Enum
-from pathlib import Path
+import logging
 import os
+from pathlib import Path
 
 from osfoffline import settings
 from osfoffline.client.osf import OSFClient
@@ -11,6 +12,9 @@ from osfoffline.tasks import operations
 from osfoffline.tasks.operations import OperationContext
 from osfoffline.utils import hash_file
 from osfoffline.utils.authentication import get_current_user
+
+
+logger = logging.getLogger(__name__)
 
 
 class Location(Enum):
@@ -151,7 +155,14 @@ class Auditor:
         with ThreadPoolExecutor(max_workers=5) as tpe:
             # first get top level nodes selected in settings
             for node in Session().query(Node).filter(Node.sync):
-                remote_node = OSFClient().get_node(node.id)
+                try:
+                    remote_node = OSFClient().get_node(node.id)
+                except Exception as e:
+                    # If the node can't be reached, skip auditing of this project and go on to the next node
+                    # TODO: The client should be made smart enough to check return code before parsing and yield a custom exception
+                    # TODO: The user should be notified about projects that failed to sync, and given a way to deselect them
+                    logger.exception(e)
+                    continue
                 remote_files = remote_node.get_storage(id='osfstorage')
                 rel_path = os.path.join(
                     node.rel_path,
@@ -164,8 +175,14 @@ class Auditor:
                     rel_path,
                     tpe
                 )
-
-                stack = remote_node.get_children(lazy=False)
+                try:
+                    stack = remote_node.get_children(lazy=False)
+                except Exception as e:
+                    # If the node can't be reached, skip auditing of this project and go on to the next node
+                    # TODO: The client should be made smart enough to check return code before parsing and yield a custom exception
+                    # TODO: The user should be notified about projects that failed to sync, and given a way to deselect them
+                    logger.exception(e)
+                    continue
                 while len(stack):
                     remote_child = stack.pop(0)
                     child_files = remote_child.get_storage(id='osfstorage')
@@ -185,7 +202,14 @@ class Auditor:
                         ),
                         tpe
                     )
-                    stack = stack + remote_child.get_children(lazy=False)
+                    try:
+                        stack = stack + remote_child.get_children(lazy=False)
+                    except Exception as e:
+                        # If the node can't be reached, skip auditing of this project and go on to the next node
+                        # TODO: The client should be made smart enough to check return code before parsing and yield a custom exception
+                        # TODO: The user should be notified about projects that failed to sync, and given a way to deselect them
+                        logger.exception(e)
+                        continue
             tpe._work_queue.join()
         return ret
 

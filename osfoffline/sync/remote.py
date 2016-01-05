@@ -1,10 +1,10 @@
-import time
 import itertools
 import logging
 import os
+from pathlib import Path
 import threading
+import time
 
-from sqlalchemy.sql.expression import true
 from sqlalchemy.orm.exc import NoResultFound
 
 from pathlib import Path
@@ -24,6 +24,7 @@ from osfoffline.sync.ext.auditor import (
     EventType
 )
 
+from osfoffline.tasks.notifications import Notification
 from osfoffline.tasks.resolution import RESOLUTION_MAP
 from osfoffline.tasks.queue import OperationWorker
 
@@ -72,12 +73,24 @@ class RemoteSyncWorker(threading.Thread, metaclass=Singleton):
 
             # Ensure selected node directories exist and db entries created
             for node in Session().query(Node).filter(Node.sync).all():
-                self._preprocess_node(node, delete=False)
+                try: 
+                    self._preprocess_node(node, delete=False)
+                 OSError:
+                    # TODO: If the node folder cannot be created, what further actions must be taken before attempting to sync?
+                    # TODO: Should the error be user-facing?
+                    logger.exception('Error creating node directory for sync')
 
             OperationWorker().join_queue()
-            self._check()
 
-            time.sleep(10)  # TODO Fix me
+            try:
+                self._check()
+            except:
+                # TODO: Add user-facing notification?
+                msg = 'Error encountered in remote sync operation; will try again later'
+                Notification().error(msg)
+                logger.exception(msg)
+
+            time.sleep(10)  # FIXME Per icereval, this is "due to watchdog not clearing its event evaluation when the lock is cleared"
             LocalSyncWorker().ignore.clear()
             logger.info('Finished remote sync')
         logger.info('Stopped RemoteSyncWorker')
