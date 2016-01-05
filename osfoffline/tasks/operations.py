@@ -3,6 +3,7 @@ import logging
 import os
 import json
 import shutil
+import http
 
 from pathlib import Path
 
@@ -195,7 +196,7 @@ class RemoteCreateFile(BaseOperation):
         with self.local.open(mode='rb') as fobj:
             resp = OSFClient().request('PUT', url, data=fobj, params={'name': self.local.name})
         data = resp.json()
-        assert resp.status_code == 201, '{}\n{}\n{}'.format(resp, url, data)
+        assert resp.status_code == http.CREATED, '{}\n{}\n{}'.format(resp, url, data)
 
         remote = osf_client.File(None, data['data'])
         # WB id are <provider>/<id>
@@ -215,7 +216,7 @@ class RemoteCreateFolder(BaseOperation):
         url = '{}/v1/resources/{}/providers/{}/{}'.format(settings.FILE_BASE, self.node.id, parent.provider, parent.osf_path)
         resp = OSFClient().request('PUT', url, params={'kind': 'folder', 'name': self.local.name})
         data = resp.json()
-        assert resp.status_code == 201, '{}\n{}\n{}'.format(resp, url, data)
+        assert resp.status_code == http.CREATED, '{}\n{}\n{}'.format(resp, url, data)
 
         remote = osf_client.File(None, data['data'])
         # WB id are <provider>/<id>/
@@ -234,7 +235,7 @@ class RemoteUpdateFile(BaseOperation):
         with open(str(self.local), 'rb') as fobj:
             resp = OSFClient().request('PUT', url, data=fobj, params={'name': self.local.name})
         data = resp.json()
-        assert resp.status_code == 200, '{}\n{}\n{}'.format(resp, url, data)
+        assert resp.status_code in (http.OK, http.CREATED), '{}\n{}\n{}'.format(resp, url, data)
         remote = osf_client.File(None, data['data'])
         # WB id are <provider>/<id>
         remote.id = remote.id.replace(remote.provider + '/', '')
@@ -248,7 +249,7 @@ class RemoteDeleteFile(BaseOperation):
 
     def _run(self):
         resp = osf_client.OSFClient().request('DELETE', self.remote.raw['links']['delete'])
-        assert resp.status_code == 204, resp
+        assert resp.status_code == http.NO_CONTENT, resp
         DatabaseDeleteFile(OperationContext(db=Session().query(models.File).filter(models.File.id == self.remote.id).one())).run()
         Notification().info('Remote delete file: {}'.format(self.remote))
 
@@ -258,7 +259,7 @@ class RemoteDeleteFolder(BaseOperation):
 
     def _run(self):
         resp = OSFClient().request('DELETE', self.remote.raw['links']['delete'])
-        assert resp.status_code == 204, resp
+        assert resp.status_code == http.NO_CONTENT, resp
         DatabaseDeleteFolder(OperationContext(db=Session().query(models.File).filter(models.File.id == self.remote.id).one())).run()
         Notification().info('Remote delete older: {}'.format(self.remote))
 
@@ -358,7 +359,7 @@ class RemoteMoveFolder(MoveOperation):
             'resource': self._dest_context.node.id,
         }))
         data = resp.json()
-        assert resp.status_code in (201, 200), resp
+        assert resp.status_code in (http.CREATED, http.OK), resp
 
         remote = osf_client.File(None, data['data'])
         # WB id are <provider>/<id>
@@ -382,7 +383,7 @@ class RemoteMoveFile(MoveOperation):
             'resource': self._dest_context.node.id,
         }))
         data = resp.json()
-        assert resp.status_code in (201, 200), resp
+        assert resp.status_code in (http.CREATED, http.OK), resp
 
         remote = osf_client.File(None, data['data'])
         # WB id are <provider>/<id>
