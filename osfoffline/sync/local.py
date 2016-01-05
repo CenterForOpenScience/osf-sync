@@ -1,7 +1,7 @@
 import logging
+from pathlib import Path
 import threading
 
-from pathlib import Path
 from watchdog.observers import Observer
 
 from osfoffline import utils
@@ -46,7 +46,9 @@ class LocalSyncWorker(ConsolidatedEventHandler, metaclass=Singleton):
         super().dispatch(event)
 
     def on_moved(self, event):
-        logger.info('Moved {}: from {} to {}'.format((event.is_directory and 'directory') or 'file', event.src_path, event.dest_path))
+        logger.info('Move event for {}: from {} to {}'.format('directory' if event.is_directory else 'file',
+                                                     event.src_path,
+                                                     event.dest_path))
         # Note: OperationContext should extrapolate all attributes from what it is given
         if event.is_directory:
             try:
@@ -74,7 +76,8 @@ class LocalSyncWorker(ConsolidatedEventHandler, metaclass=Singleton):
             ))
 
     def on_created(self, event):
-        logger.info('Created {}: {}'.format((event.is_directory and 'directory') or 'file', event.src_path))
+        logger.info('Creation event for {}: {}'.format('directory' if event.is_directory else 'file',
+                                                       event.src_path))
         node = utils.extract_node(event.src_path)
         path = Path(event.src_path)
 
@@ -90,7 +93,8 @@ class LocalSyncWorker(ConsolidatedEventHandler, metaclass=Singleton):
         return self.put_event(operations.RemoteCreateFile(context))
 
     def on_deleted(self, event):
-        logger.info('Deleted {}: {}'.format((event.is_directory and 'directory') or 'file', event.src_path))
+        logger.info('Deletion event for {}: {}'.format('directory' if event.is_directory else 'file',
+                                                       event.src_path))
         context = OperationContext(local=Path(event.src_path), is_folder=event.is_directory)
 
         if event.is_directory:
@@ -98,7 +102,8 @@ class LocalSyncWorker(ConsolidatedEventHandler, metaclass=Singleton):
         return self.put_event(operations.RemoteDeleteFile(context))
 
     def on_modified(self, event):
-        logger.info('Modified {}: {}'.format((event.is_directory and 'directory') or 'file', event.src_path))
+        logger.info('Modification event  for {}: {}'.format('directory' if event.is_directory else 'file',
+                                                       event.src_path))
         context = OperationContext(local=Path(event.src_path))
 
         if event.is_directory:
