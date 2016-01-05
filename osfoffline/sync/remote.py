@@ -73,9 +73,9 @@ class RemoteSyncWorker(threading.Thread, metaclass=Singleton):
 
             # Ensure selected node directories exist and db entries created
             for node in Session().query(Node).filter(Node.sync).all():
-                try: 
+                try:
                     self._preprocess_node(node, delete=False)
-                 OSError:
+                except OSError:
                     # TODO: If the node folder cannot be created, what further actions must be taken before attempting to sync?
                     # TODO: Should the error be user-facing?
                     logger.exception('Error creating node directory for sync')
