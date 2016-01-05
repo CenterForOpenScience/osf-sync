@@ -47,8 +47,8 @@ class LocalSyncWorker(ConsolidatedEventHandler, metaclass=Singleton):
 
     def on_moved(self, event):
         logger.info('Move event for {}: from {} to {}'.format('directory' if event.is_directory else 'file',
-                                                     event.src_path,
-                                                     event.dest_path))
+                                                              event.src_path,
+                                                              event.dest_path))
         # Note: OperationContext should extrapolate all attributes from what it is given
         if event.is_directory:
             try:

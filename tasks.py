@@ -5,6 +5,7 @@ from invoke import task, run
 
 from osfoffline import settings
 
+
 @task(aliases=['flake8'])
 def flake():
     run('flake8 osfoffline/', echo=True)
@@ -36,6 +37,7 @@ def start_for_tests(dropdb=True, droplog=False, dropdir=False):
         shutil.rmtree(osf_dir)
 
     start()
+
 
 @task
 def qt_gen():
