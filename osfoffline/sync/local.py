@@ -28,17 +28,17 @@ class LocalSyncWorker(ConsolidatedEventHandler, metaclass=Singleton):
         self.observer.schedule(self, self.folder, recursive=True)
 
     def start(self):
-        logger.info('Starting watchdog observer')
+        logger.debug('Starting watchdog observer')
         self.observer.start()
 
     def stop(self):
-        logger.info('Stopping LocalSyncWorker')
+        logger.debug('Stopping LocalSyncWorker')
         # observer is actually a separate child thread and must be join()ed
         self.observer.stop()
 
     def join(self):
         self.observer.join()
-        logger.info('LocalSyncWorker Stopped')
+        logger.debug('LocalSyncWorker Stopped')
 
     def dispatch(self, event):
         if self.ignore.is_set():
@@ -102,6 +102,7 @@ class LocalSyncWorker(ConsolidatedEventHandler, metaclass=Singleton):
         context = OperationContext(local=Path(event.src_path))
 
         if event.is_directory:
+            # FIXME: Clarify this comment (w/ @chrisseto)
             # WHAT DO
             return self.put_event(operations.RemoteCreateFolder(context))
         return self.put_event(operations.RemoteUpdateFile(context))

@@ -19,9 +19,16 @@ class Notification(metaclass=Singleton):
 
     class Event:
         def __init__(self, type, msg):
+            """
+            :param Level type: A severity ranking; must be member of the "Level" enumeration
+            :param msg: Message text to be displayed to user
+            """
             # TODO: Add additional fields describing event in more detail
             self.type = type
             self.msg = msg
+
+        def __repr__(self):
+            return '<{} ({}) {}>'.format(self.__class__.__name__, self.type.name, self.msg)
 
     def __init__(self):
         self.queue = queue.Queue()
