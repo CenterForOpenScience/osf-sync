@@ -67,14 +67,16 @@ class RemoteSyncWorker(threading.Thread, metaclass=Singleton):
                 logger.info('Sleep interrupted, syncing now')
             self._sync_now_event.clear()
 
+            logger.info('Beginning remote sync')
+            LocalSyncWorker().ignore.set()
+
             # Ensure selected node directories exist and db entries created
             for node in Session().query(Node).filter(Node.sync).all():
                 self._preprocess_node(node, delete=False)
 
-            logger.info('Beginning remote sync')
-            LocalSyncWorker().ignore.set()
             OperationWorker().join_queue()
             self._check()
+
             time.sleep(10)  # TODO Fix me
             LocalSyncWorker().ignore.clear()
             logger.info('Finished remote sync')
