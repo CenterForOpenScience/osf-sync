@@ -97,20 +97,18 @@ class LocalSyncWorker(ConsolidatedEventHandler, metaclass=Singleton):
                                                        event.src_path))
         context = OperationContext(local=Path(event.src_path), is_folder=event.is_directory)
 
-        if event.is_directory:
-            # TODO: May not be able to identify deletion event type on Windows; may rely on auditor to clean up
-            #   https://pythonhosted.org/watchdog/installation.html#supported-platforms-and-caveats
-            return self.put_event(operations.RemoteDeleteFolder(context))
-        return self.put_event(operations.RemoteDeleteFile(context))
+        # Watchdog can't differentiate between file and folder deletions on Windows,
+        #   but since implementation is the same, no need to check type.
+        return self.put_event(operations.RemoteDelete(context))
 
     def on_modified(self, event):
         logger.info('Modification event  for {}: {}'.format('directory' if event.is_directory else 'file',
-                                                       event.src_path))
+                                                            event.src_path))
         context = OperationContext(local=Path(event.src_path))
 
         if event.is_directory:
-            # FIXME: Clarify this comment (w/ @chrisseto)
-            # WHAT DO
+            # FIXME: This branch should never be reached, due to a check in dispatch method
+            logger.error("Received unexpected modification event for folder: {}".format(event.src_path))
             return self.put_event(operations.RemoteCreateFolder(context))
         return self.put_event(operations.RemoteUpdateFile(context))
 
