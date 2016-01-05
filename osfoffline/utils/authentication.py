@@ -153,5 +153,7 @@ class AuthClient(object):
         try:
             save(Session(), user)
         except SQLAlchemyError:
-            raise AuthError('Unable to save user data. Please try again later')
+            msg = 'Unable to save user data. Please try again later'
+            logger.exception(msg)
+            raise AuthError(msg)
         return user

@@ -82,7 +82,7 @@ class BaseOperation(abc.ABC):
 
     def run(self, dry=False):
         """Wrap internal run method"""
-        logger.info('{!r}'.format(self))
+        logger.debug('Running {!r}'.format(self))
         if not dry:
             return self._run()
 
@@ -121,7 +121,6 @@ class LocalCreateFile(BaseOperation):
     """Download an individual file from the OSF into a folder that already exists"""
 
     def _run(self):
-        logger.info('LocalCreateFile: {}'.format(self.remote))
         db_parent = Session().query(models.File).filter(models.File.id == self.remote.parent.id).one()
         path = os.path.join(db_parent.path, self.remote.name)
         # TODO: Create temp file in target directory while downloading, and rename when done. (check that no temp file exists)
@@ -144,7 +143,6 @@ class LocalCreateFolder(BaseOperation):
     """Create a folder, and populate the contents of that folder (all files to be downloaded)"""
 
     def _run(self):
-        logger.info('LocalCreateFolder: {}'.format(self.remote))
         db_parent = Session().query(models.File).filter(models.File.id == self.remote.parent.id).one()
         # TODO folder and file with same name
         os.mkdir(os.path.join(db_parent.path, self.remote.name))
@@ -157,7 +155,6 @@ class LocalUpdateFile(BaseOperation):
     """Download a file from the remote server and modify the database to show task completed"""
 
     def _run(self):
-        logger.info('LocalUpdateFile: {}'.format(self.remote))
         db_file = Session().query(models.File).filter(models.File.id == self.remote.id).one()
 
         tmp_path = os.path.join(db_file.parent.path, '.~tmp.{}'.format(db_file.name))
@@ -176,8 +173,6 @@ class LocalUpdateFile(BaseOperation):
 class LocalDeleteFile(BaseOperation):
 
     def _run(self):
-        logger.info('LocalDeleteFile: {}'.format(self.local))
-
         self.local.unlink()
         DatabaseDeleteFile(OperationContext(db=utils.local_to_db(self.local, self.node))).run()
 
@@ -186,7 +181,6 @@ class LocalDeleteFolder(BaseOperation):
     """Delete a folder (and all containing files) locally"""
 
     def _run(self):
-        logger.info('LocalDeleteFolder: {}'.format(self.local))
         shutil.rmtree(str(self.local))
         DatabaseDeleteFolder(self._context).run()
 
@@ -195,7 +189,6 @@ class RemoteCreateFile(BaseOperation):
     """Upload a file to the OSF, and update the database to reflect the new OSF id"""
 
     def _run(self):
-        logger.info('RemoteCreateFile: {}'.format(self.local))
         parent = utils.local_to_db(self.local.parent, self.node)
 
         url = '{}/v1/resources/{}/providers/{}/{}'.format(settings.FILE_BASE, self.node.id, parent.provider, parent.osf_path)
@@ -217,7 +210,6 @@ class RemoteCreateFolder(BaseOperation):
     """Upload a folder (and contents) to the OSF and create multiple DB instances to track changes"""
 
     def _run(self):
-        logger.info('RemoteCreateFolder: {}'.format(self.local))
         parent = utils.local_to_db(self.local.parent, self.node)
 
         url = '{}/v1/resources/{}/providers/{}/{}'.format(settings.FILE_BASE, self.node.id, parent.provider, parent.osf_path)
@@ -238,8 +230,6 @@ class RemoteUpdateFile(BaseOperation):
     """Upload (already-tracked) file to the OSF (uploads new version)"""
 
     def _run(self):
-        logger.info('RemoteUpdateFile: {}'.format(self.local))
-
         url = '{}/v1/resources/{}/providers/{}/{}'.format(settings.FILE_BASE, self.node.id, self.db.provider, self.db.osf_path)
         with open(str(self.local), 'rb') as fobj:
             resp = OSFClient().request('PUT', url, data=fobj, params={'name': self.local.name})
@@ -257,7 +247,6 @@ class RemoteDeleteFile(BaseOperation):
     """Delete a file that is already known to exist remotely"""
 
     def _run(self):
-        logger.info('RemoteDeleteFile: {}'.format(self.remote))
         resp = osf_client.OSFClient().request('DELETE', self.remote.raw['links']['delete'])
         assert resp.status_code == 204, resp
         DatabaseDeleteFile(OperationContext(db=Session().query(models.File).filter(models.File.id == self.remote.id).one())).run()
@@ -268,7 +257,6 @@ class RemoteDeleteFolder(BaseOperation):
     """Delete a file from the OSF and update the database"""
 
     def _run(self):
-        logger.info('RemoteDeleteFolder: {}'.format(self.remote))
         resp = OSFClient().request('DELETE', self.remote.raw['links']['delete'])
         assert resp.status_code == 204, resp
         DatabaseDeleteFolder(OperationContext(db=Session().query(models.File).filter(models.File.id == self.remote.id).one())).run()
@@ -280,8 +268,6 @@ class DatabaseCreateFile(BaseOperation):
         and attach the file to the specified node"""
 
     def _run(self):
-        logger.info('DatabaseCreateFile: {}'.format(self.remote))
-
         parent = self.remote.parent.id if self.remote.parent else None
 
         save(Session(), models.File(
@@ -301,8 +287,6 @@ class DatabaseCreateFile(BaseOperation):
 class DatabaseCreateFolder(BaseOperation):
 
     def _run(self):
-        logger.info('DatabaseCreateFolder: {}'.format(self.remote))
-
         parent = self.remote.parent.id if self.remote.parent else None
 
         save(Session(), models.File(
@@ -319,8 +303,6 @@ class DatabaseCreateFolder(BaseOperation):
 class DatabaseUpdateFile(BaseOperation):
 
     def _run(self):
-        logger.info('DatabaseUpdateFile: {}'.format(self.db))
-
         parent = self.remote.parent.id if self.remote.parent else None
 
         self.db.name = self.remote.name
@@ -339,8 +321,6 @@ class DatabaseUpdateFile(BaseOperation):
 class DatabaseUpdateFolder(BaseOperation):
 
     def _run(self):
-        logger.info('DatabaseUpdateFile: {}'.format(self.db))
-
         parent = self.remote.parent.id if self.remote.parent else None
 
         self.db.name = self.remote.name
@@ -356,7 +336,6 @@ class DatabaseUpdateFolder(BaseOperation):
 class DatabaseDeleteFile(BaseOperation):
 
     def _run(self):
-        logger.info('DatabaseDeleteFile: {}'.format(self.db))
         Session().delete(self.db)
         Session().commit()
 
@@ -364,7 +343,6 @@ class DatabaseDeleteFile(BaseOperation):
 class DatabaseDeleteFolder(BaseOperation):
 
     def _run(self):
-        logger.info('DatabaseDeleteFolder: {}'.format(self.db))
         Session().delete(self.db)
         Session().commit()
 
@@ -372,7 +350,6 @@ class DatabaseDeleteFolder(BaseOperation):
 class RemoteMoveFolder(MoveOperation):
 
     def _run(self):
-        logger.info('RemoteMoveFolder: {}'.format(self._context))
         dest_parent = OperationContext(local=self._dest_context.local.parent)
         resp = OSFClient().request('POST', self.remote.raw['links']['move'], data=json.dumps({
             'action': 'move',
@@ -392,7 +369,6 @@ class RemoteMoveFolder(MoveOperation):
 class RemoteMoveFile(MoveOperation):
 
     def _run(self):
-        logger.info('RemoteMoveFile: {}'.format(self._context))
         dest_parent = OperationContext(local=self._dest_context.local.parent)
 
         resp = OSFClient().request('POST', self.remote.raw['links']['move'], data=json.dumps({
@@ -413,7 +389,6 @@ class RemoteMoveFile(MoveOperation):
 class LocalMoveFile(MoveOperation):
 
     def _run(self):
-        logger.info('LocalMoveFile: {} -> {}'.format(self._context.db.path, self._dest_context.local))
         shutil.move(str(self._context.db.path), str(self._dest_context.local))
         # TODO Handle moved files that were also updated
         DatabaseUpdateFolder(OperationContext(
@@ -425,7 +400,6 @@ class LocalMoveFile(MoveOperation):
 class LocalMoveFolder(MoveOperation):
 
     def _run(self):
-        logger.info('LocalMoveFolder: {} -> {}'.format(self._context.db.path, self._dest_context.local))
         shutil.move(str(self._context.db.path), str(self._dest_context.local))
         # Note/TODO Cross Node moves will need to have node= specified to the DESTINATION Node below
         DatabaseUpdateFolder(OperationContext(

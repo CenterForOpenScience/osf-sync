@@ -49,7 +49,10 @@ class Node(Base):
 
     @property
     def path(self):
-        """Recursively walk up the path of the node. Top level node joins with the osf folder path of the user
+        """
+        Path on the local filesystem.
+
+        Recursively walk up the path of the node. Top level node joins with the osf folder path of the user
         """
         # +os.path.sep+ instead of os.path.join: http://stackoverflow.com/a/14504695
 
@@ -140,19 +143,25 @@ class File(Base):
 
     @property
     def osf_path(self):
+        """
+        APIv1 suffix for the node or folder containing this item (to be used as part of a URL)
+        """
         if not self.parent:
             return ''
-        return self.id + ((self.is_folder and '/') or '')
+        return self.id + '/' if self.is_folder else ''
 
     @property
     def path(self):
-        """Recursively walk up the path of the file/folder. Top level file/folder joins with the path of the containing node.
+        """
+        Local filesystem path to the file or folder.
+
+        Recursively walk up the path of the file/folder. Top level joins with the path of the containing node.
         """
         # +os.path.sep+ instead of os.path.join: http://stackoverflow.com/a/14504695
         if self.parent:
-            return os.path.join(self.parent.path, self.name) + ('/' if self.is_folder else '')
+            return os.path.join(self.parent.path, self.name) + (os.path.sep if self.is_folder else '')
         else:
-            return os.path.join(self.node.path, settings.OSF_STORAGE_FOLDER) + ('/' if self.is_folder else '')
+            return os.path.join(self.node.path, settings.OSF_STORAGE_FOLDER) + (os.path.sep if self.is_folder else '')
 
     def locally_create_children(self):
         self.locally_created = True

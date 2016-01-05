@@ -1,10 +1,9 @@
-import time
 import itertools
 import logging
 import os
-import threading
-
 from pathlib import Path
+import threading
+import time
 
 from osfoffline import settings
 from osfoffline.database import Session
@@ -12,6 +11,7 @@ from osfoffline.database.models import Node, File
 from osfoffline.sync.exceptions import FolderNotInFileSystem
 from osfoffline.sync.ext.auditor import Auditor
 from osfoffline.sync.ext.auditor import EventType
+from osfoffline.tasks.notifications import Notification
 from osfoffline.tasks.resolution import RESOLUTION_MAP
 from osfoffline.utils import Singleton
 from osfoffline.utils.authentication import get_current_user
@@ -58,13 +58,26 @@ class RemoteSyncWorker(threading.Thread, metaclass=Singleton):
             # Ensure selected node directories exist
             for node in Session().query(Node).all():
                 local = Path(os.path.join(node.path, settings.OSF_STORAGE_FOLDER))
-                os.makedirs(str(local), exist_ok=True)
+                try:
+                    os.makedirs(str(local), exist_ok=True)
+                except OSError:
+                    # TODO: If the node folder cannot be created, what further actions must be taken before attempting to sync?
+                    # TODO: Should the error be user-facing?
+                    logger.exception('Error creating node directory for sync')
 
             logger.info('Beginning remote sync')
             LocalSyncWorker().ignore.set()
             OperationWorker().join_queue()
-            self._check()
-            time.sleep(10)  # TODO Fix me
+
+            try:
+                self._check()
+            except:
+                # TODO: Add user-facing notification?
+                msg = 'Error encountered in remote sync operation; will try again later'
+                Notification().error(msg)
+                logger.exception(msg)
+
+            time.sleep(10)  # FIXME Per icereval, this is "due to watchdog not clearing its event evaluation when the lock is cleared"
             LocalSyncWorker().ignore.clear()
             logger.info('Finished remote sync')
         logger.info('Stopped RemoteSyncWorker')
