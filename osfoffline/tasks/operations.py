@@ -132,8 +132,10 @@ class LocalCreateFile(BaseOperation):
 
         # After file is saved, create a new database object to track the file
         #   If the task fails, the database task will be kicked off separately by the auditor on a future cycle
-        # TODO: How do we handle a filename being aliased in local storage (due to OS limitations)?
-        DatabaseCreateFile(OperationContext(remote=self.remote, node=self.node)).run()
+        # TODO: Handle a filename being aliased in local storage (due to OS limitations)?
+        DatabaseCreateFile(
+            OperationContext(remote=self.remote, node=self.node)
+        ).run()
 
         Notification().info('Downloaded File: {}'.format(self.remote.name))
 
@@ -145,7 +147,9 @@ class LocalCreateFolder(BaseOperation):
         db_parent = Session().query(models.File).filter(models.File.id == self.remote.parent.id).one()
         # TODO folder and file with same name
         os.mkdir(os.path.join(db_parent.path, self.remote.name))
-        DatabaseCreateFolder(OperationContext(remote=self.remote, node=self.node)).run()
+        DatabaseCreateFolder(
+            OperationContext(remote=self.remote, node=self.node)
+        ).run()
         Notification().info('Downloaded Folder: {}'.format(self.remote.name))
 
 
@@ -165,7 +169,9 @@ class LocalUpdateFile(BaseOperation):
                     fobj.write(chunk)
         shutil.move(tmp_path, db_file.path)
 
-        DatabaseUpdateFile(OperationContext(db=db_file, remote=self.remote, node=db_file.node)).run()
+        DatabaseUpdateFile(
+            OperationContext(db=db_file, remote=self.remote, node=db_file.node)
+        ).run()
         Notification().info('Updated File: {}'.format(self.remote.name))
 
 
@@ -173,7 +179,9 @@ class LocalDeleteFile(BaseOperation):
 
     def _run(self):
         self.local.unlink()
-        DatabaseDeleteFile(OperationContext(db=utils.local_to_db(self.local, self.node))).run()
+        DatabaseDeleteFile(
+            OperationContext(db=utils.local_to_db(self.local, self.node))
+        ).run()
 
 
 class LocalDeleteFolder(BaseOperation):
@@ -201,7 +209,9 @@ class RemoteCreateFile(BaseOperation):
         remote.id = remote.id.replace(remote.provider + '/', '')
         remote.parent = parent
 
-        DatabaseCreateFile(OperationContext(remote=remote, node=self.node)).run()
+        DatabaseCreateFile(
+            OperationContext(remote=remote, node=self.node)
+        ).run()
         Notification().info('Create Remote File: {}'.format(self.local))
 
 
@@ -221,7 +231,9 @@ class RemoteCreateFolder(BaseOperation):
         remote.id = remote.id.replace(remote.provider + '/', '').rstrip('/')
         remote.parent = parent
 
-        DatabaseCreateFolder(OperationContext(remote=remote, node=self.node)).run()
+        DatabaseCreateFolder(
+            OperationContext(remote=remote, node=self.node)
+        ).run()
         Notification().info('Create Remote Folder: {}'.format(self.local))
 
 
@@ -238,7 +250,9 @@ class RemoteUpdateFile(BaseOperation):
         # WB id are <provider>/<id>
         remote.id = remote.id.replace(remote.provider + '/', '')
         remote.parent = self.db.parent
-        DatabaseUpdateFile(OperationContext(remote=remote, db=self.db, node=self.node)).run()
+        DatabaseUpdateFile(
+            OperationContext(remote=remote, db=self.db, node=self.node)
+        ).run()
         Notification().info('Update Remote File: {}'.format(self.local))
 
 
@@ -362,9 +376,9 @@ class RemoteMove(MoveOperation):
         # WB id are <provider>/<id>
         remote.id = remote.id.replace(remote.provider + '/', '')
         remote.parent = Session().query(models.File).filter(models.File.id == dest_parent.db.id).one()
-        self.DB_CLASS(OperationContext(
-            remote=remote, db=self.db, node=self.node
-        )).run()
+        self.DB_CLASS(
+            OperationContext(remote=remote, db=self.db, node=self.node)
+        ).run()
 
 
 class RemoteMoveFolder(RemoteMove):
@@ -385,10 +399,9 @@ class LocalMove(MoveOperation):
         shutil.move(str(self._context.db.path), str(self._dest_context.local))
         # TODO Handle moved files that were also updated
         # Note/TODO Cross Node moves will need to have node= specified to the DESTINATION Node below
-        self.DB_CLASS(OperationContext(
-            db=self._context.db,
-            remote=self._dest_context.remote
-        )).run()
+        self.DB_CLASS(
+            OperationContext(db=self._context.db, remote=self._dest_context.remote)
+        ).run()
 
 
 class LocalMoveFile(LocalMove):
