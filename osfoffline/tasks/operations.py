@@ -1,4 +1,5 @@
 import abc
+import http.client
 import logging
 import os
 import shutil
@@ -27,6 +28,9 @@ class OperationContext:
         self._local = local
         self._remote = remote
         self._is_folder = is_folder
+
+    def __repr__(self):
+        return '<{}(node={}, local={}, db={}, remote={})>'.format(self.__class__.__name__, self._node, self._local, self._db, self._remote)
 
     @property
     def node(self):
@@ -67,9 +71,6 @@ class OperationContext:
         if self._db:
             self._local = Path(self._db.path)
         return self._local
-
-    def __repr__(self):
-        return '<{}({}, {}, {}, {})>'.format(self.__class__.__name__, self._node, self._local, self._db, self._remote)
 
 
 class BaseOperation(abc.ABC):
@@ -201,7 +202,7 @@ class RemoteCreateFile(BaseOperation):
         with self.local.open(mode='rb') as fobj:
             resp = OSFClient().request('PUT', url, data=fobj, params={'name': self.local.name})
         data = resp.json()
-        assert resp.status_code == 201, '{}\n{}\n{}'.format(resp, url, data)
+        assert resp.status_code == http.client.CREATED, '{}\n{}\n{}'.format(resp, url, data)
 
         remote = osf_client.File(None, data['data'])
         # WB id are <provider>/<id>
@@ -223,7 +224,7 @@ class RemoteCreateFolder(BaseOperation):
         url = '{}/v1/resources/{}/providers/{}/{}'.format(settings.FILE_BASE, self.node.id, parent.provider, parent.osf_path)
         resp = OSFClient().request('PUT', url, params={'kind': 'folder', 'name': self.local.name})
         data = resp.json()
-        assert resp.status_code == 201, '{}\n{}\n{}'.format(resp, url, data)
+        assert resp.status_code == http.client.CREATED, '{}\n{}\n{}'.format(resp, url, data)
 
         remote = osf_client.File(None, data['data'])
         # WB id are <provider>/<id>/
@@ -244,7 +245,7 @@ class RemoteUpdateFile(BaseOperation):
         with open(str(self.local), 'rb') as fobj:
             resp = OSFClient().request('PUT', url, data=fobj, params={'name': self.local.name})
         data = resp.json()
-        assert resp.status_code == 200, '{}\n{}\n{}'.format(resp, url, data)
+        assert resp.status_code in (http.client.OK, http.client.CREATED), '{}\n{}\n{}'.format(resp, url, data)
         remote = osf_client.File(None, data['data'])
         # WB id are <provider>/<id>
         remote.id = remote.id.replace(remote.provider + '/', '')
@@ -260,7 +261,7 @@ class RemoteDelete(BaseOperation):
 
     def _run(self):
         resp = OSFClient().request('DELETE', self.remote.raw['links']['delete'])
-        assert resp.status_code == 204, resp
+        assert resp.status_code == http.client.NO_CONTENT, resp
         db_model = Session().query(models.File).filter(models.File.id == self.remote.id).one()
         DatabaseDelete(
             OperationContext(db=db_model)
@@ -360,23 +361,24 @@ class RemoteMove(MoveOperation):
 
     def _run(self):
         dest_parent = OperationContext(local=self._dest_context.local.parent)
-
         resp = OSFClient().request('POST',
                                    self.remote.raw['links']['move'],
                                    json={
                                        'action': 'move',
                                        'path': dest_parent.db.osf_path if dest_parent.db.parent else '/',
-                                       'rename': self._dest_context.local.name
+                                       'rename': self._dest_context.local.name,
+                                       'resource': self._dest_context.node.id,
                                    })
+
         data = resp.json()
-        assert resp.status_code in (201, 200), resp
+        assert resp.status_code in (http.client.CREATED, http.client.OK), resp
 
         remote = osf_client.File(None, data['data'])
         # WB id are <provider>/<id>
         remote.id = remote.id.replace(remote.provider + '/', '')
         remote.parent = Session().query(models.File).filter(models.File.id == dest_parent.db.id).one()
         self.DB_CLASS(
-            OperationContext(remote=remote, db=self.db, node=self.node)
+            OperationContext(remote=remote, db=self.db, node=remote.parent.node)
         ).run()
 
 
@@ -396,10 +398,11 @@ class LocalMove(MoveOperation):
 
     def _run(self):
         shutil.move(str(self._context.db.path), str(self._dest_context.local))
-        # TODO Handle moved files that were also updated
-        # Note/TODO Cross Node moves will need to have node= specified to the DESTINATION Node below
         self.DB_CLASS(
-            OperationContext(db=self._context.db, remote=self._dest_context.remote)
+            OperationContext(
+                db=self._context.db,
+                remote=self._dest_context.remote,
+                node=self._dest_context.node)
         ).run()
 
 

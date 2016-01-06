@@ -106,7 +106,16 @@ class Preferences(QDialog, Ui_Settings):
             if checked:
                 self.selected_nodes.append(node.id)
                 if not db_node:
-                    Session().add(Node(id=node.id, title=node.title, user=user))
+                    Session().add(
+                        Node(
+                            id=node.id,
+                            title=node.title,
+                            user=user,
+                            sync=True
+                        )
+                    )
+                else:
+                    db_node.sync = True
             elif db_node:
                 Session().delete(db_node)
         save(Session())
