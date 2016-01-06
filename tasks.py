@@ -58,5 +58,5 @@ def wipe(hard=True):
         drop_db()
         drop_log()
     else:
-        print("rm -r '{0}'".format(settings.PROJECT_DB_FILE))
-        print("rm -r '{0}'".format(settings.PROJECT_LOG_FILE))
+        print("rm '{0}'".format(settings.PROJECT_DB_FILE))
+        print("rm '{0}'".format(settings.PROJECT_LOG_FILE))
