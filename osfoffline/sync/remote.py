@@ -192,7 +192,7 @@ class RemoteSyncWorker(threading.Thread, metaclass=Singleton):
                 logging.warning('Ignoring duplicate move event {}'.format(event.src_path))
                 continue
             conflicts = [
-                child for child in td.children(parts)
+                child for child in td.children(keys=parts)
                 if (event.location, event.event_type) != (child.location, child.event_type)
                 or (child.event_type == EventType.MOVE and not child.dest_path.startswith(event.dest_path))
             ]
