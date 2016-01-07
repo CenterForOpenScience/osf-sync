@@ -13,7 +13,7 @@ from osfoffline.utils.authentication import get_current_user
 
 class OSFClient(metaclass=Singleton):
 
-    def __init__(self, limit=5):
+    def __init__(self, *, limit=5):
         self.user = get_current_user()
         self.headers = {
             'Authorization': 'Bearer {}'.format(self.user.oauth_token),
@@ -25,7 +25,7 @@ class OSFClient(metaclass=Singleton):
     def get_node(self, id):
         return Node.load(self.request_session, id)
 
-    def get_user(self, id='me'):
+    def get_user(self, *, id='me'):
         return User.load(self.request_session, id)
 
     def request(self, *args, **kwargs):
@@ -74,13 +74,12 @@ class BaseResource(abc.ABC):
             yield item
         if data['links'].get('next'):
             for item in self.fetch_related(
-                self.request_session,
                 relationship,
                 next_url=data['links']['next']
             ):
                 yield item
 
-    def fetch_related(self, relationship, query=None, next_url=None):
+    def fetch_related(self, relationship, *, query=None, next_url=None):
         relation = self.raw['relationships'].get(relationship)
         if not relation:
             return None
@@ -109,7 +108,7 @@ class User(BaseResource):
     #     self.date_modified = iso8601.parse_date(self.date_modified)
 
     @classmethod
-    def get_url(cls, id='me'):
+    def get_url(cls, *, id='me'):
         return '{}/{}/{}/'.format(cls.BASE_URL, cls.RESOURCE, id)
 
     def get_nodes(self):
@@ -137,7 +136,7 @@ class Node(BaseResource):
     def get_url(cls, id):
         return '{}/{}/{}/?embed=parent'.format(cls.BASE_URL, cls.RESOURCE, id)
 
-    def get_storage(self, id='osfstorage'):
+    def get_storage(self, *, id='osfstorage'):
         # TODO: At present only osfstorage is fully supported for syncing
         return next(
             storage
@@ -145,10 +144,10 @@ class Node(BaseResource):
             if storage.provider == id
         )
 
-    def get_children(self, lazy=False):
+    def get_children(self, *, lazy=False):
         related = map(
             lambda data: Node(self.request_session, data),
-            self.fetch_related('children', {'embed': 'parent'})
+            self.fetch_related('children', query={'embed': 'parent'})
         )
         if lazy:
             return related
@@ -196,7 +195,7 @@ class Folder(StorageObject):
     def __repr__(self):
         return '<{0} {1} name={2} path={2}>'.format(__class__.__name__, id(self), self.name, self.path)
 
-    def get_children(self, lazy=False):
+    def get_children(self, *, lazy=False):
         related = map(
             lambda item: (Folder if item['attributes']['kind'] == 'folder' else File)(self.request_session, item, parent=self),
             self.fetch_related('files')

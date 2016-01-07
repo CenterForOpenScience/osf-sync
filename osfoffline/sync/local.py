@@ -92,13 +92,15 @@ class LocalSyncWorker(ConsolidatedEventHandler, metaclass=Singleton):
             return self.put_event(operations.RemoteCreateFolder(context))
         return self.put_event(operations.RemoteCreateFile(context))
 
-    def on_deleted(self, event):
+    def on_deleted(self, event, is_folder=None):
         logger.info('Deletion event for {}: {}'.format('directory' if event.is_directory else 'file',
                                                        event.src_path))
-        context = OperationContext(local=Path(event.src_path), is_folder=event.is_directory)
+        # A hack: override checking if the passed path is a directory. Since Windows
+        # emits folder deletion events as file deletes we need to ignore whether or not
+        # a delete event is for a folder. Since the RemoteDelete operation works identically
+        # for files and folders we can get away with this here.
+        context = OperationContext(local=Path(event.src_path), check_is_folder=False)
 
-        # Watchdog can't differentiate between file and folder deletions on Windows,
-        #   but since implementation is the same, no need to check type.
         return self.put_event(operations.RemoteDelete(context))
 
     def on_modified(self, event):
