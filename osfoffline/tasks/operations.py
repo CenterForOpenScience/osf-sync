@@ -247,6 +247,10 @@ class RemoteUpdateFile(BaseOperation):
     """Upload (already-tracked) file to the OSF (uploads new version)"""
 
     def _run(self):
+        if self.db is None:
+            # TODO: possibly redundant with dispatcher?
+            return RemoteCreateFile(self._context).run()
+
         url = '{}/v1/resources/{}/providers/{}/{}'.format(settings.FILE_BASE, self.node.id, self.db.provider, self.db.osf_path)
         with open(str(self.local), 'rb') as fobj:
             resp = OSFClient().request('PUT', url, data=fobj, params={'name': self.local.name})

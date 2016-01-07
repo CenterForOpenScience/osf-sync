@@ -106,6 +106,14 @@ class LocalSyncWorker(ConsolidatedEventHandler, metaclass=Singleton):
     def on_modified(self, event):
         logger.info('Modification event  for {}: {}'.format('directory' if event.is_directory else 'file',
                                                             event.src_path))
+        node = utils.extract_node(event.src_path)
+        path = Path(event.src_path)
+
+        # If the file does not exist in the database, this is a create
+        # This logic may not be the most correct, #TODO re-evaluate
+        if not utils.local_to_db(path, node):
+            return self.on_created(event)
+
         context = OperationContext(local=Path(event.src_path))
 
         if event.is_directory:
