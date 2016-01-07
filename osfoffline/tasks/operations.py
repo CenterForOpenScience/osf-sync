@@ -22,12 +22,13 @@ logger = logging.getLogger(__name__)
 
 class OperationContext:
     """Store common data describing an operation"""
-    def __init__(self, local=None, db=None, remote=None, node=None, is_folder=False):
+    def __init__(self, *, local=None, db=None, remote=None, node=None, is_folder=False, check_is_folder=True):
         self._db = db
         self._node = node
         self._local = local
         self._remote = remote
         self._is_folder = is_folder
+        self._check_is_folder = check_is_folder
 
     def __repr__(self):
         return '<{}(node={}, local={}, db={}, remote={})>'.format(self.__class__.__name__, self._node, self._local, self._db, self._remote)
@@ -51,7 +52,12 @@ class OperationContext:
         if self._db:
             return self._db
         if self._local:
-            self._db = utils.local_to_db(self._local, self.node, is_folder=self._is_folder)
+            self._db = utils.local_to_db(
+                self._local,
+                self.node,
+                is_folder=self._is_folder,
+                check_is_folder=self._check_is_folder
+            )
         elif self._remote:
             self._db = Session().query(models.File).filter(models.File.id == self._remote.id).one()
         return self._db
@@ -80,7 +86,7 @@ class BaseOperation(abc.ABC):
         """Internal implementation of run method; must be overridden in subclasses"""
         raise NotImplementedError
 
-    def run(self, dry=False):
+    def run(self, *, dry=False):
         """Wrap internal run method"""
         logger.debug('Running {!r}'.format(self))
         if not dry:
