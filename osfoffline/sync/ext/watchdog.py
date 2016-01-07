@@ -45,7 +45,7 @@ class ConsolidatedEventHandler(PatternMatchingEventHandler):
 
             try:
                 if event.is_directory and event.event_type == 'created':
-                    self._create_cache.extend(self._event_cache.children(parts))
+                    self._create_cache.extend(self._event_cache.children(keys=parts))
 
                 if not consolidate and parts in self._event_cache and self._event_cache[parts].event_type == 'deleted':
                     # TODO: Deleting a folder with files still causes error
