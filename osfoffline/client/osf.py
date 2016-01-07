@@ -26,7 +26,7 @@ class OSFClient(metaclass=Singleton):
         return Node.load(self.request_session, id)
 
     def get_user(self, *, id='me'):
-        return User.load(self.request_session, id)
+        return User.load(self.request_session, id=id)
 
     def request(self, *args, **kwargs):
         return self.request_session.request(*args, **kwargs)
@@ -55,8 +55,8 @@ class BaseResource(abc.ABC):
         return cls(request_session, data)
 
     @classmethod
-    def load(cls, request_session, *args):
-        resp = request_session.get(cls.get_url(*args), params={'page[size]': 250})
+    def load(cls, request_session, *args, **kwargs):
+        resp = request_session.get(cls.get_url(*args, **kwargs), params={'page[size]': 250})
         data = resp.json()
 
         if isinstance(data['data'], list):
