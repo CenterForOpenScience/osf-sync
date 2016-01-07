@@ -19,7 +19,7 @@ class Singleton(type):
         return cls._instances[cls]
 
 
-def hash_file(path, chunk_size=65536):
+def hash_file(path, *, chunk_size=65536):
     """
     Return the SHA256 hash of a file
 

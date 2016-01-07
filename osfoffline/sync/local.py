@@ -92,7 +92,7 @@ class LocalSyncWorker(ConsolidatedEventHandler, metaclass=Singleton):
             return self.put_event(operations.RemoteCreateFolder(context))
         return self.put_event(operations.RemoteCreateFile(context))
 
-    def on_deleted(self, event, is_folder=None):
+    def on_deleted(self, event, *args, is_folder=False, **kwargs):
         logger.info('Deletion event for {}: {}'.format('directory' if event.is_directory else 'file',
                                                        event.src_path))
         # A hack: override checking if the passed path is a directory. Since Windows

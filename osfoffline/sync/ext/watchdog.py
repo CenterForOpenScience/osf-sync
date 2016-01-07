@@ -102,7 +102,7 @@ class TreeDict:
             inner = inner[key]
         return inner
 
-    def children(self, keys=None):
+    def children(self, *, keys=None):
         try:
             sub_dict = self[keys] if keys is not None else self._inner
         except KeyError:

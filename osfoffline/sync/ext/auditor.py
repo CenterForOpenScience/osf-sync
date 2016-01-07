@@ -33,7 +33,7 @@ class EventType(Enum):
 # May want to subclass in the future
 class ModificationEvent:
 
-    def __init__(self, location, event_type, contexts, src_path, dest_path=None):
+    def __init__(self, location, event_type, contexts, src_path, *, dest_path=None):
         if dest_path:
             self.dest_path = dest_path
         self.location = location
@@ -85,6 +85,7 @@ class Audit(object):
         return (self.fid, self.sha256, self.fobj)
 
 NULL_AUDIT = Audit(None, None, None)
+
 
 class Auditor:
 
@@ -186,8 +187,8 @@ class Auditor:
                 while len(stack):
                     remote_child = stack.pop(0)
                     child_files = remote_child.get_storage(id='osfstorage')
-                    # RemoteSyncWorker's _preprocess_node guarentess a db entry exists
-                    # for each Node in the remote project heirarchy. Use the db Node's
+                    # RemoteSyncWorker's _preprocess_node guarantees a db entry exists
+                    # for each Node in the remote project hierarchy. Use the db Node's
                     # path representation to ensure consistent path naming conventions.
                     child_path = Session().query(Node).filter(
                         Node.id == remote_child.id

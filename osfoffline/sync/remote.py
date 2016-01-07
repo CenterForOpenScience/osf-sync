@@ -7,8 +7,6 @@ import time
 
 from sqlalchemy.orm.exc import NoResultFound
 
-from pathlib import Path
-
 from osfoffline import settings
 
 from osfoffline.client.osf import OSFClient
@@ -113,7 +111,7 @@ class RemoteSyncWorker(threading.Thread, metaclass=Singleton):
             if record.id not in children_ids:
                 Session().delete(record)
 
-    def _preprocess_node(self, node, delete=True):
+    def _preprocess_node(self, node, *, delete=True):
         nodes = [node]
         remote_node = OSFClient().get_node(node.id)
         stack = remote_node.get_children(lazy=False)
@@ -245,7 +243,7 @@ class TreeDict:
             inner = inner[key]
         return inner
 
-    def children(self, keys=None):
+    def children(self, *, keys=None):
         try:
             sub_dict = self[keys] if keys is not None else self._inner
         except KeyError:

@@ -47,7 +47,7 @@ class BaseResource(abc.ABC):
             setattr(self, attribute, value)
 
     @classmethod
-    def get_url(cls, *args):
+    def get_url(cls, *args, **kwargs):
         return cls.BASE_URL
 
     @classmethod
@@ -97,6 +97,7 @@ class BaseResource(abc.ABC):
             return items
         else:
             return self._fetch_related(relationship, data)
+
 
 class User(BaseResource):
     """Fetch API data relevant to a specific user"""
@@ -163,7 +164,7 @@ class UserNode(Node):
 
 class StorageObject(BaseResource):
     """Represent API data for files or folders under a specific node"""
-    def __init__(self, request_session, data, parent=None):
+    def __init__(self, request_session, data, *, parent=None):
         super().__init__(request_session, data)
         self.parent = parent
         if hasattr(self, 'date_modified') and self.date_modified:
@@ -193,7 +194,7 @@ class Folder(StorageObject):
     is_dir = True
 
     def __repr__(self):
-        return '<{0} {1} name={2} path={2}>'.format(__class__.__name__, id(self), self.name, self.path)
+        return '<{0} {1} name={2} path={2}>'.format(self.__class__.__name__, id(self), self.name, self.path)
 
     def get_children(self, *, lazy=False):
         related = map(
