@@ -33,7 +33,7 @@ class EventType(Enum):
 # May want to subclass in the future
 class ModificationEvent:
 
-    def __init__(self, location, event_type, contexts, src_path, *, dest_path=None):
+    def __init__(self, location, event_type, contexts, src_path, dest_path=None):
         if dest_path:
             self.dest_path = dest_path
         self.location = location
