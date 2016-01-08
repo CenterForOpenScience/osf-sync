@@ -1,4 +1,5 @@
 """Utilities related to error logging"""
+import logging.config
 
 from osfoffline import settings
 from osfoffline.utils.authentication import get_current_user
@@ -26,3 +27,10 @@ def remove_user_from_sentry_logs():
 
     # Alternate mechanism based on thread-locals
     #settings.raven_client.context.clear()
+
+
+def start_logging(config=settings.LOGGING_CONFIG):
+    """Initialize logging based on the specified configuration dictionary"""
+
+    # Set up basic (console and file) logging
+    logging.config.dictConfig(config)
