@@ -87,10 +87,11 @@ class BaseOperation(abc.ABC):
         raise NotImplementedError
 
     def run(self, *, dry=False):
-        """Wrap internal run method"""
-        logger.debug('Running {!r}'.format(self))
+        """Wrap internal run method with logging, so that even nested jobs report individually"""
+        logger.info('Starting {!r}'.format(self))
         if not dry:
             return self._run()
+        logger.info('Job successfully completed')
 
     def __init__(self, context):
         self._context = context
