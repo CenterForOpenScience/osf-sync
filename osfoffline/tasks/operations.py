@@ -203,6 +203,12 @@ class RemoteCreateFile(BaseOperation):
     """Upload a file to the OSF, and update the database to reflect the new OSF id"""
 
     def _run(self):
+        if self.db is not None:
+            # On windows, a file update operation can sometimes jump the queue ahead of a file create
+            # due to how watchdog fires events
+            logger.debug('File already exists; will run update operation instead')
+            return RemoteUpdateFile(self._context).run()
+
         parent = utils.local_to_db(self.local.parent, self.node)
 
         url = '{}/v1/resources/{}/providers/{}/{}'.format(settings.FILE_BASE, self.node.id, parent.provider, parent.osf_path)
@@ -249,7 +255,8 @@ class RemoteUpdateFile(BaseOperation):
 
     def _run(self):
         if self.db is None:
-            # TODO: possibly redundant with dispatcher?
+            # TODO: Test edge case where file is created both locally and remotely with same name within a given sync window
+            logger.debug('File not yet tracked; will run create operation instead')
             return RemoteCreateFile(self._context).run()
 
         url = '{}/v1/resources/{}/providers/{}/{}'.format(settings.FILE_BASE, self.node.id, self.db.provider, self.db.osf_path)
