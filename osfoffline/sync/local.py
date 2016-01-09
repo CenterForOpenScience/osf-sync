@@ -1,7 +1,7 @@
 import logging
+from pathlib import Path
 import threading
 
-from pathlib import Path
 from watchdog.observers import Observer
 
 from osfoffline import utils
@@ -46,7 +46,9 @@ class LocalSyncWorker(ConsolidatedEventHandler, metaclass=Singleton):
         super().dispatch(event)
 
     def on_moved(self, event):
-        logger.info('Moved {}: from {} to {}'.format((event.is_directory and 'directory') or 'file', event.src_path, event.dest_path))
+        logger.info('Move event for {}: from {} to {}'.format('directory' if event.is_directory else 'file',
+                                                              event.src_path,
+                                                              event.dest_path))
         # Note: OperationContext should extrapolate all attributes from what it is given
         if event.is_directory:
             try:
@@ -74,7 +76,8 @@ class LocalSyncWorker(ConsolidatedEventHandler, metaclass=Singleton):
             ))
 
     def on_created(self, event):
-        logger.info('Created {}: {}'.format((event.is_directory and 'directory') or 'file', event.src_path))
+        logger.info('Creation event for {}: {}'.format('directory' if event.is_directory else 'file',
+                                                       event.src_path))
         node = utils.extract_node(event.src_path)
         path = Path(event.src_path)
 
@@ -89,23 +92,33 @@ class LocalSyncWorker(ConsolidatedEventHandler, metaclass=Singleton):
             return self.put_event(operations.RemoteCreateFolder(context))
         return self.put_event(operations.RemoteCreateFile(context))
 
-    def on_deleted(self, event):
-        logger.info('Deleted {}: {}'.format((event.is_directory and 'directory') or 'file', event.src_path))
-        context = OperationContext(local=Path(event.src_path), is_folder=event.is_directory)
+    def on_deleted(self, event, *args, is_folder=False, **kwargs):
+        logger.info('Deletion event for {}: {}'.format('directory' if event.is_directory else 'file',
+                                                       event.src_path))
+        # A hack: override checking if the passed path is a directory. Since Windows
+        # emits folder deletion events as file deletes we need to ignore whether or not
+        # a delete event is for a folder. Since the RemoteDelete operation works identically
+        # for files and folders we can get away with this here.
+        context = OperationContext(local=Path(event.src_path), check_is_folder=False)
 
-        if event.is_directory:
-            # TODO: May not be able to identify deletion event type on Windows; may rely on auditor to clean up
-            #   https://pythonhosted.org/watchdog/installation.html#supported-platforms-and-caveats
-            return self.put_event(operations.RemoteDeleteFolder(context))
-        return self.put_event(operations.RemoteDeleteFile(context))
+        return self.put_event(operations.RemoteDelete(context))
 
     def on_modified(self, event):
-        logger.info('Modified {}: {}'.format((event.is_directory and 'directory') or 'file', event.src_path))
+        logger.info('Modification event  for {}: {}'.format('directory' if event.is_directory else 'file',
+                                                            event.src_path))
+        node = utils.extract_node(event.src_path)
+        path = Path(event.src_path)
+
+        # If the file does not exist in the database, this is a create
+        # This logic may not be the most correct, #TODO re-evaluate
+        if not utils.local_to_db(path, node):
+            return self.on_created(event)
+
         context = OperationContext(local=Path(event.src_path))
 
         if event.is_directory:
-            # FIXME: Clarify this comment (w/ @chrisseto)
-            # WHAT DO
+            # FIXME: This branch should never be reached, due to a check in dispatch method
+            logger.error("Received unexpected modification event for folder: {}".format(event.src_path))
             return self.put_event(operations.RemoteCreateFolder(context))
         return self.put_event(operations.RemoteUpdateFile(context))
 

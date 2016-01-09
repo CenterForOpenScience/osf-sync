@@ -30,18 +30,14 @@ class OperationWorker(threading.Thread, metaclass=Singleton):
                 self._queue.task_done()
                 continue
 
-            logger.info('Starting {}'.format(job))
-
             try:
                 job.run(dry=settings.DRY)
             except (NodeNotFound, ) as e:
                 logger.warning(e)
             except Exception as e:
                 logger.exception(e)
-                # TODO: How can we get filename from a given job, to display appropriate notification to the user?
-                Notification().error('Error while updating')
-            else:
-                logger.info('Job successfully completed')
+                # TODO: Get filename from a given job, to display appropriate notification to the user?
+                Notification().error('Error while updating file:\n {}'.format(job.local))
             finally:
                 self._queue.task_done()
         logger.debug('OperationWorker stopped')

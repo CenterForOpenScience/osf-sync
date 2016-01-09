@@ -13,20 +13,20 @@ from osfoffline.utils.authentication import get_current_user
 
 class OSFClient(metaclass=Singleton):
 
-    def __init__(self, limit=5):
+    def __init__(self, *, limit=5):
         self.user = get_current_user()
         self.headers = {
             'Authorization': 'Bearer {}'.format(self.user.oauth_token),
         }
-        self.throttler = threading.Semaphore(limit)
+        self.throttler = threading.Semaphore(limit)  # TODO: Is throttling active?
         self.request_session = requests.Session()
         self.request_session.headers.update(self.headers)
 
     def get_node(self, id):
         return Node.load(self.request_session, id)
 
-    def get_user(self, id='me'):
-        return User.load(self.request_session, id)
+    def get_user(self, *, id='me'):
+        return User.load(self.request_session, id=id)
 
     def request(self, *args, **kwargs):
         return self.request_session.request(*args, **kwargs)
@@ -47,7 +47,7 @@ class BaseResource(abc.ABC):
             setattr(self, attribute, value)
 
     @classmethod
-    def get_url(cls, *args):
+    def get_url(cls, *args, **kwargs):
         return cls.BASE_URL
 
     @classmethod
@@ -55,8 +55,8 @@ class BaseResource(abc.ABC):
         return cls(request_session, data)
 
     @classmethod
-    def load(cls, request_session, *args):
-        resp = request_session.get(cls.get_url(*args), params={'page[size]': 250})
+    def load(cls, request_session, *args, **kwargs):
+        resp = request_session.get(cls.get_url(*args, **kwargs), params={'page[size]': 250})
         data = resp.json()
 
         if isinstance(data['data'], list):
@@ -74,13 +74,12 @@ class BaseResource(abc.ABC):
             yield item
         if data['links'].get('next'):
             for item in self.fetch_related(
-                self.request_session,
                 relationship,
                 next_url=data['links']['next']
             ):
                 yield item
 
-    def fetch_related(self, relationship, query=None, next_url=None):
+    def fetch_related(self, relationship, *, query=None, next_url=None):
         relation = self.raw['relationships'].get(relationship)
         if not relation:
             return None
@@ -99,6 +98,7 @@ class BaseResource(abc.ABC):
         else:
             return self._fetch_related(relationship, data)
 
+
 class User(BaseResource):
     """Fetch API data relevant to a specific user"""
     RESOURCE = 'users'
@@ -109,7 +109,7 @@ class User(BaseResource):
     #     self.date_modified = iso8601.parse_date(self.date_modified)
 
     @classmethod
-    def get_url(cls, id='me'):
+    def get_url(cls, *, id='me'):
         return '{}/{}/{}/'.format(cls.BASE_URL, cls.RESOURCE, id)
 
     def get_nodes(self):
@@ -137,7 +137,7 @@ class Node(BaseResource):
     def get_url(cls, id):
         return '{}/{}/{}/?embed=parent'.format(cls.BASE_URL, cls.RESOURCE, id)
 
-    def get_storage(self, id='osfstorage'):
+    def get_storage(self, *, id='osfstorage'):
         # TODO: At present only osfstorage is fully supported for syncing
         return next(
             storage
@@ -145,10 +145,10 @@ class Node(BaseResource):
             if storage.provider == id
         )
 
-    def get_children(self, lazy=False):
+    def get_children(self, *, lazy=False):
         related = map(
             lambda data: Node(self.request_session, data),
-            self.fetch_related('children', {'embed': 'parent'})
+            self.fetch_related('children', query={'embed': 'parent'})
         )
         if lazy:
             return related
@@ -164,6 +164,14 @@ class UserNode(Node):
 
 class StorageObject(BaseResource):
     """Represent API data for files or folders under a specific node"""
+    def __init__(self, request_session, data, *, parent=None):
+        super().__init__(request_session, data)
+        self.parent = parent
+        if hasattr(self, 'date_modified') and self.date_modified:
+            self.date_modified = iso8601.parse_date(self.date_modified)
+        if hasattr(self, 'last_touched') and self.last_touched:
+            self.last_touched = iso8601.parse_date(self.last_touched)
+
     @classmethod
     def get_url(cls, id):
         return '{}/files/{}/'.format(cls.BASE_URL, id)
@@ -180,23 +188,15 @@ class StorageObject(BaseResource):
             ]
         return cls(request_session, data['data'])
 
-    def __init__(self, request_session, data, parent=None):
-        super().__init__(request_session, data)
-        self.parent = parent
-        if hasattr(self, 'date_modified') and self.date_modified:
-            self.date_modified = iso8601.parse_date(self.date_modified)
-        if hasattr(self, 'last_touched') and self.last_touched:
-            self.last_touched = iso8601.parse_date(self.last_touched)
-
 
 class Folder(StorageObject):
     """Represent API data for folders under a specific node"""
     is_dir = True
 
     def __repr__(self):
-        return '<{0} {1} name={2} path={2}>'.format(__class__.__name__, id(self), self.name, self.path)
+        return '<{0} {1} name={2} path={2}>'.format(self.__class__.__name__, id(self), self.name, self.path)
 
-    def get_children(self, lazy=False):
+    def get_children(self, *, lazy=False):
         related = map(
             lambda item: (Folder if item['attributes']['kind'] == 'folder' else File)(self.request_session, item, parent=self),
             self.fetch_related('files')

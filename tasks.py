@@ -5,6 +5,7 @@ from invoke import task, run
 
 from osfoffline import settings
 
+
 def drop_db():
     if os.path.exists(settings.PROJECT_DB_FILE):
         os.remove(settings.PROJECT_DB_FILE)
@@ -44,6 +45,7 @@ def start_for_tests(dropdb=True, droplog=False, dropdir=False):
 
     start()
 
+
 @task
 def qt_gen():
     run('pyuic5 ./osfoffline/gui/qt/static/login.ui -o ./osfoffline/gui/qt/generated/login.py')
@@ -56,5 +58,5 @@ def wipe(hard=True):
         drop_db()
         drop_log()
     else:
-        print("rm -r '{0}'".format(settings.PROJECT_DB_FILE))
-        print("rm -r '{0}'".format(settings.PROJECT_LOG_FILE))
+        print("rm '{0}'".format(settings.PROJECT_DB_FILE))
+        print("rm '{0}'".format(settings.PROJECT_LOG_FILE))

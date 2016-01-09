@@ -130,7 +130,7 @@ class Preferences(QDialog, Ui_Settings):
         for tree_item, node in self.tree_items:
             tree_item.setCheckState(self.PROJECT_SYNC_COLUMN, Qt.Unchecked)
 
-    def open_window(self, tab=GENERAL):
+    def open_window(self, *, tab=GENERAL):
         if self.isVisible():
             self.tabWidget.setCurrentIndex(tab)
             self.selector(tab)
