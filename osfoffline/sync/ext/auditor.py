@@ -1,7 +1,8 @@
 from concurrent.futures import ThreadPoolExecutor
 from enum import Enum
-from pathlib import Path
+import logging
 import os
+from pathlib import Path
 
 from osfoffline import settings
 from osfoffline.client.osf import OSFClient
@@ -11,6 +12,9 @@ from osfoffline.tasks import operations
 from osfoffline.tasks.operations import OperationContext
 from osfoffline.utils import hash_file
 from osfoffline.utils.authentication import get_current_user
+
+
+logger = logging.getLogger(__name__)
 
 
 class Location(Enum):
@@ -64,6 +68,25 @@ class ModificationEvent:
         return hash(self.key)
 
 
+class Audit(object):
+
+    def __init__(self, fid, sha256, fobj):
+        """
+        :param str fid: id of file object
+        :param str sha256: sha256 of file object
+        :param str fobj: the local, db, or remote representation of a file object
+        """
+        self.fid = fid
+        self.sha256 = sha256
+        self.fobj = fobj
+
+    @property
+    def info(self):
+        return (self.fid, self.sha256, self.fobj)
+
+NULL_AUDIT = Audit(None, None, None)
+
+
 class Auditor:
 
     def __init__(self):
@@ -77,8 +100,13 @@ class Auditor:
         def context_for(paths):
             if not isinstance(paths, tuple):
                 paths = (paths, )
-                # return OperationContext(Path(paths), db_map.get(paths, (None, ))[-1], remote_map.get(paths, (None, ))[-1])
-            return [OperationContext(self.user_folder / Path(path), db_map.get(path, (None, ))[-1], remote_map.get(path, (None, ))[-1]) for path in paths]
+            return [
+                OperationContext(
+                    local=self.user_folder / Path(path),
+                    db=db_map.get(path, NULL_AUDIT).fobj,
+                    remote=remote_map.get(path, NULL_AUDIT).fobj
+                ) for path in paths
+            ]
 
         diffs = {
             Location.LOCAL: self._diff(local_map, db_map),
@@ -94,25 +122,95 @@ class Auditor:
                         change = (change, )
                     for s in change:
                         parts = s.split(os.path.sep)
-                        while len(parts) > 2:
+                        while not parts[-1] == settings.OSF_STORAGE_FOLDER:
                             parts.pop(-1)
                             path = os.path.sep.join(parts + [''])
                             if path not in modifications[location]:
-                                modifications[location][path] = ModificationEvent(location, EventType.UPDATE, context_for(path), path)
-                        modifications[location][s] = ModificationEvent(location, event_type, context_for(change), *change)
+                                modifications[location][path] = ModificationEvent(
+                                    location,
+                                    EventType.UPDATE,
+                                    context_for(path),
+                                    path
+                                )
+                        # *change always adds the src_path kwarg and sometime adds dest_path
+                        modifications[location][s] = ModificationEvent(
+                            location,
+                            event_type,
+                            context_for(change),
+                            *change
+                        )
         return modifications[Location.LOCAL], modifications[Location.REMOTE]
 
     def collect_all_db(self):
-        return {db.path.replace(self.user_folder, ''): (db.id, db.sha256, db) for db in Session().query(File)}
+        return {
+            entry.rel_path: Audit(
+                entry.id,
+                entry.sha256,
+                entry
+            )
+            for entry in Session().query(File)
+        }
 
     def collect_all_remote(self):
         ret = {}
         with ThreadPoolExecutor(max_workers=5) as tpe:
-            for node in Session().query(Node):
-                remote_node = OSFClient().get_node(node.id)
-                remote = remote_node.get_storage(id='osfstorage')
-                rel_path = os.path.join('{} - {}'.format(node.title, node.id), settings.OSF_STORAGE_FOLDER)
-                tpe.submit(self._collect_node_remote, remote, ret, rel_path, tpe)
+            # first get top level nodes selected in settings
+            for node in Session().query(Node).filter(Node.sync):
+                try:
+                    remote_node = OSFClient().get_node(node.id)
+                except Exception as e:
+                    # If the node can't be reached, skip auditing of this project and go on to the next node
+                    # TODO: The client should be made smart enough to check return code before parsing and yield a custom exception
+                    # TODO: The user should be notified about projects that failed to sync, and given a way to deselect them
+                    logger.exception(e)
+                    continue
+                remote_files = remote_node.get_storage(id='osfstorage')
+                rel_path = os.path.join(
+                    node.rel_path,
+                    settings.OSF_STORAGE_FOLDER
+                )
+                tpe.submit(
+                    self._collect_node_remote,
+                    remote_files,
+                    ret,
+                    rel_path,
+                    tpe
+                )
+                try:
+                    stack = remote_node.get_children(lazy=False)
+                except Exception as e:
+                    # If the node can't be reached, skip auditing of this project and go on to the next node
+                    # TODO: The client should be made smart enough to check return code before parsing and yield a custom exception
+                    # TODO: The user should be notified about projects that failed to sync, and given a way to deselect them
+                    logger.exception(e)
+                    continue
+                while len(stack):
+                    remote_child = stack.pop(0)
+                    child_files = remote_child.get_storage(id='osfstorage')
+                    # RemoteSyncWorker's _preprocess_node guarantees a db entry exists
+                    # for each Node in the remote project hierarchy. Use the db Node's
+                    # path representation to ensure consistent path naming conventions.
+                    child_path = Session().query(Node).filter(
+                        Node.id == remote_child.id
+                    ).one().rel_path
+                    tpe.submit(
+                        self._collect_node_remote,
+                        child_files,
+                        ret,
+                        os.path.join(
+                            child_path,
+                            settings.OSF_STORAGE_FOLDER
+                        ),
+                        tpe
+                    )
+                    try:
+                        stack = stack + remote_child.get_children(lazy=False)
+                    except Exception as e:
+                        # If the node can't be reached, skip auditing of this project and go on to the next node
+                        # TODO: The client should be made smart enough to check return code before parsing and yield a custom exception
+                        # TODO: The user should be notified about projects that failed to sync, and given a way to deselect them
+                        logger.exception(e)
+                        continue
             tpe._work_queue.join()
         return ret
 
@@ -120,30 +218,52 @@ class Auditor:
         if root.parent:
             rel_path = os.path.join(rel_path, root.name)
 
-        acc[rel_path + os.path.sep] = (root.id, None if root.is_dir else root.extra['hashes']['sha256'], root)
+        acc[rel_path + os.path.sep] = Audit(
+            root.id,
+            None if root.is_dir else root.extra['hashes']['sha256'],
+            root
+        )
 
         for child in root.get_children():
             # TODO replace with pattern matching
             if child.name in settings.IGNORED_NAMES:
                 continue
             if child.kind == 'folder':
-                #self._collect_node_remote(child, acc, rel_path, tpe)
                 tpe.submit(self._collect_node_remote, child, acc, rel_path, tpe)
             else:
-                acc[os.path.join(rel_path, child.name)] = (child.id, child.extra['hashes']['sha256'], child)
+                acc[os.path.join(rel_path, child.name)] = Audit(
+                    child.id,
+                    child.extra['hashes']['sha256'],
+                    child
+                )
         tpe._work_queue.task_done()
-        #return acc
 
     def collect_all_local(self, db_map):
         ret = {}
-        for node in Session().query(Node):
+        for node in Session().query(Node).filter(Node.sync):
             node_path = Path(os.path.join(node.path, settings.OSF_STORAGE_FOLDER))
             self._collect_node_local(node_path, ret, db_map)
+
+            stack = [c for c in node.children]
+            while len(stack):
+                child = stack.pop(0)
+                child_path = Path(
+                    os.path.join(
+                        child.path,
+                        settings.OSF_STORAGE_FOLDER
+                    )
+                )
+                self._collect_node_local(child_path, ret, db_map)
+                stack = stack + child.children
         return ret
 
     def _collect_node_local(self, root, acc, db_map):
         rel_path = str(root).replace(self.user_folder, '') + os.path.sep
-        acc[rel_path] = (db_map.get(rel_path, (None, ))[0], None, rel_path)
+        acc[rel_path] = Audit(
+            db_map.get(rel_path, NULL_AUDIT).fid,
+            None,
+            rel_path
+        )
 
         for child in root.iterdir():
             # TODO replace with pattern matching
@@ -153,43 +273,47 @@ class Auditor:
                 self._collect_node_local(child, acc, db_map)
             else:
                 rel_path = str(child).replace(self.user_folder, '')
-                acc[rel_path] = (db_map.get(rel_path, (None, ))[0], hash_file(child), rel_path)
+                acc[rel_path] = Audit(
+                    db_map.get(rel_path, NULL_AUDIT).fid,
+                    hash_file(child),
+                    rel_path
+                )
         return acc
 
     def _diff(self, source, target):
         # source == snapshot
         # target == ref
-        id_target = {v[0]: k for k, v in target.items()}
-        id_source = {v[0]: k for k, v in source.items()}
+        id_target = {v.fid: k for k, v in target.items()}
+        id_source = {v.fid: k for k, v in source.items()}
 
         created = set(source.keys()) - set(target.keys())
         deleted = set(target.keys()) - set(source.keys())
 
         for i in set(source.keys()) & set(target.keys()):
-            if source[i][0] != target[i][0]:
+            if source[i].fid != target[i].fid:
                 created.add(i)
                 deleted.add(i)
 
         moved = set()
         for path in set(deleted):
-            id = target[path][0]
-            if id in id_source:
+            fid = target[path].fid
+            if fid in id_source:
                 deleted.remove(path)
-                moved.add((path, id_source[id]))
+                moved.add((path, id_source[fid]))
 
         for path in set(created):
-            id = source[path][0]
-            if id in id_target:
+            fid = source[path].fid
+            if fid in id_target:
                 created.remove(path)
-                moved.add((id_target[id], path))
+                moved.add((id_target[fid], path))
 
         modified = set()
         for path in set(target.keys()) & set(source.keys()):
-            if target[path][1] != source[path][1]:
+            if target[path].sha256 != source[path].sha256:
                 modified.add(path)
 
         for (src, dest) in moved:
-            if target[src][1] != source[dest][1]:
+            if target[src].sha256 != source[dest].sha256:
                 modified.add(src)
 
         return {

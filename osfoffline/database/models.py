@@ -35,9 +35,23 @@ class Node(Base):
 
     id = Column(String, primary_key=True)
 
+    # True if the node has been explicitly selected for sync by the user. Generally
+    # components will have sync = False. For all Nodes with sync = False there exists
+    # some ancestor with sync = True.
+    #
+    # TODO: If we plan to support syncing subsets of a project heirarchy it may be
+    # convienent to cast this to in Integer or Enum field with 3 accepted states:
+    # 1: Explicitly selected for sync
+    # 0: Implicitly synced-- descendant of some explicitly synced Node
+    # -1 (or 2 if we prefer unsigned): Explicitly ignored-- should have no children
+    # without sync = 1
     sync = Column(Boolean, default=False, nullable=False)
+
     title = Column(String)
     user_id = Column(Integer, ForeignKey('user.id'), nullable=False)
+    # The id of the parent Node. Should be None if either:
+    # - the Node has no parent
+    # - syncing a child Node but not its parent
     parent_id = Column(Integer, ForeignKey('node.id'), nullable=True)
 
     children = relationship('Node', backref=backref('parent', remote_side=[id]), cascade='all')
@@ -49,15 +63,25 @@ class Node(Base):
 
     @property
     def path(self):
-        """Recursively walk up the path of the node. Top level node joins with the osf folder path of the user
+        return os.path.join(self.user.folder, self.rel_path)
+
+    @property
+    def rel_path(self):
+       	"""
+        Path on the local filesystem.
+
+        Recursively walk up the path of the node. Top level node joins with the osf folder path of the user
         """
         # +os.path.sep+ instead of os.path.join: http://stackoverflow.com/a/14504695
-
         name = '{} - {}'.format(self.title, self.id)
         if self.parent:
-            return os.path.join(self.parent.path, 'Components', name)
+            return os.path.join(
+                self.parent.rel_path,
+                settings.COMPONENTS_FOLDER,
+                name
+            )
         else:
-            return os.path.join(self.user.folder, name)
+            return name
 
     @hybrid_property
     def top_level_file_folders(self):
@@ -80,6 +104,14 @@ class Node(Base):
         else:
             assert self.parent is not None
         return top_level
+
+    @validates('sync')
+    def validate_sync(self, key, sync):
+        if not self.parent_id:
+            assert sync is True
+        else:
+            assert sync is False
+        return sync
 
     def __repr__(self):
         return '<Node({}, title={}, path={})>'.format(self.id, self.title, self.path)
@@ -140,19 +172,29 @@ class File(Base):
 
     @property
     def osf_path(self):
+        """
+        APIv1 suffix for the node or folder containing this item (to be used as part of a URL)
+        """
         if not self.parent:
             return ''
-        return self.id + ((self.is_folder and '/') or '')
+        return self.id + '/' if self.is_folder else ''
 
     @property
     def path(self):
-        """Recursively walk up the path of the file/folder. Top level file/folder joins with the path of the containing node.
+        return self.rel_path.replace(self.node.rel_path, self.node.path)
+
+    @property
+    def rel_path(self):
+        """
+        Local filesystem path to the file or folder.
+
+        Recursively walk up the path of the file/folder. Top level joins with the path of the containing node.
         """
         # +os.path.sep+ instead of os.path.join: http://stackoverflow.com/a/14504695
         if self.parent:
-            return os.path.join(self.parent.path, self.name) + ('/' if self.is_folder else '')
+            return os.path.join(self.parent.rel_path, self.name) + (os.path.sep if self.is_folder else '')
         else:
-            return os.path.join(self.node.path, settings.OSF_STORAGE_FOLDER) + ('/' if self.is_folder else '')
+            return os.path.join(self.node.rel_path, settings.OSF_STORAGE_FOLDER) + (os.path.sep if self.is_folder else '')
 
     def locally_create_children(self):
         self.locally_created = True

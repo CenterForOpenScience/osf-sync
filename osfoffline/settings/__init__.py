@@ -1,5 +1,4 @@
 import logging
-import logging.config
 
 # Must import in order to be included by PyInstaller
 import raven
@@ -7,12 +6,13 @@ from raven.handlers.logging import SentryHandler
 
 from osfoffline.settings.defaults import *  # noqa
 
+
 logger = logging.getLogger(__name__)
 
 try:
     from osfoffline.settings.local import *  # noqa
 except ImportError:
-    logger.warning('No local.py found. Using default settings.')
+    logger.debug('No local.py found. Using default settings.')
 
 # Ensure that storage directories are created when application starts
 for path in (PROJECT_DB_DIR, PROJECT_LOG_DIR):
@@ -50,9 +50,6 @@ LOGGING_CONFIG = {
         'handlers': ['console', 'logfile']
     }
 }
-
-# Set up basic (console and file) logging
-logging.config.dictConfig(LOGGING_CONFIG)
 
 # Add Sentry logging separately, so that we can access the client and modify context variables later
 # This allows us to send additional data to Sentry (like username, when the user is logged in)

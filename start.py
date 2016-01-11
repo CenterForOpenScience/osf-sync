@@ -1,7 +1,8 @@
 #!/usr/bin/env python
 import logging
-import sys
 import requests
+import signal
+import sys
 from distutils.version import StrictVersion
 
 from PyQt5.QtWidgets import QApplication
@@ -10,6 +11,7 @@ from PyQt5.QtWidgets import QSystemTrayIcon
 
 from osfoffline.database import drop_db
 from osfoffline.gui.qt import OSFOfflineQT
+from osfoffline.utils.log import start_logging
 from osfoffline.utils.singleton import SingleInstance
 from osfoffline.tasks.notifications import Notification
 from osfoffline import settings
@@ -19,7 +21,8 @@ from updater4pyi.upd_iface_pyqt4 import UpdatePyQt4Interface
 from updater4pyi.upd_defs import Updater4PyiError
 
 
-logger = logging.getLogger(__name__)
+if settings.DEBUG:
+    signal.signal(signal.SIGINT, signal.SIG_DFL)
 
 
 def running_warning(message):
@@ -29,6 +32,7 @@ def running_warning(message):
 
 
 def start():
+    start_logging()
     # will end application if an instance is already running
     SingleInstance(callback=running_warning('OSF-Offline is already running. Check out the system tray.'))
 
@@ -42,6 +46,7 @@ def start():
                                              ask_before_checking=True,
                                              parent=QApplication.instance())
     except Updater4PyiError as e:
+        logger = logging.getLogger(__name__)
         logger.exception(e.updater_msg)
         if 'Connection Error' in e.updater_msg:
             Notification().error('Cannot check for updates because you have no Internet connection.')

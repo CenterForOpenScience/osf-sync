@@ -9,11 +9,14 @@ PROJECT_NAME = 'osf-offline'
 PROJECT_AUTHOR = 'cos'
 APPLICATION_SCOPES = 'osf.full_write'
 
+DEBUG = False
+
 DRY = False
 
 # Base URL for API server; used to fetch data
 OSF_URL = 'https://test.osf.io'
 API_BASE = 'https://test-api.osf.io'
+API_VERSION = 'v2'
 FILE_BASE = 'https://test-files.osf.io'
 
 # Interval (in seconds) to poll the OSF for server-side file changes
@@ -33,6 +36,7 @@ IGNORED_NAMES = ['.DS_Store', 'lost+found', 'Desktop.ini']
 IGNORED_PATTERNS = ['*.DS_Store', '*lost+found', '*Desktop.ini']
 
 OSF_STORAGE_FOLDER = 'OSF Storage'
+COMPONENTS_FOLDER = 'Components'
 
 # wab~,vmc,vhd,vo1,vo2,vsv,vud,vmdk,vmsn,vmsd,hdd,vdi,vmwarevm,nvram,vmx,vmem,iso,dmg,sparseimage,wim,ost,o,qtch,log
 # wab~,vmc,vhd,vdi,vo1,vo2,vsv,vud,iso,dmg,sparseimage,sys,cab,exe,msi,dll,dl_,wim,ost,o,qtch,log,ithmb,vmdk,vmem,vmsd,vmsn,vmss,vmx,vmxf,menudata,appicon,appinfo,pva,pvs,pvi,pvm,fdd,hds,drk,mem,nvram,hdd
