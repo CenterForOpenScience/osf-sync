@@ -50,6 +50,6 @@ PROJECT_LOG_FILE = os.path.join(PROJECT_LOG_DIR, 'osfoffline.log')
 
 #updater
 REPO = 'CenterForOpenScience/OSF-Offline'
-VERSION = '0.1.0'
+VERSION = '0.2.1'
 NAME = 'OSF-Offline'
 MIN_VERSION_URL = 'https://raw.githubusercontent.com/CenterForOpenScience/OSF-Offline/develop/deploy/Offline-version.json'
