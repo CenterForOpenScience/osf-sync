@@ -64,14 +64,17 @@ class OSFOTestBase(unittest.TestCase):
                 )
             else:
                 file_node['rel_path'] = os.path.join(
-                    os.path.sep,
+                    str(root),
                     file_node['name']
                 )
             root.ensure(
                 file_node['rel_path'],
                 dir=(file_node['type'] == 'folder')
             )
-            files = itertools.chain(files, file_node.get('children', []))
+            children = file_node.get('children', [])
+            for child in children:
+                child['parent'] = file_node
+            files = itertools.chain(files, children)
 
     def _ensure_project_structure(self, project, parent):
         for child in project.get('children', []):
@@ -93,7 +96,10 @@ class OSFOTestBase(unittest.TestCase):
             project_dir = tmpdir.mkdir(
                 project['name']
             )
-            project['rel_path'] = str(project_dir)
+            project['rel_path'] = str(project_dir).replace(
+                str(tmpdir),
+                ''
+            )
             project_osfstorage_dir = project_dir.mkdir(
                 settings.OSF_STORAGE_FOLDER
             )

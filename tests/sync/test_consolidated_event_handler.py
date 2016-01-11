@@ -2,6 +2,17 @@ import os
 
 import pytest
 
+from watchdog.events import (  # noqa
+    FileDeletedEvent,
+    FileModifiedEvent,
+    FileCreatedEvent,
+    FileMovedEvent,
+    DirDeletedEvent,
+    DirModifiedEvent,
+    DirCreatedEvent,
+    DirMovedEvent
+)
+
 from osfoffline import settings
 
 from tests.base import OSFOTestBase
@@ -19,7 +30,9 @@ class TestConsolidatedEventHandler(OSFOTestBase):
             folder=self.root_dir
         )
         self.sync_worker.start()
+        request.addfinalizer(self.sync_worker.stop)
 
+    @fail_after(timeout=3)
     def test_create_file(self):
         project = self.PROJECT_STRUCTURE[0]
         osf_storage_path = os.path.join(
@@ -36,14 +49,31 @@ class TestConsolidatedEventHandler(OSFOTestBase):
             fp.write('The meaning of life is 42')
 
         self.sync_worker.flushed.wait()
-        assert len(self.sync_worker._create_cache) == 1
-        # TODO: not really necessary because the TestSyncWorker is not a
-        # Singleton and is reinstantiate for every test.
-        self.sync_worker.flushed.clear()
-        self.sync_worker.done.set()
+        assert len(self.sync_worker._create_cache) == 1, \
+            "exactly one event captured"
+        assert isinstance(
+            self.sync_worker._create_cache[0],
+            FileCreatedEvent
+        ) is True, \
+            "the one captured event is a FileCreatedEvent"
 
     def test_update_file(self):
-        pass
+        project = self.PROJECT_STRUCTURE[0]
+        import ipdb; ipdb.set_trace()
+        file_path = os.path.join(
+            self.root_dir,
+            project['files'][0]['children'][0]['rel_path'].lstrip(os.path.sep)
+        )
+        os.utime(file_path, None)
+
+        self.sync_worker.flushed.wait()
+        assert len(self.sync_worker._event_cache.children()) == 1, \
+            "exactly one event captured"
+        assert isinstance(
+            self._event_cache.children()[0],
+            FileModifiedEvent
+        ) is True, \
+            "the one captured event is a FileModifiedEvent"
 
     def test_rename_file(self):
         pass
