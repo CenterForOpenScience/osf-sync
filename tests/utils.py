@@ -57,16 +57,18 @@ unique_id = _unique(
 )
 unique_project_name = _unique_proper_name
 
-def fail_after(test, timeout=2):
-    @functools.wraps(test)
-    def test_wrapper(self, *args, **kwargs):
-        pool = ThreadPool(processes=1)
-        result = pool.apply_async(test, args=(self, ) + args, kwds=kwargs)
-        now = time.time()
-        while not result.ready():
-            if (time.time() - now > timeout):
-                pool.terminate()
-                self.fail()
-            time.sleep(0.1)
-        return result.get()
+def fail_after(timeout=2):
+    def test_wrapper(test):
+        @functools.wraps(test)
+        def _test_wrapper(self, *args, **kwargs):
+            pool = ThreadPool(processes=1)
+            result = pool.apply_async(test, args=(self, ) + args, kwds=kwargs)
+            now = time.time()
+            while not result.ready():
+                if (time.time() - now > timeout):
+                    pool.terminate()
+                    self.fail()
+                time.sleep(0.1)
+            return result.get()
+        return _test_wrapper
     return test_wrapper
