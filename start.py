@@ -19,6 +19,7 @@ from updater4pyi import upd_source, upd_core
 from updater4pyi.upd_iface_pyqt4 import UpdatePyQt4Interface
 from updater4pyi.upd_defs import Updater4PyiError
 
+logger = logging.getLogger(__name__)
 
 if settings.DEBUG:
     signal.signal(signal.SIGINT, signal.SIG_DFL)
@@ -50,7 +51,6 @@ def start():
                                              ask_before_checking=True,
                                              parent=QApplication.instance())
     except Updater4PyiError as e:
-        logger = logging.getLogger(__name__)
         logger.exception(e.updater_msg)
         if 'Connection Error' in e.updater_msg:
             running_warning(message='Cannot check for updates because you have no Internet connection.')
@@ -61,11 +61,12 @@ def start():
         r = requests.get(settings.MIN_VERSION_URL)
     except requests.exceptions.ConnectionError:
         running_warning(message='Check for minimum verion requirements for OSF-Offline failed '
-                        'becasue you have no Internet connection', critical=True)
-    try:
-        min_version = r.json()['min-version']
-    except KeyError as e:
-        logger.exception(e)
+                        'because you have no Internet connection', critical=True)
+    else:
+        try:
+            min_version = r.json()['min-version']
+        except KeyError as e:
+            logger.exception(e)
 
     if min_version:
         if StrictVersion(settings.VERSION) < StrictVersion(min_version):
