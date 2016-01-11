@@ -14,6 +14,7 @@ from PyQt5.QtWidgets import QApplication
 from PyQt5.QtWidgets import QFileDialog
 from PyQt5.QtWidgets import QSystemTrayIcon
 
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm.exc import NoResultFound
 
 from osfoffline.application.background import BackgroundHandler
@@ -97,12 +98,13 @@ class OSFOfflineQT(QSystemTrayIcon):
 
     def start(self):
         logger.debug('Start in main called.')
+        self.hide()
         user = LoginScreen().get_user()
         if user is None:
             return False
 
         self.ensure_folder(user)
-
+        self.show()
         logger.debug('starting background handler from main.start')
         self.background_handler = BackgroundHandler()
         self.background_handler.set_intervention_cb(self.intervention_handler.enqueue_signal.emit)
@@ -224,11 +226,22 @@ class OSFOfflineQT(QSystemTrayIcon):
         drop_db()
         # Clear any user-specific context data that would be sent to Sentry
         remove_user_from_sentry_logs()
-        # if the preferences window is active, close it.
-        if self._context_menu.preferences:
-            self._context_menu.preferences.close()
-        LoginScreen().user = None
         self.background_handler.stop()
+
+        try:
+            user = Session().query(User).filter(User.login).one()
+        except NoResultFound:
+            pass
+        else:
+            user.login = False
+            try:
+                save(Session(), user)
+            except:
+                Session().query(User).delete()
+        self.hide()
+        # if the preferences window is active, close it.
+        if self._context_menu.preferences.isVisible():
+            self._context_menu.preferences.close()
         self.start()
 
 

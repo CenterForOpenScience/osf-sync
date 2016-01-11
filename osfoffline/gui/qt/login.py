@@ -1,4 +1,5 @@
 import logging
+import sys
 
 from PyQt5.QtWidgets import QDialog, QInputDialog, QMessageBox
 
@@ -70,3 +71,6 @@ class LoginScreen(QDialog, Ui_login):
         else:
             logger.info('Successfully logged in user: {}'.format(self.user))
             self.accept()
+
+    def closeEvent(self, event):
+        sys.exit(1)
