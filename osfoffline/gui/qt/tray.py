@@ -224,6 +224,11 @@ class OSFOfflineQT(QSystemTrayIcon):
         drop_db()
         # Clear any user-specific context data that would be sent to Sentry
         remove_user_from_sentry_logs()
+        # if the preferences window is active, close it.
+        if self._context_menu.preferences:
+            self._context_menu.preferences.close()
+        LoginScreen().user = None
+        self.background_handler.stop()
         self.start()
 
 
