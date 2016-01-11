@@ -63,7 +63,7 @@ def start():
         running_warning(message='Check for minimum verion requirements for OSF-Offline failed '
                         'becasue you have no Internet connection', critical=True)
     try:
-        min_version = r.json()['version']
+        min_version = r.json()['min-version']
     except KeyError as e:
         logger.exception(e)
 
