@@ -64,7 +64,7 @@ class OSFOfflineMenu(QMenu):
         webbrowser.open_new_tab(settings.OSF_URL)
 
     def open_settings(self):
-        self.preferences.open_window(Preferences.GENERAL)
+        self.preferences.open_window(tab=Preferences.GENERAL)
 
     def open_about(self):
-        self.preferences.open_window(Preferences.ABOUT)
+        self.preferences.open_window(tab=Preferences.ABOUT)

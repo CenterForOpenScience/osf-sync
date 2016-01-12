@@ -17,7 +17,7 @@ class SingleInstance:
         https://raw.githubusercontent.com/pycontribs/tendo/master/tendo/singleton.py
     """
 
-    def __init__(self, flavor_id="", callback=None):
+    def __init__(self, *, flavor_id="", callback=None):
         self.initialized = False
         basename = os.path.splitext(os.path.abspath(sys.argv[0]))[0].replace(
             "/", "-").replace(":", "").replace("\\", "-") + '-%s' % flavor_id + '.lock'

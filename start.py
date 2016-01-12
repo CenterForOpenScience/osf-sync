@@ -8,11 +8,14 @@ from PyQt5.QtWidgets import QSystemTrayIcon
 
 from osfoffline.database import drop_db
 from osfoffline.gui.qt import OSFOfflineQT
-from osfoffline.utils.singleton import SingleInstance
 from osfoffline import settings
+from osfoffline.utils.log import start_logging
+from osfoffline.utils.singleton import SingleInstance
+
 
 if settings.DEBUG:
     signal.signal(signal.SIGINT, signal.SIG_DFL)
+
 
 def running_warning():
     warn_app = QApplication(sys.argv)
@@ -21,7 +24,8 @@ def running_warning():
 
 
 def start():
-    SingleInstance(callback=running_warning)  # will end application if an instance is already running
+    start_logging()
+    singleton = SingleInstance(callback=running_warning)  # will end application if an instance is already running
 
     # Start logging all events
     if '--drop' in sys.argv:

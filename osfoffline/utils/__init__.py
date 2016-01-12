@@ -19,7 +19,7 @@ class Singleton(type):
         return cls._instances[cls]
 
 
-def hash_file(path, chunk_size=65536):
+def hash_file(path, *, chunk_size=65536):
     """
     Return the SHA256 hash of a file
 
@@ -55,14 +55,14 @@ def extract_node(path):
         raise NodeNotFound(path)
 
 
-def local_to_db(local, node, is_folder=False):
+def local_to_db(local, node, *, is_folder=False, check_is_folder=True):
     db = Session().query(models.File).filter(models.File.parent == None, models.File.node == node).one()  # noqa
     parts = str(local).replace(node.path, '').split(os.path.sep)
     for part in parts:
         for child in db.children:
             if child.name == part:
                 db = child
-    if db.path.rstrip(os.path.sep) != str(local).rstrip(os.path.sep) or db.is_folder != (local.is_dir() or is_folder):
+    if db.path.rstrip(os.path.sep) != str(local).rstrip(os.path.sep) or (check_is_folder and db.is_folder != (local.is_dir() or is_folder)):
         return None
     return db
 
