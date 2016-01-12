@@ -236,7 +236,13 @@ class OSFOfflineQT(QSystemTrayIcon):
             Session().close()
         finally:
             logger.info('Restart the application.')
-            self.start()
+            self.hide()
+            user = LoginScreen().get_user()
+            if user is None:
+                return False
+
+            self.ensure_folder(user)
+            self.show()
 
 
 class SyncEventHandler(QThread):
