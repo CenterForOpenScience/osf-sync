@@ -46,11 +46,13 @@ class ConsolidatedEventHandler(PatternMatchingEventHandler):
             if event.event_type == 'modified':
                 if event.is_directory:
                     return
-                elif parts in self._event_cache:
-                    ev = self._event_cache[parts]
-                    if not isinstance(ev, OrderedDict) and ev.event_type in ('moved', 'created'):
-                        return
-
+                move_events = [
+                    evt
+                    for evt in self._event_cache.children()
+                    if evt.event_type == 'moved' and evt.dest_path == event.src_path
+                ]
+                if move_events:
+                    return
             if event.event_type == 'created':
                 self._create_cache.append(event)
             else:
