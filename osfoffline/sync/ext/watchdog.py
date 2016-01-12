@@ -62,16 +62,21 @@ class ConsolidatedEventHandler(PatternMatchingEventHandler):
             logger.debug('Event cache: {}'.format(self._event_cache))
 
             self.timer.cancel()
-            self.timer = threading.Timer(2, self.flush)
+            self.timer = threading.Timer(settings.EVENT_DEBOUNCE, self.flush)
             self.timer.start()
+
+    def _sorted_create_cache(self):
+        return sorted(
+            self._create_cache,
+            key=lambda ev: len(Path(ev.src_path).parents)
+        )
 
     def flush(self):
         with self.lock:
             # Create events after all other types, and parent folder creation events happen before child files
             for event in itertools.chain(
                     self._event_cache.children(),
-                    sorted(self._create_cache,
-                           key=lambda ev: len(Path(ev.src_path).parents))
+                    self._sorted_create_cache(),
             ):
                 logger.debug('Watchdog event dispatched: {}'.format(event))
                 try:

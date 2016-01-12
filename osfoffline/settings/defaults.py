@@ -48,8 +48,13 @@ PROJECT_DB_FILE = os.path.join(PROJECT_DB_DIR, 'osf.db')
 PROJECT_LOG_DIR = user_log_dir(appname=PROJECT_NAME, appauthor=PROJECT_AUTHOR)
 PROJECT_LOG_FILE = os.path.join(PROJECT_LOG_DIR, 'osfoffline.log')
 
+EVENT_DEBOUNCE = 2
+
 #updater
 REPO = 'CenterForOpenScience/OSF-Offline'
 VERSION = '0.2.1'
 NAME = 'OSF-Offline'
 MIN_VERSION_URL = 'https://raw.githubusercontent.com/CenterForOpenScience/OSF-Offline/develop/deploy/Offline-version.json'
+
+
+
