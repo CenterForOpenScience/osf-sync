@@ -25,7 +25,7 @@ def running_warning():
 
 def start():
     start_logging()
-    SingleInstance(callback=running_warning)  # will end application if an instance is already running
+    singleton = SingleInstance(callback=running_warning)  # will end application if an instance is already running
 
     # Start logging all events
     if '--drop' in sys.argv:
