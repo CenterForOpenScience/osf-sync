@@ -21,13 +21,7 @@ def make_project_structure():
         {
             'name': unique_project_name(),
             'id': unique_guid(),
-            'children': [
-                {
-                    unique_project_name(): {
-                        'id': unique_guid()
-                    }
-                }
-            ],
+            'children': [],
             'files': [
                 {
                     'name': unique_folder_name(),
@@ -41,6 +35,12 @@ def make_project_structure():
                             'sha256': unique_sha256()
                         }
                     ]
+                },
+                {
+                    'name': unique_folder_name(),
+                    'type': 'folder',
+                    'id': unique_id(),
+                    'children': []
                 }
             ]
         }
@@ -49,6 +49,10 @@ def make_project_structure():
 class OSFOTestBase(unittest.TestCase):
 
     PROJECT_STRUCTURE = None
+
+    def _make_dummy_file(self, path):
+        with open(path, 'w') as fp:
+            fp.write('With gorilla gone, what will become of man?')
 
     def _ensure_file_structure(self, root, files):
         files = iter(files)
@@ -64,13 +68,20 @@ class OSFOTestBase(unittest.TestCase):
                 )
             else:
                 file_node['rel_path'] = os.path.join(
-                    str(root),
+                    root.relto(self.root_dir),
                     file_node['name']
                 )
-            root.ensure(
-                file_node['rel_path'],
-                dir=(file_node['type'] == 'folder')
-            )
+            if file_node['type'] == 'folder':
+                self.root_dir.ensure_dir(
+                    file_node['rel_path']
+                )
+            else:
+                self._make_dummy_file(
+                    os.path.join(
+                        str(self.root_dir),
+                        file_node['rel_path']
+                    )
+                )
             children = file_node.get('children', [])
             for child in children:
                 child['parent'] = file_node
@@ -85,10 +96,10 @@ class OSFOTestBase(unittest.TestCase):
             for subchild in child.get('children', []):
                 self._ensure_project_structure(subchild, child_components_dir)
 
-    @pytest.fixture(autouse=True)
+    @pytest.fixture(scope='function', autouse=True)
     def initdir(self, request, tmpdir):
         self.PROJECT_STRUCTURE = self.PROJECT_STRUCTURE or make_project_structure()
-        self.root_dir = str(tmpdir)
+        self.root_dir = tmpdir
         # change to pytest-provided temporary directory
         tmpdir.chdir()
         # create test directory structure
@@ -96,10 +107,7 @@ class OSFOTestBase(unittest.TestCase):
             project_dir = tmpdir.mkdir(
                 project['name']
             )
-            project['rel_path'] = str(project_dir).replace(
-                str(tmpdir),
-                ''
-            )
+            project['rel_path'] = project_dir.relto(tmpdir)
             project_osfstorage_dir = project_dir.mkdir(
                 settings.OSF_STORAGE_FOLDER
             )
@@ -108,7 +116,6 @@ class OSFOTestBase(unittest.TestCase):
                 project_osfstorage_dir,
                 project['files']
             )
-
             if project.get('children'):
                 project_components_dir = project_dir.mkdir(
                     settings.COMPONENTS_FOLDER
