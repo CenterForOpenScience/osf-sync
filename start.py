@@ -38,8 +38,9 @@ def running_warning(message=None, critical=False):
 
 def start():
     start_logging()
+
     # will end application if an instance is already running
-    SingleInstance(callback=running_warning)
+    singleton = SingleInstance(callback=running_warning)
 
     # Check for updates first and give user a way to get new version
     try:
