@@ -222,27 +222,23 @@ class OSFOfflineQT(QSystemTrayIcon):
         self.background_handler.sync_now()
 
     def logout(self):
-        try:
-            self.background_handler.stop()
-            # Will probably wipe out everything :shrug:
-            drop_db()
-            # Clear any user-specific context data that would be sent to Sentry
-            remove_user_from_sentry_logs()
 
-            self.hide()
-            # if the preferences window is active, close it.
-            if self._context_menu.preferences.isVisible():
-                self._context_menu.preferences.close()
-            Session().close()
-        finally:
-            logger.info('Restart the application.')
-            self.hide()
-            user = LoginScreen().get_user()
-            if user is None:
-                return False
+        self.background_handler.stop()
+        # Will probably wipe out everything :shrug:
+        drop_db()
+        # Clear any user-specific context data that would be sent to Sentry
+        remove_user_from_sentry_logs()
 
-            self.ensure_folder(user)
-            self.show()
+        self.hide()
+        # if the preferences window is active, close it.
+        if self._context_menu.preferences.isVisible():
+            self._context_menu.preferences.close()
+
+        Session().close()
+
+        logger.info('Restart the application.')
+        self.start()
+
 
 
 class SyncEventHandler(QThread):
