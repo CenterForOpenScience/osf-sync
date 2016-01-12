@@ -229,7 +229,6 @@ class OSFOfflineQT(QSystemTrayIcon):
         # Clear any user-specific context data that would be sent to Sentry
         remove_user_from_sentry_logs()
 
-        self.hide()
         # if the preferences window is active, close it.
         if self._context_menu.preferences.isVisible():
             self._context_menu.preferences.close()
@@ -238,7 +237,6 @@ class OSFOfflineQT(QSystemTrayIcon):
 
         logger.info('Restart the application.')
         self.start()
-
 
 
 class SyncEventHandler(QThread):
