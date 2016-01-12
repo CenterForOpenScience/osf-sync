@@ -11,5 +11,3 @@ raven==5.1.1
 requests==2.8.1
 SQLAlchemy==1.0.9
 watchdog==0.8.3
-
-
