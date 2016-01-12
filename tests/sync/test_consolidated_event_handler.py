@@ -160,7 +160,7 @@ class TestConsolidatedEventHandler(OSFOTestBase):
         self.sync_worker.flushed.wait()
         assert len(self.sync_worker._create_cache) == 2, \
             "exactly two events captured"
-        create_cache = self.sync_worker._sorted_event_cache()
+        create_cache = self.sync_worker._sorted_create_cache()
         assert isinstance(
             create_cache[0],
             DirCreatedEvent
