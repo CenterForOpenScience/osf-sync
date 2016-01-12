@@ -46,4 +46,3 @@ class BackgroundHandler(metaclass=Singleton):
         OperationWorker().stop()
         RemoteSyncWorker().stop()
         LocalSyncWorker().stop()
-

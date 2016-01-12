@@ -1,7 +1,7 @@
 import logging
 import os
-from queue import Empty, Queue
 import threading
+from queue import Empty, Queue
 
 from PyQt5.QtGui import QIcon
 from PyQt5.QtCore import pyqtSignal
@@ -18,6 +18,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm.exc import NoResultFound
 
 from osfoffline.application.background import BackgroundHandler
+from osfoffline.client.osf import OSFClient
 from osfoffline.database import Session
 from osfoffline.database import drop_db
 from osfoffline.database.models import User
@@ -28,7 +29,6 @@ from osfoffline.utils.log import remove_user_from_sentry_logs
 from osfoffline import settings
 from osfoffline.tasks.notifications import group_events, Level
 from osfoffline.utils.validators import validate_containing_folder
-
 
 logger = logging.getLogger(__name__)
 
@@ -224,6 +224,7 @@ class OSFOfflineQT(QSystemTrayIcon):
     def logout(self):
 
         self.background_handler.stop()
+        OSFClient().stop()
         # Will probably wipe out everything :shrug:
         drop_db()
         # Clear any user-specific context data that would be sent to Sentry
