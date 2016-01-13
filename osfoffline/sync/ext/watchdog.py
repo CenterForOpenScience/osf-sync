@@ -40,29 +40,29 @@ class ConsolidatedEventHandler(PatternMatchingEventHandler):
             # result we can't trust event.is_directory to check whether or not delete
             # events need to be consolidated
             consolidate = event.is_directory
-            if event.event_type == 'deleted':
+            if event.event_type == EVENT_TYPE_DELETED:
                 consolidate = (parts in self._event_cache)
 
-            if event.event_type == 'modified':
+            if event.event_type == EVENT_TYPE_MODIFIED:
                 if event.is_directory:
                     return
                 move_events = (
                     evt
                     for evt in self._event_cache.children()
-                    if evt.event_type == 'moved' and evt.dest_path == event.src_path
+                    if evt.event_type == EVENT_TYPE_MOVED and evt.dest_path == event.src_path
                 )
                 for event in move_events:
                     return
-            if event.event_type == 'created':
+            if event.event_type == EVENT_TYPE_CREATED:
                 self._create_cache.append(event)
             else:
                 if not consolidate and parts in self._event_cache:
                     ev = self._event_cache[parts]
-                    if not isinstance(ev, OrderedDict) and ev.event_type == 'deleted':
+                    if not isinstance(ev, OrderedDict) and ev.event_type == EVENT_TYPE_DELETED:
                         # For leaf entries, turn deletes followed by creates into updates,
                         #   eg saving in vim or replacing a file in finder.
                         # Would be more correct to create an actual modified event, but only `event_type` is checked
-                        event.event_type = 'modified'
+                        event.event_type = EVENT_TYPE_MODIFIED
                 self._event_cache[parts] = event
 
             logger.debug('Create cache: {}'.format(self._create_cache))
