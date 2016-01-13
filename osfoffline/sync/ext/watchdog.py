@@ -5,7 +5,15 @@ import os
 from pathlib import Path
 import threading
 
-from watchdog.events import PatternMatchingEventHandler
+from watchdog.events import (
+    EVENT_TYPE_MOVED,
+    EVENT_TYPE_DELETED,
+    EVENT_TYPE_CREATED,
+    EVENT_TYPE_MODIFIED,
+    DirModifiedEvent,
+    FileModifiedEvent,
+    PatternMatchingEventHandler,
+)
 
 from osfoffline import settings
 from osfoffline.exceptions import NodeNotFound
@@ -61,8 +69,10 @@ class ConsolidatedEventHandler(PatternMatchingEventHandler):
                     if not isinstance(ev, OrderedDict) and ev.event_type == EVENT_TYPE_DELETED:
                         # For leaf entries, turn deletes followed by creates into updates,
                         #   eg saving in vim or replacing a file in finder.
-                        # Would be more correct to create an actual modified event, but only `event_type` is checked
-                        event.event_type = EVENT_TYPE_MODIFIED
+                        if event.is_directory:
+                            event = DirModifiedEvent(event.src_path)
+                        else:
+                            event = FileModifiedEvent(event.src_path)
                 self._event_cache[parts] = event
 
             logger.debug('Create cache: {}'.format(self._create_cache))
