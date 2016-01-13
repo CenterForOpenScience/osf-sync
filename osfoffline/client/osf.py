@@ -31,6 +31,8 @@ class OSFClient(metaclass=Singleton):
     def request(self, *args, **kwargs):
         return self.request_session.request(*args, **kwargs)
 
+    def stop(self):
+        del type(self.__class__)._instances[self.__class__]
 
 class BaseResource(abc.ABC):
 

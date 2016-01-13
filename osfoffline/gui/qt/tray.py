@@ -1,7 +1,7 @@
 import logging
 import os
-from queue import Empty, Queue
 import threading
+from queue import Empty, Queue
 
 from PyQt5.QtGui import QIcon
 from PyQt5.QtCore import pyqtSignal
@@ -14,9 +14,11 @@ from PyQt5.QtWidgets import QApplication
 from PyQt5.QtWidgets import QFileDialog
 from PyQt5.QtWidgets import QSystemTrayIcon
 
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm.exc import NoResultFound
 
 from osfoffline.application.background import BackgroundHandler
+from osfoffline.client.osf import OSFClient
 from osfoffline.database import Session
 from osfoffline.database import drop_db
 from osfoffline.database.models import User
@@ -27,7 +29,6 @@ from osfoffline.utils.log import remove_user_from_sentry_logs
 from osfoffline import settings
 from osfoffline.tasks.notifications import group_events, Level
 from osfoffline.utils.validators import validate_containing_folder
-
 
 logger = logging.getLogger(__name__)
 
@@ -97,12 +98,13 @@ class OSFOfflineQT(QSystemTrayIcon):
 
     def start(self):
         logger.debug('Start in main called.')
+        self.hide()
         user = LoginScreen().get_user()
         if user is None:
             return False
 
         self.ensure_folder(user)
-
+        self.show()
         logger.debug('starting background handler from main.start')
         self.background_handler = BackgroundHandler()
         self.background_handler.set_intervention_cb(self.intervention_handler.enqueue_signal.emit)
@@ -220,10 +222,21 @@ class OSFOfflineQT(QSystemTrayIcon):
         self.background_handler.sync_now()
 
     def logout(self):
+
+        self.background_handler.stop()
+        OSFClient().stop()
         # Will probably wipe out everything :shrug:
         drop_db()
         # Clear any user-specific context data that would be sent to Sentry
         remove_user_from_sentry_logs()
+
+        # if the preferences window is active, close it.
+        if self._context_menu.preferences.isVisible():
+            self._context_menu.preferences.close()
+
+        Session().close()
+
+        logger.info('Restart the application.')
         self.start()
 
 

@@ -1,13 +1,13 @@
 appdirs==1.4.0
+fake-factory==0.5.3
 flake8==2.5.0
 furl==0.4.8
 invoke==0.11.1
 iso8601==0.1.11
 # Dev branch bugfix to PyInstaller; corresponds to PR 1630
 git+git://github.com/pyinstaller/pyinstaller.git@073cb6780d80a81f8f1bac7a8bda6d24d9156043
+pytest==2.8.5
 raven==5.1.1
 requests==2.8.1
 SQLAlchemy==1.0.9
 watchdog==0.8.3
-pytest==2.8.5
-fake-factory==0.5.3
