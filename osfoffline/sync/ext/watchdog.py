@@ -43,9 +43,16 @@ class ConsolidatedEventHandler(PatternMatchingEventHandler):
             if event.event_type == 'deleted':
                 consolidate = (parts in self._event_cache)
 
-            if event.is_directory and event.event_type == 'modified':
-                return
-
+            if event.event_type == 'modified':
+                if event.is_directory:
+                    return
+                move_events = [
+                    evt
+                    for evt in self._event_cache.children()
+                    if evt.event_type == 'moved' and evt.dest_path == event.src_path
+                ]
+                if move_events:
+                    return
             if event.event_type == 'created':
                 self._create_cache.append(event)
             else:
