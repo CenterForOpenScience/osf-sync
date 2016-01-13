@@ -69,10 +69,8 @@ class ConsolidatedEventHandler(PatternMatchingEventHandler):
                     if not isinstance(ev, OrderedDict) and ev.event_type == EVENT_TYPE_DELETED:
                         # For leaf entries, turn deletes followed by creates into updates,
                         #   eg saving in vim or replacing a file in finder.
-                        if event.is_directory:
-                            event = DirModifiedEvent(event.src_path)
-                        else:
-                            event = FileModifiedEvent(event.src_path)
+                        Event = DirModifiedEvent if event.is_directory else FileModifiedEvent
+                        event = Event(event.src_path)
                 self._event_cache[parts] = event
 
             logger.debug('Create cache: {}'.format(self._create_cache))
