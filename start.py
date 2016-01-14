@@ -51,6 +51,7 @@ def start():
                                              progname=settings.NAME,
                                              ask_before_checking=True,
                                              parent=QApplication.instance())
+        swu_interface.check_for_updates()
     except Updater4PyiError as e:
         logger.exception(e.updater_msg)
         if 'Connection Error' in e.updater_msg:
