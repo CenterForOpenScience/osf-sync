@@ -5,7 +5,15 @@ import os
 from pathlib import Path
 import threading
 
-from watchdog.events import PatternMatchingEventHandler
+from watchdog.events import (
+    EVENT_TYPE_MOVED,
+    EVENT_TYPE_DELETED,
+    EVENT_TYPE_CREATED,
+    EVENT_TYPE_MODIFIED,
+    DirModifiedEvent,
+    FileModifiedEvent,
+    PatternMatchingEventHandler,
+)
 
 from osfoffline import settings
 from osfoffline.exceptions import NodeNotFound
@@ -40,22 +48,29 @@ class ConsolidatedEventHandler(PatternMatchingEventHandler):
             # result we can't trust event.is_directory to check whether or not delete
             # events need to be consolidated
             consolidate = event.is_directory
-            if event.event_type == 'deleted':
+            if event.event_type == EVENT_TYPE_DELETED:
                 consolidate = (parts in self._event_cache)
 
-            if event.is_directory and event.event_type == 'modified':
-                return
-
-            if event.event_type == 'created':
+            if event.event_type == EVENT_TYPE_MODIFIED:
+                if event.is_directory:
+                    return
+                move_events = (
+                    evt
+                    for evt in self._event_cache.children()
+                    if evt.event_type == EVENT_TYPE_MOVED and evt.dest_path == event.src_path
+                )
+                for event in move_events:
+                    return
+            if event.event_type == EVENT_TYPE_CREATED:
                 self._create_cache.append(event)
             else:
                 if not consolidate and parts in self._event_cache:
                     ev = self._event_cache[parts]
-                    if not isinstance(ev, OrderedDict) and ev.event_type == 'deleted':
+                    if not isinstance(ev, OrderedDict) and ev.event_type == EVENT_TYPE_DELETED:
                         # For leaf entries, turn deletes followed by creates into updates,
                         #   eg saving in vim or replacing a file in finder.
-                        # Would be more correct to create an actual modified event, but only `event_type` is checked
-                        event.event_type = 'modified'
+                        Event = DirModifiedEvent if event.is_directory else FileModifiedEvent
+                        event = Event(event.src_path)
                 self._event_cache[parts] = event
 
             logger.debug('Create cache: {}'.format(self._create_cache))

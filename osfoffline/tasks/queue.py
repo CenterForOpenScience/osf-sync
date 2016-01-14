@@ -47,6 +47,7 @@ class OperationWorker(threading.Thread, metaclass=Singleton):
         self.__stop.set()
         self._queue.put(None)
         self.join_queue()
+        del type(self.__class__)._instances[self.__class__]
 
     def put(self, operation):
         self._queue.put(operation)
