@@ -24,6 +24,49 @@ Separate MacOS setup instructions are available and will be added here at a late
 - [pyqt5](https://riverbankcomputing.com/software/pyqt/download5)
     - Used PyQt5-5.5.1-gpl-Py3.4-Qt5.5.1-x32.exe (PyQT version should be built to match Python version, eg 3.4)
 
+### Mac OS-specific instructions
+
+- Make sure homebrew is up to date and has no problems:
+  ```
+  brew update ; brew doctor
+  brew install python3
+  brew install qt5
+  ```
+
+- Create a virtual env (based on python3!!), and activate said virtualenv
+  `mkvirtualenv osf-offline -p /usr/local/bin/python3.4`
+
+- Install requirements
+  `pip install -r requirements.txt`
+
+- To install PyQT5, the above requirements should have made the following script available (run as is):
+  `install_pyqt5.py`
+  (usage: https://pypi.python.org/pypi/pyqt5-installer )
+
+  - You will need to specify the QMAKE path. If you installed with homebrew the path is
+    `/usr/local/Cellar/qt5/5.5.1/bin/qmake`
+
+- If that doesn't work, then you may need to do things the long way. In order to compile from source:
+  - Download PyQt: https://riverbankcomputing.com/software/pyqt/download5
+
+    ```
+    brew install sip
+    cd /var/tmp
+    cp /Users/YOU/Downloads/PyQt-gpl-5.5.1.tar.gz .
+    tar xzf PyQt-gpl-5.5.1.tar.gz
+    cd PyQt-gpl-5.5.1/
+    python3 configure.py --destdir ~/PATH_TO_YOUR_VENV/lib/python3.4/site-packages --qmake /usr/local/Cellar/qt5/5.5.1/bin/qmake --disable=QtPositioning
+    make
+    sudo make install
+    sudo make clean
+    ```
+  - More information can be found here: http://pyqt.sourceforge.net/Docs/PyQt5/installation.html
+
+- If everything works, you will be able to run the GUI tool from the repo using:
+  `inv start`
+
+- After you log in, you will need to click the OSF icon in the system tray and select folders to sync under "Preferences".
+
 ### Additional Windows requirements
 
 - [InnoSetup](http://www.jrsoftware.org/isdl.php)
