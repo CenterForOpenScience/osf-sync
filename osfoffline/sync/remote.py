@@ -88,7 +88,11 @@ class RemoteSyncWorker(threading.Thread, metaclass=Singleton):
                 Notification().error(msg)
                 logger.exception(msg)
 
-            time.sleep(10)  # FIXME Per icereval, this is "due to watchdog not clearing its event evaluation when the lock is cleared"
+            # We need to ignore modifications to the local filesystem made by the RemoteSyncWorker.
+            # Since there can be a delay between when an operation is popped off the OperationWorker's
+            # queue and when the event is actually captured by watchdog, this sleep tries to ensure the
+            # watchdog observer does not capture any events triggered by the application itself.
+            time.sleep(10)
             LocalSyncWorker().ignore.clear()
             logger.info('Finished remote sync')
         logger.info('Stopped RemoteSyncWorker')
@@ -120,13 +124,13 @@ class RemoteSyncWorker(threading.Thread, metaclass=Singleton):
             remote_node = OSFClient().get_node(node.id)
         except ClientLoadError as err:
             # TODO: maybe special case on status code, but for now treat
-            # 40X codes as if the user cannot access the Node any more
+            # 4XX codes as if the user cannot access the Node any more
             if 400 <= err.status < 500:
                 # cascade should automagically delete children
                 Session().delete(node)
                 return
             else:
-                # TODO handle 50X errors
+                # TODO handle 5XX errors
                 raise
         stack = remote_node.get_children(lazy=False)
         self._orphan_children(node, stack)
