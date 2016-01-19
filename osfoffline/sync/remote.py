@@ -9,7 +9,7 @@ from sqlalchemy.orm.exc import NoResultFound
 
 from osfoffline import settings
 
-from osfoffline.client.osf import OSFClient
+from osfoffline.client.osf import OSFClient, ClientLoadError
 
 from osfoffline.database import Session
 from osfoffline.database.models import Node, File
@@ -113,7 +113,18 @@ class RemoteSyncWorker(threading.Thread, metaclass=Singleton):
 
     def _preprocess_node(self, node, *, delete=True):
         nodes = [node]
-        remote_node = OSFClient().get_node(node.id)
+        try:
+            remote_node = OSFClient().get_node(node.id)
+        except ClientLoadError as err:
+            # TODO: maybe special case on status code, but for now treat
+            # 40X codes as if the user cannot access the Node any more
+            if 400 <= err.status < 500:
+                # cascade should automagically delete children
+                Session().delete(node)
+                return
+            else:
+                # TODO handle 50X errors
+                raise
         stack = remote_node.get_children(lazy=False)
         self._orphan_children(node, stack)
         while len(stack):
