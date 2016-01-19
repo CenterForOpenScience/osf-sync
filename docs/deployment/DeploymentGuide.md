@@ -60,6 +60,7 @@ Separate MacOS setup instructions are available and will be added here at a late
     sudo make install
     sudo make clean
     ```
+  - More information can be found here: http://pyqt.sourceforge.net/Docs/PyQt5/installation.html
 
 - If everything works, you will be able to run the GUI tool from the repo using:
   `inv start`
