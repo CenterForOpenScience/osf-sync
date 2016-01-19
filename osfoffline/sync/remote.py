@@ -4,6 +4,7 @@ import os
 from pathlib import Path
 import threading
 import time
+import http.client
 
 from sqlalchemy.orm.exc import NoResultFound
 
@@ -123,14 +124,11 @@ class RemoteSyncWorker(threading.Thread, metaclass=Singleton):
         try:
             remote_node = OSFClient().get_node(node.id)
         except ClientLoadError as err:
-            # TODO: maybe special case on status code, but for now treat
-            # 4XX codes as if the user cannot access the Node any more
-            if 400 <= err.status < 500:
+            if err.status in (http.client.NOT_FOUND, http.client.GONE):
                 # cascade should automagically delete children
                 Session().delete(node)
                 return
-            else:
-                # TODO handle 5XX errors
+            else:  # TODO: maybe handle other statuses here
                 raise
         stack = remote_node.get_children(lazy=False)
         self._orphan_children(node, stack)
