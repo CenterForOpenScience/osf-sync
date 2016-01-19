@@ -106,10 +106,13 @@ class RemoteSyncWorker(threading.Thread, metaclass=Singleton):
         locally for which the remote Node has been deleted are explicitly removed
         from OSFO's auditing and will be ignored.
         """
-        children_ids = map(lambda c: c.id, remote_children)
+        children_ids = [c.id for c in remote_children]
         for record in node.children:
             if record.id not in children_ids:
                 Session().delete(record)
+            else:
+                remote_child = OSFClient().get_node(record.id)
+                self._orphan_children(record, remote_child.get_children(lazy=False))
 
     def _preprocess_node(self, node, *, delete=True):
         nodes = [node]
