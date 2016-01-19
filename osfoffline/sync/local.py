@@ -3,6 +3,7 @@ from pathlib import Path
 import threading
 
 from watchdog.observers import Observer
+from sqlalchemy.orm.exc import NoResultFound
 
 from osfoffline import utils
 from osfoffline.utils.authentication import get_current_user
@@ -21,11 +22,19 @@ class LocalSyncWorker(ConsolidatedEventHandler, metaclass=Singleton):
 
     def __init__(self):
         super().__init__()
-        self.folder = get_current_user().folder
+        try:
+            user = get_current_user()
+        except NoResultFound:
+            user = None
+            self.folder = None
+
+        if user:
+            self.folder = user.folder
 
         self.observer = Observer()
         self.ignore = threading.Event()
-        self.observer.schedule(self, self.folder, recursive=True)
+        if self.folder:
+            self.observer.schedule(self, self.folder, recursive=True)
 
     def start(self):
         logger.debug('Starting watchdog observer')
