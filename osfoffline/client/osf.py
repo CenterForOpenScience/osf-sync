@@ -67,7 +67,7 @@ class BaseResource(abc.ABC):
     @classmethod
     def load(cls, request_session, *args, **kwargs):
         resp = request_session.get(cls.get_url(*args, **kwargs), params={'page[size]': 250})
-        if (resp.status_code % 500) <= 100:
+        if resp.status_code >= 500:
             raise ClientLoadError(
                 resource=cls.RESOURCE,
                 status=resp.status_code,
