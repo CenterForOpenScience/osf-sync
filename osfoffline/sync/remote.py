@@ -97,7 +97,6 @@ class RemoteSyncWorker(threading.Thread, metaclass=Singleton):
         logger.info('Stopping RemoteSyncWorker')
         self.__stop.set()
         self.sync_now()
-        del type(self.__class__)._instances[self.__class__]
 
     def _orphan_children(self, node, remote_children):
         """It's a hard world out there...

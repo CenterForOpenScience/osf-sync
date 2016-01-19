@@ -49,7 +49,6 @@ class LoginScreen(QDialog, Ui_login):
         return self.user
 
     def login(self, *, otp=None):
-        # self.start_screen.logInButton.setDisabled(True)  # Doesn't update until the asyncio call below returns
         logger.debug('attempting to log in')
         username = self.usernameEdit.text()
         password = self.passwordEdit.text()

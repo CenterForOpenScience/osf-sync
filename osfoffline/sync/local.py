@@ -35,7 +35,7 @@ class LocalSyncWorker(ConsolidatedEventHandler, metaclass=Singleton):
         logger.debug('Stopping LocalSyncWorker')
         # observer is actually a separate child thread and must be join()ed
         self.observer.stop()
-        del type(self.__class__)._instances[self.__class__]
+        self.join()
 
     def join(self):
         self.observer.join()

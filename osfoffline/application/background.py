@@ -47,6 +47,6 @@ class BackgroundHandler(metaclass=Singleton):
         RemoteSyncWorker().stop()
         LocalSyncWorker().stop()
 
-        OperationWorker().join()
-        RemoteSyncWorker().join()
-        LocalSyncWorker().join()
+        del type(OperationWorker)._instances[OperationWorker]
+        del type(RemoteSyncWorker)._instances[RemoteSyncWorker]
+        del type(LocalSyncWorker)._instances[LocalSyncWorker]
