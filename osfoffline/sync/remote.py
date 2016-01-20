@@ -100,6 +100,7 @@ class RemoteSyncWorker(threading.Thread, metaclass=Singleton):
 
     def stop(self):
         logger.info('Stopping RemoteSyncWorker')
+        OperationWorker().join_queue()
         self.__stop.set()
         self.sync_now()
 
@@ -115,6 +116,7 @@ class RemoteSyncWorker(threading.Thread, metaclass=Singleton):
         for record in node.children:
             if record.id not in children_ids:
                 Session().delete(record)
+                logger.info("Deleted remotely deleted database Node<{}>".format(record.id))
             else:
                 remote_child = OSFClient().get_node(record.id)
                 self._orphan_children(record, remote_child.get_children(lazy=False))
@@ -127,6 +129,7 @@ class RemoteSyncWorker(threading.Thread, metaclass=Singleton):
             if err.status in (http.client.NOT_FOUND, http.client.GONE):
                 # cascade should automagically delete children
                 Session().delete(node)
+                logger.info("Deleted remotely deleted database Node<{}>".format(record.id))
                 return
             else:  # TODO: maybe handle other statuses here
                 raise

@@ -43,8 +43,8 @@ class BackgroundHandler(metaclass=Singleton):
         RemoteSyncWorker().sync_now()
 
     def stop(self):
-        OperationWorker().stop()
         RemoteSyncWorker().stop()
+        OperationWorker().stop()
         LocalSyncWorker().stop()
 
         del type(OperationWorker)._instances[OperationWorker]
