@@ -105,7 +105,7 @@ class Ui_Settings(object):
         Settings.setWindowTitle(_translate("Settings", "Settings"))
         self.groupBox.setTitle(_translate("Settings", "System"))
         self.desktopNotifications.setText(_translate("Settings", "Show Desktop Notifications"))
-        self.startOnStartup.setText(_translate("Settings", "Start OSF Oync on Computer Startup"))
+        self.startOnStartup.setText(_translate("Settings", "Start OSF Sync on Computer Startup"))
         self.groupBox_6.setTitle(_translate("Settings", "Choose folder to Place OSF folder in "))
         self.changeFolderButton.setText(_translate("Settings", "Change"))
         self.containingFolderTextEdit.setHtml(_translate("Settings", "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"
