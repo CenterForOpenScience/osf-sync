@@ -3,6 +3,7 @@ from pathlib import Path
 import threading
 
 from watchdog.observers import Observer
+from sqlalchemy.orm.exc import NoResultFound
 
 from osfoffline import utils
 from osfoffline.utils.authentication import get_current_user
@@ -21,10 +22,21 @@ class LocalSyncWorker(ConsolidatedEventHandler, metaclass=Singleton):
 
     def __init__(self):
         super().__init__()
-        self.folder = get_current_user().folder
+
+        self.ignore = threading.Event()
+
+        try:
+            user = get_current_user()
+        except NoResultFound as e:
+            # TODO: This only happens when a user logs out and the db has
+            # been cleared. The app tries to run again without a user being
+            # being set. This error doesn't disrupt user experience, but we
+            # might consider tracking down the specific source and preventing
+            # it from happening.
+            raise
+        self.folder = user.folder
 
         self.observer = Observer()
-        self.ignore = threading.Event()
         self.observer.schedule(self, self.folder, recursive=True)
 
     def start(self):
@@ -35,7 +47,7 @@ class LocalSyncWorker(ConsolidatedEventHandler, metaclass=Singleton):
         logger.debug('Stopping LocalSyncWorker')
         # observer is actually a separate child thread and must be join()ed
         self.observer.stop()
-        del type(self.__class__)._instances[self.__class__]
+        self.join()
 
     def join(self):
         self.observer.join()

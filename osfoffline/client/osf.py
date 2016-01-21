@@ -11,6 +11,14 @@ from osfoffline.utils import Singleton
 from osfoffline.utils.authentication import get_current_user
 
 
+class ClientLoadError(Exception):
+
+    def __init__(self, *args, resource=None, status=None, errors=None):
+        super(ClientLoadError, self).__init__(*args)
+        self.resource = resource
+        self.status = status
+        self.errors = errors
+
 class OSFClient(metaclass=Singleton):
 
     def __init__(self, *, limit=5):
@@ -59,7 +67,20 @@ class BaseResource(abc.ABC):
     @classmethod
     def load(cls, request_session, *args, **kwargs):
         resp = request_session.get(cls.get_url(*args, **kwargs), params={'page[size]': 250})
+        if resp.status_code >= 500:
+            raise ClientLoadError(
+                resource=cls.RESOURCE,
+                status=resp.status_code,
+                errors=['Server error']
+            )
         data = resp.json()
+
+        if 'errors' in data:
+            raise ClientLoadError(
+                resource=cls.RESOURCE,
+                status=resp.status_code,
+                errors=data['errors']
+            )
 
         if isinstance(data['data'], list):
             l = data['data']
@@ -182,6 +203,13 @@ class StorageObject(BaseResource):
     def load(cls, request_session, *args):
         resp = request_session.get(cls.get_url(*args), params={'page[size]': 250})
         data = resp.json()
+
+        if 'errors' in data:
+            raise ClientLoadError(
+                resource=cls.RESOURCE,
+                status=resp.status_code,
+                errors=data['errors']
+            )
 
         if isinstance(data['data'], list):
             return [

@@ -4,12 +4,13 @@ import os
 from pathlib import Path
 import threading
 import time
+import http.client
 
 from sqlalchemy.orm.exc import NoResultFound
 
 from osfoffline import settings
 
-from osfoffline.client.osf import OSFClient
+from osfoffline.client.osf import OSFClient, ClientLoadError
 
 from osfoffline.database import Session
 from osfoffline.database.models import Node, File
@@ -78,6 +79,7 @@ class RemoteSyncWorker(threading.Thread, metaclass=Singleton):
                     # TODO: Should the error be user-facing?
                     logger.exception('Error creating node directory for sync')
 
+            Session().commit()
             OperationWorker().join_queue()
 
             try:
@@ -88,16 +90,20 @@ class RemoteSyncWorker(threading.Thread, metaclass=Singleton):
                 Notification().error(msg)
                 logger.exception(msg)
 
-            time.sleep(10)  # FIXME Per icereval, this is "due to watchdog not clearing its event evaluation when the lock is cleared"
+            # We need to ignore modifications to the local filesystem made by the RemoteSyncWorker.
+            # Since there can be a delay between when an operation is popped off the OperationWorker's
+            # queue and when the event is actually captured by watchdog, this sleep tries to ensure the
+            # watchdog observer does not capture any events triggered by the application itself.
+            time.sleep(10)
             LocalSyncWorker().ignore.clear()
             logger.info('Finished remote sync')
         logger.info('Stopped RemoteSyncWorker')
 
     def stop(self):
         logger.info('Stopping RemoteSyncWorker')
+        OperationWorker().join_queue()
         self.__stop.set()
         self.sync_now()
-        del type(self.__class__)._instances[self.__class__]
 
     def _orphan_children(self, node, remote_children):
         """It's a hard world out there...
@@ -107,14 +113,27 @@ class RemoteSyncWorker(threading.Thread, metaclass=Singleton):
         locally for which the remote Node has been deleted are explicitly removed
         from OSFO's auditing and will be ignored.
         """
-        children_ids = map(lambda c: c.id, remote_children)
+        children_ids = [c.id for c in remote_children]
         for record in node.children:
             if record.id not in children_ids:
                 Session().delete(record)
+                logger.info("Deleted remotely deleted database Node<{}>".format(record.id))
+            else:
+                remote_child = OSFClient().get_node(record.id)
+                self._orphan_children(record, remote_child.get_children(lazy=False))
 
     def _preprocess_node(self, node, *, delete=True):
         nodes = [node]
-        remote_node = OSFClient().get_node(node.id)
+        try:
+            remote_node = OSFClient().get_node(node.id)
+        except ClientLoadError as err:
+            if err.status in (http.client.NOT_FOUND, http.client.GONE):
+                # cascade should automagically delete children
+                Session().delete(node)
+                logger.info("Deleted remotely deleted database Node<{}>".format(record.id))
+                return
+            else:  # TODO: maybe handle other statuses here
+                raise
         stack = remote_node.get_children(lazy=False)
         self._orphan_children(node, stack)
         while len(stack):
