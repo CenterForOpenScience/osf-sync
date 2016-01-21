@@ -105,7 +105,7 @@ class Ui_Settings(object):
         Settings.setWindowTitle(_translate("Settings", "Settings"))
         self.groupBox.setTitle(_translate("Settings", "System"))
         self.desktopNotifications.setText(_translate("Settings", "Show Desktop Notifications"))
-        self.startOnStartup.setText(_translate("Settings", "Start OSF Offline on Computer Startup"))
+        self.startOnStartup.setText(_translate("Settings", "Start OSF Oync on Computer Startup"))
         self.groupBox_6.setTitle(_translate("Settings", "Choose folder to Place OSF folder in "))
         self.changeFolderButton.setText(_translate("Settings", "Change"))
         self.containingFolderTextEdit.setHtml(_translate("Settings", "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"
@@ -129,7 +129,7 @@ class Ui_Settings(object):
 "<html><head><meta name=\"qrichtext\" content=\"1\" /><style type=\"text/css\">\n"
 "p, li { white-space: pre-wrap; }\n"
 "</style></head><body style=\" font-family:\'.Helvetica Neue DeskInterface\'; font-size:13pt; font-weight:400; font-style:normal;\">\n"
-"<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-family:\'Ubuntu\'; font-size:11pt;\">This is OSF OFFLINE. Please go ahead and use it and make more software based off of it. Please and Thank You. </span></p>\n"
+"<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-family:\'Ubuntu\'; font-size:11pt;\">This is OSF-Sync-v0.3.0. Please go ahead and use it and make more software based off of it. Please and Thank You. </span></p>\n"
 "<p style=\"-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-family:\'Ubuntu\'; font-size:11pt;\"><br /></p>\n"
 "<p align=\"center\" style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-family:\'Ubuntu\'; font-size:11pt;\">© Center for Open Science</span></p></body></html>"))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_5), _translate("Settings", "About"))
