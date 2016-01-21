@@ -130,7 +130,7 @@ class RemoteSyncWorker(threading.Thread, metaclass=Singleton):
             if err.status in (http.client.NOT_FOUND, http.client.GONE):
                 # cascade should automagically delete children
                 Session().delete(node)
-                logger.info("Deleted remotely deleted database Node<{}>".format(record.id))
+                logger.info("Remote Node<{}> appears to have been deleted; will stop tracking and delete from local database".format(node.id))
                 return
             else:  # TODO: maybe handle other statuses here
                 raise
