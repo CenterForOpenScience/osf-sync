@@ -55,8 +55,7 @@ def start():
     if min_version:
         if StrictVersion(settings.VERSION) < StrictVersion(min_version):
             # User error message
-            running_warning(message='You must update to a newer version. You are currently '
-                                    'using version {}. The minimum required version is {}. '
+            running_warning(message='You must update to a newer version. '
                                     'You can find newest version at {}'
                             .format(settings.VERSION, min_version,
                                     settings.OFFLINE_PROJECT_ON_OSF),
