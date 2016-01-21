@@ -57,8 +57,7 @@ def start():
             # User error message
             running_warning(message='You must update to a newer version. '
                                     'You can find newest version at {}'
-                            .format(settings.VERSION, min_version,
-                                    settings.OFFLINE_PROJECT_ON_OSF),
+                            .format(settings.OFFLINE_PROJECT_ON_OSF),
                             critical=True)
             sys.exit(1)
 
