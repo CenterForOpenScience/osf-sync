@@ -56,5 +56,3 @@ VERSION = '0.3.0'
 NAME = 'OSF-Offline'
 MIN_VERSION_URL = 'https://raw.githubusercontent.com/CenterForOpenScience/OSF-Offline/develop/deploy/Offline-version.json'
 OFFLINE_PROJECT_ON_OSF = 'https://osf.io/v2y6z/files/'
-
-
