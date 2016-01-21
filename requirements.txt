@@ -10,7 +10,5 @@ pytest==2.8.5
 raven==5.1.1
 requests==2.8.1
 SQLAlchemy==1.0.9
-# Customed version fo updater4pyi which is under python 3 and pyqt5
-git+git://github.com/chennan47/updater4pyi@e1659b32329a09bba698cb604afb4d4f302396ae
 watchdog==0.8.3
 
