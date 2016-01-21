@@ -24,7 +24,7 @@ if settings.DEBUG:
 
 def running_warning(message=None, critical=False):
     if not message:
-        message = 'OSF-Offline is already running. Check out the system tray.'
+        message = 'OSF-Sync is already running. Check out the system tray.'
     warn_app = QApplication(sys.argv)
     if critical:
         QMessageBox.critical(None, 'Systray', message)
@@ -44,7 +44,7 @@ def start():
     try:
         r = requests.get(settings.MIN_VERSION_URL)
     except requests.exceptions.ConnectionError:
-        running_warning(message='Check for minimum verion requirements for OSF-Offline failed '
+        running_warning(message='Check for minimum verion requirements for OSF-Sync failed '
                         'because you have no Internet connection', critical=True)
     else:
         try:

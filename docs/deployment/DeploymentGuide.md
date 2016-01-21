@@ -86,10 +86,10 @@ virtual environment, make sure that PyQT is installed to that venv.
 ## Building for deployment
 ### Create the binary
 On Windows:
-  `pyinstaller --onedir --onefile --name=OSF-Offline --icon=deploy\\images\\cos_logo.ico --windowed start.py`
+  `pyinstaller --onedir --onefile --name=OSF-Sync --icon=deploy\\images\\cos_logo.ico --windowed start.py`
 
 On Mac OS:
-  `pyinstaller --onedir --onefile --name=OSF-Offline --icon=deploy/images/cos_logo.icns --windowed start.py`
+  `pyinstaller --onedir --onefile --name=OSF-Sync --icon=deploy/images/cos_logo.icns --windowed start.py`
 
 After the first run, PyInstaller will create a .spec file that can be used for future builds on your machine.
 
@@ -114,7 +114,7 @@ Select the following settings:
 - Icon size 128x128
 - Background (drag picture to box): `OSF-Offline/deploy/images/OSF-Offline-background.png`
 
-Drag the bundled `OSF-Offline.app` into the disk image on the left side. Using finder, create an alias
+Drag the bundled `OSF-Sync.app` into the disk image on the left side. Using finder, create an alias
 to `Macintosh HD/Applications`, and drag the alias into the disk image on the right side.
 
 When done, close the window. Return to disk utility and right-click on the image. Unmount and click eject partition.

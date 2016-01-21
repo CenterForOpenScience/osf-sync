@@ -21,13 +21,13 @@ exe = EXE(pyz,
           a.binaries,
           a.zipfiles,
           a.datas,
-          name='OSF-Offline',
+          name='OSF-Sync',
           debug=False,
           strip=None,
           upx=True,
           console=False , icon='deploy/images/cos_logo.icns')
 app = BUNDLE(exe,
-             name='OSF-Offline.app',
+             name='OSF-Sync.app',
              icon='deploy/images/cos_logo.icns',
              bundle_identifier=None)
 
