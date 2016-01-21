@@ -22,19 +22,22 @@ class LocalSyncWorker(ConsolidatedEventHandler, metaclass=Singleton):
 
     def __init__(self):
         super().__init__()
+
+        self.ignore = threading.Event()
+
         try:
             user = get_current_user()
-        except NoResultFound:
-            user = None
-            self.folder = None
-
-        if user:
-            self.folder = user.folder
+        except NoResultFound as e:
+            # TODO: This only happens when a user logs out and the db has
+            # been cleared. The app tries to run again without a user being
+            # being set. This error doesn't disrupt user experience, but we
+            # might consider tracking down the specific source and preventing
+            # it from happening.
+            raise
+        self.folder = user.folder
 
         self.observer = Observer()
-        self.ignore = threading.Event()
-        if self.folder:
-            self.observer.schedule(self, self.folder, recursive=True)
+        self.observer.schedule(self, self.folder, recursive=True)
 
     def start(self):
         logger.debug('Starting watchdog observer')

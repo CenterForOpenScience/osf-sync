@@ -79,6 +79,7 @@ class RemoteSyncWorker(threading.Thread, metaclass=Singleton):
                     # TODO: Should the error be user-facing?
                     logger.exception('Error creating node directory for sync')
 
+            Session().commit()
             OperationWorker().join_queue()
 
             try:
