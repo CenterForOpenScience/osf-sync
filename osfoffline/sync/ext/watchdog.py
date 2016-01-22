@@ -62,7 +62,11 @@ class ConsolidatedEventHandler(PatternMatchingEventHandler):
                 for event in move_events:
                     return
             if event.event_type == EVENT_TYPE_CREATED:
-                self._create_cache.append(event)
+                if not event.is_directory and parts in self._event_cache and self._event_cache[parts].event_type == EVENT_TYPE_DELETED:
+                    Event = DirModifiedEvent if event.is_directory else FileModifiedEvent
+                    self._event_cache[parts] = Event(event.src_path)
+                else:
+                    self._create_cache.append(event)
             else:
                 if not consolidate and parts in self._event_cache:
                     ev = self._event_cache[parts]
