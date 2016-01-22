@@ -15,12 +15,29 @@ from watchdog.events import (
     PatternMatchingEventHandler,
 )
 
-from osfoffline import settings
+from osfoffline import settings, utils
 from osfoffline.exceptions import NodeNotFound
 
 
 logger = logging.getLogger(__name__)
 
+def sha256_from_local_path(*, src_path, dest_path):
+    try:
+        node = utils.extract_node(src_path)
+    except NodeNotFound:
+        db_file = None
+    else:
+        db_file = utils.local_to_db(src_path, node, check_is_folder=False)
+    if not db_file:
+        if not dest_path:
+            return None
+        else:
+            try:
+                return utils.hash_file(Path(dest_path))
+            except IsADirectoryError:
+                return None
+    else:
+        return db_file.sha256
 
 class ConsolidatedEventHandler(PatternMatchingEventHandler):
 
@@ -44,13 +61,34 @@ class ConsolidatedEventHandler(PatternMatchingEventHandler):
 
             parts = list(zip(src_parts, dest_parts))
 
+            # Stash the sha256, basename, and parts. This allows us to do consolidation
+            # down the line.
+            event.basename = os.path.basename(event.src_path)
+            event.sha256 = sha256_from_local_path(src_path=event.src_path, dest_path=getattr(event, 'dest_path', None))
+            event.parts = parts
+
             # Windows represents folder deletes incorrectly as file deletes, and as
             # result we can't trust event.is_directory to check whether or not delete
             # events need to be consolidated
             consolidate = event.is_directory
             if event.event_type == EVENT_TYPE_DELETED:
                 consolidate = (parts in self._event_cache)
-
+                move_events = (
+                    evt
+                    for evt in self._event_cache.children()
+                    if evt.event_type == EVENT_TYPE_MOVED and evt.dest_path == event.src_path
+                )
+                for evt in move_events:
+                    create_events = (create_evt for create_evt in self._create_cache if create_evt.src_path == evt.src_path)
+                    for create_evt in create_events:
+                        logger.info('Attempting to consolidate a create/move/delete as an update')
+                        # discard the move
+                        del self._event_cache[evt.parts]
+                        # discard the create
+                        self._create_cache.remove(create_evt)
+                        # consolidate to update
+                        self._event_cache[create_evt.parts] = FileModifiedEvent(create_evt.src_path)
+                        return
             if event.event_type == EVENT_TYPE_MODIFIED:
                 if event.is_directory:
                     return
