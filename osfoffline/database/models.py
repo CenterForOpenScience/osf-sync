@@ -67,7 +67,7 @@ class Node(Base):
 
     @property
     def rel_path(self):
-       	"""
+        """
         Path on the local filesystem.
 
         Recursively walk up the path of the node. Top level node joins with the osf folder path of the user

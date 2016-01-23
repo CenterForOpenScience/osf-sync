@@ -1,0 +1,35 @@
+sudo: false
+
+matrix:
+  include:
+    - os: linux
+      language: python
+      python: 3.4
+    - os: osx
+      language: generic
+
+before_install:
+  - |
+    if [ "$TRAVIS_OS_NAME" == "osx" ]; then
+      brew update || brew update
+
+      brew outdated pyenv || brew upgrade pyenv
+      eval "$(pyenv init -)"
+
+      pyenv install 3.4.3
+      pyenv global 3.4.3
+      pyenv rehash
+
+      python -m pip install --user virtualenv
+      python -m virtualenv ~/.venv
+      source ~/.venv/bin/activate
+    fi
+
+install:
+  - travis_retry pip install -r requirements.txt
+
+script:
+  - py.test -v -s tests
+
+notifications:
+  flowdock: 2b7c714ee5b3c5df37f56aef6f8ddcc7
