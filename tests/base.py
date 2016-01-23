@@ -6,6 +6,9 @@ import pytest
 import unittest
 
 from osfoffline import settings
+from osfoffline.database import models
+from osfoffline.database.utils import save
+from osfoffline.database import drop_db, Session
 
 from tests.utils import (
     unique_file_name,
@@ -96,10 +99,28 @@ class OSFOTestBase(unittest.TestCase):
             for subchild in child.get('children', []):
                 self._ensure_project_structure(subchild, child_components_dir)
 
+    def _reset_database(self):
+        drop_db()
+        user = models.User(
+            id='fake_user_id',
+            full_name='fake full name',
+            login='fake_username',
+            oauth_token='fake_personal_access_token',
+            folder=str(self.root_dir)
+        )
+        node = models.Node(
+            id=self.PROJECT_STRUCTURE[0]['id'],
+            title=self.PROJECT_STRUCTURE[0]['name'],
+            sync=True,
+            user_id = user.id
+        )
+        save(Session(), user, node)
+
     @pytest.fixture(scope='function', autouse=True)
     def initdir(self, request, tmpdir):
         self.PROJECT_STRUCTURE = self.PROJECT_STRUCTURE or make_project_structure()
         self.root_dir = tmpdir
+        self._reset_database()
         # change to pytest-provided temporary directory
         tmpdir.chdir()
         # create test directory structure
