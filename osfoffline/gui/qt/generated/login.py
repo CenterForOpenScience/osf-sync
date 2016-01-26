@@ -57,10 +57,10 @@ class Ui_login(object):
 
     def retranslateUi(self, login):
         _translate = QtCore.QCoreApplication.translate
-        login.setWindowTitle(_translate("login", "OSF-Offline | Log in"))
+        login.setWindowTitle(_translate("login", "OSF-Sync | Log in"))
         self.groupBox_7.setTitle(_translate("login", "Log in"))
         self.label_7.setText(_translate("login", "Password:"))
         self.logInButton.setText(_translate("login", "Log In"))
         self.label_6.setText(_translate("login", " Email:"))
-        self.label.setText(_translate("login", "Welcome to OSF Offline"))
+        self.label.setText(_translate("login", "Welcome to OSF Sync"))
 
