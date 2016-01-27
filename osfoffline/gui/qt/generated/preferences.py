@@ -1,13 +1,12 @@
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file './osfoffline/gui/qt/static/preferences.ui'
+# Form implementation generated from reading ui file 'static/preferences.ui'
 #
-# Created by: PyQt5 UI code generator 5.5.1
+# Created by: PyQt5 UI code generator 5.5
 #
 # WARNING! All changes made in this file will be lost!
 
 from PyQt5 import QtCore, QtGui, QtWidgets
-from ....settings import *
 
 class Ui_Settings(object):
     def setupUi(self, Settings):
@@ -29,10 +28,6 @@ class Ui_Settings(object):
         self.desktopNotifications.setGeometry(QtCore.QRect(10, 20, 541, 22))
         self.desktopNotifications.setChecked(True)
         self.desktopNotifications.setObjectName("desktopNotifications")
-        self.startOnStartup = QtWidgets.QCheckBox(self.groupBox)
-        self.startOnStartup.setGeometry(QtCore.QRect(10, 40, 541, 22))
-        self.startOnStartup.setChecked(True)
-        self.startOnStartup.setObjectName("startOnStartup")
         self.gridLayout_7.addWidget(self.groupBox, 0, 0, 1, 1)
         self.groupBox_6 = QtWidgets.QGroupBox(self.tab)
         self.groupBox_6.setObjectName("groupBox_6")
@@ -98,7 +93,7 @@ class Ui_Settings(object):
         self.gridLayout_3.addLayout(self.horizontalLayout, 0, 0, 1, 1)
 
         self.retranslateUi(Settings)
-        self.tabWidget.setCurrentIndex(1)
+        self.tabWidget.setCurrentIndex(2)
         QtCore.QMetaObject.connectSlotsByName(Settings)
 
     def retranslateUi(self, Settings):
@@ -106,13 +101,12 @@ class Ui_Settings(object):
         Settings.setWindowTitle(_translate("Settings", "Settings"))
         self.groupBox.setTitle(_translate("Settings", "System"))
         self.desktopNotifications.setText(_translate("Settings", "Show Desktop Notifications"))
-        self.startOnStartup.setText(_translate("Settings", "Start OSF Sync on Computer Startup"))
         self.groupBox_6.setTitle(_translate("Settings", "Choose folder to Place OSF folder in "))
         self.changeFolderButton.setText(_translate("Settings", "Change"))
         self.containingFolderTextEdit.setHtml(_translate("Settings", "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"
 "<html><head><meta name=\"qrichtext\" content=\"1\" /><style type=\"text/css\">\n"
 "p, li { white-space: pre-wrap; }\n"
-"</style></head><body style=\" font-family:\'.Helvetica Neue DeskInterface\'; font-size:13pt; font-weight:400; font-style:normal;\">\n"
+"</style></head><body style=\" font-family:\'.SF NS Text\'; font-size:13pt; font-weight:400; font-style:normal;\">\n"
 "<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-family:\'Ubuntu\'; font-size:11pt;\">/home/himanshu/somefolder/My Project</span></p></body></html>"))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab), _translate("Settings", "General"))
         self.groupBox_2.setTitle(_translate("Settings", "Account"))
@@ -129,8 +123,8 @@ class Ui_Settings(object):
         self.textEdit_2.setHtml(_translate("Settings", "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"
 "<html><head><meta name=\"qrichtext\" content=\"1\" /><style type=\"text/css\">\n"
 "p, li { white-space: pre-wrap; }\n"
-"</style></head><body style=\" font-family:\'.Helvetica Neue DeskInterface\'; font-size:13pt; font-weight:400; font-style:normal;\">\n"
-"<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-family:\'Ubuntu\'; font-size:11pt;\">OSF Sync v" + VERSION + "</span></p>\n"
+"</style></head><body style=\" font-family:\'.SF NS Text\'; font-size:13pt; font-weight:400; font-style:normal;\">\n"
+"<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-family:\'Ubuntu\'; font-size:11pt;\">This is OSF OFFLINE. Please go ahead and use it and make more software based off of it. Please and Thank You. </span></p>\n"
 "<p style=\"-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-family:\'Ubuntu\'; font-size:11pt;\"><br /></p>\n"
 "<p align=\"center\" style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-family:\'Ubuntu\'; font-size:11pt;\">© Center for Open Science</span></p></body></html>"))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_5), _translate("Settings", "About"))
