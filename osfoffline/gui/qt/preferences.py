@@ -166,7 +166,10 @@ class Preferences(QDialog, Ui_Settings):
     def populate_item_tree(self, nodes):
         self.reset_tree_widget()
         _translate = QCoreApplication.translate
-        self.selected_nodes = [n.id for n in Session().query(Node)]
+        all_selected_nodes = [n.id for n in Session().query(Node)]
+        for n in Session().query(Node):
+            if n.parent_id not in all_selected_nodes and n.id not in self.selected_nodes:
+                self.selected_nodes.append(n.id)
 
         for node in sorted(nodes, key=lambda n: n.title):
             tree_item = QTreeWidgetItem(self.treeWidget)
