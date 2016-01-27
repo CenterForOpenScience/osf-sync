@@ -12,6 +12,8 @@ from watchdog.events import (
     EVENT_TYPE_MODIFIED,
     DirModifiedEvent,
     FileModifiedEvent,
+    DirMovedEvent,
+    FileMovedEvent,
     PatternMatchingEventHandler,
 )
 
@@ -21,23 +23,47 @@ from osfoffline.exceptions import NodeNotFound
 
 logger = logging.getLogger(__name__)
 
-def sha256_from_local_path(*, src_path, dest_path):
+
+def sha256_from_event(event):
     try:
-        node = utils.extract_node(src_path)
+        node = utils.extract_node(event.src_path)
     except NodeNotFound:
         db_file = None
     else:
-        db_file = utils.local_to_db(src_path, node, check_is_folder=False)
+        db_file = utils.local_to_db(event.src_path, node, check_is_folder=False)
+
     if not db_file:
-        if not dest_path:
+        path = getattr(event, 'dest_path', None)
+        if event.event_type == EVENT_TYPE_CREATED:
+            path = event.src_path
+
+        if not path:
             return None
         else:
             try:
-                return utils.hash_file(Path(dest_path))
+                return utils.hash_file(Path(path))
             except IsADirectoryError:
                 return None
     else:
         return db_file.sha256
+
+#  def sha256_from_local_path(*, src_path, dest_path):
+#      try:
+#          node = utils.extract_node(src_path)
+#      except NodeNotFound:
+#          db_file = None
+#      else:
+#          db_file = utils.local_to_db(src_path, node, check_is_folder=False)
+#      if not db_file:
+#          if not dest_path:
+#              return None
+#          else:
+#              try:
+#                  return utils.hash_file(Path(dest_path))
+#              except IsADirectoryError:
+#                  return None
+#      else:
+#          return db_file.sha256
 
 class ConsolidatedEventHandler(PatternMatchingEventHandler):
 
@@ -64,7 +90,7 @@ class ConsolidatedEventHandler(PatternMatchingEventHandler):
             # Stash the sha256, basename, and parts. This allows us to do consolidation
             # down the line.
             event.basename = os.path.basename(event.src_path)
-            event.sha256 = sha256_from_local_path(src_path=event.src_path, dest_path=getattr(event, 'dest_path', None))
+            event.sha256 = sha256_from_event(event)
             event.parts = parts
 
             # Windows represents folder deletes incorrectly as file deletes, and as
