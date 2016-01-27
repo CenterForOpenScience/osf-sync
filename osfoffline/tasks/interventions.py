@@ -3,10 +3,10 @@ import enum
 import logging
 import threading
 
-from osfoffline.sync.ext.auditor import EventType
+from osfoffline import language
 from osfoffline.tasks import operations
 from osfoffline.utils import Singleton
-
+from osfoffline.sync.ext.auditor import EventType
 
 logger = logging.getLogger(__name__)
 
@@ -105,7 +105,7 @@ class RemoteLocalFileConflict(BaseIntervention):
     def __init__(self, local, remote):
         super().__init__(local, remote)
         self.title = 'Remote Local File Conflict'
-        self.description = 'This is the description'
+        self.description = language.REMOTE_FILE_CONFLICT
         self.options = (Decision.MINE, Decision.THEIRS, Decision.KEEP_BOTH)
 
     def resolve(self):
