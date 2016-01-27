@@ -104,7 +104,19 @@ class ConsolidatedEventHandler(PatternMatchingEventHandler):
                     Event = DirModifiedEvent if event.is_directory else FileModifiedEvent
                     self._event_cache[parts] = Event(event.src_path)
                 else:
-                    self._create_cache.append(event)
+                    delete_events = [
+                        evt
+                        for evt in self._event_cache.children()
+                        if evt.event_type == EVENT_TYPE_DELETED and evt.basename == event.basename and evt.sha256 == event.sha256
+                    ]
+                    if delete_events:
+                        for evt in delete_events:
+                            # delete the delete
+                            del self._event_cache[evt.parts]
+                            Event = DirMovedEvent if event.is_directory else FileMovedEvent
+                            self._event_cache[evt.parts] = Event(src_path=evt.src_path, dest_path=event.src_path)
+                    else:
+                        self._create_cache.append(event)
             else:
                 if not consolidate and parts in self._event_cache:
                     ev = self._event_cache[parts]
