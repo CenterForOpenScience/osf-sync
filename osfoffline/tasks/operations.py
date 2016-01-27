@@ -308,7 +308,7 @@ class DatabaseCreateFile(BaseOperation):
             parent_id=parent,
             node_id=self.node.id,
             size=self.remote.size,
-            md5=sfelf.remote.extra['hashes']['md5'],
+            md5=self.remote.extra['hashes']['md5'],
             sha256=self.remote.extra['hashes']['sha256'],
         ))
 
