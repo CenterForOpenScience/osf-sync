@@ -42,7 +42,7 @@ def sha256_from_event(event):
         else:
             try:
                 return utils.hash_file(Path(path))
-            except IsADirectoryError:
+            except (IsADirectoryError, PermissionError):
                 return None
     else:
         return db_file.sha256

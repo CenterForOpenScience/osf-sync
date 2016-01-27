@@ -215,7 +215,7 @@ class RemoteCreateFile(BaseOperation):
         with self.local.open(mode='rb') as fobj:
             resp = OSFClient().request('PUT', url, data=fobj, params={'name': self.local.name})
         data = resp.json()
-        assert resp.status_code == http.client.CREATED, '{}\n{}\n{}'.format(resp, url, data)
+        # assert resp.status_code == http.client.CREATED, '{}\n{}\n{}'.format(resp, url, data)
 
         remote = osf_client.File(None, data['data'])
         # WB id are <provider>/<id>
