@@ -10,9 +10,11 @@ def drop_db():
     if os.path.exists(settings.PROJECT_DB_FILE):
         os.remove(settings.PROJECT_DB_FILE)
 
+
 def drop_log():
     if os.path.exists(settings.PROJECT_LOG_FILE):
         os.remove(settings.PROJECT_LOG_FILE)
+
 
 @task(aliases=['flake8'])
 def flake():
@@ -51,6 +53,7 @@ def qt_gen():
     run('pyuic5 ./osfoffline/gui/qt/static/login.ui -o ./osfoffline/gui/qt/generated/login.py')
     run('pyuic5 ./osfoffline/gui/qt/static/preferences.ui -o ./osfoffline/gui/qt/generated/preferences.py')
     run('pyrcc5 ./osfoffline/gui/qt/static/resources.qrc -o ./osfoffline/gui/qt/generated/resources.py')
+
 
 @task
 def wipe(hard=True):

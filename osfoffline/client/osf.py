@@ -12,15 +12,14 @@ from osfoffline.utils.authentication import get_current_user
 
 
 class ClientLoadError(Exception):
-
     def __init__(self, *args, resource=None, status=None, errors=None):
         super(ClientLoadError, self).__init__(*args)
         self.resource = resource
         self.status = status
         self.errors = errors
 
-class OSFClient(metaclass=Singleton):
 
+class OSFClient(metaclass=Singleton):
     def __init__(self, *, limit=5):
         self.user = get_current_user()
         self.headers = {
@@ -42,8 +41,8 @@ class OSFClient(metaclass=Singleton):
     def stop(self):
         del type(self.__class__)._instances[self.__class__]
 
-class BaseResource(abc.ABC):
 
+class BaseResource(abc.ABC):
     OSF_HOST = settings.API_BASE
     API_PREFIX = settings.API_VERSION
     BASE_URL = '{}/{}'.format(OSF_HOST, API_PREFIX)
@@ -69,17 +68,17 @@ class BaseResource(abc.ABC):
         resp = request_session.get(cls.get_url(*args, **kwargs), params={'page[size]': 250})
         if resp.status_code >= 500:
             raise ClientLoadError(
-                resource=cls.RESOURCE,
-                status=resp.status_code,
-                errors=['Server error']
+                    resource=cls.RESOURCE,
+                    status=resp.status_code,
+                    errors=['Server error']
             )
         data = resp.json()
 
         if 'errors' in data:
             raise ClientLoadError(
-                resource=cls.RESOURCE,
-                status=resp.status_code,
-                errors=data['errors']
+                    resource=cls.RESOURCE,
+                    status=resp.status_code,
+                    errors=data['errors']
             )
 
         if isinstance(data['data'], list):
@@ -97,8 +96,8 @@ class BaseResource(abc.ABC):
             yield item
         if data['links'].get('next'):
             for item in self.fetch_related(
-                relationship,
-                next_url=data['links']['next']
+                    relationship,
+                    next_url=data['links']['next']
             ):
                 yield item
 
@@ -111,8 +110,8 @@ class BaseResource(abc.ABC):
         params = {'page[size]': 250}
         params.update(query or {})
         resp = self.request_session.get(
-            url,
-            params=params
+                url,
+                params=params
         )
         data = resp.json()
         items = data['data']
@@ -125,11 +124,6 @@ class BaseResource(abc.ABC):
 class User(BaseResource):
     """Fetch API data relevant to a specific user"""
     RESOURCE = 'users'
-
-    # def __init__(self, request_session, data):
-    #     super().__init__(request_session, data)
-    #     self.date_created = iso8601.parse_date(self.date_created)
-    #     self.date_modified = iso8601.parse_date(self.date_modified)
 
     @classmethod
     def get_url(cls, *, id='me'):
@@ -149,8 +143,8 @@ class Node(BaseResource):
         self.date_modified = iso8601.parse_date(self.date_modified)
 
         self.parent = Node(
-            request_session,
-            data['embeds']['parent']['data']
+                request_session,
+                data['embeds']['parent']['data']
         ) if (
             'embeds' in data and
             data['embeds']['parent'].get('data')
@@ -163,23 +157,25 @@ class Node(BaseResource):
     def get_storage(self, *, id='osfstorage'):
         # TODO: At present only osfstorage is fully supported for syncing
         return next(
-            storage
-            for storage in NodeStorage.load(self.request_session, self.id)
-            if storage.provider == id
+                storage
+                for storage in NodeStorage.load(self.request_session, self.id)
+                if storage.provider == id
         )
 
     def get_children(self, *, lazy=False):
         related = map(
-            lambda data: Node(self.request_session, data),
-            self.fetch_related('children', query={'embed': 'parent'})
+                lambda data: Node(self.request_session, data),
+                self.fetch_related('children', query={'embed': 'parent'})
         )
         if lazy:
             return related
         else:
             return list(related)
 
+
 class UserNode(Node):
     """Fetch API data about nodes owned by a specific user"""
+
     @classmethod
     def get_url(cls, id):
         return '{}/users/{}/nodes/?filter[registration]=false'.format(cls.BASE_URL, id)
@@ -187,6 +183,7 @@ class UserNode(Node):
 
 class StorageObject(BaseResource):
     """Represent API data for files or folders under a specific node"""
+
     def __init__(self, request_session, data, *, parent=None):
         super().__init__(request_session, data)
         self.parent = parent
@@ -206,16 +203,16 @@ class StorageObject(BaseResource):
 
         if 'errors' in data:
             raise ClientLoadError(
-                resource=cls.RESOURCE,
-                status=resp.status_code,
-                errors=data['errors']
+                    resource=cls.RESOURCE,
+                    status=resp.status_code,
+                    errors=data['errors']
             )
 
         if isinstance(data['data'], list):
             return [
                 (Folder if item['attributes']['kind'] == 'folder' else File)(request_session, item)
                 for item in data['data']
-            ]
+                ]
         return cls(request_session, data['data'])
 
 
@@ -228,22 +225,25 @@ class Folder(StorageObject):
 
     def get_children(self, *, lazy=False):
         related = map(
-            lambda item: (Folder if item['attributes']['kind'] == 'folder' else File)(self.request_session, item, parent=self),
-            self.fetch_related('files')
+                lambda item: (Folder if item['attributes']['kind'] == 'folder' else File)(self.request_session, item,
+                                                                                          parent=self),
+                self.fetch_related('files')
         )
         if lazy:
             return related
         else:
             return list(related)
 
+
 class NodeStorage(Folder):
     """Fetch API list of storage options under a node"""
+
     @classmethod
     def get_url(cls, node_id):
         return '{}/{}/{}/files/'.format(
-            cls.BASE_URL,
-            Node.RESOURCE,
-            node_id
+                cls.BASE_URL,
+                Node.RESOURCE,
+                node_id
         )
 
 

@@ -14,12 +14,10 @@ from osfoffline.database.models import User
 from osfoffline.gui.qt.preferences import Preferences
 from osfoffline.utils.validators import validate_containing_folder
 
-
 logger = logging.getLogger(__name__)
 
 
 class OSFOfflineMenu(QMenu):
-
     push_status = pyqtSignal((str,))
 
     def __init__(self, parent):

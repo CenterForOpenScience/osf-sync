@@ -7,12 +7,10 @@ from osfoffline.exceptions import NodeNotFound
 from osfoffline.tasks.notifications import Notification
 from osfoffline.utils import Singleton
 
-
 logger = logging.getLogger(__name__)
 
 
 class OperationWorker(threading.Thread, metaclass=Singleton):
-
     def __init__(self):
         super().__init__()
         self._queue = queue.Queue()
@@ -32,7 +30,7 @@ class OperationWorker(threading.Thread, metaclass=Singleton):
 
             try:
                 job.run(dry=settings.DRY)
-            except (NodeNotFound, ) as e:
+            except (NodeNotFound,) as e:
                 logger.warning(e)
             except Exception as e:
                 logger.exception(e)

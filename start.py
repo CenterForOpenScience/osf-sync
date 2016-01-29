@@ -15,7 +15,6 @@ from osfoffline.utils.log import start_logging
 from osfoffline.utils.singleton import SingleInstance
 from osfoffline import settings
 
-
 logger = logging.getLogger(__name__)
 
 if settings.DEBUG:
@@ -45,7 +44,7 @@ def start():
         r = requests.get(settings.MIN_VERSION_URL)
     except requests.exceptions.ConnectionError:
         running_warning(message='Check for minimum version requirements for OSF-Sync failed '
-                        'because you have no Internet connection', critical=True)
+                                'because you have no Internet connection', critical=True)
     else:
         try:
             min_version = r.json()['min-version']

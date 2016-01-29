@@ -15,7 +15,7 @@ def add_user_to_sentry_logs():
     data.update(context)
 
     # Alternate mechanism based on thread locals
-    #settings.raven_client.extra_context(context)
+    # settings.raven_client.extra_context(context)
 
 
 def remove_user_from_sentry_logs():
@@ -25,8 +25,8 @@ def remove_user_from_sentry_logs():
     for k in ('osf_user_id',):
         extra_data.pop(k, None)
 
-    # Alternate mechanism based on thread-locals
-    #settings.raven_client.context.clear()
+        # Alternate mechanism based on thread-locals
+        # settings.raven_client.context.clear()
 
 
 def start_logging(config=settings.LOGGING_CONFIG):

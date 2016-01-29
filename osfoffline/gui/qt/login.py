@@ -14,12 +14,10 @@ from osfoffline.utils.authentication import AuthClient
 from osfoffline.utils.log import add_user_to_sentry_logs
 from osfoffline.gui.qt.generated.login import Ui_login
 
-
 logger = logging.getLogger(__name__)
 
 
 class LoginScreen(QDialog, Ui_login):
-
     def __init__(self):
         super().__init__()
         self.user = None

@@ -10,7 +10,8 @@ from osfoffline.utils import hash_file
 
 def prompt_user(local, remote, local_events, remote_events):
     # TODO Pass around pre computed SHAs
-    if local.context.local and remote.context.remote and hash_file(local.context.local) == remote.context.remote.extra['hashes']['sha256']:
+    if local.context.local and remote.context.remote and hash_file(local.context.local) == \
+            remote.context.remote.extra['hashes']['sha256']:
         return db_create(local, remote, local_events, remote_events)
     return Intervention().resolve(interventions.RemoteLocalFileConflict(local, remote))
 
@@ -62,7 +63,8 @@ def handle_move_src_update(local, remote, local_events, remote_events):
     for child in set(local_events.keys()) | set(remote_events.keys()):
         if not child.startswith(remote.src_path) and not child.startswith(remote.dest_path):
             continue
-        if os.path.sep in child.replace(remote.src_path, '', 1).rstrip(os.path.sep) and os.path.sep in child.replace(remote.dest_path, '', 1).rstrip(os.path.sep):
+        if os.path.sep in child.replace(remote.src_path, '', 1).rstrip(os.path.sep) and os.path.sep in child.replace(
+                remote.dest_path, '', 1).rstrip(os.path.sep):
             continue
         llocal, lremote = local_events.pop(child, None), remote_events.pop(child, None)
         if child not in (getattr(llocal, 'src_path', None), getattr(lremote, 'src_path', None)):
@@ -83,13 +85,13 @@ def move_to_conflict(local, remote, local_events, remote_events):
         if remote.contexts[0].db:
             if remote.is_directory:
                 return [operations.DatabaseUpdateFolder(operations.OperationContext(
-                    db=remote.contexts[0].db,
-                    remote=remote.contexts[1].remote
+                        db=remote.contexts[0].db,
+                        remote=remote.contexts[1].remote
                 ))]
             else:
                 return [operations.DatabaseUpdateFile(operations.OperationContext(
-                    db=remote.contexts[0].db,
-                    remote=remote.contexts[1].remote
+                        db=remote.contexts[0].db,
+                        remote=remote.contexts[1].remote
                 ))]
         return db_create(local, remote, local_events, remote_events)
     # Ask User
@@ -101,6 +103,7 @@ def move_gate(event_src, event_dest):
         if local.src_path == remote.src_path:
             return event_src(local, remote, *args, **kwargs)
         return event_dest(local, remote, *args, **kwargs)
+
     return gate
 
 

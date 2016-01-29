@@ -4,7 +4,6 @@ import logging
 
 from osfoffline.utils import Singleton
 
-
 logger = logging.getLogger(__name__)
 
 
@@ -16,7 +15,6 @@ class Level(enum.IntEnum):
 
 
 class Notification(metaclass=Singleton):
-
     class Event:
         def __init__(self, type, msg):
             """
