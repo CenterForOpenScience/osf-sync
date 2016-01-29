@@ -11,13 +11,13 @@ from PyQt5.QtWidgets import QMessageBox
 from PyQt5.QtWidgets import QTreeWidgetItem
 from sqlalchemy.orm.exc import NoResultFound
 
+from osfoffline import language
 from osfoffline.client.osf import OSFClient
 from osfoffline.database import Session
 from osfoffline.database.models import User, Node
 from osfoffline.database.utils import save
 from osfoffline.gui.qt.generated.preferences import Ui_Settings
 from osfoffline.sync.remote import RemoteSyncWorker
-
 
 logger = logging.getLogger(__name__)
 
@@ -59,9 +59,7 @@ class Preferences(QDialog, Ui_Settings):
             reply = QMessageBox()
             reply.setText('Unsaved changes')
             reply.setIcon(QMessageBox.Warning)
-            reply.setInformativeText('You have unsaved changes to your synced projects.\n\n '
-                                     'Please review your changes and press \'update\' if you would like to save them. \n\n  '
-                                     'Are you sure you would like to leave without saving? \n')
+            reply.setInformativeText(language.UNSAVED_CHANGES)
             default = reply.addButton('Exit without saving', QMessageBox.YesRole)
             reply.addButton('Review changes', QMessageBox.NoRole)
             reply.setDefaultButton(default)
@@ -81,9 +79,8 @@ class Preferences(QDialog, Ui_Settings):
             os.makedirs(osf_path)
         elif os.path.isfile(osf_path):
             # FIXME: Consolidate redundant messages
-            # AlertHandler.warn(
-            #     "An OSF file exists where you would like to create the OSF folder. Delete it, or choose a different location")
-            logger.warning("An OSF file exists where you would like to create the OSF folder.")
+            AlertHandler.warn(language.TARGET_FOLDER_EXISTS)
+            logger.debug(language.TARGET_FOLDER_EXISTS)
             return
 
         user = Session().query(User).one()
@@ -189,7 +186,7 @@ class Preferences(QDialog, Ui_Settings):
         # TODO: Is there a more elegant way to pass errors across signal or thread boundaries?
         QMessageBox.critical(None,
                              'Error fetching projects',
-                             'Could not fetch list of projects; the preferences window will be closed without saving changes. Please try again later.')
+                             language.ITEM_LOAD_ERROR)
         self.reset_tree_widget()
         self.reject()
 
