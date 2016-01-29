@@ -6,7 +6,6 @@ from raven.handlers.logging import SentryHandler
 
 from osfoffline.settings.defaults import *  # noqa
 
-
 logger = logging.getLogger(__name__)
 
 try:
@@ -18,7 +17,6 @@ except ImportError:
 for path in (PROJECT_DB_DIR, PROJECT_LOG_DIR):
     logger.info('Ensuring {} exists'.format(path))
     os.makedirs(path, exist_ok=True)
-
 
 # Define logging configuration to use individual override params from settings files
 LOGGING_CONFIG = {

@@ -3,7 +3,6 @@ import os
 from appdirs import user_data_dir
 from appdirs import user_log_dir
 
-
 # General settings
 PROJECT_NAME = 'osf-offline'
 PROJECT_AUTHOR = 'cos'
@@ -50,7 +49,7 @@ PROJECT_LOG_FILE = os.path.join(PROJECT_LOG_DIR, 'osfoffline.log')
 
 EVENT_DEBOUNCE = 3
 
-#updater
+# updater
 REPO = 'CenterForOpenScience/OSF-Sync'
 VERSION = '0.3.0'
 NAME = 'OSF-Offline'

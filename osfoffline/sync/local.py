@@ -14,12 +14,10 @@ from osfoffline.tasks.operations import OperationContext
 from osfoffline.utils import Singleton
 from osfoffline.tasks.queue import OperationWorker
 
-
 logger = logging.getLogger(__name__)
 
 
 class LocalSyncWorker(ConsolidatedEventHandler, metaclass=Singleton):
-
     def __init__(self):
         super().__init__()
 
@@ -68,24 +66,24 @@ class LocalSyncWorker(ConsolidatedEventHandler, metaclass=Singleton):
                 # TODO: avoid a lazy context load in this case to catch the NodeNotFound exception?
                 _ = OperationContext(local=Path(event.src_path), is_folder=True).remote
                 return self.put_event(operations.RemoteMoveFolder(
-                    OperationContext(local=Path(event.src_path), is_folder=True),
-                    OperationContext(local=Path(event.dest_path), is_folder=True),
+                        OperationContext(local=Path(event.src_path), is_folder=True),
+                        OperationContext(local=Path(event.dest_path), is_folder=True),
                 ))
             except NodeNotFound:
                 return self.put_event(operations.RemoteCreateFolder(
-                    OperationContext(local=Path(event.dest_path), is_folder=True),
+                        OperationContext(local=Path(event.dest_path), is_folder=True),
                 ))
 
         try:
             # TODO: avoid a lazy context load in this case to catch the NodeNotFound exception?
             _ = OperationContext(local=Path(event.src_path)).remote  # noqa
             return self.put_event(operations.RemoteMoveFile(
-                OperationContext(local=Path(event.src_path)),
-                OperationContext(local=Path(event.dest_path)),
+                    OperationContext(local=Path(event.src_path)),
+                    OperationContext(local=Path(event.dest_path)),
             ))
         except NodeNotFound:
             return self.put_event(operations.RemoteCreateFile(
-                OperationContext(local=Path(event.dest_path)),
+                    OperationContext(local=Path(event.dest_path)),
             ))
 
     def on_created(self, event):

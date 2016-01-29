@@ -21,7 +21,6 @@ class Decision(enum.Enum):
 # Use the naming convention <LOCATION><ACTION>
 # IE: RemoteCreated, BothDeleted, etc
 class BaseIntervention(abc.ABC):
-
     def __init__(self, local, remote):
         self.local = local
         self.remote = remote
@@ -99,7 +98,6 @@ class BaseIntervention(abc.ABC):
 
 
 class RemoteLocalFileConflict(BaseIntervention):
-
     DEFAULT_DECISION = Decision.KEEP_BOTH
 
     def __init__(self, local, remote):
@@ -142,7 +140,6 @@ class RemoteLocalFileConflict(BaseIntervention):
 
 
 class RemoteFolderDeleted(BaseIntervention):
-
     DEFAULT_DECISION = Decision.MINE
 
     def __init__(self, local, remote, local_events, remote_events):
@@ -186,7 +183,6 @@ class RemoteFolderDeleted(BaseIntervention):
 
 
 class Intervention(metaclass=Singleton):
-
     def set_callback(self, cb):
         self.cb = cb
 

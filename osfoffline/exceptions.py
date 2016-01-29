@@ -1,6 +1,7 @@
 class OSFOfflineException(Exception):
     """ Base exception from which all others should inherit
     """
+
     def __init__(self, msg=None):
         self.message = msg
 
@@ -8,6 +9,7 @@ class OSFOfflineException(Exception):
         return '<{}({})>'.format(self.__class__.__name__, self.message)
 
     __str__ = __repr__
+
 
 class AuthError(OSFOfflineException):
     """Generic authentication error while connecting to the OSF"""

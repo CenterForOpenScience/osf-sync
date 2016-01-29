@@ -104,12 +104,12 @@ class Preferences(QDialog, Ui_Settings):
                 self.selected_nodes.append(node.id)
                 if not db_node:
                     Session().add(
-                        Node(
-                            id=node.id,
-                            title=node.title,
-                            user=user,
-                            sync=True
-                        )
+                            Node(
+                                    id=node.id,
+                                    title=node.title,
+                                    user=user,
+                                    sync=True
+                            )
                     )
                 else:
                     db_node.sync = True
@@ -171,8 +171,10 @@ class Preferences(QDialog, Ui_Settings):
 
         for node in sorted(nodes, key=lambda n: n.title):
             tree_item = QTreeWidgetItem(self.treeWidget)
-            tree_item.setCheckState(self.PROJECT_SYNC_COLUMN, Qt.Checked if node.id in self.selected_nodes else Qt.Unchecked)
-            tree_item.setText(self.PROJECT_NAME_COLUMN, _translate('Preferences', '{} - {}'.format(node.title, node.id)))
+            tree_item.setCheckState(self.PROJECT_SYNC_COLUMN,
+                                    Qt.Checked if node.id in self.selected_nodes else Qt.Unchecked)
+            tree_item.setText(self.PROJECT_NAME_COLUMN,
+                              _translate('Preferences', '{} - {}'.format(node.title, node.id)))
 
             self.tree_items.append((tree_item, node))
 
@@ -192,7 +194,6 @@ class Preferences(QDialog, Ui_Settings):
 
 
 class NodeFetcher(QtCore.QObject):
-
     finished = QtCore.pyqtSignal([list], [int])
 
     def fetch(self):
