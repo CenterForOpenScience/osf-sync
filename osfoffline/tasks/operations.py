@@ -215,18 +215,20 @@ class RemoteCreateFile(BaseOperation):
         with self.local.open(mode='rb') as fobj:
             resp = OSFClient().request('PUT', url, data=fobj, params={'name': self.local.name})
         data = resp.json()
+        if resp.status_code == http.client.FORBIDDEN:
+            Notification().error('You cannot sync File: {} as you only have read permission on this project. '.format(self.local.name))
+        else:
+            assert resp.status_code == http.client.CREATED, '{}\n{}\n{}'.format(resp, url, data)
 
-        assert resp.status_code == http.client.CREATED, '{}\n{}\n{}'.format(resp, url, data)
+            remote = osf_client.File(None, data['data'])
+            # WB id are <provider>/<id>
+            remote.id = remote.id.replace(remote.provider + '/', '')
+            remote.parent = parent
 
-        remote = osf_client.File(None, data['data'])
-        # WB id are <provider>/<id>
-        remote.id = remote.id.replace(remote.provider + '/', '')
-        remote.parent = parent
-
-        DatabaseCreateFile(
-            OperationContext(remote=remote, node=self.node)
-        ).run()
-        Notification().info('Create Remote File: {}'.format(self.local))
+            DatabaseCreateFile(
+                OperationContext(remote=remote, node=self.node)
+            ).run()
+            Notification().info('Create Remote File: {}'.format(self.local))
 
 
 class RemoteCreateFolder(BaseOperation):
@@ -238,17 +240,20 @@ class RemoteCreateFolder(BaseOperation):
         url = '{}/v1/resources/{}/providers/{}/{}'.format(settings.FILE_BASE, self.node.id, parent.provider, parent.osf_path)
         resp = OSFClient().request('PUT', url, params={'kind': 'folder', 'name': self.local.name})
         data = resp.json()
-        assert resp.status_code == http.client.CREATED, '{}\n{}\n{}'.format(resp, url, data)
+        if resp.status_code == http.client.FORBIDDEN:
+            Notification().error('You cannot sync Folder: {} as you only have read permission on this project. '.format(self.local.name))
+        else:
+            assert resp.status_code == http.client.CREATED, '{}\n{}\n{}'.format(resp, url, data)
 
-        remote = osf_client.File(None, data['data'])
-        # WB id are <provider>/<id>/
-        remote.id = remote.id.replace(remote.provider + '/', '').rstrip('/')
-        remote.parent = parent
+            remote = osf_client.File(None, data['data'])
+            # WB id are <provider>/<id>/
+            remote.id = remote.id.replace(remote.provider + '/', '').rstrip('/')
+            remote.parent = parent
 
-        DatabaseCreateFolder(
-            OperationContext(remote=remote, node=self.node)
-        ).run()
-        Notification().info('Create Remote Folder: {}'.format(self.local))
+            DatabaseCreateFolder(
+                OperationContext(remote=remote, node=self.node)
+            ).run()
+            Notification().info('Create Remote Folder: {}'.format(self.local))
 
 
 class RemoteUpdateFile(BaseOperation):
@@ -284,12 +289,15 @@ class RemoteDelete(BaseOperation):
 
     def _run(self):
         resp = OSFClient().request('DELETE', self.remote.raw['links']['delete'])
-        assert resp.status_code == http.client.NO_CONTENT, resp
-        db_model = Session().query(models.File).filter(models.File.id == self.remote.id).one()
-        DatabaseDelete(
-            OperationContext(db=db_model)
-        ).run()
-        Notification().info('Remote delete {}: {}'.format(db_model.kind.lower(), self.remote))
+        if resp.status_code == http.client.FORBIDDEN:
+            Notification().error('You cannot sync File: {} as you only have read permission on this project. '.format(self.remote))
+        else:
+            assert resp.status_code == http.client.NO_CONTENT, resp
+            db_model = Session().query(models.File).filter(models.File.id == self.remote.id).one()
+            DatabaseDelete(
+                OperationContext(db=db_model)
+            ).run()
+            Notification().info('Remote delete {}: {}'.format(db_model.kind.lower(), self.remote))
 
 
 # Auditor looks for operations by specific names; DRY redundant implementations
