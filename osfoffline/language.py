@@ -18,3 +18,5 @@ TFA_PROMPT = '''
 Please enter a two-factor authentication code.\n
 (check your mobile device)
 '''
+
+PERMISSION_ERROR = 'You cannnot sync this project.

@@ -265,7 +265,7 @@ class RemoteUpdateFile(BaseOperation):
             resp = OSFClient().request('PUT', url, data=fobj, params={'name': self.local.name})
         data = resp.json()
         if resp.status_code == http.client.FORBIDDEN:
-            Notification().error(resp.message_long)
+            Notification().error('You cannot sync File: {} as you only have read permission on this project. '.format(self.local.name))
         else:
             assert resp.status_code in (http.client.OK, http.client.CREATED), '{}\n{}\n{}'.format(resp, url, data)
 
