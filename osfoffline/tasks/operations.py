@@ -269,14 +269,14 @@ class RemoteUpdateFile(BaseOperation):
         else:
             assert resp.status_code in (http.client.OK, http.client.CREATED), '{}\n{}\n{}'.format(resp, url, data)
 
-        remote = osf_client.File(None, data['data'])
-        # WB id are <provider>/<id>
-        remote.id = remote.id.replace(remote.provider + '/', '')
-        remote.parent = self.db.parent
-        DatabaseUpdateFile(
-            OperationContext(remote=remote, db=self.db, node=self.node)
-        ).run()
-        Notification().info('Update Remote File: {}'.format(self.local))
+            remote = osf_client.File(None, data['data'])
+            # WB id are <provider>/<id>
+            remote.id = remote.id.replace(remote.provider + '/', '')
+            remote.parent = self.db.parent
+            DatabaseUpdateFile(
+                OperationContext(remote=remote, db=self.db, node=self.node)
+            ).run()
+            Notification().info('Update Remote File: {}'.format(self.local))
 
 
 class RemoteDelete(BaseOperation):
