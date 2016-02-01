@@ -20,6 +20,12 @@ from osfoffline.utils.authentication import get_current_user
 logger = logging.getLogger(__name__)
 
 
+def get_node_title(node_id):
+    url = '{}/v2/nodes/{}'.format(settings.API_BASE, node_id)
+    resp = OSFClient().request('GET', url)
+    return resp['data']['attributes']['title']
+
+
 class OperationContext:
     """Store common data describing an operation"""
     def __init__(self, *, local=None, db=None, remote=None, node=None, is_folder=False, check_is_folder=True):
@@ -216,12 +222,9 @@ class RemoteCreateFile(BaseOperation):
             resp = OSFClient().request('PUT', url, data=fobj, params={'name': self.local.name})
         data = resp.json()
         if resp.status_code == http.client.FORBIDDEN:
-            url = '{}/v2/nodes/{}'.format(settings.API_BASE, self.node.id)
-            resp = OSFClient().request('GET', url)
-            node_title = resp['data']['attributes']['title']
             Notification().error(
                     'Could not sync file {} in project {}. Please verify you have write permission to the project.'
-                        .format(self.local.name, node_title))
+                        .format(self.local.name, get_node_title(self.node.id)))
         else:
             assert resp.status_code == http.client.CREATED, '{}\n{}\n{}'.format(resp, url, data)
 
@@ -246,12 +249,9 @@ class RemoteCreateFolder(BaseOperation):
         resp = OSFClient().request('PUT', url, params={'kind': 'folder', 'name': self.local.name})
         data = resp.json()
         if resp.status_code == http.client.FORBIDDEN:
-            url = '{}/v2/nodes/{}'.format(settings.API_BASE, self.node.id)
-            resp = OSFClient().request('GET', url)
-            node_title = resp['data']['attributes']['title']
             Notification().error(
                     'Could not sync folder {} in project {}. Please verify you have write permission to the project.'
-                        .format(self.local.name, node_title))
+                        .format(self.local.name, get_node_title(self.node.id)))
         else:
             assert resp.status_code == http.client.CREATED, '{}\n{}\n{}'.format(resp, url, data)
 
@@ -280,12 +280,9 @@ class RemoteUpdateFile(BaseOperation):
             resp = OSFClient().request('PUT', url, data=fobj, params={'name': self.local.name})
         data = resp.json()
         if resp.status_code == http.client.FORBIDDEN:
-            url = '{}/v2/nodes/{}'.format(settings.API_BASE, self.node.id)
-            resp = OSFClient().request('GET', url)
-            node_title = resp['data']['attributes']['title']
             Notification().error(
                     'Could not sync file {} in project {}. Please verify you have write permission to the project.'
-                        .format(self.local.name, node_title))
+                        .format(self.local.name, get_node_title(self.node.id)))
         else:
             assert resp.status_code in (http.client.OK, http.client.CREATED), '{}\n{}\n{}'.format(resp, url, data)
 
@@ -306,12 +303,9 @@ class RemoteDelete(BaseOperation):
         resp = OSFClient().request('DELETE', self.remote.raw['links']['delete'])
         db_model = Session().query(models.File).filter(models.File.id == self.remote.id).one()
         if resp.status_code == http.client.FORBIDDEN:
-            url = '{}/v2/nodes/{}'.format(settings.API_BASE, self.node.id)
-            resp = OSFClient().request('GET', url)
-            node_title = resp['data']['attributes']['title']
             Notification().error(
                     'Could not sync {} {} in project {}. Please verify you have write permission to the project.'
-                        .format(db_model.kind.lower(), self.remote.name, node_title))
+                        .format(db_model.kind.lower(), self.remote.name, get_node_title(self.node.id)))
         else:
             assert resp.status_code == http.client.NO_CONTENT, resp
             DatabaseDelete(
@@ -423,12 +417,9 @@ class RemoteMove(MoveOperation):
 
         data = resp.json()
         if resp.status_code == http.client.FORBIDDEN:
-            url = '{}/v2/nodes/{}'.format(settings.API_BASE, self._dest_context.node.id)
-            resp = OSFClient().request('GET', url)
-            node_title = resp['data']['attributes']['title']
             Notification().error(
                     'Could not sync {} in project {}. Please verify you have write permission to the project.'
-                        .format(self._dest_context.local.name, node_title))
+                        .format(self._dest_context.local.name, get_node_title(self._dest_context.node.id)))
         else:
             assert resp.status_code in (http.client.CREATED, http.client.OK), resp
 
