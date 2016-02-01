@@ -289,11 +289,13 @@ class RemoteDelete(BaseOperation):
 
     def _run(self):
         resp = OSFClient().request('DELETE', self.remote.raw['links']['delete'])
+        db_model = Session().query(models.File).filter(models.File.id == self.remote.id).one()
         if resp.status_code == http.client.FORBIDDEN:
-            Notification().error('You cannot sync File: {} as you only have read permission on this project. '.format(self.remote))
+            Notification().error(
+                    'You cannot sync {}: {} as you only have read permission on this project. '
+                        .format(db_model.kind.lower(), self.remote.name))
         else:
             assert resp.status_code == http.client.NO_CONTENT, resp
-            db_model = Session().query(models.File).filter(models.File.id == self.remote.id).one()
             DatabaseDelete(
                 OperationContext(db=db_model)
             ).run()
@@ -402,15 +404,18 @@ class RemoteMove(MoveOperation):
                                    })
 
         data = resp.json()
-        assert resp.status_code in (http.client.CREATED, http.client.OK), resp
+        if resp.status_code == http.client.FORBIDDEN:
+            Notification().error('You cannot sync {} as you only have read permission on this project. '.format(self._dest_context.local.name))
+        else:
+            assert resp.status_code in (http.client.CREATED, http.client.OK), resp
 
-        remote = osf_client.File(None, data['data'])
-        # WB id are <provider>/<id>
-        remote.id = remote.id.replace(remote.provider + '/', '')
-        remote.parent = Session().query(models.File).filter(models.File.id == dest_parent.db.id).one()
-        self.DB_CLASS(
-            OperationContext(remote=remote, db=self.db, node=remote.parent.node)
-        ).run()
+            remote = osf_client.File(None, data['data'])
+            # WB id are <provider>/<id>
+            remote.id = remote.id.replace(remote.provider + '/', '')
+            remote.parent = Session().query(models.File).filter(models.File.id == dest_parent.db.id).one()
+            self.DB_CLASS(
+                OperationContext(remote=remote, db=self.db, node=remote.parent.node)
+            ).run()
 
 
 class RemoteMoveFolder(RemoteMove):
