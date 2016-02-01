@@ -44,6 +44,7 @@ class Preferences(QDialog, Ui_Settings):
 
         self.changeFolderButton_2.clicked.connect(self.update_sync_nodes)
         self.changeFolderButton.clicked.connect(self.change_folder_from_edit_box)
+        self.browseFolderButton.clicked.connect(self.set_containing_folder)
         self.pushButton.clicked.connect(self.sync_all)
         self.pushButton_2.clicked.connect(self.sync_none)
         self.tabWidget.currentChanged.connect(self.selector)
