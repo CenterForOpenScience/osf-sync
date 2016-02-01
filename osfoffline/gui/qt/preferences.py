@@ -43,6 +43,7 @@ class Preferences(QDialog, Ui_Settings):
         self._translate = QCoreApplication.translate
 
         self.changeFolderButton_2.clicked.connect(self.update_sync_nodes)
+        self.changeFolderButton.clicked.connect(self.change_folder_from_edit_box)
         self.pushButton.clicked.connect(self.sync_all)
         self.pushButton_2.clicked.connect(self.sync_none)
         self.tabWidget.currentChanged.connect(self.selector)
@@ -52,6 +53,10 @@ class Preferences(QDialog, Ui_Settings):
 
         self._executor = QtCore.QThread()
         self.node_fetcher = NodeFetcher()
+
+    def change_folder_from_edit_box(self):
+        new_folder = self.containingFolderTextEdit.toPlainText()
+        self.set_containing_folder(new_folder=new_folder, save_setting=True)
 
     def closeEvent(self, event):
         if set(self.selected_nodes) != set([node.id for tree_item, node in self.tree_items
@@ -68,8 +73,8 @@ class Preferences(QDialog, Ui_Settings):
         self.reset_tree_widget()
         event.accept()
 
-    def set_containing_folder(self):
-        new_containing_folder = QFileDialog.getExistingDirectory(self, "Choose where to place OSF folder")
+    def set_containing_folder(self, new_folder='', save_setting=False):
+        new_containing_folder = new_folder or QFileDialog.getExistingDirectory(self, "Choose where to place OSF folder")
         osf_path = os.path.join(new_containing_folder, "OSF")
 
         if not new_containing_folder:
@@ -89,6 +94,9 @@ class Preferences(QDialog, Ui_Settings):
         self.containingFolderTextEdit.setText(self._translate("Preferences", self.containing_folder))
         self.open_window(tab=Preferences.GENERAL)  # todo: dynamically update ui????
         self.containing_folder_updated_signal.emit(new_containing_folder)
+
+        if save_setting:
+            save(Session())
 
     def update_sync_nodes(self):
         self.selected_nodes = []
