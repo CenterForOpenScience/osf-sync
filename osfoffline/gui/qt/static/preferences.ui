@@ -64,7 +64,7 @@
              </rect>
             </property>
             <property name="text">
-             <string>Change</string>
+             <string>Change Folder</string>
             </property>
            </widget>
            <widget class="QPushButton" name="browseFolderButton">

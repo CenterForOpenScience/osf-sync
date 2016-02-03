@@ -78,7 +78,9 @@ class Preferences(QDialog, Ui_Settings):
         new_containing_folder = new_folder or QFileDialog.getExistingDirectory(self, "Choose where to place OSF folder")
         osf_path = os.path.join(new_containing_folder, "OSF")
 
-        if not new_containing_folder:
+        ok = QMessageBox.question(self, 'Are you sure?', language.CONFIRM_CHANGE_FOLDER, QMessageBox.Yes, QMessageBox.No)
+
+        if not new_containing_folder or not ok:
             # cancel, closed, or no folder chosen
             return
         elif not os.path.exists(osf_path):
@@ -98,6 +100,7 @@ class Preferences(QDialog, Ui_Settings):
 
         if save_setting:
             save(Session())
+            self.update_sync_nodes()
 
     def update_sync_nodes(self):
         self.selected_nodes = []

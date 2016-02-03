@@ -106,7 +106,7 @@ class Ui_Settings(object):
         self.groupBox.setTitle(_translate("Settings", "System"))
         self.desktopNotifications.setText(_translate("Settings", "Show Desktop Notifications"))
         self.groupBox_6.setTitle(_translate("Settings", "Choose folder to Place OSF folder in "))
-        self.changeFolderButton.setText(_translate("Settings", "Change"))
+        self.changeFolderButton.setText(_translate("Settings", "Change Folder"))
         self.browseFolderButton.setText(_translate("Settings", "Browse"))
         self.containingFolderTextEdit.setHtml(_translate("Settings", "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"
 "<html><head><meta name=\"qrichtext\" content=\"1\" /><style type=\"text/css\">\n"
