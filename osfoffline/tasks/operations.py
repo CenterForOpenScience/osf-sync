@@ -20,6 +20,11 @@ from osfoffline.utils.authentication import get_current_user
 logger = logging.getLogger(__name__)
 
 
+def permission_error_notification(file_or_folder, file_name, node_title):
+    Notification().error(
+            'Could not sync {} {} in project {}. Please verify you '
+            'have write permission to the project.'.format(file_or_folder, file_name, node_title))
+
 class OperationContext:
     """Store common data describing an operation"""
     def __init__(self, *, local=None, db=None, remote=None, node=None, is_folder=False, check_is_folder=True):
@@ -215,18 +220,20 @@ class RemoteCreateFile(BaseOperation):
         with self.local.open(mode='rb') as fobj:
             resp = OSFClient().request('PUT', url, data=fobj, params={'name': self.local.name})
         data = resp.json()
+        if resp.status_code == http.client.FORBIDDEN:
+            permission_error_notification('file', self.local.name, self.node.title)
+        else:
+            assert resp.status_code == http.client.CREATED, '{}\n{}\n{}'.format(resp, url, data)
 
-        assert resp.status_code == http.client.CREATED, '{}\n{}\n{}'.format(resp, url, data)
+            remote = osf_client.File(None, data['data'])
+            # WB id are <provider>/<id>
+            remote.id = remote.id.replace(remote.provider + '/', '')
+            remote.parent = parent
 
-        remote = osf_client.File(None, data['data'])
-        # WB id are <provider>/<id>
-        remote.id = remote.id.replace(remote.provider + '/', '')
-        remote.parent = parent
-
-        DatabaseCreateFile(
-            OperationContext(remote=remote, node=self.node)
-        ).run()
-        Notification().info('Create Remote File: {}'.format(self.local))
+            DatabaseCreateFile(
+                OperationContext(remote=remote, node=self.node)
+            ).run()
+            Notification().info('Create Remote File: {}'.format(self.local))
 
 
 class RemoteCreateFolder(BaseOperation):
@@ -238,17 +245,20 @@ class RemoteCreateFolder(BaseOperation):
         url = '{}/v1/resources/{}/providers/{}/{}'.format(settings.FILE_BASE, self.node.id, parent.provider, parent.osf_path)
         resp = OSFClient().request('PUT', url, params={'kind': 'folder', 'name': self.local.name})
         data = resp.json()
-        assert resp.status_code == http.client.CREATED, '{}\n{}\n{}'.format(resp, url, data)
+        if resp.status_code == http.client.FORBIDDEN:
+            permission_error_notification('folder', self.local.name, self.node.title)
+        else:
+            assert resp.status_code == http.client.CREATED, '{}\n{}\n{}'.format(resp, url, data)
 
-        remote = osf_client.File(None, data['data'])
-        # WB id are <provider>/<id>/
-        remote.id = remote.id.replace(remote.provider + '/', '').rstrip('/')
-        remote.parent = parent
+            remote = osf_client.File(None, data['data'])
+            # WB id are <provider>/<id>/
+            remote.id = remote.id.replace(remote.provider + '/', '').rstrip('/')
+            remote.parent = parent
 
-        DatabaseCreateFolder(
-            OperationContext(remote=remote, node=self.node)
-        ).run()
-        Notification().info('Create Remote Folder: {}'.format(self.local))
+            DatabaseCreateFolder(
+                OperationContext(remote=remote, node=self.node)
+            ).run()
+            Notification().info('Create Remote Folder: {}'.format(self.local))
 
 
 class RemoteUpdateFile(BaseOperation):
@@ -264,15 +274,19 @@ class RemoteUpdateFile(BaseOperation):
         with open(str(self.local), 'rb') as fobj:
             resp = OSFClient().request('PUT', url, data=fobj, params={'name': self.local.name})
         data = resp.json()
-        assert resp.status_code in (http.client.OK, http.client.CREATED), '{}\n{}\n{}'.format(resp, url, data)
-        remote = osf_client.File(None, data['data'])
-        # WB id are <provider>/<id>
-        remote.id = remote.id.replace(remote.provider + '/', '')
-        remote.parent = self.db.parent
-        DatabaseUpdateFile(
-            OperationContext(remote=remote, db=self.db, node=self.node)
-        ).run()
-        Notification().info('Update Remote File: {}'.format(self.local))
+        if resp.status_code == http.client.FORBIDDEN:
+            permission_error_notification('file', self.local.name, self.node.title)
+        else:
+            assert resp.status_code in (http.client.OK, http.client.CREATED), '{}\n{}\n{}'.format(resp, url, data)
+
+            remote = osf_client.File(None, data['data'])
+            # WB id are <provider>/<id>
+            remote.id = remote.id.replace(remote.provider + '/', '')
+            remote.parent = self.db.parent
+            DatabaseUpdateFile(
+                OperationContext(remote=remote, db=self.db, node=self.node)
+            ).run()
+            Notification().info('Update Remote File: {}'.format(self.local))
 
 
 class RemoteDelete(BaseOperation):
@@ -280,12 +294,15 @@ class RemoteDelete(BaseOperation):
 
     def _run(self):
         resp = OSFClient().request('DELETE', self.remote.raw['links']['delete'])
-        assert resp.status_code == http.client.NO_CONTENT, resp
         db_model = Session().query(models.File).filter(models.File.id == self.remote.id).one()
-        DatabaseDelete(
-            OperationContext(db=db_model)
-        ).run()
-        Notification().info('Remote delete {}: {}'.format(db_model.kind.lower(), self.remote))
+        if resp.status_code == http.client.FORBIDDEN:
+            permission_error_notification(db_model.kind.lower(), self.remote.name, self.node.title)
+        else:
+            assert resp.status_code == http.client.NO_CONTENT, resp
+            DatabaseDelete(
+                OperationContext(db=db_model)
+            ).run()
+            Notification().info('Remote delete {}: {}'.format(db_model.kind.lower(), self.remote))
 
 
 # Auditor looks for operations by specific names; DRY redundant implementations
@@ -390,15 +407,20 @@ class RemoteMove(MoveOperation):
                                    })
 
         data = resp.json()
-        assert resp.status_code in (http.client.CREATED, http.client.OK), resp
+        if resp.status_code == http.client.FORBIDDEN:
+            permission_error_notification(
+                    'folder' if self._dest_context.local.is_dir else 'file',
+                    self._dest_context.local.name, self._dest_context.node.title)
+        else:
+            assert resp.status_code in (http.client.CREATED, http.client.OK), resp
 
-        remote = osf_client.File(None, data['data'])
-        # WB id are <provider>/<id>
-        remote.id = remote.id.replace(remote.provider + '/', '')
-        remote.parent = Session().query(models.File).filter(models.File.id == dest_parent.db.id).one()
-        self.DB_CLASS(
-            OperationContext(remote=remote, db=self.db, node=remote.parent.node)
-        ).run()
+            remote = osf_client.File(None, data['data'])
+            # WB id are <provider>/<id>
+            remote.id = remote.id.replace(remote.provider + '/', '')
+            remote.parent = Session().query(models.File).filter(models.File.id == dest_parent.db.id).one()
+            self.DB_CLASS(
+                OperationContext(remote=remote, db=self.db, node=remote.parent.node)
+            ).run()
 
 
 class RemoteMoveFolder(RemoteMove):
