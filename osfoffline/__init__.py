@@ -1,1 +1,2 @@
-__version__ = '0.0.1'
+from osfoffline import settings
+__version__ = settings.VERSION

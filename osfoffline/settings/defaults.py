@@ -26,7 +26,9 @@ ALERT_DURATION = 5.0  # sec
 
 LOG_LEVEL = 'INFO'
 
+# sentry configuration. import from local
 SENTRY_DSN = None
+refs = None
 
 # Logging configuration
 FILE_FORMATTER = '[%(levelname)s][%(asctime)s][%(threadName)s][%(name)s]: %(message)s'
