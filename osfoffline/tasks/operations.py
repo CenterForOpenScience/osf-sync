@@ -20,6 +20,11 @@ from osfoffline.utils.authentication import get_current_user
 logger = logging.getLogger(__name__)
 
 
+def permission_error_notification(type, file_name, node_title):
+    Notification().error(
+            'Could not sync {} {} in project {}. Please verify you '
+            'have write permission to the project.'.format(type, file_name, node_title))
+
 class OperationContext:
     """Store common data describing an operation"""
     def __init__(self, *, local=None, db=None, remote=None, node=None, is_folder=False, check_is_folder=True):
@@ -216,9 +221,7 @@ class RemoteCreateFile(BaseOperation):
             resp = OSFClient().request('PUT', url, data=fobj, params={'name': self.local.name})
         data = resp.json()
         if resp.status_code == http.client.FORBIDDEN:
-            Notification().error(
-                    'Could not sync file {} in project {}. Please verify you have write permission to the project.'
-                        .format(self.local.name, self.node.title))
+            permission_error_notification('file', self.local.name, self.node.title)
         else:
             assert resp.status_code == http.client.CREATED, '{}\n{}\n{}'.format(resp, url, data)
 
@@ -243,9 +246,7 @@ class RemoteCreateFolder(BaseOperation):
         resp = OSFClient().request('PUT', url, params={'kind': 'folder', 'name': self.local.name})
         data = resp.json()
         if resp.status_code == http.client.FORBIDDEN:
-            Notification().error(
-                    'Could not sync folder {} in project {}. Please verify you have write permission to the project.'
-                        .format(self.local.name, self.node.title))
+            permission_error_notification('folder', self.local.name, self.node.title)
         else:
             assert resp.status_code == http.client.CREATED, '{}\n{}\n{}'.format(resp, url, data)
 
@@ -274,9 +275,7 @@ class RemoteUpdateFile(BaseOperation):
             resp = OSFClient().request('PUT', url, data=fobj, params={'name': self.local.name})
         data = resp.json()
         if resp.status_code == http.client.FORBIDDEN:
-            Notification().error(
-                    'Could not sync file {} in project {}. Please verify you have write permission to the project.'
-                        .format(self.local.name, self.node.title))
+            permission_error_notification('file', self.local.name, self.node.title)
         else:
             assert resp.status_code in (http.client.OK, http.client.CREATED), '{}\n{}\n{}'.format(resp, url, data)
 
@@ -297,9 +296,7 @@ class RemoteDelete(BaseOperation):
         resp = OSFClient().request('DELETE', self.remote.raw['links']['delete'])
         db_model = Session().query(models.File).filter(models.File.id == self.remote.id).one()
         if resp.status_code == http.client.FORBIDDEN:
-            Notification().error(
-                    'Could not sync {} {} in project {}. Please verify you have write permission to the project.'
-                        .format(db_model.kind.lower(), self.remote.name, self.node.title))
+            permission_error_notification(db_model.kind.lower(), self.remote.name, self.node.title)
         else:
             assert resp.status_code == http.client.NO_CONTENT, resp
             DatabaseDelete(
@@ -411,9 +408,9 @@ class RemoteMove(MoveOperation):
 
         data = resp.json()
         if resp.status_code == http.client.FORBIDDEN:
-            Notification().error(
-                    'Could not sync {} in project {}. Please verify you have write permission to the project.'
-                        .format(self._dest_context.local.name, self._dest_context.node.title))
+            permission_error_notification(
+                    'folder' if self._dest_context.local.is_dir else 'file',
+                    self._dest_context.local.name, self._dest_context.node.title)
         else:
             assert resp.status_code in (http.client.CREATED, http.client.OK), resp
 
