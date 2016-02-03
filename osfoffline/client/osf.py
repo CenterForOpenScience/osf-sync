@@ -141,6 +141,7 @@ class Node(BaseResource):
         super().__init__(request_session, data)
         self.date_created = iso8601.parse_date(self.date_created)
         self.date_modified = iso8601.parse_date(self.date_modified)
+        self.title = self.title
 
         self.parent = Node(
                 request_session,
