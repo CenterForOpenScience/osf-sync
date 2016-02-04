@@ -86,10 +86,10 @@ virtual environment, make sure that PyQT is installed to that venv.
 ## Building for deployment
 ### Create the binary
 On Windows:
-  `pyinstaller --onedir --onefile --name=OSF-Sync --icon=deploy\\images\\cos_logo.ico --windowed start.py`
+  `pyinstaller --onedir --onefile --name='OSF Sync' --icon=deploy\\images\\cos_logo.ico --windowed start.py`
 
 On Mac OS:
-  `pyinstaller --onedir --onefile --name=OSF-Sync --icon=deploy/images/cos_logo.icns --windowed start.py`
+  `pyinstaller --onedir --onefile --name='OSF Sync' --icon=deploy/images/cos_logo.icns --windowed start.py`
 
 After the first run, PyInstaller will create a .spec file that can be used for future builds on your machine.
 
