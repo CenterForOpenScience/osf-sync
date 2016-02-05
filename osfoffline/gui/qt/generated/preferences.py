@@ -35,9 +35,6 @@ class Ui_Settings(object):
         self.changeFolderButton = QtWidgets.QPushButton(self.groupBox_6)
         self.changeFolderButton.setGeometry(QtCore.QRect(440, 20, 99, 31))
         self.changeFolderButton.setObjectName("changeFolderButton")
-        self.browseFolderButton = QtWidgets.QPushButton(self.groupBox_6)
-        self.browseFolderButton.setGeometry(QtCore.QRect(440, 55, 99, 31))
-        self.browseFolderButton.setObjectName("changeFolderButton")
         self.containingFolderTextEdit = QtWidgets.QTextEdit(self.groupBox_6)
         self.containingFolderTextEdit.setGeometry(QtCore.QRect(20, 20, 331, 31))
         self.containingFolderTextEdit.setObjectName("containingFolderTextEdit")
@@ -106,8 +103,7 @@ class Ui_Settings(object):
         self.groupBox.setTitle(_translate("Settings", "System"))
         self.desktopNotifications.setText(_translate("Settings", "Show Desktop Notifications"))
         self.groupBox_6.setTitle(_translate("Settings", "Choose folder to Place OSF folder in "))
-        self.changeFolderButton.setText(_translate("Settings", "Change Folder"))
-        self.browseFolderButton.setText(_translate("Settings", "Browse"))
+        self.changeFolderButton.setText(_translate("Settings", "Change"))
         self.containingFolderTextEdit.setHtml(_translate("Settings", "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"
 "<html><head><meta name=\"qrichtext\" content=\"1\" /><style type=\"text/css\">\n"
 "p, li { white-space: pre-wrap; }\n"

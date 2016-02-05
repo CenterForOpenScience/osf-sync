@@ -1,5 +1,6 @@
 import os
 import logging
+from distutils.dir_util import copy_tree
 
 from PyQt5 import QtCore
 from PyQt5.QtCore import QCoreApplication
@@ -43,8 +44,7 @@ class Preferences(QDialog, Ui_Settings):
         self._translate = QCoreApplication.translate
 
         self.changeFolderButton_2.clicked.connect(self.update_sync_nodes)
-        self.changeFolderButton.clicked.connect(self.change_folder_from_edit_box)
-        self.browseFolderButton.clicked.connect(self.set_containing_folder)
+        self.changeFolderButton.clicked.connect(self.update_containing_folder)
         self.pushButton.clicked.connect(self.sync_all)
         self.pushButton_2.clicked.connect(self.sync_none)
         self.tabWidget.currentChanged.connect(self.selector)
@@ -55,9 +55,8 @@ class Preferences(QDialog, Ui_Settings):
         self._executor = QtCore.QThread()
         self.node_fetcher = NodeFetcher()
 
-    def change_folder_from_edit_box(self):
-        new_folder = self.containingFolderTextEdit.toPlainText()
-        self.set_containing_folder(new_folder=new_folder, save_setting=True)
+    def update_containing_folder(self):
+        self.set_containing_folder(save_setting=True)
 
     def closeEvent(self, event):
         if set(self.selected_nodes) != set([node.id for tree_item, node in self.tree_items
@@ -78,9 +77,7 @@ class Preferences(QDialog, Ui_Settings):
         new_containing_folder = new_folder or QFileDialog.getExistingDirectory(self, "Choose where to place OSF folder")
         osf_path = os.path.join(new_containing_folder, "OSF")
 
-        ok = QMessageBox.question(self, 'Are you sure?', language.CONFIRM_CHANGE_FOLDER, QMessageBox.Yes, QMessageBox.No)
-
-        if not new_containing_folder or not ok:
+        if not new_containing_folder:
             # cancel, closed, or no folder chosen
             return
         elif not os.path.exists(osf_path):
@@ -92,6 +89,10 @@ class Preferences(QDialog, Ui_Settings):
             return
 
         user = Session().query(User).one()
+
+        if save_setting:
+            copy_tree(user.folder, os.path.join(osf_path))
+
         user.folder = os.path.join(osf_path)
 
         self.containingFolderTextEdit.setText(self._translate("Preferences", self.containing_folder))
