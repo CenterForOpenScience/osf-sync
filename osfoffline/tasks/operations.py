@@ -302,7 +302,7 @@ class RemoteDelete(BaseOperation):
             DatabaseDelete(
                 OperationContext(db=db_model)
             ).run()
-            Notification().info('Remote delete {}: {}'.format(db_model.kind.lower(), self.remote))
+            Notification().info('Remote delete {}: {}'.format(db_model.kind.lower(), self.remote.name))
 
 
 # Auditor looks for operations by specific names; DRY redundant implementations
