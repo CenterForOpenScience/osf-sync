@@ -73,8 +73,8 @@ class Preferences(QDialog, Ui_Settings):
         self.reset_tree_widget()
         event.accept()
 
-    def set_containing_folder(self, new_folder='', save_setting=False):
-        new_containing_folder = new_folder or QFileDialog.getExistingDirectory(self, "Choose where to place OSF folder")
+    def set_containing_folder(self, save_setting=False):
+        new_containing_folder = QFileDialog.getExistingDirectory(self, "Choose where to place OSF folder")
         osf_path = os.path.join(new_containing_folder, "OSF")
 
         if not new_containing_folder:
@@ -91,6 +91,8 @@ class Preferences(QDialog, Ui_Settings):
         user = Session().query(User).one()
 
         if save_setting:
+            # copy the synced folders from the old to new location
+            # so OSF doesn't think they were deleted
             copy_tree(user.folder, os.path.join(osf_path))
 
         user.folder = os.path.join(osf_path)
