@@ -34,7 +34,7 @@ class OSFOfflineMenu(QMenu):
         self.addAction(QAction('Settings', self, triggered=self.open_settings))
         self.addAction(QAction('About', self, triggered=self.open_about))
         self.addSeparator()
-        self.addAction(QAction('Log Out', self, triggered=parent.logout))
+
         self.addAction(QAction('Quit', self, triggered=parent.quit))
 
         self.parent = parent
