@@ -17,6 +17,7 @@ from osfoffline.database import Session
 from osfoffline.database.models import User, Node
 from osfoffline.database.utils import save
 from osfoffline.gui.qt.generated.preferences import Ui_Settings
+from osfoffline.tasks.notifications import Notification
 from osfoffline.sync.remote import RemoteSyncWorker
 
 logger = logging.getLogger(__name__)
@@ -207,6 +208,7 @@ class NodeFetcher(QtCore.QObject):
 
     def fetch(self):
         """Fetch the list of nodes associated with a user. Returns either a list, or an (int) error code."""
+        Notification().info('We are fetching your list of projects. This may take a few minutes.')
         try:
             client = OSFClient()
             client_user = client.get_user()
