@@ -73,7 +73,7 @@ def local_to_db(local, node, *, is_folder=False, check_is_folder=True):
 def db_to_remote(db):
     # Fix circular import
     from osfoffline.client import osf
-    print(db)
+
     if db.parent is None:
         return _remote_root(db)
     return osf.StorageObject.load(osf.OSFClient().request_session, db.id)
