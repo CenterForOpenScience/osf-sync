@@ -80,23 +80,38 @@ class ConsolidatedEventHandler(PatternMatchingEventHandler):
             consolidate = event.is_directory
             if event.event_type == EVENT_TYPE_DELETED:
                 consolidate = (parts in self._event_cache)
-                move_events = (
+                logger.debug('inside delete_event:')
+                logger.debug(self._event_cache.children())
+                create_events = [
                     evt
                     for evt in self._event_cache.children()
-                    if evt.event_type == EVENT_TYPE_MOVED and evt.dest_path == event.src_path
-                )
-                for evt in move_events:
-                    create_events = (create_evt for create_evt in self._create_cache if
-                                     create_evt.src_path == evt.src_path)
-                    for create_evt in create_events:
-                        logger.info('Attempting to consolidate a create/move/delete as an update')
-                        # discard the move
+                    if evt.event_type == EVENT_TYPE_CREATED and evt.basename == event.basename and evt.sha256 == event.sha256
+                ]
+                if create_events:
+                    for evt in create_events:
+                        # delete the create
                         del self._event_cache[evt.parts]
-                        # discard the create
-                        self._create_cache.remove(create_evt)
-                        # consolidate to update
-                        self._event_cache[create_evt.parts] = FileModifiedEvent(create_evt.src_path)
-                        return
+                        Event = DirMovedEvent if event.is_directory else FileMovedEvent
+                        self._event_cache[evt.parts] = Event(src_path=evt.src_path, dest_path=event.src_path)
+                else:
+                    move_events = (
+                        evt
+                        for evt in self._event_cache.children()
+                        if evt.event_type == EVENT_TYPE_MOVED and evt.dest_path == event.src_path
+                    )
+                    for evt in move_events:
+                        create_events = (create_evt for create_evt in self._create_cache if
+                                         create_evt.src_path == evt.src_path)
+                        for create_evt in create_events:
+                            logger.info('Attempting to consolidate a create/move/delete as an update')
+                            # discard the move
+                            del self._event_cache[evt.parts]
+                            # discard the create
+                            self._create_cache.remove(create_evt)
+                            # consolidate to update
+                            self._event_cache[create_evt.parts] = FileModifiedEvent(create_evt.src_path)
+                            return
+
             if event.event_type == EVENT_TYPE_MODIFIED:
                 if event.is_directory:
                     return
@@ -107,12 +122,16 @@ class ConsolidatedEventHandler(PatternMatchingEventHandler):
                 )
                 for event in move_events:
                     return
+
             if event.event_type == EVENT_TYPE_CREATED:
-                if not event.is_directory and parts in self._event_cache and self._event_cache[
-                    parts].event_type == EVENT_TYPE_DELETED:
+                if (not event.is_directory and
+                            parts in self._event_cache and
+                            self._event_cache[parts].event_type == EVENT_TYPE_DELETED):
                     Event = DirModifiedEvent if event.is_directory else FileModifiedEvent
                     self._event_cache[parts] = Event(event.src_path)
                 else:
+                    logger.debug('inside create_event:')
+                    logger.debug(self._event_cache.children())
                     delete_events = [
                         evt
                         for evt in self._event_cache.children()
@@ -136,6 +155,7 @@ class ConsolidatedEventHandler(PatternMatchingEventHandler):
                                 if evt.dest_path in event.src_path:
                                     return
                         self._create_cache.append(event)
+
             else:
                 if not consolidate and parts in self._event_cache:
                     ev = self._event_cache[parts]
