@@ -5,6 +5,7 @@ import signal
 import sys
 from distutils.version import StrictVersion
 
+from PyQt5.QtCore import QTimer
 from PyQt5.QtWidgets import QApplication
 from PyQt5.QtWidgets import QMessageBox
 from PyQt5.QtWidgets import QSystemTrayIcon
@@ -13,12 +14,20 @@ from osfoffline.database import drop_db
 from osfoffline.gui.qt import OSFOfflineQT
 from osfoffline.utils.log import start_logging
 from osfoffline.utils.singleton import SingleInstance
+from osfoffline.application.background import BackgroundHandler
 from osfoffline import settings
 
 logger = logging.getLogger(__name__)
 
-if settings.DEBUG:
-    signal.signal(signal.SIGINT, signal.SIG_DFL)
+
+def exit_gracefully(*args):
+    try:
+        BackgroundHandler().stop()
+    finally:
+        sys.exit(1)
+
+signal.signal(signal.SIGINT, signal.SIG_DFL)
+signal.signal(signal.SIGTERM, exit_gracefully)
 
 
 def running_warning(message=None, critical=False):
@@ -65,6 +74,9 @@ def start():
         drop_db()
 
     app = QApplication(sys.argv)
+
+    # connect QT to handle system shutdown signal from os correctly
+    app.aboutToQuit.connect(exit_gracefully)
 
     if not QSystemTrayIcon.isSystemTrayAvailable():
         QMessageBox.critical(None, 'Systray', 'Could not detect a system tray on this system')

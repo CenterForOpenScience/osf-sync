@@ -1,5 +1,5 @@
-import os
 import logging
+import os
 
 from PyQt5 import QtCore
 from PyQt5.QtCore import QCoreApplication
@@ -64,17 +64,21 @@ class Preferences(QDialog, Ui_Settings):
         self.node_fetcher = NodeFetcher()
 
     def closeEvent(self, event):
+
         if set(self.selected_nodes) != set([node.id for tree_item, node in self.tree_items
                                             if tree_item.checkState(self.PROJECT_SYNC_COLUMN) == Qt.Checked]):
-            reply = QMessageBox()
-            reply.setText('Unsaved changes')
-            reply.setIcon(QMessageBox.Warning)
-            reply.setInformativeText(language.UNSAVED_CHANGES)
-            default = reply.addButton('Exit without saving', QMessageBox.YesRole)
-            reply.addButton('Review changes', QMessageBox.NoRole)
-            reply.setDefaultButton(default)
-            if reply.exec_() != 0:
-                return event.ignore()
+            if self.selected_nodes and not self.tree_items:
+                return
+            else:
+                reply = QMessageBox()
+                reply.setText('Unsaved changes')
+                reply.setIcon(QMessageBox.Warning)
+                reply.setInformativeText(language.UNSAVED_CHANGES)
+                default = reply.addButton('Exit without saving', QMessageBox.YesRole)
+                reply.addButton('Review changes', QMessageBox.NoRole)
+                reply.setDefaultButton(default)
+                if reply.exec_() != 0:
+                    return event.ignore()
         self.reset_tree_widget()
         event.accept()
 
@@ -88,8 +92,6 @@ class Preferences(QDialog, Ui_Settings):
         elif not os.path.exists(osf_path):
             os.makedirs(osf_path)
         elif os.path.isfile(osf_path):
-            # FIXME: Consolidate redundant messages
-            AlertHandler.warn(language.TARGET_FOLDER_EXISTS)
             logger.debug(language.TARGET_FOLDER_EXISTS)
             return
 
