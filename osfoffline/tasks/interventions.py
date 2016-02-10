@@ -12,10 +12,11 @@ logger = logging.getLogger(__name__)
 
 
 class Decision(enum.Enum):
-    MINE = 0
-    THEIRS = 1
-    KEEP_BOTH = 2
-    MERGE = 3
+    Keep_Mine = 0
+    Keep_Theirs = 1
+    Keep_Both = 2
+    Cancel = 3
+    Restore_Folder = 4
 
 
 # Use the naming convention <LOCATION><ACTION>
@@ -98,32 +99,34 @@ class BaseIntervention(abc.ABC):
 
 
 class RemoteLocalFileConflict(BaseIntervention):
-    DEFAULT_DECISION = Decision.KEEP_BOTH
+    DEFAULT_DECISION = Decision.Keep_Both
 
     def __init__(self, local, remote):
         super().__init__(local, remote)
         self.title = 'Remote Local File Conflict'
-        self.description = language.REMOTE_FILE_CONFLICT
-        self.options = (Decision.MINE, Decision.THEIRS, Decision.KEEP_BOTH)
+        self.description = ('This file "' +
+                            self.local.context.local.stem +
+                            '" conflicts with the remote file, which copy do you want to keep?')
+        self.options = (Decision.Keep_Mine, Decision.Keep_Theirs, Decision.Keep_Both)
 
     def resolve(self):
         from osfoffline.sync.remote import RemoteSyncWorker
 
-        if self.decision == Decision.MINE:
+        if self.decision == Decision.Keep_Mine:
             if self.local.event_type == EventType.CREATE and self.remote.event_type == EventType.CREATE:
                 return [
                     operations.DatabaseCreateFile(self.local.context),
                     operations.RemoteUpdateFile(self.local.context),
                 ]
             return [operations.RemoteUpdateFile(self.local.context)]
-        elif self.decision == Decision.THEIRS:
+        elif self.decision == Decision.Keep_Theirs:
             if self.local.event_type == EventType.CREATE and self.remote.event_type == EventType.CREATE:
                 return [
                     operations.DatabaseCreateFile(self.remote.context),
                     operations.LocalUpdateFile(self.remote.context),
                 ]
             return [operations.LocalUpdateFile(self.remote.context)]
-        elif self.decision == Decision.KEEP_BOTH:
+        elif self.decision == Decision.Keep_Both:
             parent = self.local.context.local.parent
             i = 1
             while True:
@@ -140,7 +143,7 @@ class RemoteLocalFileConflict(BaseIntervention):
 
 
 class RemoteFolderDeleted(BaseIntervention):
-    DEFAULT_DECISION = Decision.MINE
+    DEFAULT_DECISION = Decision.Restore_Folder
 
     def __init__(self, local, remote, local_events, remote_events):
         super().__init__(local, remote)
@@ -158,26 +161,36 @@ class RemoteFolderDeleted(BaseIntervention):
                 self.changed.append(event)
 
         self.title = 'Remote Folder Deleted'
-        self.description = self.local.src_path
-        self.options = (Decision.MINE, Decision.THEIRS, Decision.MERGE)
+        self.description = ('Folder "' +
+                            self.local.context.local.stem +
+                            '"has been removed from "' +
+                            self.local.context.local.parts[5])
+        self.options = (Decision.Cancel, Decision.Restore_Folder)
 
     def resolve(self):
         from osfoffline.sync.remote import RemoteSyncWorker
 
-        if self.decision == Decision.MINE:
+        if self.decision == Decision.Restore_Folder:
             for event in self.changed:
                 del self.local_events[event.src_path]
             for event in self.deleted:
                 del self.remote_events[event.src_path]
-        elif self.decision == Decision.THEIRS:
+        elif self.decision == Decision.Cancel:
             for event in self.changed:
                 del self.local_events[event.src_path]
-            self.remote_events[self.remote.src_path] = self.remote
+            for event in self.deleted:
+                del self.remote_events[event.src_path]
             return []
-        elif self.decision == Decision.MERGE:
-            for event in self.changed:
-                del self.local_events[event.src_path]
-                self.remote_events.pop(event.src_path, None)
+        # elif self.decision == Decision.Keep_Theirs:
+        #     for event in self.changed:
+        #         del self.local_events[event.src_path]
+        #     self.remote_events[self.remote.src_path] = self.remote
+        #     return []
+        # elif self.decision == Decision.MERGE:
+        #     for event in self.changed:
+        #         del self.local_events[event.src_path]
+        #         self.remote_events.pop(event.src_path, None)
+
         RemoteSyncWorker().sync_now()
         return [operations.DatabaseDeleteFolder(self.remote.context)]
 
