@@ -19,60 +19,41 @@ from osfoffline import settings
 
 logger = logging.getLogger(__name__)
 
-def exit_gracefully(signal, frame):
-    # restore the original signal handler as otherwise evil things will happen
-    # in raw_input when CTRL+C is pressed, and our signal handler is not re-entrant
-    print('shut down')
-    # BackgroundHandler().stop()
+
+def exit_gracefully(*args):
+    BackgroundHandler().stop()
     sys.exit(1)
 
-signal.signal(signal.SIGINT, exit_gracefully)
-signal.signal(signal.SIGABRT, exit_gracefully)
-signal.signal(signal.SIGALRM, exit_gracefully)
-signal.signal(signal.SIGBUS, exit_gracefully)
-signal.signal(signal.SIGCHLD, exit_gracefully)
-signal.signal(signal.SIGCONT, exit_gracefully)
-signal.signal(signal.SIGEMT, exit_gracefully)
-signal.signal(signal.SIGFPE, exit_gracefully)
-signal.signal(signal.SIGHUP, exit_gracefully)
-signal.signal(signal.SIGIO, exit_gracefully)
-signal.signal(signal.SIGIOT, exit_gracefully)
-signal.signal(signal.SIGPIPE, exit_gracefully)
-signal.signal(signal.SIGPROF, exit_gracefully)
-signal.signal(signal.SIGQUIT, exit_gracefully)
-signal.signal(signal.SIGSEGV, exit_gracefully)
-signal.signal(signal.SIGSYS, exit_gracefully)
+signal.signal(signal.SIGINT, signal.SIG_DFL)
+# signal.signal(signal.SIGABRT, exit_gracefully)
+# signal.signal(signal.SIGALRM, exit_gracefully)
+# signal.signal(signal.SIGBUS, exit_gracefully)
+# signal.signal(signal.SIGCHLD, exit_gracefully)
+# signal.signal(signal.SIGCONT, exit_gracefully)
+# signal.signal(signal.SIGEMT, exit_gracefully)
+# signal.signal(signal.SIGFPE, exit_gracefully)
+# signal.signal(signal.SIGHUP, exit_gracefully)
+# signal.signal(signal.SIGIO, exit_gracefully)
+# signal.signal(signal.SIGIOT, exit_gracefully)
+# signal.signal(signal.SIGPIPE, exit_gracefully)
+# signal.signal(signal.SIGPROF, exit_gracefully)
+# signal.signal(signal.SIGQUIT, exit_gracefully)
+# signal.signal(signal.SIGSEGV, exit_gracefully)
+# signal.signal(signal.SIGSYS, exit_gracefully)
 signal.signal(signal.SIGTERM, exit_gracefully)
-signal.signal(signal.SIGTRAP, exit_gracefully)
-signal.signal(signal.SIGTSTP, exit_gracefully)
-signal.signal(signal.SIGTTIN, exit_gracefully)
-signal.signal(signal.SIGTTOU, exit_gracefully)
-signal.signal(signal.SIGURG, exit_gracefully)
-signal.signal(signal.SIGUSR1, exit_gracefully)
-signal.signal(signal.SIGUSR2, exit_gracefully)
-signal.signal(signal.SIGVTALRM, exit_gracefully)
-signal.signal(signal.SIGWINCH, exit_gracefully)
-signal.signal(signal.SIGXCPU, exit_gracefully)
-signal.signal(signal.SIGXFSZ, exit_gracefully)
+# signal.signal(signal.SIGTRAP, exit_gracefully)
+# signal.signal(signal.SIGTSTP, exit_gracefully)
+# signal.signal(signal.SIGTTIN, exit_gracefully)
+# signal.signal(signal.SIGTTOU, exit_gracefully)
+# signal.signal(signal.SIGURG, exit_gracefully)
+# signal.signal(signal.SIGUSR1, exit_gracefully)
+# signal.signal(signal.SIGUSR2, exit_gracefully)
+# signal.signal(signal.SIGVTALRM, exit_gracefully)
+# signal.signal(signal.SIGWINCH, exit_gracefully)
+# signal.signal(signal.SIGXCPU, exit_gracefully)
+# signal.signal(signal.SIGXFSZ, exit_gracefully)
 
 # signal.signal(signal.SIGTERM, lambda num, frame: sys.exit(0))
-
-# def sigint_handler(*args):
-#     """Handler for the SIGINT signal."""
-#     sys.stderr.write('\r')
-#     if QMessageBox.question(None, '', "Are you sure you want to quit?",
-#                             QMessageBox.Yes | QMessageBox.No,
-#                             QMessageBox.No) == QMessageBox.Yes:
-#         QApplication.quit()
-
-
-
-# def set_signals():
-#     signal.signal(signal.SIGINT, exit_gracefully)
-#     signal.signal(signal.SIGTERM, exit_gracefully)
-#     signal.signal(signal.SIGALRM, exit_gracefully)
-#     signal.signal(signal.SIGHUP, signal.SIG_IGN)
-#     print('Press Ctrl+C')
 
 
 def running_warning(message=None, critical=False):
@@ -119,6 +100,10 @@ def start():
         drop_db()
 
     app = QApplication(sys.argv)
+    app.aboutToQuit.connect(exit_gracefully)
+    timer = QTimer()
+    timer.start(500)  # You may change this if you wish.
+    timer.timeout.connect(lambda: None)  # Let the interpreter run each 500 ms.
 
     if not QSystemTrayIcon.isSystemTrayAvailable():
         QMessageBox.critical(None, 'Systray', 'Could not detect a system tray on this system')
@@ -132,10 +117,4 @@ def start():
 
 
 if __name__ == "__main__":
-    # signal.signal(signal.SIGINT, sigint_handler)
-    # app = QApplication(sys.argv)
-    # timer = QTimer()
-    # timer.start(500)  # You may change this if you wish.
-    # timer.timeout.connect(lambda: None)  # Let the interpreter run each 500 ms.
     start()
-    # sys.exit(app.exec_())
