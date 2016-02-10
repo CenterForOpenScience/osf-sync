@@ -2,8 +2,6 @@
 """Various text used throughout the website, e.g. status messages, errors, etc.
 """
 
-REMOTE_FILE_CONFLICT = 'This file conflicts with the remote file, which copy do you want to keep?'
-
 UNSAVED_CHANGES = '''
 You have unsaved changes to your synced projects.\n\n
 Please review your changes and press \'Apply Settings\' if you would like to save them. \n\n
