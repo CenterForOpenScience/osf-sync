@@ -5,7 +5,6 @@ import signal
 import sys
 from distutils.version import StrictVersion
 
-from PyQt5.QtCore import QTimer
 from PyQt5.QtWidgets import QApplication
 from PyQt5.QtWidgets import QMessageBox
 from PyQt5.QtWidgets import QSystemTrayIcon

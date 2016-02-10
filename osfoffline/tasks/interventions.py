@@ -176,7 +176,11 @@ class RemoteFolderDeleted(BaseIntervention):
             for event in self.deleted:
                 del self.remote_events[event.src_path]
         elif self.decision == Decision.Cancel:
-            return
+            for event in self.changed:
+                del self.local_events[event.src_path]
+            for event in self.deleted:
+                del self.remote_events[event.src_path]
+            return []
         # elif self.decision == Decision.Keep_Theirs:
         #     for event in self.changed:
         #         del self.local_events[event.src_path]
