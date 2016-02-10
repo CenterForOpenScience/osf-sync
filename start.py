@@ -21,8 +21,10 @@ logger = logging.getLogger(__name__)
 
 
 def exit_gracefully(*args):
-    BackgroundHandler().stop()
-    sys.exit(1)
+    try:
+        BackgroundHandler().stop()
+    finally:
+        sys.exit(1)
 
 signal.signal(signal.SIGINT, signal.SIG_DFL)
 signal.signal(signal.SIGTERM, exit_gracefully)
