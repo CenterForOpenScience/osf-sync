@@ -165,7 +165,7 @@ class RemoteFolderDeleted(BaseIntervention):
                             self.local.context.local.stem +
                             '"has been removed from "' +
                             self.local.context.local.parts[5])
-        self.options = (Decision.Restore_Folder, Decision.Cancel)
+        self.options = (Decision.Cancel, Decision.Restore_Folder)
 
     def resolve(self):
         from osfoffline.sync.remote import RemoteSyncWorker

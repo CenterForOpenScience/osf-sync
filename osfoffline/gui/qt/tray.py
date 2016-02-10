@@ -118,7 +118,7 @@ class OSFOfflineQT(QSystemTrayIcon):
         message.setInformativeText(intervention.description)
         for option in intervention.options:
             option_language = str(option).split('.')[1]
-            message.addButton(" ".join(option_language), QMessageBox.YesRole)
+            message.addButton(" ".join(option_language.split('_')), QMessageBox.YesRole)
         idx = message.exec()
 
         intervention.set_result(intervention.options[idx])
