@@ -201,8 +201,6 @@ class OSFOfflineQT(QSystemTrayIcon):
             )
 
     def quit(self):
-        if self._context_menu.preferences.isVisible():
-            self._context_menu.preferences.close()
 
         try:
             user = Session().query(User).one()
