@@ -202,20 +202,18 @@ class OSFOfflineQT(QSystemTrayIcon):
             )
 
     def quit(self):
-        try:
-            self.background_handler.stop()
 
-            try:
-                user = Session().query(User).one()
-            except NoResultFound:
-                pass
-            else:
-                logger.debug('Saving user data')
-                save(Session(), user)
-            Session().close()
-        finally:
-            logger.info('Quitting application')
-            QApplication.instance().quit()
+        try:
+            user = Session().query(User).one()
+        except NoResultFound:
+            pass
+        else:
+            logger.debug('Saving user data')
+            save(Session(), user)
+        Session().close()
+
+        logger.info('Quitting application')
+        QApplication.instance().quit()
 
     def sync_now(self):
         self.background_handler.sync_now()
