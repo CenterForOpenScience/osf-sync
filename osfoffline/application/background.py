@@ -1,5 +1,4 @@
 import logging
-import signal
 import threading
 
 from osfoffline.sync.local import LocalSyncWorker

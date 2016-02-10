@@ -64,6 +64,12 @@ class Preferences(QDialog, Ui_Settings):
         self.node_fetcher = NodeFetcher()
 
     def closeEvent(self, event):
+
+        if self._executor():
+            print('yes')
+        else:
+            print('no')
+
         if set(self.selected_nodes) != set([node.id for tree_item, node in self.tree_items
                                             if tree_item.checkState(self.PROJECT_SYNC_COLUMN) == Qt.Checked]):
             reply = QMessageBox()
