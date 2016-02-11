@@ -25,7 +25,7 @@ DisableProgramGroupPage=true
 DisableStartupPrompt=true
 LicenseFile=C:\Users\IEUser\Documents\GitHub\OSF-Offline\LICENSE
 OutputDir=C:\Users\IEUser\Desktop
-OutputBaseFilename='OSF Sync v0.4.0 for Windows'
+OutputBaseFilename="OSF Sync v0.4.0"
 SetupIconFile=C:\Users\IEUser\Documents\GitHub\OSF-Offline\deploy\images\cos_logo.ico
 Compression=lzma
 SolidCompression=yes
@@ -44,7 +44,7 @@ Source: "C:\Users\IEUser\Documents\GitHub\OSF-Offline\deploy\psvince.dll"; flags
 ; uninstall time to check if the target program is running
 Source: "C:\Users\IEUser\Documents\GitHub\OSF-Offline\deploy\psvince.dll"; DestDir: {app}
 
-Source: "C:\Users\IEUser\Documents\GitHub\OSF-Offline\dist\OSF-Sync.exe"; DestDir: "{app}";
+Source: "C:\Users\IEUser\Documents\GitHub\OSF-Offline\dist\OSF Sync.exe"; DestDir: "{app}";
 ; NOTE: Don't use "Flags: ignoreversion" on any shared system files
 
 [Icons]
