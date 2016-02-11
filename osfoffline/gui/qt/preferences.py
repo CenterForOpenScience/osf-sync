@@ -115,7 +115,7 @@ class Preferences(QDialog, Ui_Settings):
         self.containing_folder_updated_signal.emit(new_containing_folder)
 
         if save_setting:
-            save(Session())
+            save(Session(), user)
             self.update_sync_nodes()
 
     def update_sync_nodes(self):
