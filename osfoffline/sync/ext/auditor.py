@@ -7,7 +7,7 @@ from pathlib import Path
 from osfoffline import settings
 from osfoffline.client.osf import OSFClient
 from osfoffline.database import Session
-from osfoffline.database.models import Node, File, User
+from osfoffline.database.models import Node, File
 from osfoffline.tasks import operations
 from osfoffline.tasks.operations import OperationContext
 from osfoffline.utils import hash_file
@@ -238,8 +238,6 @@ class Auditor:
     def collect_all_local(self, db_map):
         ret = {}
         for node in Session().query(Node).filter(Node.sync):
-            # user = Session().query(User).one()
-            # path = os.path.join(user.folder, node.rel_path)
             node_path = Path(os.path.join(node.path, settings.OSF_STORAGE_FOLDER))
             self._collect_node_local(node_path, ret, db_map)
 

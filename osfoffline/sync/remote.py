@@ -165,7 +165,6 @@ class RemoteSyncWorker(threading.Thread, metaclass=Singleton):
             stack = stack + children
         save(Session())
         for node in nodes:
-            # path = os.path.join(self.user.folder, node.rel_path)
             local = Path(os.path.join(node.path, settings.OSF_STORAGE_FOLDER))
             if delete and not local.exists():
                 logger.warning('Clearing files for node {}'.format(node))

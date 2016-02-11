@@ -64,7 +64,6 @@ class Node(Base):
     def path(self):
         return os.path.join(self.user.folder, self.rel_path)
 
-
     @property
     def rel_path(self):
         """
