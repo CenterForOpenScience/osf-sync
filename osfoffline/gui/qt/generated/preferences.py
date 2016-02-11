@@ -35,7 +35,7 @@ class Ui_Settings(object):
         self.changeFolderButton = QtWidgets.QPushButton(self.groupBox_6)
         self.changeFolderButton.setGeometry(QtCore.QRect(440, 20, 99, 31))
         self.changeFolderButton.setObjectName("changeFolderButton")
-        self.containingFolderTextEdit = QtWidgets.QTextEdit(self.groupBox_6)
+        self.containingFolderTextEdit = QtWidgets.QLabel(self.groupBox_6)
         self.containingFolderTextEdit.setGeometry(QtCore.QRect(20, 20, 331, 31))
         self.containingFolderTextEdit.setObjectName("containingFolderTextEdit")
         self.gridLayout_7.addWidget(self.groupBox_6, 1, 0, 1, 1)
@@ -104,11 +104,6 @@ class Ui_Settings(object):
         self.desktopNotifications.setText(_translate("Settings", "Show Desktop Notifications"))
         self.groupBox_6.setTitle(_translate("Settings", "Choose folder to Place OSF folder in "))
         self.changeFolderButton.setText(_translate("Settings", "Change"))
-        self.containingFolderTextEdit.setHtml(_translate("Settings", "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"
-"<html><head><meta name=\"qrichtext\" content=\"1\" /><style type=\"text/css\">\n"
-"p, li { white-space: pre-wrap; }\n"
-"</style></head><body style=\" font-family:\'.Helvetica Neue DeskInterface\'; font-size:13pt; font-weight:400; font-style:normal;\">\n"
-"<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-family:\'Ubuntu\'; font-size:11pt;\">/home/himanshu/somefolder/My Project</span></p></body></html>"))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab), _translate("Settings", "General"))
         self.groupBox_2.setTitle(_translate("Settings", "Account"))
         self.label.setText(_translate("Settings", "User name"))
