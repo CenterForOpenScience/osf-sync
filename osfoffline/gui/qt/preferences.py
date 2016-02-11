@@ -103,6 +103,7 @@ class Preferences(QDialog, Ui_Settings):
         user = Session().query(User).one()
 
         if save_setting:
+            logger.debug('Copy files into new OSF folder.')
             # copy the synced folders from the old to new location
             # so OSF doesn't think they were deleted
             copy_tree(user.folder, os.path.join(osf_path))
