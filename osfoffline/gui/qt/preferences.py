@@ -172,8 +172,8 @@ class Preferences(QDialog, Ui_Settings):
             containing_folder = os.path.dirname(user.folder)
             self.containingFolderTextEdit.setText(self._translate("Preferences", containing_folder))
         elif selected_index == self.OSF:
+            Notification().info('We are fetching your list of projects. This may take a few minutes.')
             self.label.setText(self._translate("Preferences", user.full_name))
-
             self._executor = QtCore.QThread()
             self.node_fetcher = NodeFetcher()
             self.treeWidget.setCursor(QtCore.Qt.BusyCursor)
@@ -226,7 +226,6 @@ class NodeFetcher(QtCore.QObject):
 
     def fetch(self):
         """Fetch the list of nodes associated with a user. Returns either a list, or an (int) error code."""
-        Notification().info('We are fetching your list of projects. This may take a few minutes.')
         try:
             client = OSFClient()
             client_user = client.get_user()
