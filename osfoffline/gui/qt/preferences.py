@@ -1,11 +1,13 @@
 import logging
 import os
+import sys
 from distutils.dir_util import copy_tree
 
 from PyQt5 import QtCore
 from PyQt5.QtCore import QCoreApplication
 from PyQt5.QtCore import Qt
 from PyQt5.QtCore import pyqtSignal
+from PyQt5.QtCore import QSettings
 from PyQt5.QtWidgets import QDialog
 from PyQt5.QtWidgets import QFileDialog
 from PyQt5.QtWidgets import QMessageBox
@@ -23,6 +25,13 @@ from osfoffline.sync.remote import RemoteSyncWorker
 
 logger = logging.getLogger(__name__)
 
+WINDOWS_RUN_PATH = 'HKEY_CURRENT_USER\\Software\\Microsoft\\Windows\\CurrentVersion\\Run'
+
+# sys.platform will be win32 regardless of the bitness of the underlying Windows system
+# see http://svn.python.org/view/python/trunk/PC/pyconfig.h?view=markup line 334
+ON_WINDOWS = sys.platform == 'win32'
+
+ON_MAC = sys.platform == 'darwin'
 
 def get_parent_id(node):
     try:
@@ -59,6 +68,10 @@ class Preferences(QDialog, Ui_Settings):
         self.pushButton_2.clicked.connect(self.sync_none)
         self.tabWidget.currentChanged.connect(self.selector)
 
+        if ON_WINDOWS:
+            self.settings = QSettings(WINDOWS_RUN_PATH, QSettings.NativeFormat)
+            self.startAtBoot.setChecked(self.settings.contains('Preferences'))
+
         self.tree_items = []
         self.selected_nodes = []
 
@@ -85,6 +98,12 @@ class Preferences(QDialog, Ui_Settings):
                 if reply.exec_() != 0:
                     return event.ignore()
         self.reset_tree_widget()
+
+        if ON_WINDOWS:
+            if self.startAtBoot.isChecked():
+                self.settings.setValue('Preferences', sys.argv[0])
+            else:
+                self.settings.remove('Preferences')
         event.accept()
 
     def set_containing_folder(self, save_setting=False):
