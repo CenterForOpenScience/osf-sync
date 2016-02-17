@@ -56,6 +56,7 @@ class OSFOfflineQT(QSystemTrayIcon):
     def __init__(self, application):
         super().__init__(QIcon(':/tray_icon.png'), application)
 
+
         self._context_menu = OSFOfflineMenu(self)
         self.setContextMenu(self._context_menu)
         self.show()
