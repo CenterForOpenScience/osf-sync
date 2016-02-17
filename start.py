@@ -13,13 +13,20 @@ from osfoffline.database import drop_db
 from osfoffline.gui.qt import OSFOfflineQT
 from osfoffline.utils.log import start_logging
 from osfoffline.utils.singleton import SingleInstance
+from osfoffline.application.background import BackgroundHandler
 from osfoffline import settings
-
 
 logger = logging.getLogger(__name__)
 
-if settings.DEBUG:
-    signal.signal(signal.SIGINT, signal.SIG_DFL)
+
+def exit_gracefully(*args):
+    try:
+        BackgroundHandler().stop()
+    finally:
+        sys.exit(1)
+
+signal.signal(signal.SIGINT, signal.SIG_DFL)
+signal.signal(signal.SIGTERM, exit_gracefully)
 
 
 def running_warning(message=None, critical=False):
@@ -45,7 +52,7 @@ def start():
         r = requests.get(settings.MIN_VERSION_URL)
     except requests.exceptions.ConnectionError:
         running_warning(message='Check for minimum version requirements for OSF-Sync failed '
-                        'because you have no Internet connection', critical=True)
+                                'because you have no Internet connection', critical=True)
     else:
         try:
             min_version = r.json()['min-version']
@@ -66,6 +73,9 @@ def start():
         drop_db()
 
     app = QApplication(sys.argv)
+
+    # connect QT to handle system shutdown signal from os correctly
+    app.aboutToQuit.connect(exit_gracefully)
 
     if not QSystemTrayIcon.isSystemTrayAvailable():
         QMessageBox.critical(None, 'Systray', 'Could not detect a system tray on this system')

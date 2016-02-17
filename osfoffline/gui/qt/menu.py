@@ -14,12 +14,10 @@ from osfoffline.database.models import User
 from osfoffline.gui.qt.preferences import Preferences
 from osfoffline.utils.validators import validate_containing_folder
 
-
 logger = logging.getLogger(__name__)
 
 
 class OSFOfflineMenu(QMenu):
-
     push_status = pyqtSignal((str,))
 
     def __init__(self, parent):
@@ -36,7 +34,7 @@ class OSFOfflineMenu(QMenu):
         self.addAction(QAction('Settings', self, triggered=self.open_settings))
         self.addAction(QAction('About', self, triggered=self.open_about))
         self.addSeparator()
-        self.addAction(QAction('Log Out', self, triggered=parent.logout))
+
         self.addAction(QAction('Quit', self, triggered=parent.quit))
 
         self.parent = parent

@@ -13,14 +13,6 @@ logger = logging.getLogger(__name__)
 
 class BackgroundHandler(metaclass=Singleton):
 
-    # TODO: Find a good fix for ulimit setting
-    # try:
-    #     self.observer.start()  # start
-    # except OSError as e:
-    #     # FIXME: Document these limits and provide better user notification.
-    #     #    See http://pythonhosted.org/watchdog/installation.html for limits.
-    #     raise RuntimeError('Limit of watched items reached') from e
-
     def set_intervention_cb(self, cb):
         Intervention().set_callback(cb)
 

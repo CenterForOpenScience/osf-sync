@@ -5,7 +5,6 @@ import os
 import tempfile
 import logging
 
-
 logger = logging.getLogger(__name__)
 
 
@@ -20,9 +19,9 @@ class SingleInstance:
     def __init__(self, *, flavor_id="", callback=None):
         self.initialized = False
         basename = os.path.splitext(os.path.abspath(sys.argv[0]))[0].replace(
-            "/", "-").replace(":", "").replace("\\", "-") + '-%s' % flavor_id + '.lock'
+                "/", "-").replace(":", "").replace("\\", "-") + '-%s' % flavor_id + '.lock'
         self.lockfile = os.path.normpath(
-            os.path.join(tempfile.gettempdir(), basename))
+                os.path.join(tempfile.gettempdir(), basename))
 
         logger.debug("SingleInstance lockfile: " + self.lockfile)
         if sys.platform == 'win32':
@@ -32,7 +31,7 @@ class SingleInstance:
                 if os.path.exists(self.lockfile):
                     os.unlink(self.lockfile)
                 self.fd = os.open(
-                    self.lockfile, os.O_CREAT | os.O_EXCL | os.O_RDWR)
+                        self.lockfile, os.O_CREAT | os.O_EXCL | os.O_RDWR)
             except OSError:
                 type, e, tb = sys.exc_info()
                 if e.errno == 13:

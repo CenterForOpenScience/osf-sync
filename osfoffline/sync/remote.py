@@ -30,12 +30,10 @@ from osfoffline.tasks.queue import OperationWorker
 from osfoffline.utils import Singleton
 from osfoffline.utils.authentication import get_current_user
 
-
 logger = logging.getLogger(__name__)
 
 
 class RemoteSyncWorker(threading.Thread, metaclass=Singleton):
-
     def __init__(self):
         super().__init__()
         self.user = get_current_user()
@@ -130,7 +128,9 @@ class RemoteSyncWorker(threading.Thread, metaclass=Singleton):
             if err.status in (http.client.NOT_FOUND, http.client.GONE):
                 # cascade should automagically delete children
                 Session().delete(node)
-                logger.info("Remote Node<{}> appears to have been deleted; will stop tracking and delete from local database".format(node.id))
+                logger.info(
+                    "Remote Node<{}> appears to have been deleted; will stop tracking and delete from local database".format(
+                        node.id))
                 return
             else:  # TODO: maybe handle other statuses here
                 raise
@@ -145,18 +145,18 @@ class RemoteSyncWorker(threading.Thread, metaclass=Singleton):
             # additional logic could be added here to skip over certain nodes.
             try:
                 db_child = Session().query(Node).filter(
-                    Node.id == child.id
+                        Node.id == child.id
                 ).one()
             except NoResultFound:
                 # Setting sync=False notes that the node is implicity synced
                 parent = Session().query(Node).filter(
-                    Node.id == child.parent.id
+                        Node.id == child.parent.id
                 ).one()
                 db_child = Node(
-                    id=child.id,
-                    title=child.title,
-                    user=node.user,
-                    parent_id=parent.id
+                        id=child.id,
+                        title=child.title,
+                        user=node.user,
+                        parent_id=parent.id
                 )
                 Session().add(db_child)
             nodes.append(db_child)
@@ -176,24 +176,30 @@ class RemoteSyncWorker(threading.Thread, metaclass=Singleton):
         local_events, remote_events = Auditor().audit()
 
         for is_folder in (True, False):
-            for conflict in sorted(set(local_events.keys()) & set(remote_events.keys()), key=lambda x: x.count(os.path.sep)):
+            for conflict in sorted(set(local_events.keys()) & set(remote_events.keys()),
+                                   key=lambda x: x.count(os.path.sep)):
                 if conflict.endswith(os.path.sep) != is_folder:
                     continue
                 try:
                     local, remote = local_events.pop(conflict), remote_events.pop(conflict)
                 except KeyError:
                     continue
-                res = RESOLUTION_MAP[(is_folder, local.event_type, remote.event_type)](local, remote, local_events, remote_events)
+                res = RESOLUTION_MAP[(is_folder, local.event_type, remote.event_type)](local, remote, local_events,
+                                                                                       remote_events)
                 if res:
                     if isinstance(res, list):
                         resolutions.extend(res)
-                    logger.error('Conflict at {} between {} and {}\nResolved with {}'.format(conflict, local.event_type, remote.event_type, res))
+                    logger.error('Conflict at {} between {} and {}\nResolved with {}'.format(conflict, local.event_type,
+                                                                                             remote.event_type, res))
                 else:
-                    logger.warning('Conflict at {} between {} and {} required no resolution'.format(conflict, local.event_type, remote.event_type))
+                    logger.warning(
+                        'Conflict at {} between {} and {} required no resolution'.format(conflict, local.event_type,
+                                                                                         remote.event_type))
 
         td = TreeDict()
         directories = []
-        for event in sorted(set(itertools.chain(local_events.values(), remote_events.values())), key=lambda x: x.src_path.count(os.path.sep)):
+        for event in sorted(set(itertools.chain(local_events.values(), remote_events.values())),
+                            key=lambda x: x.src_path.count(os.path.sep)):
             if event.is_directory:
                 if event.event_type == EventType.UPDATE:
                     continue
@@ -215,9 +221,10 @@ class RemoteSyncWorker(threading.Thread, metaclass=Singleton):
                 child for child in td.children(keys=parts)
                 if (event.location, event.event_type) != (child.location, child.event_type)
                 or (child.event_type == EventType.MOVE and not child.dest_path.startswith(event.dest_path))
-            ]
+                ]
             if conflicts:
-                logger.error('Detected {} conflicts for folder {}. ({})'.format(len(conflicts), event.src_path, [x.context for x in conflicts]))
+                logger.error('Detected {} conflicts for folder {}. ({})'.format(len(conflicts), event.src_path,
+                                                                                [x.context for x in conflicts]))
             else:
                 td[parts] = event
                 directories.remove(event)
@@ -229,7 +236,8 @@ class RemoteSyncWorker(threading.Thread, metaclass=Singleton):
 
         directories = sorted(directories, key=lambda x: getattr(x, 'dest_path', x.src_path).count(os.path.sep))
 
-        for operation in itertools.chain(resolutions, (event.operation() for event in directories), (event.operation() for event in td.children())):
+        for operation in itertools.chain(resolutions, (event.operation() for event in directories),
+                                         (event.operation() for event in td.children())):
             OperationWorker().put(operation)
 
         OperationWorker().join_queue()
@@ -245,7 +253,6 @@ def flatten(dict_obj, acc):
 
 
 class TreeDict:
-
     def __init__(self):
         self._inner = {}
 

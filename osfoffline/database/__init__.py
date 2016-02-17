@@ -7,11 +7,10 @@ from sqlalchemy.orm import sessionmaker
 from osfoffline.database.models import Base, User, Node, File
 from osfoffline.settings import PROJECT_DB_FILE
 
-
 CORE_OSFO_MODELS = [User, Node, File]
 URL = 'sqlite:///{}'.format(PROJECT_DB_FILE)
 
-engine = create_engine(URL, connect_args={'check_same_thread': False},)
+engine = create_engine(URL, connect_args={'check_same_thread': False}, )
 Base.metadata.create_all(engine)
 session_factory = sessionmaker(bind=engine)
 _Session = scoped_session(session_factory)()

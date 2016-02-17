@@ -5,6 +5,7 @@ from PyQt5.QtWidgets import QDialog, QInputDialog, QMessageBox
 
 from sqlalchemy.orm.exc import NoResultFound
 
+from osfoffline import language
 from osfoffline.database import Session
 from osfoffline.database.models import User
 from osfoffline.database.utils import save
@@ -13,12 +14,10 @@ from osfoffline.utils.authentication import AuthClient
 from osfoffline.utils.log import add_user_to_sentry_logs
 from osfoffline.gui.qt.generated.login import Ui_login
 
-
 logger = logging.getLogger(__name__)
 
 
 class LoginScreen(QDialog, Ui_login):
-
     def __init__(self):
         super().__init__()
         self.user = None
@@ -59,8 +58,7 @@ class LoginScreen(QDialog, Ui_login):
         except TwoFactorRequiredError:
             # Prompt user for 2FA code, then re-try authentication
             otp_val, ok = QInputDialog.getText(self, 'Enter one-time code',
-                                               'Please enter a two-factor authentication code.\n'
-                                               '(check your mobile device)')
+                                               language.TFA_PROMPT)
             if ok:
                 return self.login(otp=otp_val)
         except AuthError as e:

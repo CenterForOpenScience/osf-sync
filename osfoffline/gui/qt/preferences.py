@@ -1,5 +1,6 @@
-import os
 import logging
+import os
+from distutils.dir_util import copy_tree
 
 from PyQt5 import QtCore
 from PyQt5.QtCore import QCoreApplication
@@ -11,15 +12,25 @@ from PyQt5.QtWidgets import QMessageBox
 from PyQt5.QtWidgets import QTreeWidgetItem
 from sqlalchemy.orm.exc import NoResultFound
 
+from osfoffline import language
 from osfoffline.client.osf import OSFClient
 from osfoffline.database import Session
 from osfoffline.database.models import User, Node
 from osfoffline.database.utils import save
 from osfoffline.gui.qt.generated.preferences import Ui_Settings
+from osfoffline.tasks.notifications import Notification
 from osfoffline.sync.remote import RemoteSyncWorker
 
-
 logger = logging.getLogger(__name__)
+
+
+def get_parent_id(node):
+    try:
+        parent = node.raw['relationships']['parent']
+    except KeyError:
+        return None
+
+    return parent['links']['related']['href'].split('/')[-2]
 
 
 class Preferences(QDialog, Ui_Settings):
@@ -43,6 +54,7 @@ class Preferences(QDialog, Ui_Settings):
         self._translate = QCoreApplication.translate
 
         self.changeFolderButton_2.clicked.connect(self.update_sync_nodes)
+        self.changeFolderButton.clicked.connect(self.update_containing_folder)
         self.pushButton.clicked.connect(self.sync_all)
         self.pushButton_2.clicked.connect(self.sync_none)
         self.tabWidget.currentChanged.connect(self.selector)
@@ -53,24 +65,29 @@ class Preferences(QDialog, Ui_Settings):
         self._executor = QtCore.QThread()
         self.node_fetcher = NodeFetcher()
 
+    def update_containing_folder(self):
+        self.set_containing_folder(save_setting=True)
+
     def closeEvent(self, event):
+
         if set(self.selected_nodes) != set([node.id for tree_item, node in self.tree_items
                                             if tree_item.checkState(self.PROJECT_SYNC_COLUMN) == Qt.Checked]):
-            reply = QMessageBox()
-            reply.setText('Unsaved changes')
-            reply.setIcon(QMessageBox.Warning)
-            reply.setInformativeText('You have unsaved changes to your synced projects.\n\n '
-                                     'Please review your changes and press \'update\' if you would like to save them. \n\n  '
-                                     'Are you sure you would like to leave without saving? \n')
-            default = reply.addButton('Exit without saving', QMessageBox.YesRole)
-            reply.addButton('Review changes', QMessageBox.NoRole)
-            reply.setDefaultButton(default)
-            if reply.exec_() != 0:
-                return event.ignore()
+            if self.selected_nodes and not self.tree_items:
+                return
+            else:
+                reply = QMessageBox()
+                reply.setText('Unsaved changes')
+                reply.setIcon(QMessageBox.Warning)
+                reply.setInformativeText(language.UNSAVED_CHANGES)
+                default = reply.addButton('Exit without saving', QMessageBox.YesRole)
+                reply.addButton('Review changes', QMessageBox.NoRole)
+                reply.setDefaultButton(default)
+                if reply.exec_() != 0:
+                    return event.ignore()
         self.reset_tree_widget()
         event.accept()
 
-    def set_containing_folder(self):
+    def set_containing_folder(self, save_setting=False):
         new_containing_folder = QFileDialog.getExistingDirectory(self, "Choose where to place OSF folder")
         osf_path = os.path.join(new_containing_folder, "OSF")
 
@@ -80,18 +97,26 @@ class Preferences(QDialog, Ui_Settings):
         elif not os.path.exists(osf_path):
             os.makedirs(osf_path)
         elif os.path.isfile(osf_path):
-            # FIXME: Consolidate redundant messages
-            # AlertHandler.warn(
-            #     "An OSF file exists where you would like to create the OSF folder. Delete it, or choose a different location")
-            logger.warning("An OSF file exists where you would like to create the OSF folder.")
+            logger.debug(language.TARGET_FOLDER_EXISTS)
             return
 
         user = Session().query(User).one()
+
+        if save_setting:
+            logger.debug('Copy files into new OSF folder.')
+            # copy the synced folders from the old to new location
+            # so OSF doesn't think they were deleted
+            copy_tree(user.folder, os.path.join(osf_path))
+
         user.folder = os.path.join(osf_path)
 
         self.containingFolderTextEdit.setText(self._translate("Preferences", self.containing_folder))
         self.open_window(tab=Preferences.GENERAL)  # todo: dynamically update ui????
         self.containing_folder_updated_signal.emit(new_containing_folder)
+
+        if save_setting:
+            save(Session(), user)
+            self.update_sync_nodes()
 
     def update_sync_nodes(self):
         self.selected_nodes = []
@@ -107,12 +132,12 @@ class Preferences(QDialog, Ui_Settings):
                 self.selected_nodes.append(node.id)
                 if not db_node:
                     Session().add(
-                        Node(
-                            id=node.id,
-                            title=node.title,
-                            user=user,
-                            sync=True
-                        )
+                            Node(
+                                    id=node.id,
+                                    title=node.title,
+                                    user=user,
+                                    sync=True
+                            )
                     )
                 else:
                     db_node.sync = True
@@ -147,8 +172,8 @@ class Preferences(QDialog, Ui_Settings):
             containing_folder = os.path.dirname(user.folder)
             self.containingFolderTextEdit.setText(self._translate("Preferences", containing_folder))
         elif selected_index == self.OSF:
+            Notification().info('We are fetching your list of projects. This may take a few minutes.')
             self.label.setText(self._translate("Preferences", user.full_name))
-
             self._executor = QtCore.QThread()
             self.node_fetcher = NodeFetcher()
             self.treeWidget.setCursor(QtCore.Qt.BusyCursor)
@@ -166,6 +191,7 @@ class Preferences(QDialog, Ui_Settings):
     def populate_item_tree(self, nodes):
         self.reset_tree_widget()
         _translate = QCoreApplication.translate
+        self.selected_nodes = []
         all_selected_nodes = [n.id for n in Session().query(Node)]
         for n in Session().query(Node):
             if n.parent_id not in all_selected_nodes and n.id not in self.selected_nodes:
@@ -173,8 +199,10 @@ class Preferences(QDialog, Ui_Settings):
 
         for node in sorted(nodes, key=lambda n: n.title):
             tree_item = QTreeWidgetItem(self.treeWidget)
-            tree_item.setCheckState(self.PROJECT_SYNC_COLUMN, Qt.Checked if node.id in self.selected_nodes else Qt.Unchecked)
-            tree_item.setText(self.PROJECT_NAME_COLUMN, _translate('Preferences', '{} - {}'.format(node.title, node.id)))
+            tree_item.setCheckState(self.PROJECT_SYNC_COLUMN,
+                                    Qt.Checked if node.id in self.selected_nodes else Qt.Unchecked)
+            tree_item.setText(self.PROJECT_NAME_COLUMN,
+                              _translate('Preferences', '{} - {}'.format(node.title, node.id)))
 
             self.tree_items.append((tree_item, node))
 
@@ -188,13 +216,12 @@ class Preferences(QDialog, Ui_Settings):
         # TODO: Is there a more elegant way to pass errors across signal or thread boundaries?
         QMessageBox.critical(None,
                              'Error fetching projects',
-                             'Could not fetch list of projects; the preferences window will be closed without saving changes. Please try again later.')
+                             language.ITEM_LOAD_ERROR)
         self.reset_tree_widget()
         self.reject()
 
 
 class NodeFetcher(QtCore.QObject):
-
     finished = QtCore.pyqtSignal([list], [int])
 
     def fetch(self):
@@ -207,6 +234,10 @@ class NodeFetcher(QtCore.QObject):
             logger.exception('Error fetching list of nodes')
             result = -1
         else:
-            result = [node for node in user_nodes if 'parent' not in node.raw['relationships']]
+            nodes_id = [n.id for n in user_nodes]
+            result = []
+            for node in user_nodes:
+                if 'parent' not in node.raw['relationships'] or get_parent_id(node) not in nodes_id:
+                    result.append(node)
 
         self.finished[type(result)].emit(result)

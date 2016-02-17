@@ -3,7 +3,6 @@ import os
 from appdirs import user_data_dir
 from appdirs import user_log_dir
 
-
 # General settings
 PROJECT_NAME = 'osf-offline'
 PROJECT_AUTHOR = 'cos'
@@ -27,7 +26,9 @@ ALERT_DURATION = 5.0  # sec
 
 LOG_LEVEL = 'INFO'
 
+# sentry configuration. import from local
 SENTRY_DSN = None
+refs = None
 
 # Logging configuration
 FILE_FORMATTER = '[%(levelname)s][%(asctime)s][%(threadName)s][%(name)s]: %(message)s'
@@ -50,9 +51,9 @@ PROJECT_LOG_FILE = os.path.join(PROJECT_LOG_DIR, 'osfoffline.log')
 
 EVENT_DEBOUNCE = 3
 
-#updater
+# updater
 REPO = 'CenterForOpenScience/OSF-Sync'
-VERSION = '0.3.0'
+VERSION = '0.4.0'
 NAME = 'OSF-Offline'
 MIN_VERSION_URL = 'https://raw.githubusercontent.com/CenterForOpenScience/OSF-Sync/develop/deploy/Offline-version.json'
 OFFLINE_PROJECT_ON_OSF = 'https://osf.io/v2y6z/files/'

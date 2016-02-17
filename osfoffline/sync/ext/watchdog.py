@@ -20,7 +20,6 @@ from watchdog.events import (
 from osfoffline import settings, utils
 from osfoffline.exceptions import NodeNotFound
 
-
 logger = logging.getLogger(__name__)
 
 
@@ -47,26 +46,8 @@ def sha256_from_event(event):
     else:
         return db_file.sha256
 
-#  def sha256_from_local_path(*, src_path, dest_path):
-#      try:
-#          node = utils.extract_node(src_path)
-#      except NodeNotFound:
-#          db_file = None
-#      else:
-#          db_file = utils.local_to_db(src_path, node, check_is_folder=False)
-#      if not db_file:
-#          if not dest_path:
-#              return None
-#          else:
-#              try:
-#                  return utils.hash_file(Path(dest_path))
-#              except IsADirectoryError:
-#                  return None
-#      else:
-#          return db_file.sha256
 
 class ConsolidatedEventHandler(PatternMatchingEventHandler):
-
     def __init__(self):
         super().__init__(ignore_patterns=settings.IGNORED_PATTERNS)
         self._event_cache = TreeDict()
@@ -99,22 +80,38 @@ class ConsolidatedEventHandler(PatternMatchingEventHandler):
             consolidate = event.is_directory
             if event.event_type == EVENT_TYPE_DELETED:
                 consolidate = (parts in self._event_cache)
-                move_events = (
+                logger.debug('inside delete_event:')
+                logger.debug(self._event_cache.children())
+                create_events = [
                     evt
                     for evt in self._event_cache.children()
-                    if evt.event_type == EVENT_TYPE_MOVED and evt.dest_path == event.src_path
-                )
-                for evt in move_events:
-                    create_events = (create_evt for create_evt in self._create_cache if create_evt.src_path == evt.src_path)
-                    for create_evt in create_events:
-                        logger.info('Attempting to consolidate a create/move/delete as an update')
-                        # discard the move
+                    if evt.event_type == EVENT_TYPE_CREATED and evt.basename == event.basename and evt.sha256 == event.sha256
+                ]
+                if create_events:
+                    for evt in create_events:
+                        # delete the create
                         del self._event_cache[evt.parts]
-                        # discard the create
-                        self._create_cache.remove(create_evt)
-                        # consolidate to update
-                        self._event_cache[create_evt.parts] = FileModifiedEvent(create_evt.src_path)
-                        return
+                        Event = DirMovedEvent if event.is_directory else FileMovedEvent
+                        self._event_cache[evt.parts] = Event(src_path=evt.src_path, dest_path=event.src_path)
+                else:
+                    move_events = (
+                        evt
+                        for evt in self._event_cache.children()
+                        if evt.event_type == EVENT_TYPE_MOVED and evt.dest_path == event.src_path
+                    )
+                    for evt in move_events:
+                        create_events = (create_evt for create_evt in self._create_cache if
+                                         create_evt.src_path == evt.src_path)
+                        for create_evt in create_events:
+                            logger.info('Attempting to consolidate a create/move/delete as an update')
+                            # discard the move
+                            del self._event_cache[evt.parts]
+                            # discard the create
+                            self._create_cache.remove(create_evt)
+                            # consolidate to update
+                            self._event_cache[create_evt.parts] = FileModifiedEvent(create_evt.src_path)
+                            return
+
             if event.event_type == EVENT_TYPE_MODIFIED:
                 if event.is_directory:
                     return
@@ -125,16 +122,22 @@ class ConsolidatedEventHandler(PatternMatchingEventHandler):
                 )
                 for event in move_events:
                     return
+
             if event.event_type == EVENT_TYPE_CREATED:
-                if not event.is_directory and parts in self._event_cache and self._event_cache[parts].event_type == EVENT_TYPE_DELETED:
+                if (not event.is_directory and
+                            parts in self._event_cache and
+                            self._event_cache[parts].event_type == EVENT_TYPE_DELETED):
                     Event = DirModifiedEvent if event.is_directory else FileModifiedEvent
                     self._event_cache[parts] = Event(event.src_path)
                 else:
+                    logger.debug('inside create_event:')
+                    logger.debug(self._event_cache.children())
                     delete_events = [
                         evt
                         for evt in self._event_cache.children()
-                        if evt.event_type == EVENT_TYPE_DELETED and evt.basename == event.basename and evt.sha256 == event.sha256
-                    ]
+                        if
+                        evt.event_type == EVENT_TYPE_DELETED and evt.basename == event.basename and evt.sha256 == event.sha256
+                        ]
                     if delete_events:
                         for evt in delete_events:
                             # delete the delete
@@ -146,12 +149,13 @@ class ConsolidatedEventHandler(PatternMatchingEventHandler):
                             evt
                             for evt in self._event_cache.children()
                             if evt.event_type == EVENT_TYPE_MOVED
-                        ]
+                            ]
                         if move_events:
                             for evt in move_events:
                                 if evt.dest_path in event.src_path:
                                     return
                         self._create_cache.append(event)
+
             else:
                 if not consolidate and parts in self._event_cache:
                     ev = self._event_cache[parts]
@@ -171,8 +175,8 @@ class ConsolidatedEventHandler(PatternMatchingEventHandler):
 
     def _sorted_create_cache(self):
         return sorted(
-            self._create_cache,
-            key=lambda ev: len(Path(ev.src_path).parents)
+                self._create_cache,
+                key=lambda ev: len(Path(ev.src_path).parents)
         )
 
     def flush(self):
@@ -185,7 +189,7 @@ class ConsolidatedEventHandler(PatternMatchingEventHandler):
                 logger.debug('Watchdog event dispatched: {}'.format(event))
                 try:
                     super().dispatch(event)
-                except (NodeNotFound, ) as e:
+                except (NodeNotFound,) as e:
                     logger.warning(e)
                 except Exception:
                     logger.exception('Failure while dispatching watchdog event: {}'.format(event))
@@ -205,7 +209,6 @@ def flatten(dict_obj, acc):
 
 
 class TreeDict:
-
     def __init__(self):
         self._inner = OrderedDict()
 

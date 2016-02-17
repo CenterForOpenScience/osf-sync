@@ -86,10 +86,10 @@ virtual environment, make sure that PyQT is installed to that venv.
 ## Building for deployment
 ### Create the binary
 On Windows:
-  `pyinstaller --onedir --onefile --name=OSF-Sync --icon=deploy\\images\\cos_logo.ico --windowed start.py`
+  `pyinstaller --onedir --onefile --name='OSF Sync' --icon=deploy\\images\\cos_logo.ico --windowed start.py`
 
 On Mac OS:
-  `pyinstaller --onedir --onefile --name=OSF-Sync --icon=deploy/images/cos_logo.icns --windowed start.py`
+  `pyinstaller --onedir --onefile --name='OSF Sync' --icon=deploy/images/cos_logo.icns --windowed start.py`
 
 After the first run, PyInstaller will create a .spec file that can be used for future builds on your machine.
 
@@ -130,3 +130,9 @@ it is available in the PyInstaller github repo (development version); the bugfix
 Sometimes pyinstaller will raise an exception due to problems importing `cy***.util`. If that happens,
 it can be resolved by manually editing the PyInstaller source code to add an import statement in the location
 indicated by the traceback.
+
+#OSF-Offline-mac.spec is the pyinstaller scipt file for mac
+#OSF-Offline-windows.spec is the pyinstaller scipt file for windows,
+#which needs some change in your local pyinstaller 3.0 to make it work
+
+#osfofflne-setup.iss is the inno-setup script to setup the windows installer for osf-offline.exe

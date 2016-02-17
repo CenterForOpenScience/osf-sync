@@ -34,7 +34,6 @@ logger = logging.getLogger(__name__)
 
 
 class QResizableMessageBox(QMessageBox):
-
     QWIDGETSIZE_MAX = 16777215
 
     def __init__(self, *args, **kwargs):
@@ -54,7 +53,6 @@ class QResizableMessageBox(QMessageBox):
 
 
 class OSFOfflineQT(QSystemTrayIcon):
-
     def __init__(self, application):
         super().__init__(QIcon(':/tray_icon.png'), application)
 
@@ -119,7 +117,8 @@ class OSFOfflineQT(QSystemTrayIcon):
         message.setText(intervention.title)
         message.setInformativeText(intervention.description)
         for option in intervention.options:
-            message.addButton(str(option).split('.')[1], QMessageBox.YesRole)
+            option_language = str(option).split('.')[1]
+            message.addButton(" ".join(option_language.split('_')), QMessageBox.YesRole)
         idx = message.exec()
 
         intervention.set_result(intervention.options[idx])
@@ -184,10 +183,10 @@ class OSFOfflineQT(QSystemTrayIcon):
                     self._show_notifications(notification_list)
                 else:
                     self.showMessage(
-                        'Updated multiple',
-                        'Updated {} files and folders'.format(len(notification_list)),
-                        QSystemTrayIcon.NoIcon,
-                        msecs=settings.ALERT_DURATION / 1000.
+                            'Updated multiple',
+                            'Updated {} files and folders'.format(len(notification_list)),
+                            QSystemTrayIcon.NoIcon,
+                            msecs=settings.ALERT_DURATION / 1000.
                     )
 
         self.notification_handler.done()
@@ -196,27 +195,25 @@ class OSFOfflineQT(QSystemTrayIcon):
         """Show a message bubble for each notification in the list provided"""
         for n in notifications_list:
             self.showMessage(
-                'Synchronizing...',
-                n.msg,
-                QSystemTrayIcon.NoIcon,
-                msecs=settings.ALERT_DURATION / 1000.
+                    'Synchronizing...',
+                    n.msg,
+                    QSystemTrayIcon.NoIcon,
+                    msecs=settings.ALERT_DURATION / 1000.
             )
 
     def quit(self):
-        try:
-            self.background_handler.stop()
 
-            try:
-                user = Session().query(User).one()
-            except NoResultFound:
-                pass
-            else:
-                logger.debug('Saving user data')
-                save(Session(), user)
-            Session().close()
-        finally:
-            logger.info('Quitting application')
-            QApplication.instance().quit()
+        try:
+            user = Session().query(User).one()
+        except NoResultFound:
+            pass
+        else:
+            logger.debug('Saving user data')
+            save(Session(), user)
+        Session().close()
+
+        logger.info('Quitting application')
+        QApplication.instance().quit()
 
     def sync_now(self):
         self.background_handler.sync_now()
@@ -241,7 +238,6 @@ class OSFOfflineQT(QSystemTrayIcon):
 
 
 class SyncEventHandler(QThread):
-
     notify_signal = pyqtSignal(object)
     enqueue_signal = pyqtSignal(object)
     done_signal = pyqtSignal()

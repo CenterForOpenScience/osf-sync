@@ -13,7 +13,6 @@ from osfoffline.tasks.operations import OperationContext
 from osfoffline.utils import hash_file
 from osfoffline.utils.authentication import get_current_user
 
-
 logger = logging.getLogger(__name__)
 
 
@@ -32,7 +31,6 @@ class EventType(Enum):
 # Meant to emulate the watchdog FileSystemEvent
 # May want to subclass in the future
 class ModificationEvent:
-
     def __init__(self, location, event_type, contexts, src_path, dest_path=None):
         if dest_path:
             self.dest_path = dest_path
@@ -46,12 +44,12 @@ class ModificationEvent:
     def operation(self):
         location = Location.LOCAL if self.location == Location.REMOTE else Location.REMOTE
         return getattr(
-            operations,
-            ''.join([
-                location.name.capitalize(),
-                self.event_type.name.capitalize(),
-                'Folder' if self.is_directory else 'File'
-            ])
+                operations,
+                ''.join([
+                    location.name.capitalize(),
+                    self.event_type.name.capitalize(),
+                    'Folder' if self.is_directory else 'File'
+                ])
         )(*self.contexts)
 
     @property
@@ -69,7 +67,6 @@ class ModificationEvent:
 
 
 class Audit(object):
-
     def __init__(self, fid, sha256, fobj):
         """
         :param str fid: id of file object
@@ -84,11 +81,11 @@ class Audit(object):
     def info(self):
         return (self.fid, self.sha256, self.fobj)
 
+
 NULL_AUDIT = Audit(None, None, None)
 
 
 class Auditor:
-
     def __init__(self):
         self.user_folder = get_current_user().folder + os.path.sep
 
@@ -99,14 +96,14 @@ class Auditor:
 
         def context_for(paths):
             if not isinstance(paths, tuple):
-                paths = (paths, )
+                paths = (paths,)
             return [
                 OperationContext(
-                    local=self.user_folder / Path(path),
-                    db=db_map.get(path, NULL_AUDIT).fobj,
-                    remote=remote_map.get(path, NULL_AUDIT).fobj
+                        local=self.user_folder / Path(path),
+                        db=db_map.get(path, NULL_AUDIT).fobj,
+                        remote=remote_map.get(path, NULL_AUDIT).fobj
                 ) for path in paths
-            ]
+                ]
 
         diffs = {
             Location.LOCAL: self._diff(local_map, db_map),
@@ -119,7 +116,7 @@ class Auditor:
             for event_type in EventType:
                 for change in changes[event_type]:
                     if not isinstance(change, tuple):
-                        change = (change, )
+                        change = (change,)
                     for s in change:
                         parts = s.split(os.path.sep)
                         while not parts[-1] == settings.OSF_STORAGE_FOLDER:
@@ -127,29 +124,29 @@ class Auditor:
                             path = os.path.sep.join(parts + [''])
                             if path not in modifications[location]:
                                 modifications[location][path] = ModificationEvent(
-                                    location,
-                                    EventType.UPDATE,
-                                    context_for(path),
-                                    path
+                                        location,
+                                        EventType.UPDATE,
+                                        context_for(path),
+                                        path
                                 )
                         # *change always adds the src_path kwarg and sometime adds dest_path
                         modifications[location][s] = ModificationEvent(
-                            location,
-                            event_type,
-                            context_for(change),
-                            *change
+                                location,
+                                event_type,
+                                context_for(change),
+                                *change
                         )
         return modifications[Location.LOCAL], modifications[Location.REMOTE]
 
     def collect_all_db(self):
         return {
             entry.rel_path: Audit(
-                entry.id,
-                entry.sha256,
-                entry
+                    entry.id,
+                    entry.sha256,
+                    entry
             )
             for entry in Session().query(File)
-        }
+            }
 
     def collect_all_remote(self):
         ret = {}
@@ -166,15 +163,15 @@ class Auditor:
                     continue
                 remote_files = remote_node.get_storage(id='osfstorage')
                 rel_path = os.path.join(
-                    node.rel_path,
-                    settings.OSF_STORAGE_FOLDER
+                        node.rel_path,
+                        settings.OSF_STORAGE_FOLDER
                 )
                 tpe.submit(
-                    self._collect_node_remote,
-                    remote_files,
-                    ret,
-                    rel_path,
-                    tpe
+                        self._collect_node_remote,
+                        remote_files,
+                        ret,
+                        rel_path,
+                        tpe
                 )
                 try:
                     stack = remote_node.get_children(lazy=False)
@@ -191,17 +188,17 @@ class Auditor:
                     # for each Node in the remote project hierarchy. Use the db Node's
                     # path representation to ensure consistent path naming conventions.
                     child_path = Session().query(Node).filter(
-                        Node.id == remote_child.id
+                            Node.id == remote_child.id
                     ).one().rel_path
                     tpe.submit(
-                        self._collect_node_remote,
-                        child_files,
-                        ret,
-                        os.path.join(
-                            child_path,
-                            settings.OSF_STORAGE_FOLDER
-                        ),
-                        tpe
+                            self._collect_node_remote,
+                            child_files,
+                            ret,
+                            os.path.join(
+                                    child_path,
+                                    settings.OSF_STORAGE_FOLDER
+                            ),
+                            tpe
                     )
                     try:
                         stack = stack + remote_child.get_children(lazy=False)
@@ -219,9 +216,9 @@ class Auditor:
             rel_path = os.path.join(rel_path, root.name)
 
         acc[rel_path + os.path.sep] = Audit(
-            root.id,
-            None if root.is_dir else root.extra['hashes']['sha256'],
-            root
+                root.id,
+                None if root.is_dir else root.extra['hashes']['sha256'],
+                root
         )
 
         for child in root.get_children():
@@ -232,9 +229,9 @@ class Auditor:
                 tpe.submit(self._collect_node_remote, child, acc, rel_path, tpe)
             else:
                 acc[os.path.join(rel_path, child.name)] = Audit(
-                    child.id,
-                    child.extra['hashes']['sha256'],
-                    child
+                        child.id,
+                        child.extra['hashes']['sha256'],
+                        child
                 )
         tpe._work_queue.task_done()
 
@@ -248,10 +245,10 @@ class Auditor:
             while len(stack):
                 child = stack.pop(0)
                 child_path = Path(
-                    os.path.join(
-                        child.path,
-                        settings.OSF_STORAGE_FOLDER
-                    )
+                        os.path.join(
+                                child.path,
+                                settings.OSF_STORAGE_FOLDER
+                        )
                 )
                 self._collect_node_local(child_path, ret, db_map)
                 stack = stack + child.children
@@ -260,9 +257,9 @@ class Auditor:
     def _collect_node_local(self, root, acc, db_map):
         rel_path = str(root).replace(self.user_folder, '') + os.path.sep
         acc[rel_path] = Audit(
-            db_map.get(rel_path, NULL_AUDIT).fid,
-            None,
-            rel_path
+                db_map.get(rel_path, NULL_AUDIT).fid,
+                None,
+                rel_path
         )
 
         for child in root.iterdir():
@@ -274,9 +271,9 @@ class Auditor:
             else:
                 rel_path = str(child).replace(self.user_folder, '')
                 acc[rel_path] = Audit(
-                    db_map.get(rel_path, NULL_AUDIT).fid,
-                    hash_file(child),
-                    rel_path
+                        db_map.get(rel_path, NULL_AUDIT).fid,
+                        hash_file(child),
+                        rel_path
                 )
         return acc
 
