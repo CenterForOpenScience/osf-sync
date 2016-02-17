@@ -26,7 +26,6 @@ from osfoffline.sync.remote import RemoteSyncWorker
 logger = logging.getLogger(__name__)
 
 WINDOWS_RUN_PATH = 'HKEY_CURRENT_USER\\Software\\Microsoft\\Windows\\CurrentVersion\\Run'
-
 # sys.platform will be win32 regardless of the bitness of the underlying Windows system
 # see http://svn.python.org/view/python/trunk/PC/pyconfig.h?view=markup line 334
 ON_WINDOWS = sys.platform == 'win32'
