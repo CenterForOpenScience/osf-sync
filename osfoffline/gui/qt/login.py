@@ -4,8 +4,6 @@ import sys
 from PyQt5.QtWidgets import QDialog, QInputDialog, QMessageBox
 
 from sqlalchemy.orm.exc import NoResultFound
-from urllib.request import urlopen
-from urllib.error import URLError
 
 from osfoffline import language
 from osfoffline.database import Session
