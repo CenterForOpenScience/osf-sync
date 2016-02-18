@@ -74,8 +74,9 @@ def handle_move_src_update(local, remote, local_events, remote_events):
         elif child.endswith(os.path.sep):
             handle_move_src_update(llocal, lremote, local_events, remote_events)
 
-    Session().delete(local.context.db)
-    Session().commit()
+    with Session() as session:
+        session.delete(local.context.db)
+        session.commit()
     return True
 
 
@@ -110,8 +111,9 @@ def move_gate(event_src, event_dest):
 # File A modified locally. File B renamed to File B remotely
 def fork_file(local, remote, local_events, remote_events):
     del remote_events[remote.dest_path]
-    Session().remove(local.context.db)
-    Session().commit()
+    with Session() as session:
+        session.remove(local.context.db)
+        session.commit()
     from osfoffline.sync.remote import RemoteSyncWorker
     RemoteSyncWorker().sync_now()
 

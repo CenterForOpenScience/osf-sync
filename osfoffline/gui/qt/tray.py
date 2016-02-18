@@ -22,7 +22,6 @@ from osfoffline.client.osf import OSFClient
 from osfoffline.database import Session
 from osfoffline.database import drop_db
 from osfoffline.database.models import User
-from osfoffline.database.utils import save
 from osfoffline.gui.qt.login import LoginScreen
 from osfoffline.gui.qt.menu import OSFOfflineMenu
 from osfoffline.utils.log import remove_user_from_sentry_logs
@@ -93,9 +92,11 @@ class OSFOfflineQT(QSystemTrayIcon):
             else:
                 containing_folder = os.path.abspath(res)
 
-        user.folder = os.path.join(containing_folder, 'OSF')
-        os.makedirs(user.folder, exist_ok=True)
-        save(Session(), user)
+        with Session() as session:
+            user.folder = os.path.join(containing_folder, 'OSF')
+            os.makedirs(user.folder, exist_ok=True)
+            session.add(user)
+            session.commit()
 
     def start(self):
         logger.debug('Start in main called.')
@@ -210,15 +211,16 @@ class OSFOfflineQT(QSystemTrayIcon):
             )
 
     def quit(self):
-
-        try:
-            user = Session().query(User).one()
-        except NoResultFound:
-            pass
-        else:
-            logger.debug('Saving user data')
-            save(Session(), user)
-        Session().close()
+        with Session() as session:
+            try:
+                user = session.query(User).one()
+            except NoResultFound:
+                pass
+            else:
+                logger.debug('Saving user data')
+                session.add(user)
+                session.commit()
+            session.close()
 
         logger.info('Quitting application')
         QApplication.instance().quit()
@@ -238,7 +240,8 @@ class OSFOfflineQT(QSystemTrayIcon):
         if self._context_menu.preferences.isVisible():
             self._context_menu.preferences.close()
 
-        Session().close()
+        with Session() as session:
+            session.close()
 
         logger.info('Restart the application.')
         self.start()

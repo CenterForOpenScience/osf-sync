@@ -10,7 +10,6 @@ from sqlalchemy.orm.exc import NoResultFound
 from osfoffline import settings
 from osfoffline.database import clear_models, Session
 from osfoffline.database import models
-from osfoffline.database.utils import save
 from osfoffline.exceptions import AuthError, TwoFactorRequiredError
 
 logger = logging.getLogger(__name__)
@@ -23,7 +22,8 @@ def get_current_user():
     :rtype: models.User
     :raises SQLAlchemyError
     """
-    return Session().query(models.User).one()
+    with Session() as session:
+        return session.query(models.User).one()
 
 
 class AuthClient(object):
@@ -150,7 +150,9 @@ class AuthClient(object):
             user = self._create_user(username, personal_access_token)
 
         try:
-            save(Session(), user)
+            with Session() as session:
+                session.add(user)
+                session.commit()
         except SQLAlchemyError:
             msg = 'Unable to save user data. Please try again later'
             logger.exception(msg)

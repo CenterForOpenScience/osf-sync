@@ -1,7 +1,7 @@
 import contextlib
+import threading
 
 from sqlalchemy import create_engine
-from sqlalchemy.orm import scoped_session
 from sqlalchemy.orm import sessionmaker
 
 from osfoffline.database.models import Base, User, Node, File
@@ -12,12 +12,14 @@ URL = 'sqlite:///{}'.format(PROJECT_DB_FILE)
 
 engine = create_engine(URL, connect_args={'check_same_thread': False}, )
 Base.metadata.create_all(engine)
-session_factory = sessionmaker(bind=engine)
-_Session = scoped_session(session_factory)()
+_session = sessionmaker(bind=engine)()
+_session_rlock = threading.RLock()
 
 
+@contextlib.contextmanager
 def Session():
-    return _Session
+    with _session_rlock:
+        yield _session
 
 
 def drop_db():
@@ -30,4 +32,5 @@ def drop_db():
 
 def clear_models():
     for model in CORE_OSFO_MODELS:
-        Session().query(model).delete()
+        with Session() as session:
+            session.query(model).delete()

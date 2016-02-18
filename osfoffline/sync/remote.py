@@ -14,7 +14,6 @@ from osfoffline.client.osf import OSFClient, ClientLoadError
 
 from osfoffline.database import Session
 from osfoffline.database.models import Node, File
-from osfoffline.database.utils import save
 
 from osfoffline.sync.local import LocalSyncWorker
 from osfoffline.sync.exceptions import FolderNotInFileSystem
@@ -45,9 +44,11 @@ class RemoteSyncWorker(threading.Thread, metaclass=Singleton):
 
     def initialize(self):
         logger.info('Beginning initial sync')
-        for node in Session().query(Node).filter(Node.sync).all():
+        with Session() as session:
+            nodes = session.query(Node).filter(Node.sync).all()
+        for node in nodes:
             self._preprocess_node(node)
-        Session().commit()
+        # session.commit()
         # TODO No need for this check
         self._check()
         logger.info('Initial sync finished')
@@ -69,7 +70,9 @@ class RemoteSyncWorker(threading.Thread, metaclass=Singleton):
             LocalSyncWorker().ignore.set()
 
             # Ensure selected node directories exist and db entries created
-            for node in Session().query(Node).filter(Node.sync).all():
+            with Session() as session:
+                nodes = session.query(Node).filter(Node.sync).all()
+            for node in nodes:
                 try:
                     self._preprocess_node(node, delete=False)
                 except OSError:
@@ -77,7 +80,7 @@ class RemoteSyncWorker(threading.Thread, metaclass=Singleton):
                     # TODO: Should the error be user-facing?
                     logger.exception('Error creating node directory for sync')
 
-            Session().commit()
+            # Session().commit()
             OperationWorker().join_queue()
 
             try:
@@ -114,61 +117,66 @@ class RemoteSyncWorker(threading.Thread, metaclass=Singleton):
         children_ids = [c.id for c in remote_children]
         for record in node.children:
             if record.id not in children_ids:
-                Session().delete(record)
+                with Session() as session:
+                    session.delete(record)
+                    session.commit()
                 logger.info("Deleted remotely deleted database Node<{}>".format(record.id))
             else:
                 remote_child = OSFClient().get_node(record.id)
                 self._orphan_children(record, remote_child.get_children(lazy=False))
 
     def _preprocess_node(self, node, *, delete=True):
-        nodes = [node]
-        try:
-            remote_node = OSFClient().get_node(node.id)
-        except ClientLoadError as err:
-            if err.status in (http.client.NOT_FOUND, http.client.GONE):
-                # cascade should automagically delete children
-                Session().delete(node)
-                logger.info(
-                    "Remote Node<{}> appears to have been deleted; will stop tracking and delete from local database".format(
-                        node.id))
-                return
-            else:  # TODO: maybe handle other statuses here
-                raise
-        stack = remote_node.get_children(lazy=False)
-        self._orphan_children(node, stack)
-        while len(stack):
-            child = stack.pop(0)
-            # Ensure the database contains a Node record for each node in the project heirarchy.
-            # This must guarentee the remote/database representations of the project heirarchy are
-            # fully congruent.
-            # TODO: If we want to support syncing only subsets of the project heirarchy then some
-            # additional logic could be added here to skip over certain nodes.
+        with Session() as session:
+            nodes = [node]
             try:
-                db_child = Session().query(Node).filter(
-                    Node.id == child.id
-                ).one()
-            except NoResultFound:
-                # Setting sync=False notes that the node is implicity synced
-                parent = Session().query(Node).filter(
-                    Node.id == child.parent.id
-                ).one()
-                db_child = Node(
-                    id=child.id,
-                    title=child.title,
-                    user=node.user,
-                    parent_id=parent.id
-                )
-                Session().add(db_child)
-            nodes.append(db_child)
-            children = child.get_children(lazy=False)
-            self._orphan_children(db_child, children)
-            stack = stack + children
-        save(Session())
+                remote_node = OSFClient().get_node(node.id)
+            except ClientLoadError as err:
+                if err.status in (http.client.NOT_FOUND, http.client.GONE):
+                    # cascade should automagically delete children
+                    session.delete(node)
+                    logger.info(
+                        "Remote Node<{}> appears to have been deleted; will stop tracking and delete from local database".format(
+                            node.id))
+                    return
+                else:  # TODO: maybe handle other statuses here
+                    raise
+            stack = remote_node.get_children(lazy=False)
+            self._orphan_children(node, stack)
+            while len(stack):
+                child = stack.pop(0)
+                # Ensure the database contains a Node record for each node in the project heirarchy.
+                # This must guarentee the remote/database representations of the project heirarchy are
+                # fully congruent.
+                # TODO: If we want to support syncing only subsets of the project heirarchy then some
+                # additional logic could be added here to skip over certain nodes.
+                try:
+                    db_child = session.query(Node).filter(
+                        Node.id == child.id
+                    ).one()
+                except NoResultFound:
+                    # Setting sync=False notes that the node is implicity synced
+                    parent = session.query(Node).filter(
+                        Node.id == child.parent.id
+                    ).one()
+                    db_child = Node(
+                        id=child.id,
+                        title=child.title,
+                        user=node.user,
+                        parent_id=parent.id
+                    )
+                    session.add(db_child)
+                nodes.append(db_child)
+                children = child.get_children(lazy=False)
+                self._orphan_children(db_child, children)
+                stack = stack + children
+            session.commit()
+
         for node in nodes:
             local = Path(os.path.join(node.path, settings.OSF_STORAGE_FOLDER))
             if delete and not local.exists():
                 logger.warning('Clearing files for node {}'.format(node))
-                Session().query(File).filter(File.node_id == node.id).delete()
+                with Session() as session:
+                    session.query(File).filter(File.node_id == node.id).delete()
             os.makedirs(str(local), exist_ok=True)
 
     def _check(self):

@@ -10,7 +10,6 @@ from urllib.error import URLError
 from osfoffline import language
 from osfoffline.database import Session
 from osfoffline.database.models import User
-from osfoffline.database.utils import save
 from osfoffline.exceptions import AuthError, TwoFactorRequiredError
 from osfoffline.utils.internetchecker import InternetChecker
 from osfoffline.utils.authentication import AuthClient
@@ -29,7 +28,8 @@ class LoginScreen(QDialog, Ui_login):
 
     def get_user(self):
         try:
-            self.user = Session().query(User).one()
+            with Session() as session:
+                self.user = session.query(User).one()
             try:
                 urlopen("http://www.google.com")
             except URLError:
@@ -38,7 +38,9 @@ class LoginScreen(QDialog, Ui_login):
             else:
                 logger.info("Internet is up and running.")
                 self.user = AuthClient().populate_user_data(self.user)
-                save(Session(), self.user)
+                with Session() as session:
+                    session.add(self.user)
+                    session.commit()
         except AuthError:
             self.usernameEdit.setText(self.user.login)
             self.passwordEdit.setFocus()

@@ -12,7 +12,6 @@ from osfoffline.client import osf as osf_client
 from osfoffline.client.osf import OSFClient
 from osfoffline.database import models
 from osfoffline.database import Session
-from osfoffline.database.utils import save
 from osfoffline.tasks.notifications import Notification
 from osfoffline.utils.authentication import get_current_user
 
@@ -65,7 +64,8 @@ class OperationContext:
                 check_is_folder=self._check_is_folder
             )
         elif self._remote:
-            self._db = Session().query(models.File).filter(models.File.id == self._remote.id).one()
+            with Session() as session:
+                self._db = session.query(models.File).filter(models.File.id == self._remote.id).one()
         return self._db
 
     @property
@@ -134,7 +134,8 @@ class LocalCreateFile(BaseOperation):
     """Download an individual file from the OSF into a folder that already exists"""
 
     def _run(self):
-        db_parent = Session().query(models.File).filter(models.File.id == self.remote.parent.id).one()
+        with Session() as session:
+            db_parent = session.query(models.File).filter(models.File.id == self.remote.parent.id).one()
         path = os.path.join(db_parent.path, self.remote.name)
         # TODO: Create temp file in target directory while downloading, and rename when done. (check that no temp file exists)
         resp = OSFClient().request('GET', self.remote.raw['links']['download'], stream=True)
@@ -157,7 +158,8 @@ class LocalCreateFolder(BaseOperation):
     """Create a folder, and populate the contents of that folder (all files to be downloaded)"""
 
     def _run(self):
-        db_parent = Session().query(models.File).filter(models.File.id == self.remote.parent.id).one()
+        with Session() as session:
+            db_parent = session.query(models.File).filter(models.File.id == self.remote.parent.id).one()
         # TODO folder and file with same name
         os.mkdir(os.path.join(db_parent.path, self.remote.name))
         DatabaseCreateFolder(
@@ -171,7 +173,8 @@ class LocalUpdateFile(BaseOperation):
     """Download a file from the remote server and modify the database to show task completed"""
 
     def _run(self):
-        db_file = Session().query(models.File).filter(models.File.id == self.remote.id).one()
+        with Session() as session:
+            db_file = session.query(models.File).filter(models.File.id == self.remote.id).one()
 
         tmp_path = os.path.join(db_file.parent.path, '.~tmp.{}'.format(db_file.name))
 
@@ -295,7 +298,8 @@ class RemoteDelete(BaseOperation):
 
     def _run(self):
         resp = OSFClient().request('DELETE', self.remote.raw['links']['delete'])
-        db_model = Session().query(models.File).filter(models.File.id == self.remote.id).one()
+        with Session() as session:
+            db_model = session.query(models.File).filter(models.File.id == self.remote.id).one()
         if resp.status_code == http.client.FORBIDDEN:
             permission_error_notification(db_model.kind.lower(), self.remote.name, self.node.title)
         else:
@@ -321,18 +325,20 @@ class DatabaseCreateFile(BaseOperation):
     def _run(self):
         parent = self.remote.parent.id if self.remote.parent else None
 
-        save(Session(), models.File(
-            id=self.remote.id,
-            name=self.remote.name,
-            kind=self.remote.kind,
-            provider=self.remote.provider,
-            user=get_current_user(),
-            parent_id=parent,
-            node_id=self.node.id,
-            size=self.remote.size,
-            md5=self.remote.extra['hashes']['md5'],
-            sha256=self.remote.extra['hashes']['sha256'],
-        ))
+        with Session() as session:
+            session.add(models.File(
+                id=self.remote.id,
+                name=self.remote.name,
+                kind=self.remote.kind,
+                provider=self.remote.provider,
+                user=get_current_user(),
+                parent_id=parent,
+                node_id=self.node.id,
+                size=self.remote.size,
+                md5=self.remote.extra['hashes']['md5'],
+                sha256=self.remote.extra['hashes']['sha256'],
+            ))
+            session.commit()
 
 
 class DatabaseCreateFolder(BaseOperation):
@@ -340,15 +346,17 @@ class DatabaseCreateFolder(BaseOperation):
     def _run(self):
         parent = self.remote.parent.id if self.remote.parent else None
 
-        save(Session(), models.File(
-            id=self.remote.id,
-            name=self.remote.name,
-            kind=self.remote.kind,
-            provider=self.remote.provider,
-            user=get_current_user(),
-            parent_id=parent,
-            node_id=self.node.id
-        ))
+        with Session() as session:
+            session.add(models.File(
+                id=self.remote.id,
+                name=self.remote.name,
+                kind=self.remote.kind,
+                provider=self.remote.provider,
+                user=get_current_user(),
+                parent_id=parent,
+                node_id=self.node.id
+            ))
+            session.commit()
 
 
 class DatabaseUpdateFile(BaseOperation):
@@ -366,7 +374,9 @@ class DatabaseUpdateFile(BaseOperation):
         self.db.md5 = self.remote.extra['hashes']['md5']
         self.db.sha256 = self.remote.extra['hashes']['sha256']
 
-        save(Session(), self.db)
+        with Session() as session:
+            session.add(self.db)
+            session.commit()
 
 
 class DatabaseUpdateFolder(BaseOperation):
@@ -381,14 +391,17 @@ class DatabaseUpdateFolder(BaseOperation):
         self.db.parent_id = parent
         self.db.node_id = self.node.id
 
-        save(Session(), self.db)
+        with Session() as session:
+            session.add(self.db)
+            session.commit()
 
 
 class DatabaseDelete(BaseOperation):
 
     def _run(self):
-        Session().delete(self.db)
-        Session().commit()
+        with Session() as session:
+            session.delete(self.db)
+            session.commit()
 
 
 # Auditor looks for operations by specific names; DRY redundant implementations
@@ -427,7 +440,8 @@ class RemoteMove(MoveOperation):
             remote = osf_client.File(None, data['data'])
             # WB id are <provider>/<id>
             remote.id = remote.id.replace(remote.provider + '/', '')
-            remote.parent = Session().query(models.File).filter(models.File.id == dest_parent.db.id).one()
+            with Session() as session:
+                remote.parent = session.query(models.File).filter(models.File.id == dest_parent.db.id).one()
             self.DB_CLASS(
                 OperationContext(remote=remote, db=self.db, node=remote.parent.node)
             ).run()

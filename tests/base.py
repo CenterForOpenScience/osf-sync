@@ -7,7 +7,6 @@ import unittest
 
 from osfoffline import settings
 from osfoffline.database import models
-from osfoffline.database.utils import save
 from osfoffline.database import drop_db, Session
 
 from tests.utils import (
@@ -114,7 +113,10 @@ class OSFOTestBase(unittest.TestCase):
             sync=True,
             user_id = user.id
         )
-        save(Session(), user, node)
+        with Session() as session:
+            session.add(user)
+            session.add(node)
+            session.commit()
 
     @pytest.fixture(scope='function', autouse=True)
     def initdir(self, request, tmpdir):

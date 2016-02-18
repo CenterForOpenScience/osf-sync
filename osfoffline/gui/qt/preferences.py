@@ -20,7 +20,6 @@ from osfoffline.application.background import BackgroundHandler
 from osfoffline.client.osf import OSFClient
 from osfoffline.database import Session
 from osfoffline.database.models import User, Node
-from osfoffline.database.utils import save
 from osfoffline.gui.qt.generated.preferences import Ui_Settings
 from osfoffline.tasks.notifications import Notification
 
@@ -121,10 +120,12 @@ class Preferences(QDialog, Ui_Settings):
                     return event.ignore()
         self.reset_tree_widget()
 
-        user = Session().query(User).one_or_none()
-        if user:
-            user.first_boot = False
-            save(Session(), user)
+        with Session() as session:
+            user = session.query(User).one_or_none()
+            if user:
+                user.first_boot = False
+                session.add(user)
+                session.commit()
 
         if ON_WINDOWS:
             if self.startAtBoot.isChecked():
@@ -141,7 +142,8 @@ class Preferences(QDialog, Ui_Settings):
         event.accept()
 
     def set_containing_folder(self, save_setting=False):
-        user = Session().query(User).one()
+        with Session() as session:
+            user = session.query(User).one()
 
         logger.warning('Changing containing folder')
         res = QFileDialog.getExistingDirectory(caption='Choose where to place OSF folder')
@@ -163,35 +165,34 @@ class Preferences(QDialog, Ui_Settings):
         self.containing_folder_updated_signal.emit(folder)
 
         if save_setting:
-            save(Session(), user)
+            with Session() as session:
+                session.add(user)
+                session.commit()
             self.update_sync_nodes()
 
     def update_sync_nodes(self):
         self.selected_nodes = []
-        user = Session().query(User).one()
-        for tree_item, node in self.tree_items:
-            checked = tree_item.checkState(self.PROJECT_SYNC_COLUMN) == Qt.Checked
-            try:
-                db_node = Session().query(Node).filter(Node.id == node.id).one()
-            except NoResultFound:
-                db_node = None
 
-            if checked:
-                self.selected_nodes.append(node.id)
-                if not db_node:
-                    Session().add(
-                        Node(
-                            id=node.id,
-                            title=node.title,
-                            user=user,
-                            sync=True
+        with Session() as session:
+            user = session.query(User).one()
+            for tree_item, node in self.tree_items:
+                checked = tree_item.checkState(self.PROJECT_SYNC_COLUMN) == Qt.Checked
+                try:
+                    db_node = session.query(Node).filter(Node.id == node.id).one()
+                except NoResultFound:
+                    db_node = None
+
+                if checked:
+                    self.selected_nodes.append(node.id)
+                    if not db_node:
+                        session.add(
+                            Node(id=node.id, title=node.title, user=user, sync=True)
                         )
-                    )
-                else:
-                    db_node.sync = True
-            elif db_node:
-                Session().delete(db_node)
-        save(Session())
+                    else:
+                        db_node.sync = True
+                elif db_node:
+                    session.delete(db_node)
+            session.commit()
         BackgroundHandler().sync_now()
         self.close()
 
@@ -215,7 +216,8 @@ class Preferences(QDialog, Ui_Settings):
         self.activateWindow()
 
     def selector(self, selected_index):
-        user = Session().query(User).one()
+        with Session() as session:
+            user = session.query(User).one()
         if selected_index == self.GENERAL:
             containing_folder = os.path.dirname(user.folder)
             self.containingFolderTextEdit.setText(self._translate("Preferences", containing_folder))
@@ -240,10 +242,11 @@ class Preferences(QDialog, Ui_Settings):
         self.reset_tree_widget()
         _translate = QCoreApplication.translate
         self.selected_nodes = []
-        all_selected_nodes = [n.id for n in Session().query(Node)]
-        for n in Session().query(Node):
-            if n.parent_id not in all_selected_nodes and n.id not in self.selected_nodes:
-                self.selected_nodes.append(n.id)
+        with Session() as session:
+            all_selected_nodes = [n.id for n in session.query(Node)]
+            for n in session.query(Node):
+                if n.parent_id not in all_selected_nodes and n.id not in self.selected_nodes:
+                    self.selected_nodes.append(n.id)
 
         for node in sorted(nodes, key=lambda n: n.title):
             tree_item = QTreeWidgetItem(self.treeWidget)
