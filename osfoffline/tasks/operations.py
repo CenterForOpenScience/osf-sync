@@ -299,10 +299,14 @@ class RemoteDelete(BaseOperation):
             permission_error_notification(db_model.kind.lower(), self.remote.name, self.node.title)
         else:
             assert resp.status_code == http.client.NO_CONTENT, resp
-            DatabaseDelete(
-                OperationContext(db=db_model)
-            ).run()
             Notification().info('Remote delete {}: {}'.format(db_model.kind.lower(), self.remote.name))
+        # Always delete the database record. There are two cases:
+        # 1. User can write, and the remote file is deleted
+        # 2. User can not write, but has deleted a local file. Forgetting the database record means that file
+        # will get re-synced later
+        DatabaseDelete(
+            OperationContext(db=db_model)
+        ).run()
 
 
 # Auditor looks for operations by specific names; DRY redundant implementations
@@ -409,8 +413,13 @@ class RemoteMove(MoveOperation):
         data = resp.json()
         if resp.status_code == http.client.FORBIDDEN:
             permission_error_notification(
-                    'folder' if self._dest_context.local.is_dir else 'file',
-                    self._dest_context.local.name, self._dest_context.node.title)
+                'folder' if self._dest_context.local.is_dir else 'file',
+                self._dest_context.local.name, self._dest_context.node.title
+            )
+            # Delete the database record.
+            DatabaseDelete(
+                OperationContext(db=self.db)
+            ).run()
         else:
             assert resp.status_code in (http.client.CREATED, http.client.OK), resp
 
