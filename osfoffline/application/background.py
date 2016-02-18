@@ -49,9 +49,11 @@ class BackgroundHandler(metaclass=Singleton):
             if not InternetChecker():
                 InternetChecker().start()
         else:
-            if not RemoteSyncWorker():
+            try:
                 RemoteSyncWorker().initialize()
                 RemoteSyncWorker().start()
+            except RuntimeError:
+                pass
         RemoteSyncWorker().sync_now()
 
     def stop(self):

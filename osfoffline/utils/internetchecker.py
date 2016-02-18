@@ -34,6 +34,7 @@ class InternetChecker(threading.Thread, metaclass=Singleton):
             self.has_connection = False
             if RemoteSyncWorker():
                 RemoteSyncWorker().stop()
+                del type(RemoteSyncWorker)._instances[RemoteSyncWorker]
         else:
             logger.info("Internet is up and running.")
             self.has_connection = True
@@ -41,7 +42,7 @@ class InternetChecker(threading.Thread, metaclass=Singleton):
         return self.has_connection
 
     def stop(self):
-        logger.info('Stopping RemoteSyncWorker')
+        logger.info('Stopping InternetChecker')
         self.__stop.set()
 
         if not RemoteSyncWorker():
