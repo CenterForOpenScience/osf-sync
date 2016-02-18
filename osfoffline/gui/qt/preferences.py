@@ -110,31 +110,26 @@ class Preferences(QDialog, Ui_Settings):
         event.accept()
 
     def set_containing_folder(self, save_setting=False):
-        new_containing_folder = QFileDialog.getExistingDirectory(self, "Choose where to place OSF folder")
-        osf_path = os.path.join(new_containing_folder, "OSF")
-
-        if not new_containing_folder:
-            # cancel, closed, or no folder chosen
-            return
-        elif not os.path.exists(osf_path):
-            os.makedirs(osf_path)
-        elif os.path.isfile(osf_path):
-            logger.debug(language.TARGET_FOLDER_EXISTS)
-            return
-
         user = Session().query(User).one()
+
+        logger.warning('Changing containing folder')
+        res = QFileDialog.getExistingDirectory(caption='Choose where to place OSF folder')
+        if not res:
+            return
+        containing_folder = os.path.abspath(res)
+        folder = os.path.join(containing_folder, 'OSF')
 
         if save_setting:
             logger.debug('Copy files into new OSF folder.')
             # copy the synced folders from the old to new location
             # so OSF doesn't think they were deleted
-            copy_tree(user.folder, os.path.join(osf_path))
+            copy_tree(user.folder, folder)
 
-        user.folder = os.path.join(osf_path)
+        user.folder = folder
 
         self.containingFolderTextEdit.setText(self._translate("Preferences", self.containing_folder))
         self.open_window(tab=Preferences.GENERAL)  # todo: dynamically update ui????
-        self.containing_folder_updated_signal.emit(new_containing_folder)
+        self.containing_folder_updated_signal.emit(folder)
 
         if save_setting:
             save(Session(), user)
