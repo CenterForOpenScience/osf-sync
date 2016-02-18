@@ -111,11 +111,6 @@ class Ui_Settings(object):
         self.startAtBoot.setText(_translate("Settings", "Start at boot"))
         self.groupBox_6.setTitle(_translate("Settings", "Choose folder to Place OSF folder in "))
         self.changeFolderButton.setText(_translate("Settings", "Change"))
-        self.containingFolderTextEdit.setHtml(_translate("Settings", "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"
-"<html><head><meta name=\"qrichtext\" content=\"1\" /><style type=\"text/css\">\n"
-"p, li { white-space: pre-wrap; }\n"
-"</style></head><body style=\" font-family:\'.SF NS Text\'; font-size:13pt; font-weight:400; font-style:normal;\">\n"
-"<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-family:\'Ubuntu\'; font-size:11pt;\">/home/himanshu/somefolder/My Project</span></p></body></html>"))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab), _translate("Settings", "General"))
         self.groupBox_2.setTitle(_translate("Settings", "Account"))
         self.label.setText(_translate("Settings", "User name"))
@@ -128,6 +123,12 @@ class Ui_Settings(object):
         self.treeWidget.headerItem().setText(1, _translate("Settings", "Projects"))
         self.pushButton_2.setText(_translate("Settings", "Sync None"))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_2), _translate("Settings", "OSF"))
+        self.textEdit_2.setHtml(_translate("Settings", "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"
+ "<html><head><meta name=\"qrichtext\" content=\"1\" /><style type=\"text/css\">\n"
+ "p, li { white-space: pre-wrap; }\n"
+ "</style></head><body style=\" font-family:\'.SF NS Text\'; font-size:13pt; font-weight:400; font-style:normal;\">\n"
+ "<p align=\"center\" style=\" margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-family:\'Ubuntu\'; font-size:11pt;\">OSF Sync</span></p>\n"
+ "<p align=\"center\" style=\" margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-family:\'Ubuntu\'; font-size:11pt;\">© Center for Open Science</span></p></body></html>"))
         self.labelVersion.setText(_translate("Settings", "OSF Sync v0.0.0"))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_5), _translate("Settings", "About"))
 
