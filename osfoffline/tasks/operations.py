@@ -22,8 +22,9 @@ logger = logging.getLogger(__name__)
 
 def permission_error_notification(file_or_folder, file_name, node_title):
     Notification().error(
-            'Could not sync {} {} in project {}. Please verify you '
-            'have write permission to the project.'.format(file_or_folder, file_name, node_title))
+        'Could not sync {} {} in project {}. Please verify you '
+        'have write permission to the project.'.format(file_or_folder, file_name, node_title)
+    )
 
 class OperationContext:
     """Store common data describing an operation"""

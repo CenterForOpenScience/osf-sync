@@ -15,7 +15,6 @@ from PyQt5.QtWidgets import QApplication
 from PyQt5.QtWidgets import QFileDialog
 from PyQt5.QtWidgets import QSystemTrayIcon
 
-from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm.exc import NoResultFound
 
 from osfoffline.application.background import BackgroundHandler
@@ -61,7 +60,6 @@ class OSFOfflineQT(QSystemTrayIcon):
             super().__init__(QIcon(':/tray_icon_win.png'), application)
         else:
             super().__init__(QIcon(':/tray_icon_mac.png'), application)
-
 
         self._context_menu = OSFOfflineMenu(self)
         self.setContextMenu(self._context_menu)
@@ -190,10 +188,10 @@ class OSFOfflineQT(QSystemTrayIcon):
                     self._show_notifications(notification_list)
                 else:
                     self.showMessage(
-                            'Updated multiple',
-                            'Updated {} files and folders'.format(len(notification_list)),
-                            QSystemTrayIcon.NoIcon,
-                            msecs=settings.ALERT_DURATION / 1000.
+                        'Updated multiple',
+                        'Updated {} files and folders'.format(len(notification_list)),
+                        QSystemTrayIcon.NoIcon,
+                        msecs=settings.ALERT_DURATION / 1000.
                     )
 
         self.notification_handler.done()
@@ -202,10 +200,10 @@ class OSFOfflineQT(QSystemTrayIcon):
         """Show a message bubble for each notification in the list provided"""
         for n in notifications_list:
             self.showMessage(
-                    'Synchronizing...',
-                    n.msg,
-                    QSystemTrayIcon.NoIcon,
-                    msecs=settings.ALERT_DURATION / 1000.
+                'Synchronizing...',
+                n.msg,
+                QSystemTrayIcon.NoIcon,
+                msecs=settings.ALERT_DURATION / 1000.
             )
 
     def quit(self):

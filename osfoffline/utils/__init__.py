@@ -48,9 +48,7 @@ def extract_node(path):
         'Node - 1482'
         1482
     """
-    node_id = \
-    path.replace(get_current_user().folder, '').split(settings.OSF_STORAGE_FOLDER)[0].strip(os.path.sep).split(
-        os.path.sep)[-1].split(' - ')[-1]
+    node_id = path.replace(get_current_user().folder, '').split(settings.OSF_STORAGE_FOLDER)[0].strip(os.path.sep).split(os.path.sep)[-1].split(' - ')[-1]
     try:
         return Session().query(models.Node).filter(models.Node.id == node_id).one()
     except NoResultFound:
@@ -64,8 +62,7 @@ def local_to_db(local, node, *, is_folder=False, check_is_folder=True):
         for child in db.children:
             if child.name == part:
                 db = child
-    if db.path.rstrip(os.path.sep) != str(local).rstrip(os.path.sep) or (
-        check_is_folder and db.is_folder != (local.is_dir() or is_folder)):
+    if db.path.rstrip(os.path.sep) != str(local).rstrip(os.path.sep) or (check_is_folder and db.is_folder != (local.is_dir() or is_folder)):
         return None
     return db
 
@@ -83,8 +80,8 @@ def _remote_root(db):
     # Fix circular import
     from osfoffline.client import osf
     return next(
-            storage
-            for storage in
-            osf.NodeStorage.load(osf.OSFClient().request_session, db.node.id)
-            if storage.provider == db.provider
+        storage
+        for storage in
+        osf.NodeStorage.load(osf.OSFClient().request_session, db.node.id)
+        if storage.provider == db.provider
     )

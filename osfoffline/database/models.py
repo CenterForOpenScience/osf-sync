@@ -75,9 +75,9 @@ class Node(Base):
         name = '{} - {}'.format(self.title, self.id)
         if self.parent:
             return os.path.join(
-                    self.parent.rel_path,
-                    settings.COMPONENTS_FOLDER,
-                    name
+                self.parent.rel_path,
+                settings.COMPONENTS_FOLDER,
+                name
             )
         else:
             return name
@@ -193,8 +193,7 @@ class File(Base):
         if self.parent:
             return os.path.join(self.parent.rel_path, self.name) + (os.path.sep if self.is_folder else '')
         else:
-            return os.path.join(self.node.rel_path, settings.OSF_STORAGE_FOLDER) + (
-            os.path.sep if self.is_folder else '')
+            return os.path.join(self.node.rel_path, settings.OSF_STORAGE_FOLDER) + (os.path.sep if self.is_folder else '')
 
     def locally_create_children(self):
         self.locally_created = True

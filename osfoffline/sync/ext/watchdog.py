@@ -144,7 +144,7 @@ class ConsolidatedEventHandler(PatternMatchingEventHandler):
                             evt
                             for evt in self._event_cache.children()
                             if evt.event_type == EVENT_TYPE_MOVED
-                            ]
+                        ]
                         if move_events:
                             for evt in move_events:
                                 if evt.dest_path in event.src_path:
@@ -170,8 +170,8 @@ class ConsolidatedEventHandler(PatternMatchingEventHandler):
 
     def _sorted_create_cache(self):
         return sorted(
-                self._create_cache,
-                key=lambda ev: len(Path(ev.src_path).parents)
+            self._create_cache,
+            key=lambda ev: len(Path(ev.src_path).parents)
         )
 
     def flush(self):

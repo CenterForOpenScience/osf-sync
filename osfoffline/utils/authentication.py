@@ -53,10 +53,10 @@ class AuthClient(object):
 
         try:
             resp = requests.post(
-                    token_url.url,
-                    headers=headers,
-                    data=json.dumps(token_request_body),
-                    auth=(username, password)
+                token_url.url,
+                headers=headers,
+                data=json.dumps(token_request_body),
+                auth=(username, password)
             )
         except Exception:
             # Invalid credentials probably, but it's difficult to tell
@@ -87,10 +87,10 @@ class AuthClient(object):
         logger.debug('User doesn\'t exist. Attempting to authenticate, then creating user.')
 
         user = models.User(
-                id='',
-                full_name='',
-                login=username,
-                oauth_token=personal_access_token,
+            id='',
+            full_name='',
+            login=username,
+            oauth_token=personal_access_token,
         )
         return self.populate_user_data(user)
 

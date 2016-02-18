@@ -1,6 +1,5 @@
 import logging
 import sys
-import urllib
 
 from PyQt5.QtWidgets import QDialog, QInputDialog, QMessageBox
 

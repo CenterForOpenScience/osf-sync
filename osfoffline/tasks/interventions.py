@@ -3,7 +3,6 @@ import enum
 import logging
 import threading
 
-from osfoffline import language
 from osfoffline.tasks import operations
 from osfoffline.utils import Singleton
 from osfoffline.sync.ext.auditor import EventType
