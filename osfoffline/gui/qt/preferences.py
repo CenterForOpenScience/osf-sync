@@ -23,7 +23,6 @@ from osfoffline.database.utils import save
 from osfoffline.gui.qt.generated.preferences import Ui_Settings
 from osfoffline.tasks.notifications import Notification
 from osfoffline.sync.remote import RemoteSyncWorker
-from osfoffline.utils.validators import validate_containing_folder
 
 
 logger = logging.getLogger(__name__)
@@ -112,7 +111,6 @@ class Preferences(QDialog, Ui_Settings):
 
     def set_containing_folder(self, save_setting=False):
         user = Session().query(User).one()
-        containing_folder = os.path.dirname(user.folder or '')
 
         logger.warning('Invalid containing folder: "{}"'.format(containing_folder))
         res = QFileDialog.getExistingDirectory(caption='Choose where to place OSF folder')
