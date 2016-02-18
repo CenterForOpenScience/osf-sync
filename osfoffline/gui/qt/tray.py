@@ -55,6 +55,7 @@ class QResizableMessageBox(QMessageBox):
 
 
 class OSFOfflineQT(QSystemTrayIcon):
+
     def __init__(self, application):
         if ON_WINDOWS:
             super().__init__(QIcon(':/tray_icon_win.png'), application)
@@ -67,9 +68,6 @@ class OSFOfflineQT(QSystemTrayIcon):
 
         self.intervention_handler = SyncEventHandler()
         self.notification_handler = SyncEventHandler()
-
-        # handler
-        self.background_handler = BackgroundHandler()
 
         # [ (signal, slot) ]
         signal_slot_pairs = [
@@ -108,11 +106,16 @@ class OSFOfflineQT(QSystemTrayIcon):
 
         self.ensure_folder(user)
         self.show()
+
         logger.debug('starting background handler from main.start')
-        self.background_handler = BackgroundHandler()
-        self.background_handler.set_intervention_cb(self.intervention_handler.enqueue_signal.emit)
-        self.background_handler.set_notification_cb(self.notification_handler.enqueue_signal.emit)
-        self.background_handler.start()
+        BackgroundHandler().set_intervention_cb(self.intervention_handler.enqueue_signal.emit)
+        BackgroundHandler().set_notification_cb(self.notification_handler.enqueue_signal.emit)
+        BackgroundHandler().start()
+
+        if user.first_boot:
+            self._context_menu.preferences.on_first_boot()
+            self._context_menu.open_settings()
+
         return True
 
     def on_intervention(self, intervention):
@@ -221,11 +224,10 @@ class OSFOfflineQT(QSystemTrayIcon):
         QApplication.instance().quit()
 
     def sync_now(self):
-        self.background_handler.sync_now()
+        BackgroundHandler().sync_now()
 
     def logout(self):
-
-        self.background_handler.stop()
+        BackgroundHandler().stop()
         OSFClient().stop()
         # Will probably wipe out everything :shrug:
         drop_db()

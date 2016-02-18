@@ -16,13 +16,13 @@ from sqlalchemy.orm.exc import NoResultFound
 
 import osfoffline
 from osfoffline import language
+from osfoffline.application.background import BackgroundHandler
 from osfoffline.client.osf import OSFClient
 from osfoffline.database import Session
 from osfoffline.database.models import User, Node
 from osfoffline.database.utils import save
 from osfoffline.gui.qt.generated.preferences import Ui_Settings
 from osfoffline.tasks.notifications import Notification
-from osfoffline.sync.remote import RemoteSyncWorker
 
 
 logger = logging.getLogger(__name__)
@@ -31,8 +31,23 @@ WINDOWS_RUN_PATH = 'HKEY_CURRENT_USER\\Software\\Microsoft\\Windows\\CurrentVers
 # sys.platform will be win32 regardless of the bitness of the underlying Windows system
 # see http://svn.python.org/view/python/trunk/PC/pyconfig.h?view=markup line 334
 ON_WINDOWS = sys.platform == 'win32'
-
 ON_MAC = sys.platform == 'darwin'
+MAC_PLIST_FILE_PATH = os.path.expanduser('~/Library/LaunchAgents/io.cos.osfsync.plist')
+MAC_PLIST_FILE_CONTENTS = """
+<?xml version="1.0" encoding="UTF-8"?>
+<plist version="1.0">
+  <dict>
+    <key>KeepAlive</key>
+    <true />
+    <key>Label</key>
+    <string>io.cos.osfsync</string>
+    <key>ProgramArguments</key>
+    <array>
+      <string>{}</string>
+    </array>
+  </dict>
+</plist>
+"""
 
 def get_parent_id(node):
     try:
@@ -73,12 +88,17 @@ class Preferences(QDialog, Ui_Settings):
         if ON_WINDOWS:
             self.winRegistryRunKey = QSettings(WINDOWS_RUN_PATH, QSettings.NativeFormat)
             self.startAtBoot.setChecked(self.winRegistryRunKey.contains('OSF Sync'))
+        elif ON_MAC:
+            self.startAtBoot.setChecked(os.path.exists(MAC_PLIST_FILE_PATH))
 
         self.tree_items = []
         self.selected_nodes = []
 
         self._executor = QtCore.QThread()
         self.node_fetcher = NodeFetcher()
+
+    def on_first_boot(self):
+        self.startAtBoot.setChecked(True)
 
     def update_containing_folder(self):
         self.set_containing_folder(save_setting=True)
@@ -101,11 +121,22 @@ class Preferences(QDialog, Ui_Settings):
                     return event.ignore()
         self.reset_tree_widget()
 
+        user = Session().query(User).one_or_none()
+        if user:
+            user.first_boot = False
+            save(Session(), user)
+
         if ON_WINDOWS:
             if self.startAtBoot.isChecked():
                 self.winRegistryRunKey.setValue('OSF Sync', sys.argv[0])
             else:
                 self.winRegistryRunKey.remove('OSF Sync')
+        elif ON_MAC:
+            if self.startAtBoot.isChecked():
+                with open(MAC_PLIST_FILE_PATH, 'w+') as file:
+                    file.write(MAC_PLIST_FILE_CONTENTS.format(sys.argv[0]))
+            elif os.path.exists(MAC_PLIST_FILE_PATH):
+                os.remove(MAC_PLIST_FILE_PATH)
 
         event.accept()
 
@@ -161,7 +192,7 @@ class Preferences(QDialog, Ui_Settings):
             elif db_node:
                 Session().delete(db_node)
         save(Session())
-        RemoteSyncWorker().sync_now()
+        BackgroundHandler().sync_now()
         self.close()
 
     def sync_all(self):

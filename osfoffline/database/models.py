@@ -21,6 +21,7 @@ class User(Base):
     full_name = Column(String, nullable=False)
     login = Column(String, nullable=False)
     oauth_token = Column(String, nullable=False)
+    first_boot = Column(Boolean, default=True)
 
     files = relationship('File', backref=backref('user'), cascade='all, delete-orphan')
     nodes = relationship('Node', backref=backref('user'), cascade='all, delete-orphan')
