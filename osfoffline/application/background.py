@@ -29,31 +29,11 @@ class BackgroundHandler(metaclass=Singleton):
 
     def _start(self):
         OperationWorker().start()
-
-        try:
-            urlopen("http://www.google.com")
-        except URLError:
-            Notification().info('Internet is down')
-            if not InternetChecker():
-                InternetChecker().start()
-        else:
-            RemoteSyncWorker().initialize()
-            RemoteSyncWorker().start()
+        RemoteSyncWorker().initialize()
+        RemoteSyncWorker().start()
         LocalSyncWorker().start()
 
     def sync_now(self):
-        try:
-            urlopen("http://www.google.com")
-        except URLError:
-            Notification().info('Internet is down')
-            if not InternetChecker():
-                InternetChecker().start()
-        else:
-            try:
-                RemoteSyncWorker().initialize()
-                RemoteSyncWorker().start()
-            except RuntimeError:
-                pass
         RemoteSyncWorker().sync_now()
 
     def stop(self):

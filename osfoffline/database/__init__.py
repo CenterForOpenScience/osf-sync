@@ -18,8 +18,13 @@ _session_rlock = threading.RLock()
 
 @contextlib.contextmanager
 def Session():
+    import threading
+
+    print('locking session - {} : {}'.format(threading.current_thread().ident, threading.current_thread().getName()))
     with _session_rlock:
+        print('locking session [acquired] - {} : {}'.format(threading.current_thread().ident, threading.current_thread().getName()))
         yield _session
+    print('release session - {} : {}'.format(threading.current_thread().ident, threading.current_thread().getName()))
 
 
 def drop_db():

@@ -134,6 +134,7 @@ class RemoteSyncWorker(threading.Thread, metaclass=Singleton):
                 if err.status in (http.client.NOT_FOUND, http.client.GONE):
                     # cascade should automagically delete children
                     session.delete(node)
+                    session.commit()
                     logger.info(
                         "Remote Node<{}> appears to have been deleted; will stop tracking and delete from local database".format(
                             node.id))
@@ -165,19 +166,18 @@ class RemoteSyncWorker(threading.Thread, metaclass=Singleton):
                         parent_id=parent.id
                     )
                     session.add(db_child)
+                    session.commit()
                 nodes.append(db_child)
                 children = child.get_children(lazy=False)
                 self._orphan_children(db_child, children)
                 stack = stack + children
-            session.commit()
 
-        for node in nodes:
-            local = Path(os.path.join(node.path, settings.OSF_STORAGE_FOLDER))
-            if delete and not local.exists():
-                logger.warning('Clearing files for node {}'.format(node))
-                with Session() as session:
+            for node in nodes:
+                local = Path(os.path.join(node.path, settings.OSF_STORAGE_FOLDER))
+                if delete and not local.exists():
+                    logger.warning('Clearing files for node {}'.format(node))
                     session.query(File).filter(File.node_id == node.id).delete()
-            os.makedirs(str(local), exist_ok=True)
+                os.makedirs(str(local), exist_ok=True)
 
     def _check(self):
         resolutions = []

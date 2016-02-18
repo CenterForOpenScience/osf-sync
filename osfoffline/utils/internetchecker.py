@@ -45,10 +45,10 @@ class InternetChecker(threading.Thread, metaclass=Singleton):
         logger.info('Stopping InternetChecker')
         self.__stop.set()
 
-        try:
+        if not RemoteSyncWorker().is_alive():
             RemoteSyncWorker().initialize()
             RemoteSyncWorker().start()
-        except RuntimeError:
+        else:
             RemoteSyncWorker().sync_now()
 
         del type(InternetChecker)._instances[InternetChecker]
