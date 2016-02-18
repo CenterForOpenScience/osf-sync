@@ -38,7 +38,7 @@ class Ui_Settings(object):
         self.changeFolderButton = QtWidgets.QPushButton(self.groupBox_6)
         self.changeFolderButton.setGeometry(QtCore.QRect(440, 20, 99, 31))
         self.changeFolderButton.setObjectName("changeFolderButton")
-        self.containingFolderTextEdit = QtWidgets.QTextEdit(self.groupBox_6)
+        self.containingFolderTextEdit = QtWidgets.Qlabel(self.groupBox_6)
         self.containingFolderTextEdit.setGeometry(QtCore.QRect(20, 20, 331, 31))
         self.containingFolderTextEdit.setObjectName("containingFolderTextEdit")
         self.gridLayout_7.addWidget(self.groupBox_6, 1, 0, 1, 1)
@@ -128,12 +128,6 @@ class Ui_Settings(object):
         self.treeWidget.headerItem().setText(1, _translate("Settings", "Projects"))
         self.pushButton_2.setText(_translate("Settings", "Sync None"))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_2), _translate("Settings", "OSF"))
-        self.textEdit_2.setHtml(_translate("Settings", "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"
-"<html><head><meta name=\"qrichtext\" content=\"1\" /><style type=\"text/css\">\n"
-"p, li { white-space: pre-wrap; }\n"
-"</style></head><body style=\" font-family:\'.SF NS Text\'; font-size:13pt; font-weight:400; font-style:normal;\">\n"
-"<p align=\"center\" style=\" margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-family:\'Ubuntu\'; font-size:11pt;\">OSF Sync</span></p>\n"
-"<p align=\"center\" style=\" margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-family:\'Ubuntu\'; font-size:11pt;\">© Center for Open Science</span></p></body></html>"))
         self.labelVersion.setText(_translate("Settings", "OSF Sync v0.0.0"))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_5), _translate("Settings", "About"))
 
