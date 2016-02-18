@@ -118,7 +118,6 @@ class Preferences(QDialog, Ui_Settings):
             return
         containing_folder = os.path.abspath(res)
         folder = os.path.join(containing_folder, 'OSF')
-        os.makedirs(user.folder, exist_ok=True)
 
         if save_setting:
             logger.debug('Copy files into new OSF folder.')
