@@ -15,6 +15,22 @@ from osfoffline.utils.internetchecker import InternetChecker
 logger = logging.getLogger(__name__)
 
 
+def check_connection():
+    try:
+        urlopen("http://www.google.com")
+    except URLError:
+        Notification().info('Internet is down')
+        if not InternetChecker():
+            InternetChecker().start()
+    else:
+        if InternetChecker():
+            InternetChecker().stop()
+            del type(InternetChecker)._instances[InternetChecker]
+        elif not RemoteSyncWorker():
+            RemoteSyncWorker().initialize()
+            RemoteSyncWorker().start()
+
+
 class BackgroundHandler(metaclass=Singleton):
 
     def set_intervention_cb(self, cb):
@@ -29,36 +45,21 @@ class BackgroundHandler(metaclass=Singleton):
 
     def _start(self):
         OperationWorker().start()
-
-        try:
-            urlopen("http://www.google.com")
-        except URLError:
-            Notification().info('Internet is down')
-            if not InternetChecker():
-                InternetChecker().start()
-        else:
-            RemoteSyncWorker().initialize()
-            RemoteSyncWorker().start()
+        check_connection()
         LocalSyncWorker().start()
 
     def sync_now(self):
-        try:
-            urlopen("http://www.google.com")
-        except URLError:
-            Notification().info('Internet is down')
-            if not InternetChecker():
-                InternetChecker().start()
-        else:
-            if not RemoteSyncWorker():
-                RemoteSyncWorker().initialize()
-                RemoteSyncWorker().start()
+        check_connection()
         RemoteSyncWorker().sync_now()
 
     def stop(self):
-        RemoteSyncWorker().stop()
+        if RemoteSyncWorker():
+            RemoteSyncWorker().stop()
         OperationWorker().stop()
         LocalSyncWorker().stop()
 
         del type(OperationWorker)._instances[OperationWorker]
         del type(RemoteSyncWorker)._instances[RemoteSyncWorker]
         del type(LocalSyncWorker)._instances[LocalSyncWorker]
+
+
