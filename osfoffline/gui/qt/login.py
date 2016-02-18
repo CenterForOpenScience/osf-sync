@@ -1,15 +1,19 @@
 import logging
 import sys
+import urllib
 
 from PyQt5.QtWidgets import QDialog, QInputDialog, QMessageBox
 
 from sqlalchemy.orm.exc import NoResultFound
+from urllib.request import urlopen
+from urllib.error import URLError
 
 from osfoffline import language
 from osfoffline.database import Session
 from osfoffline.database.models import User
 from osfoffline.database.utils import save
 from osfoffline.exceptions import AuthError, TwoFactorRequiredError
+from osfoffline.utils.internetchecker import InternetChecker
 from osfoffline.utils.authentication import AuthClient
 from osfoffline.utils.log import add_user_to_sentry_logs
 from osfoffline.gui.qt.generated.login import Ui_login
@@ -27,8 +31,15 @@ class LoginScreen(QDialog, Ui_login):
     def get_user(self):
         try:
             self.user = Session().query(User).one()
-            self.user = AuthClient().populate_user_data(self.user)
-            save(Session(), self.user)
+            try:
+                urlopen("http://www.google.com")
+            except URLError:
+                logger.info('Internet is down')
+                InternetChecker().start()
+            else:
+                logger.info("Internet is up and running.")
+                self.user = AuthClient().populate_user_data(self.user)
+                save(Session(), self.user)
         except AuthError:
             self.usernameEdit.setText(self.user.login)
             self.passwordEdit.setFocus()
