@@ -11,6 +11,7 @@ logger = logging.getLogger(__name__)
 def check_internet():
     try:
         urlopen('http://www.google.com')
+        logger.info('Internet is up and running.')
         return True
     except URLError:
         logger.warning('No internet connection')
