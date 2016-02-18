@@ -8,7 +8,7 @@ PROJECT_NAME = 'osf-offline'
 PROJECT_AUTHOR = 'cos'
 APPLICATION_SCOPES = 'osf.full_write'
 
-DEBUG = False
+DEBUG = True
 
 DRY = False
 
@@ -27,7 +27,7 @@ INTERNET_CHECK_INTERVAL = 60
 # Time to keep alert messages on screen (in seconds); may not be configurable on all platforms
 ALERT_DURATION = 5.0  # sec
 
-LOG_LEVEL = 'INFO'
+LOG_LEVEL = 'DEBUG'
 
 # sentry configuration. import from local
 SENTRY_DSN = None
