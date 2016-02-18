@@ -1,7 +1,8 @@
 <!DOCTYPE RCC>
 <RCC version="1.0">
     <qresource>
-        <file alias="tray_icon.png">images/tray_icon.png</file>
+        <file alias="tray_icon_mac.png">images/tray_icon_mac.png</file>
+        <file alias="tray_icon_win.png">images/tray_icon_win.png</file>
     </qresource>
 </RCC>
 

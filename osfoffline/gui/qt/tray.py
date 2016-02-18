@@ -32,6 +32,8 @@ from osfoffline.utils.validators import validate_containing_folder
 
 logger = logging.getLogger(__name__)
 
+ON_WINDOWS = sys.platform == 'win32'
+ON_MAC = sys.platform == 'darwin'
 
 class QResizableMessageBox(QMessageBox):
     QWIDGETSIZE_MAX = 16777215
@@ -54,7 +56,10 @@ class QResizableMessageBox(QMessageBox):
 
 class OSFOfflineQT(QSystemTrayIcon):
     def __init__(self, application):
-        super().__init__(QIcon(':/tray_icon.png'), application)
+        if ON_WINDOWS:
+            super().__init__(QIcon(':/tray_icon_win.png'), application)
+        else:
+            super().__init__(QIcon(':/tray_icon_mac.png'), application)
 
 
         self._context_menu = OSFOfflineMenu(self)
