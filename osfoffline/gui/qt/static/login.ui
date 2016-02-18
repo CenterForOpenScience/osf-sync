@@ -11,7 +11,7 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string>OSF-Offline | Log in</string>
+   <string>OSF Sync | Log in</string>
   </property>
   <layout class="QGridLayout" name="gridLayout">
    <item row="1" column="0">
@@ -72,7 +72,7 @@
       </font>
      </property>
      <property name="text">
-      <string>Welcome to OSF Offline</string>
+      <string>Welcome to OSF Sync</string>
      </property>
      <property name="alignment">
       <set>Qt::AlignCenter</set>
