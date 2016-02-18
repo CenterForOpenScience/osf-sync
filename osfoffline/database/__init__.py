@@ -14,7 +14,10 @@ engine = create_engine(URL, connect_args={'check_same_thread': False}, )
 Base.metadata.create_all(engine)
 session_factory = sessionmaker(bind=engine)
 _Session = scoped_session(session_factory)()
-Session = lambda: _Session
+
+
+def Session():
+    return _Session
 
 
 def drop_db():

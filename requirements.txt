@@ -1,6 +1,7 @@
 appdirs==1.4.0
 fake-factory==0.5.3
 flake8==2.5.0
+pep8=1.6
 furl==0.4.8
 invoke==0.11.1
 iso8601==0.1.11
