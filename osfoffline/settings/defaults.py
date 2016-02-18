@@ -21,6 +21,9 @@ FILE_BASE = 'https://test-files.osf.io'
 # Interval (in seconds) to poll the OSF for server-side file changes
 REMOTE_CHECK_INTERVAL = 60 * 5  # Every 5 minutes
 
+#internet checker interval
+INTERNET_CHECK_INTERVAL = 60
+
 # Time to keep alert messages on screen (in seconds); may not be configurable on all platforms
 ALERT_DURATION = 5.0  # sec
 
