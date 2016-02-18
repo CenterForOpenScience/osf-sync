@@ -38,7 +38,7 @@ class Ui_Settings(object):
         self.changeFolderButton = QtWidgets.QPushButton(self.groupBox_6)
         self.changeFolderButton.setGeometry(QtCore.QRect(440, 20, 99, 31))
         self.changeFolderButton.setObjectName("changeFolderButton")
-        self.containingFolderTextEdit = QtWidgets.Qlabel(self.groupBox_6)
+        self.containingFolderTextEdit = QtWidgets.QLabel(self.groupBox_6)
         self.containingFolderTextEdit.setGeometry(QtCore.QRect(20, 20, 331, 31))
         self.containingFolderTextEdit.setObjectName("containingFolderTextEdit")
         self.gridLayout_7.addWidget(self.groupBox_6, 1, 0, 1, 1)
