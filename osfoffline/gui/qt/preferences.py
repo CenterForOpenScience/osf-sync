@@ -113,16 +113,12 @@ class Preferences(QDialog, Ui_Settings):
     def set_containing_folder(self, save_setting=False):
         user = Session().query(User).one()
         containing_folder = os.path.dirname(user.folder or '')
-        while not validate_containing_folder(containing_folder):
-            logger.warning('Invalid containing folder: "{}"'.format(containing_folder))
-            res = QFileDialog.getExistingDirectory(caption='Choose where to place OSF folder')
-            if not res:
-                # Do not accept an empty string (dialog box dismissed without selection)
-                # FIXME: This fixes overt errors, but user gets folder picker endlessly until they select a folder
-                continue
-            else:
-                containing_folder = os.path.abspath(res)
 
+        logger.warning('Invalid containing folder: "{}"'.format(containing_folder))
+        res = QFileDialog.getExistingDirectory(caption='Choose where to place OSF folder')
+        if not res:
+            return
+        containing_folder = os.path.abspath(res)
         folder = os.path.join(containing_folder, 'OSF')
         os.makedirs(user.folder, exist_ok=True)
 
