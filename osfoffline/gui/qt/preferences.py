@@ -14,6 +14,7 @@ from PyQt5.QtWidgets import QMessageBox
 from PyQt5.QtWidgets import QTreeWidgetItem
 from sqlalchemy.orm.exc import NoResultFound
 
+import osfoffline
 from osfoffline import language
 from osfoffline.client.osf import OSFClient
 from osfoffline.database import Session
@@ -22,6 +23,7 @@ from osfoffline.database.utils import save
 from osfoffline.gui.qt.generated.preferences import Ui_Settings
 from osfoffline.tasks.notifications import Notification
 from osfoffline.sync.remote import RemoteSyncWorker
+
 
 logger = logging.getLogger(__name__)
 
@@ -66,6 +68,7 @@ class Preferences(QDialog, Ui_Settings):
         self.pushButton.clicked.connect(self.sync_all)
         self.pushButton_2.clicked.connect(self.sync_none)
         self.tabWidget.currentChanged.connect(self.selector)
+        self.labelVersion.setText('OSF Sync v{}'.format(osfoffline.__version__))
 
         if ON_WINDOWS:
             self.winRegistryRunKey = QSettings(WINDOWS_RUN_PATH, QSettings.NativeFormat)
