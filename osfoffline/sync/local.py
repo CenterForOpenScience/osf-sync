@@ -120,9 +120,12 @@ class LocalSyncWorker(ConsolidatedEventHandler, metaclass=Singleton):
         node = utils.extract_node(event.src_path)
         path = Path(event.src_path)
 
-        # If the file does not exist in the database, this is a create
-        # This logic may not be the most correct, #TODO re-evaluate
+        # If the file does not exist in the database, this may be a create
         if not utils.local_to_db(path, node):
+            for e in self._create_cache:
+                if e.src_path == event.src_path:
+                    logging.warning('Found a duplicate create event {}. Ignoring...'.format(event))
+                    return
             return self.on_created(event)
 
         context = OperationContext(local=Path(event.src_path))
