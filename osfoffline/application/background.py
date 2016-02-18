@@ -1,9 +1,6 @@
 import logging
 import threading
 
-from urllib.request import urlopen
-from urllib.error import URLError
-
 from osfoffline.sync.local import LocalSyncWorker
 from osfoffline.sync.remote import RemoteSyncWorker
 from osfoffline.tasks import Intervention, Notification
@@ -12,12 +9,10 @@ from osfoffline.utils import Singleton
 from osfoffline.utils.internetchecker import check_internet
 from osfoffline.utils.internetchecker import require_internet
 
-
 logger = logging.getLogger(__name__)
 
 
 class BackgroundHandler(metaclass=Singleton):
-
     def set_intervention_cb(self, cb):
         Intervention().set_callback(cb)
 
