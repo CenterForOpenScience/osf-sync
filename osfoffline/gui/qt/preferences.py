@@ -112,7 +112,7 @@ class Preferences(QDialog, Ui_Settings):
     def set_containing_folder(self, save_setting=False):
         user = Session().query(User).one()
 
-        logger.warning('Invalid containing folder: "{}"'.format(containing_folder))
+        logger.warning('Changing containing folder')
         res = QFileDialog.getExistingDirectory(caption='Choose where to place OSF folder')
         if not res:
             return
