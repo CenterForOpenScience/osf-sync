@@ -11,4 +11,3 @@ SENTRY_DSN = None
 
 # Interval (in seconds) to poll the OSF for server-side file changes
 REMOTE_CHECK_INTERVAL = 60 * 5  # Every 5 minutes
-

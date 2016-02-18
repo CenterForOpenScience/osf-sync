@@ -115,18 +115,12 @@ class ConsolidatedEventHandler(PatternMatchingEventHandler):
             if event.event_type == EVENT_TYPE_MODIFIED:
                 if event.is_directory:
                     return
-                move_events = (
-                    evt
-                    for evt in self._event_cache.children()
-                    if evt.event_type == EVENT_TYPE_MOVED and evt.dest_path == event.src_path
-                )
-                for event in move_events:
-                    return
+                for evt in self._event_cache.children():
+                    if evt.event_type == EVENT_TYPE_MOVED and evt.dest_path == event.src_path:
+                        return
 
             if event.event_type == EVENT_TYPE_CREATED:
-                if (not event.is_directory and
-                            parts in self._event_cache and
-                            self._event_cache[parts].event_type == EVENT_TYPE_DELETED):
+                if (not event.is_directory and parts in self._event_cache and self._event_cache[parts].event_type == EVENT_TYPE_DELETED):
                     Event = DirModifiedEvent if event.is_directory else FileModifiedEvent
                     self._event_cache[parts] = Event(event.src_path)
                 else:
@@ -135,9 +129,10 @@ class ConsolidatedEventHandler(PatternMatchingEventHandler):
                     delete_events = [
                         evt
                         for evt in self._event_cache.children()
-                        if
-                        evt.event_type == EVENT_TYPE_DELETED and evt.basename == event.basename and evt.sha256 == event.sha256
-                        ]
+                        if evt.event_type == EVENT_TYPE_DELETED
+                        and evt.basename == event.basename
+                        and evt.sha256 == event.sha256
+                    ]
                     if delete_events:
                         for evt in delete_events:
                             # delete the delete
@@ -149,7 +144,7 @@ class ConsolidatedEventHandler(PatternMatchingEventHandler):
                             evt
                             for evt in self._event_cache.children()
                             if evt.event_type == EVENT_TYPE_MOVED
-                            ]
+                        ]
                         if move_events:
                             for evt in move_events:
                                 if evt.dest_path in event.src_path:
@@ -175,8 +170,8 @@ class ConsolidatedEventHandler(PatternMatchingEventHandler):
 
     def _sorted_create_cache(self):
         return sorted(
-                self._create_cache,
-                key=lambda ev: len(Path(ev.src_path).parents)
+            self._create_cache,
+            key=lambda ev: len(Path(ev.src_path).parents)
         )
 
     def flush(self):

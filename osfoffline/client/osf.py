@@ -68,17 +68,17 @@ class BaseResource(abc.ABC):
         resp = request_session.get(cls.get_url(*args, **kwargs), params={'page[size]': 250})
         if resp.status_code >= 500:
             raise ClientLoadError(
-                    resource=cls.RESOURCE,
-                    status=resp.status_code,
-                    errors=['Server error']
+                resource=cls.RESOURCE,
+                status=resp.status_code,
+                errors=['Server error']
             )
         data = resp.json()
 
         if 'errors' in data:
             raise ClientLoadError(
-                    resource=cls.RESOURCE,
-                    status=resp.status_code,
-                    errors=data['errors']
+                resource=cls.RESOURCE,
+                status=resp.status_code,
+                errors=data['errors']
             )
 
         if isinstance(data['data'], list):
@@ -110,8 +110,8 @@ class BaseResource(abc.ABC):
         params = {'page[size]': 250}
         params.update(query or {})
         resp = self.request_session.get(
-                url,
-                params=params
+            url,
+            params=params
         )
         data = resp.json()
         items = data['data']
@@ -142,13 +142,10 @@ class Node(BaseResource):
         self.date_created = iso8601.parse_date(self.date_created)
         self.date_modified = iso8601.parse_date(self.date_modified)
 
-        self.parent = Node(
-                request_session,
-                data['embeds']['parent']['data']
-        ) if (
-            'embeds' in data and
-            data['embeds']['parent'].get('data')
-        ) else None
+        if 'embeds' in data and data['embeds']['parent'].get('data'):
+            self.parent = Node(request_session, data['embeds']['parent']['data'])
+        else:
+            self.parent = None
 
     @classmethod
     def get_url(cls, id):
@@ -157,15 +154,15 @@ class Node(BaseResource):
     def get_storage(self, *, id='osfstorage'):
         # TODO: At present only osfstorage is fully supported for syncing
         return next(
-                storage
-                for storage in NodeStorage.load(self.request_session, self.id)
-                if storage.provider == id
+            storage
+            for storage in NodeStorage.load(self.request_session, self.id)
+            if storage.provider == id
         )
 
     def get_children(self, *, lazy=False):
         related = map(
-                lambda data: Node(self.request_session, data),
-                self.fetch_related('children', query={'embed': 'parent'})
+            lambda data: Node(self.request_session, data),
+            self.fetch_related('children', query={'embed': 'parent'})
         )
         if lazy:
             return related
@@ -203,16 +200,16 @@ class StorageObject(BaseResource):
 
         if 'errors' in data:
             raise ClientLoadError(
-                    resource=cls.RESOURCE,
-                    status=resp.status_code,
-                    errors=data['errors']
+                resource=cls.RESOURCE,
+                status=resp.status_code,
+                errors=data['errors']
             )
 
         if isinstance(data['data'], list):
             return [
                 (Folder if item['attributes']['kind'] == 'folder' else File)(request_session, item)
                 for item in data['data']
-                ]
+            ]
         return cls(request_session, data['data'])
 
 
@@ -225,9 +222,8 @@ class Folder(StorageObject):
 
     def get_children(self, *, lazy=False):
         related = map(
-                lambda item: (Folder if item['attributes']['kind'] == 'folder' else File)(self.request_session, item,
-                                                                                          parent=self),
-                self.fetch_related('files')
+            lambda item: (Folder if item['attributes']['kind'] == 'folder' else File)(self.request_session, item, parent=self),
+            self.fetch_related('files')
         )
         if lazy:
             return related
@@ -241,9 +237,9 @@ class NodeStorage(Folder):
     @classmethod
     def get_url(cls, node_id):
         return '{}/{}/{}/files/'.format(
-                cls.BASE_URL,
-                Node.RESOURCE,
-                node_id
+            cls.BASE_URL,
+            Node.RESOURCE,
+            node_id
         )
 
 

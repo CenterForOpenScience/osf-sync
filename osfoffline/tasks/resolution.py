@@ -85,13 +85,13 @@ def move_to_conflict(local, remote, local_events, remote_events):
         if remote.contexts[0].db:
             if remote.is_directory:
                 return [operations.DatabaseUpdateFolder(operations.OperationContext(
-                        db=remote.contexts[0].db,
-                        remote=remote.contexts[1].remote
+                    db=remote.contexts[0].db,
+                    remote=remote.contexts[1].remote
                 ))]
             else:
                 return [operations.DatabaseUpdateFile(operations.OperationContext(
-                        db=remote.contexts[0].db,
-                        remote=remote.contexts[1].remote
+                    db=remote.contexts[0].db,
+                    remote=remote.contexts[1].remote
                 ))]
         return db_create(local, remote, local_events, remote_events)
     # Ask User

@@ -145,18 +145,18 @@ class RemoteSyncWorker(threading.Thread, metaclass=Singleton):
             # additional logic could be added here to skip over certain nodes.
             try:
                 db_child = Session().query(Node).filter(
-                        Node.id == child.id
+                    Node.id == child.id
                 ).one()
             except NoResultFound:
                 # Setting sync=False notes that the node is implicity synced
                 parent = Session().query(Node).filter(
-                        Node.id == child.parent.id
+                    Node.id == child.parent.id
                 ).one()
                 db_child = Node(
-                        id=child.id,
-                        title=child.title,
-                        user=node.user,
-                        parent_id=parent.id
+                    id=child.id,
+                    title=child.title,
+                    user=node.user,
+                    parent_id=parent.id
                 )
                 Session().add(db_child)
             nodes.append(db_child)
@@ -221,7 +221,7 @@ class RemoteSyncWorker(threading.Thread, metaclass=Singleton):
                 child for child in td.children(keys=parts)
                 if (event.location, event.event_type) != (child.location, child.event_type)
                 or (child.event_type == EventType.MOVE and not child.dest_path.startswith(event.dest_path))
-                ]
+            ]
             if conflicts:
                 logger.error('Detected {} conflicts for folder {}. ({})'.format(len(conflicts), event.src_path,
                                                                                 [x.context for x in conflicts]))

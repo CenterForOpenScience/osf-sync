@@ -25,7 +25,7 @@ class LocalSyncWorker(ConsolidatedEventHandler, metaclass=Singleton):
 
         try:
             user = get_current_user()
-        except NoResultFound as e:
+        except NoResultFound:
             # TODO: This only happens when a user logs out and the db has
             # been cleared. The app tries to run again without a user being
             # being set. This error doesn't disrupt user experience, but we
@@ -66,24 +66,24 @@ class LocalSyncWorker(ConsolidatedEventHandler, metaclass=Singleton):
                 # TODO: avoid a lazy context load in this case to catch the NodeNotFound exception?
                 _ = OperationContext(local=Path(event.src_path), is_folder=True).remote
                 return self.put_event(operations.RemoteMoveFolder(
-                        OperationContext(local=Path(event.src_path), is_folder=True),
-                        OperationContext(local=Path(event.dest_path), is_folder=True),
+                    OperationContext(local=Path(event.src_path), is_folder=True),
+                    OperationContext(local=Path(event.dest_path), is_folder=True),
                 ))
             except NodeNotFound:
                 return self.put_event(operations.RemoteCreateFolder(
-                        OperationContext(local=Path(event.dest_path), is_folder=True),
+                    OperationContext(local=Path(event.dest_path), is_folder=True),
                 ))
 
         try:
             # TODO: avoid a lazy context load in this case to catch the NodeNotFound exception?
             _ = OperationContext(local=Path(event.src_path)).remote  # noqa
             return self.put_event(operations.RemoteMoveFile(
-                    OperationContext(local=Path(event.src_path)),
-                    OperationContext(local=Path(event.dest_path)),
+                OperationContext(local=Path(event.src_path)),
+                OperationContext(local=Path(event.dest_path)),
             ))
         except NodeNotFound:
             return self.put_event(operations.RemoteCreateFile(
-                    OperationContext(local=Path(event.dest_path)),
+                OperationContext(local=Path(event.dest_path)),
             ))
 
     def on_created(self, event):
@@ -120,9 +120,12 @@ class LocalSyncWorker(ConsolidatedEventHandler, metaclass=Singleton):
         node = utils.extract_node(event.src_path)
         path = Path(event.src_path)
 
-        # If the file does not exist in the database, this is a create
-        # This logic may not be the most correct, #TODO re-evaluate
+        # If the file does not exist in the database, this may be a create
         if not utils.local_to_db(path, node):
+            for e in self._create_cache:
+                if e.src_path == event.src_path:
+                    logging.warning('Found a duplicate create event {}. Ignoring...'.format(event))
+                    return
             return self.on_created(event)
 
         context = OperationContext(local=Path(event.src_path))
