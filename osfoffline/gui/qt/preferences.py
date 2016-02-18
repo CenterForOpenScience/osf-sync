@@ -68,8 +68,8 @@ class Preferences(QDialog, Ui_Settings):
         self.tabWidget.currentChanged.connect(self.selector)
 
         if ON_WINDOWS:
-            self.settings = QSettings(WINDOWS_RUN_PATH, QSettings.NativeFormat)
-            self.startAtBoot.setChecked(self.settings.contains('Preferences'))
+            self.winRegistryRunKey = QSettings(WINDOWS_RUN_PATH, QSettings.NativeFormat)
+            self.startAtBoot.setChecked(self.winRegistryRunKey.contains('OSF Sync'))
 
         self.tree_items = []
         self.selected_nodes = []
@@ -100,9 +100,10 @@ class Preferences(QDialog, Ui_Settings):
 
         if ON_WINDOWS:
             if self.startAtBoot.isChecked():
-                self.settings.setValue('Preferences', sys.argv[0])
+                self.winRegistryRunKey.setValue('OSF Sync', sys.argv[0])
             else:
-                self.settings.remove('Preferences')
+                self.winRegistryRunKey.remove('OSF Sync')
+
         event.accept()
 
     def set_containing_folder(self, save_setting=False):
