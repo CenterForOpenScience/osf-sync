@@ -45,7 +45,8 @@ class OSFOfflineMenu(QMenu):
         self.status.setText(str(val))
 
     def open_folder(self):
-        user = Session().query(User).one()
+        with Session() as session:
+            user = session.query(User).one()
         logger.debug("containing folder is :{}".format(user.folder))
         if validate_containing_folder(user.folder):
             if sys.platform == 'win32':

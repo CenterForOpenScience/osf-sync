@@ -140,16 +140,19 @@ class Auditor:
         return modifications[Location.LOCAL], modifications[Location.REMOTE]
 
     def collect_all_db(self):
-        return {
-            entry.rel_path: Audit(entry.id, entry.sha256, entry)
-            for entry in Session().query(File)
-        }
+        with Session() as session:
+            return {
+                entry.rel_path: Audit(entry.id, entry.sha256, entry)
+                for entry in session.query(File)
+            }
 
     def collect_all_remote(self):
         ret = {}
         with ThreadPoolExecutor(max_workers=5) as tpe:
+            with Session() as session:
+                nodes = session.query(Node).filter(Node.sync)
             # first get top level nodes selected in settings
-            for node in Session().query(Node).filter(Node.sync):
+            for node in nodes:
                 try:
                     remote_node = OSFClient().get_node(node.id)
                 except Exception as e:
@@ -181,9 +184,10 @@ class Auditor:
                     # RemoteSyncWorker's _preprocess_node guarantees a db entry exists
                     # for each Node in the remote project hierarchy. Use the db Node's
                     # path representation to ensure consistent path naming conventions.
-                    child_path = Session().query(Node).filter(
-                        Node.id == remote_child.id
-                    ).one().rel_path
+                    with Session() as session:
+                        child_path = session.query(Node).filter(
+                            Node.id == remote_child.id
+                        ).one().rel_path
                     tpe.submit(
                         self._collect_node_remote,
                         child_files,
@@ -228,7 +232,9 @@ class Auditor:
 
     def collect_all_local(self, db_map):
         ret = {}
-        for node in Session().query(Node).filter(Node.sync):
+        with Session() as session:
+            nodes = session.query(Node).filter(Node.sync)
+        for node in nodes:
             node_path = Path(os.path.join(node.path, settings.OSF_STORAGE_FOLDER))
             self._collect_node_local(node_path, ret, db_map)
 

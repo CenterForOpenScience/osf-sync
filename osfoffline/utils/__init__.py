@@ -50,13 +50,15 @@ def extract_node(path):
     """
     node_id = path.replace(get_current_user().folder, '').split(settings.OSF_STORAGE_FOLDER)[0].strip(os.path.sep).split(os.path.sep)[-1].split(' - ')[-1]
     try:
-        return Session().query(models.Node).filter(models.Node.id == node_id).one()
+        with Session() as session:
+            return session.query(models.Node).filter(models.Node.id == node_id).one()
     except NoResultFound:
         raise NodeNotFound(path)
 
 
 def local_to_db(local, node, *, is_folder=False, check_is_folder=True):
-    db = Session().query(models.File).filter(models.File.parent == None, models.File.node == node).one()  # noqa
+    with Session() as session:
+        db = session.query(models.File).filter(models.File.parent == None, models.File.node == node).one()  # noqa
     parts = str(local).replace(node.path, '').split(os.path.sep)
     for part in parts:
         for child in db.children:
