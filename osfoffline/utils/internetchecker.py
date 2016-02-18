@@ -4,7 +4,6 @@ import time
 from urllib.request import urlopen
 from urllib.error import URLError
 
-
 logger = logging.getLogger(__name__)
 
 
