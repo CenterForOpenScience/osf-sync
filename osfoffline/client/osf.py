@@ -23,6 +23,7 @@ class OSFClient(metaclass=Singleton):
     def __init__(self, *, limit=5):
         self.user = get_current_user()
         self.headers = {
+            'User-Agent': 'OSF Sync',
             'Authorization': 'Bearer {}'.format(self.user.oauth_token),
         }
         self.throttler = threading.Semaphore(limit)  # TODO: Is throttling active?

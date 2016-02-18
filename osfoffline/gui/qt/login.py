@@ -11,7 +11,7 @@ from osfoffline import language
 from osfoffline.database import Session
 from osfoffline.database.models import User
 from osfoffline.exceptions import AuthError, TwoFactorRequiredError
-from osfoffline.utils.internetchecker import InternetChecker
+from osfoffline.utils.internetchecker import require_internet
 from osfoffline.utils.authentication import AuthClient
 from osfoffline.utils.log import add_user_to_sentry_logs
 from osfoffline.gui.qt.generated.login import Ui_login
@@ -28,19 +28,13 @@ class LoginScreen(QDialog, Ui_login):
 
     def get_user(self):
         try:
+            require_internet()
             with Session() as session:
                 self.user = session.query(User).one()
-            try:
-                urlopen("http://www.google.com")
-            except URLError:
-                logger.info('Internet is down')
-                InternetChecker().start()
-            else:
-                logger.info("Internet is up and running.")
-                self.user = AuthClient().populate_user_data(self.user)
-                with Session() as session:
-                    session.add(self.user)
-                    session.commit()
+            self.user = AuthClient().populate_user_data(self.user)
+            with Session() as session:
+                session.add(self.user)
+                session.commit()
         except AuthError:
             self.usernameEdit.setText(self.user.login)
             self.passwordEdit.setFocus()
