@@ -1,9 +1,14 @@
-# Interval (in seconds) to poll the OSF for server-side file changes
-REMOTE_CHECK_INTERVAL = 5  # seconds
-
 LOG_LEVEL = 'DEBUG'
+
+MIN_VERSION_URL = None
 
 SENTRY_DSN = None
 
-API_BASE = 'http://localhost:8000'
-FILE_BASE = 'http://localhost:7777'
+## Base URL for API server; used to fetch data
+# OSF_URL = 'https://test.osf.io'
+# API_BASE = 'https://test-api.osf.io'
+# FILE_BASE = 'https://test-files.osf.io'
+
+# Interval (in seconds) to poll the OSF for server-side file changes
+REMOTE_CHECK_INTERVAL = 60 * 5  # Every 5 minutes
+
