@@ -47,6 +47,22 @@
              <bool>true</bool>
             </property>
            </widget>
+           <widget class="QCheckBox" name="startAtBoot">
+            <property name="geometry">
+             <rect>
+              <x>10</x>
+              <y>50</y>
+              <width>541</width>
+              <height>22</height>
+             </rect>
+            </property>
+            <property name="text">
+             <string>Start at boot</string>
+            </property>
+            <property name="checked">
+             <bool>true</bool>
+            </property>
+           </widget>
           </widget>
          </item>
          <item row="1" column="0">
