@@ -1,3 +1,4 @@
+import logging
 import contextlib
 import threading
 
@@ -14,17 +15,17 @@ engine = create_engine(URL, connect_args={'check_same_thread': False}, )
 Base.metadata.create_all(engine)
 _session = sessionmaker(bind=engine)()
 _session_rlock = threading.RLock()
+logger = logging.getLogger(__name__)
 
 
 @contextlib.contextmanager
 def Session():
-    import threading
 
-    print('locking session - {} : {}'.format(threading.current_thread().ident, threading.current_thread().getName()))
+    logger.debug('locking session - {} : {}'.format(threading.current_thread().ident, threading.current_thread().getName()))
     with _session_rlock:
-        print('locking session [acquired] - {} : {}'.format(threading.current_thread().ident, threading.current_thread().getName()))
+        logger.debug('locking session [acquired] - {} : {}'.format(threading.current_thread().ident, threading.current_thread().getName()))
         yield _session
-    print('release session - {} : {}'.format(threading.current_thread().ident, threading.current_thread().getName()))
+    logger.debug('release session - {} : {}'.format(threading.current_thread().ident, threading.current_thread().getName()))
 
 
 def drop_db():

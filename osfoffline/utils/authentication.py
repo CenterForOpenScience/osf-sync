@@ -46,7 +46,10 @@ class AuthClient(object):
                 }
             }
         }
-        headers = {'content-type': 'application/json'}
+        headers = {
+            'User-Agent': 'OSF Sync',
+            'content-type': 'application/json'
+        }
 
         if otp is not None:
             headers['X-OSF-OTP'] = otp
