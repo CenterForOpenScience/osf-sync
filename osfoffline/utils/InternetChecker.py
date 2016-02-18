@@ -5,10 +5,11 @@ import time
 from urllib.request import urlopen
 from urllib.error import URLError
 
-
 from . import Singleton
+
 from osfoffline import settings
 from osfoffline.sync.remote import RemoteSyncWorker
+
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +31,9 @@ class InternetChecker(threading.Thread, metaclass=Singleton):
             urlopen("http://www.google.com")
         except URLError:
             logger.info('Internet is down')
-            RemoteSyncWorker().stop()
+            self.has_connection = False
+            if RemoteSyncWorker():
+                RemoteSyncWorker().stop()
         else:
             logger.info("Internet is up and running.")
             self.has_connection = True
@@ -40,6 +43,7 @@ class InternetChecker(threading.Thread, metaclass=Singleton):
     def stop(self):
         logger.info('Stopping RemoteSyncWorker')
         self.__stop.set()
+
         if not RemoteSyncWorker():
             RemoteSyncWorker().initialize()
             RemoteSyncWorker().start()
