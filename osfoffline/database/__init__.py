@@ -37,6 +37,6 @@ def drop_db():
 
 
 def clear_models():
-    for model in CORE_OSFO_MODELS:
-        with Session() as session:
+    with Session() as session:
+        for model in CORE_OSFO_MODELS:
             session.query(model).delete()
