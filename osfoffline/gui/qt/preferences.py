@@ -222,7 +222,6 @@ class Preferences(QDialog, Ui_Settings):
             containing_folder = os.path.dirname(user.folder)
             self.containingFolderTextEdit.setText(self._translate("Preferences", containing_folder))
         elif selected_index == self.OSF:
-            Notification().info('We are fetching your list of projects. This may take a few minutes.')
             self.label.setText(self._translate("Preferences", user.full_name))
             self._executor = QtCore.QThread()
             self.node_fetcher = NodeFetcher()
