@@ -211,6 +211,7 @@ class OSFOfflineQT(QSystemTrayIcon):
             )
 
     def quit(self):
+        BackgroundHandler().stop()
         with Session() as session:
             try:
                 user = session.query(User).one()
