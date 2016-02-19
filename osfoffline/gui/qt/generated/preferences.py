@@ -129,6 +129,7 @@ class Ui_Settings(object):
  "</style></head><body style=\" font-family:\'.SF NS Text\'; font-size:13pt; font-weight:400; font-style:normal;\">\n"
  "<p align=\"center\" style=\" margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-family:\'Ubuntu\'; font-size:11pt;\">OSF Sync</span></p>\n"
  "<p align=\"center\" style=\" margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-family:\'Ubuntu\'; font-size:11pt;\">© Center for Open Science</span></p></body></html>"))
+        self.textEdit_2.setReadOnly(True)
         self.labelVersion.setText(_translate("Settings", "OSF Sync v0.0.0"))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_5), _translate("Settings", "About"))
 
