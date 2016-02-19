@@ -21,8 +21,6 @@ from osfoffline.client.osf import OSFClient
 from osfoffline.database import Session
 from osfoffline.database.models import User, Node
 from osfoffline.gui.qt.generated.preferences import Ui_Settings
-from osfoffline.tasks.notifications import Notification
-
 
 logger = logging.getLogger(__name__)
 
@@ -47,6 +45,7 @@ MAC_PLIST_FILE_CONTENTS = """
   </dict>
 </plist>
 """
+
 
 def get_parent_id(node):
     try:
@@ -186,7 +185,7 @@ class Preferences(QDialog, Ui_Settings):
                     self.selected_nodes.append(node.id)
                     if not db_node:
                         session.add(
-                            Node(id=node.id, title=node.title, user=user, sync=True)
+                                Node(id=node.id, title=node.title, user=user, sync=True)
                         )
                     else:
                         db_node.sync = True
