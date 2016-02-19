@@ -48,7 +48,9 @@ class BackgroundHandler(metaclass=Singleton):
         if not check_internet():
             self.stop()
             require_internet()
-        RemoteSyncWorker().sync_now()
+            self.start()
+        else:
+            RemoteSyncWorker().sync_now()
 
     def stop(self):
         # Attempting to stop a stopped or never started thread deadlocks
