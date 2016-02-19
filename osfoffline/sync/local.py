@@ -47,6 +47,9 @@ class LocalSyncWorker(ConsolidatedEventHandler, metaclass=Singleton):
         self.observer.stop()
         self.join()
 
+    def is_alive(self):
+        return self.observer.is_alive()
+
     def join(self):
         self.observer.join()
         logger.debug('LocalSyncWorker Stopped')

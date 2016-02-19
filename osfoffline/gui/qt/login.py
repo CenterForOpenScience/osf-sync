@@ -30,6 +30,7 @@ class LoginScreen(QDialog, Ui_login):
                 self.user = session.query(User).one()
             if check_internet():
                 self.user = AuthClient().populate_user_data(self.user)
+                logger.warning('Could not update user information')
                 with Session() as session:
                     session.add(self.user)
                     session.commit()
