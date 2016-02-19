@@ -36,7 +36,7 @@ MAC_PLIST_FILE_CONTENTS = """
 <?xml version="1.0" encoding="UTF-8"?>
 <plist version="1.0">
   <dict>
-    <key>KeepAlive</key>
+    <key>RunAtLoad</key>
     <true />
     <key>Label</key>
     <string>io.cos.osfsync</string>
