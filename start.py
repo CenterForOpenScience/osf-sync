@@ -25,6 +25,7 @@ def exit_gracefully(*args):
     finally:
         sys.exit(1)
 
+
 signal.signal(signal.SIGINT, signal.SIG_DFL)
 signal.signal(signal.SIGTERM, exit_gracefully)
 
@@ -51,8 +52,8 @@ def start():
     try:
         r = requests.get(settings.MIN_VERSION_URL, timeout=10)
     except requests.exceptions.ConnectionError:
-        running_warning(message='Check for minimum version requirements for OSF-Sync failed '
-                                'because you have no Internet connection', critical=True)
+        logger.warning('Check for minimum version requirements for OSF-Sync failed '
+                       'because you have no Internet connection')
     else:
         try:
             min_version = r.json()['min-version']
