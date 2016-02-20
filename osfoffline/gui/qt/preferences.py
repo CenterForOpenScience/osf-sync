@@ -44,7 +44,7 @@ MAC_PLIST_FILE_CONTENTS = """
     </array>
   </dict>
 </plist>
-"""
+""".format(sys.argv[0])
 
 
 def get_parent_id(node):
@@ -134,7 +134,7 @@ class Preferences(QDialog, Ui_Settings):
         elif ON_MAC:
             if self.startAtBoot.isChecked():
                 with open(MAC_PLIST_FILE_PATH, 'w+') as file:
-                    file.write(MAC_PLIST_FILE_CONTENTS.format(sys.argv[0]))
+                    file.write(MAC_PLIST_FILE_CONTENTS)
             elif os.path.exists(MAC_PLIST_FILE_PATH):
                 os.remove(MAC_PLIST_FILE_PATH)
 
