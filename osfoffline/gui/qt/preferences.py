@@ -185,7 +185,7 @@ class Preferences(QDialog, Ui_Settings):
                     self.selected_nodes.append(node.id)
                     if not db_node:
                         session.add(
-                                Node(id=node.id, title=node.title, user=user, sync=True)
+                            Node(id=node.id, title=node.title, user=user, sync=True)
                         )
                     else:
                         db_node.sync = True
