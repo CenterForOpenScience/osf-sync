@@ -145,7 +145,7 @@ class OSFOfflineQT(QSystemTrayIcon):
             return
 
         # Wait for more notifications, then grab all events and display
-        t = threading.Timer(settings.ALERT_DURATION * 2, self._consolidate_notifications, args=[notification])
+        t = threading.Timer(settings.ALERT_DURATION, self._consolidate_notifications, args=[notification])
         t.start()
 
     # def resume(self):
