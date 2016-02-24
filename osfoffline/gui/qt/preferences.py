@@ -224,6 +224,9 @@ class Preferences(QDialog, Ui_Settings):
             self.label.setText(self._translate("Preferences", user.full_name))
             self._executor = QtCore.QThread()
             self.reset_tree_widget()
+            self.changeFolderButton_2.setEnabled(False)
+            self.pushButton.setEnabled(False)
+            self.pushButton_2.setEnabled(False)
             self.node_fetcher = NodeFetcher()
             self.treeWidget.setStyleSheet("background-color: grey")
             self.treeWidget.setCursor(QtCore.Qt.BusyCursor)
@@ -260,6 +263,9 @@ class Preferences(QDialog, Ui_Settings):
         self.treeWidget.resizeColumnToContents(self.PROJECT_NAME_COLUMN)
         self.treeWidget.unsetCursor()
         self.treeWidget.setStyleSheet("background-color: white")
+        self.changeFolderButton_2.setEnabled(True)
+        self.pushButton.setEnabled(True)
+        self.pushButton_2.setEnabled(True)
 
     @QtCore.pyqtSlot(int)
     def item_load_error(self, error_code):
