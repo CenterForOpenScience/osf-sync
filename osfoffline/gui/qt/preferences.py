@@ -223,6 +223,7 @@ class Preferences(QDialog, Ui_Settings):
         elif selected_index == self.OSF:
             self.label.setText(self._translate("Preferences", user.full_name))
             self._executor = QtCore.QThread()
+            self.reset_tree_widget()
             self.node_fetcher = NodeFetcher()
             self.treeWidget.setStyleSheet("background-color: grey")
             self.treeWidget.setCursor(QtCore.Qt.BusyCursor)
@@ -238,7 +239,6 @@ class Preferences(QDialog, Ui_Settings):
 
     @QtCore.pyqtSlot(list)
     def populate_item_tree(self, nodes):
-        self.reset_tree_widget()
         _translate = QCoreApplication.translate
         self.selected_nodes = []
         with Session() as session:
