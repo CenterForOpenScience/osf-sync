@@ -35,7 +35,9 @@ class OperationWorker(threading.Thread, metaclass=Singleton):
             except Exception as e:
                 logger.exception(e)
                 # TODO: Get filename from a given job, to display appropriate notification to the user?
-                Notification().error('Error while updating file:\n {}'.format(job.local))
+                file_name = job.local.name
+                project_name = job.node.title
+                Notification().error('Error while updating the file {} in project {}.'.format(file_name, project_name))
             finally:
                 self._queue.task_done()
         logger.debug('OperationWorker stopped')
