@@ -136,3 +136,6 @@ indicated by the traceback.
 #which needs some change in your local pyinstaller 3.0 to make it work
 
 #osfofflne-setup.iss is the inno-setup script to setup the windows installer for osf-offline.exe
+
+#To sign the Mac version
+    `codesign --verbose --force --deep --sign "Certificate Name" "OSF Sync.app"`
