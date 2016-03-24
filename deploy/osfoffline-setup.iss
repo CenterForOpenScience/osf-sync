@@ -2,7 +2,7 @@
 ; SEE THE DOCUMENTATION FOR DETAILS ON CREATING INNO SETUP SCRIPT FILES!
 
 #define MyAppName "OSF Sync"
-#define MyAppVersion "0.4.0"
+#define MyAppVersion "0.4.1"
 #define MyAppPublisher "Center for Open Science"
 #define MyAppURL "http://osf.io/"
 #define MyAppExeName "OSF Sync.exe"
@@ -25,7 +25,7 @@ DisableProgramGroupPage=true
 DisableStartupPrompt=true
 LicenseFile=C:\Users\IEUser\Documents\GitHub\OSF-Offline\LICENSE
 OutputDir=C:\Users\IEUser\Desktop
-OutputBaseFilename="OSF Sync v0.4.0"
+OutputBaseFilename="OSF Sync installer"
 SetupIconFile=C:\Users\IEUser\Documents\GitHub\OSF-Offline\deploy\images\cos_logo.ico
 Compression=lzma
 SolidCompression=yes
