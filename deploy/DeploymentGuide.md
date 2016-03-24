@@ -14,6 +14,8 @@ Separate MacOS setup instructions are available and will be added here at a late
   recommended for Windows operating systems, for best compatibility with precompiled Windows PyQT binaries.
   - On Windows, be sure to select a custom install, and choose the option to add Python (and script folders)
   to the system PATH automatically.
+  - make sure your python ssl version is no less than 1.0.2. You can check your ssl version by 
+    'python -c 'import ssl; print(ssl.OPENSSL_VERSION)''
 - `pip`
   - Should already come with python. Make sure it can be run via the command line.
 - `git`
@@ -131,11 +133,11 @@ Sometimes pyinstaller will raise an exception due to problems importing `cy***.u
 it can be resolved by manually editing the PyInstaller source code to add an import statement in the location
 indicated by the traceback.
 
-#OSF-Offline-mac.spec is the pyinstaller scipt file for mac
-#OSF-Offline-windows.spec is the pyinstaller scipt file for windows,
-#which needs some change in your local pyinstaller 3.0 to make it work
-
-#osfofflne-setup.iss is the inno-setup script to setup the windows installer for osf-offline.exe
+##File usage
+OSF-Offline-mac.spec is the pyinstaller scipt file for mac
+OSF-Offline-windows.spec is the pyinstaller scipt file for windows,
+which needs some change in your local pyinstaller 3.0 to make it work
+osfofflne-setup.iss is the inno-setup script to setup the windows installer for osf-offline.exe
 
 #To sign the Mac version
     `codesign --verbose --force --deep --sign "Certificate Name" "OSF Sync.app"`
