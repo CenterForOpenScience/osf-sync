@@ -176,7 +176,7 @@ class UserNode(Node):
 
     @classmethod
     def get_url(cls, id):
-        return '{}/users/{}/nodes/?filter[registration]=false'.format(cls.BASE_URL, id)
+        return '{}/users/{}/nodes/'.format(cls.BASE_URL, id)
 
 
 class StorageObject(BaseResource):
