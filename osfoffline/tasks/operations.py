@@ -276,7 +276,7 @@ class RemoteUpdateFile(BaseOperation):
 
         url = '{}/v1/resources/{}/providers/{}/{}'.format(settings.FILE_BASE, self.node.id, self.db.provider, self.db.osf_path)
         with open(str(self.local), 'rb') as fobj:
-            resp = OSFClient().request('PUT', url, data=fobj, params={'name': self.local.name})
+            resp = OSFClient().request('PUT', url, data=fobj)
         data = resp.json()
         if resp.status_code == http.client.FORBIDDEN:
             permission_error_notification('file', self.local.name, self.node.title)

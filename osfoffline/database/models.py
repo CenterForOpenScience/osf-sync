@@ -135,10 +135,6 @@ class File(Base):
     date_modified = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
     provider = Column(String, nullable=False)
 
-    # NOTE: this is called path. It is not any type of file/folder path. Think of it just as an id.
-    osf_path = Column(String, nullable=True,
-                      default=None)  # todo: unique=True. (can't right now due to duplicates when moved on osf)
-
     user_id = Column(Integer, ForeignKey('user.id'), nullable=False)
     node_id = Column(Integer, ForeignKey('node.id'), nullable=False)
     parent_id = Column(Integer, ForeignKey('file.id'))
@@ -177,7 +173,7 @@ class File(Base):
         """
         if not self.parent:
             return ''
-        return self.id + '/' if self.is_folder else ''
+        return self.id + ('/' if self.is_folder else '')
 
     @property
     def path(self):
