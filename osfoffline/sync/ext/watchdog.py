@@ -183,9 +183,6 @@ class ConsolidatedEventHandler(PatternMatchingEventHandler):
             ):
                 logger.debug('Watchdog event dispatched: {}'.format(event))
                 try:
-                    print('************************')
-                    print(event, utils.is_ignored(event.src_path))
-                    print('************************')
                     super().dispatch(event)
                 except (NodeNotFound,) as e:
                     logger.warning(e)
