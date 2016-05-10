@@ -72,7 +72,7 @@ class OperationContext:
     def remote(self):
         if self._remote:
             return self._remote
-        if self._db or self._local:
+        if self._db:
             self._remote = utils.db_to_remote(self.db)
         return self._remote
 
@@ -414,6 +414,12 @@ class RemoteMove(MoveOperation):
     DB_CLASS = None
 
     def _run(self):
+        if self.db is None and self.remote is None:
+            # If a file is an ignored name and get renamed to a not ignored name
+            # it will trigger a move but not exist anywhere else
+            logger.debug('Source file does not exist; will run create operation instead')
+            return RemoteCreateFile(self._dest_context).run()
+
         dest_parent = OperationContext(local=self._dest_context.local.parent)
         resp = OSFClient().request('POST',
                                    self.remote.raw['links']['move'],
