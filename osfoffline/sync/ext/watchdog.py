@@ -68,11 +68,14 @@ class ConsolidatedEventHandler(PatternMatchingEventHandler):
 
             parts = list(zip(src_parts, dest_parts))
 
-            # Stash the sha256, basename, and parts. This allows us to do consolidation
-            # down the line.
-            event.basename = os.path.basename(event.src_path)
-            event.sha256 = sha256_from_event(event)
-            event.parts = parts
+            try:
+                # Stash the sha256, basename, and parts. This allows us to do consolidation
+                # down the line.
+                event.basename = os.path.basename(event.src_path)
+                event.sha256 = sha256_from_event(event)
+                event.parts = parts
+            except FileNotFoundError:
+                return  # If the file is delete while attempting to SHA it, leave.
 
             # Windows represents folder deletes incorrectly as file deletes, and as
             # result we can't trust event.is_directory to check whether or not delete
