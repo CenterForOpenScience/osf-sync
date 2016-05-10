@@ -89,6 +89,9 @@ def _remote_root(db):
         if storage.provider == db.provider
     )
 
+def is_ignored(name):
+    return match_patterns(name, settings.IGNORED_PATTERNS)
+
 # https://github.com/gorakhargosh/watchdog/blob/d7ceb7ddd48037f6d04ab37297a63116655926d9/tools/nosy.py#L33
 def match_patterns(pathname, patterns):
     """Returns ``True`` if the pathname matches any of the given patterns."""

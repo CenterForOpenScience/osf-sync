@@ -11,7 +11,7 @@ from osfoffline.database.models import Node, File
 from osfoffline.tasks import operations
 from osfoffline.tasks.operations import OperationContext
 from osfoffline.utils import hash_file
-from osfoffline.utils import match_patterns
+from osfoffline.utils import is_ignored
 from osfoffline.utils.authentication import get_current_user
 
 logger = logging.getLogger(__name__)
@@ -218,7 +218,7 @@ class Auditor:
         )
 
         for child in root.get_children():
-            if match_patterns(child.name, settings.IGNORED_PATTERNS):
+            if is_ignored(child.name):
                 continue
             if child.kind == 'folder':
                 tpe.submit(self._collect_node_remote, child, acc, rel_path, tpe)
@@ -260,7 +260,7 @@ class Auditor:
         )
 
         for child in root.iterdir():
-            if match_patterns(child.name, settings.IGNORED_PATTERNS):
+            if is_ignored(child.name):
                 continue
             if child.is_dir():
                 self._collect_node_local(child, acc, db_map)
