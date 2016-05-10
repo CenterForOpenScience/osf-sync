@@ -218,7 +218,8 @@ class Auditor:
         )
 
         for child in root.get_children():
-            if is_ignored(child.name):
+            # is_ignored matches on full paths and requires at least a leading /
+            if is_ignored(os.path.sep + child.name):
                 continue
             if child.kind == 'folder':
                 tpe.submit(self._collect_node_remote, child, acc, rel_path, tpe)
@@ -260,7 +261,8 @@ class Auditor:
         )
 
         for child in root.iterdir():
-            if is_ignored(child.name):
+            # Ignore matches full paths
+            if is_ignored(str(child)):
                 continue
             if child.is_dir():
                 self._collect_node_local(child, acc, db_map)
