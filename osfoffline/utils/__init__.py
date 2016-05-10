@@ -1,5 +1,6 @@
 import hashlib
 import os
+from fnmatch import fnmatch
 
 from sqlalchemy.orm.exc import NoResultFound
 
@@ -87,3 +88,11 @@ def _remote_root(db):
         osf.NodeStorage.load(osf.OSFClient().request_session, db.node.id)
         if storage.provider == db.provider
     )
+
+# https://github.com/gorakhargosh/watchdog/blob/d7ceb7ddd48037f6d04ab37297a63116655926d9/tools/nosy.py#L33
+def match_patterns(pathname, patterns):
+    """Returns ``True`` if the pathname matches any of the given patterns."""
+    for pattern in patterns:
+        if fnmatch(pathname, pattern):
+            return True
+    return False
