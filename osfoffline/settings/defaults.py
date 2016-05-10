@@ -37,7 +37,7 @@ refs = None
 FILE_FORMATTER = '[%(levelname)s][%(asctime)s][%(threadName)s][%(name)s]: %(message)s'
 
 IGNORED_NAMES = ['.DS_Store', 'lost+found', 'Desktop.ini']
-IGNORED_PATTERNS = ['*.DS_Store', '*lost+found', '*Desktop.ini']
+IGNORED_PATTERNS = ['*.DS_Store', '*lost+found', '*Desktop.ini', '~*', '*.tmp']
 
 OSF_STORAGE_FOLDER = 'OSF Storage'
 COMPONENTS_FOLDER = 'Components'
