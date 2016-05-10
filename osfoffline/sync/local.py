@@ -63,8 +63,8 @@ class LocalSyncWorker(ConsolidatedEventHandler, metaclass=Singleton):
         logger.info('Move event for {}: from {} to {}'.format('directory' if event.is_directory else 'file', event.src_path, event.dest_path))
 
         if is_ignored(event.dest_path):
-            context = OperationContext(local=Path(event.src_path), check_is_folder=False)
-            return self.put_event(operations.RemoteDelete(context))
+            logger.info('Ignoring move event for {}: from {} to {} (Ignored file)'.format('directory' if event.is_directory else 'file', event.src_path, event.dest_path))
+            return
 
         # Note: OperationContext should extrapolate all attributes from what it is given
         if event.is_directory:
