@@ -116,6 +116,7 @@ class LocalSyncWorker(ConsolidatedEventHandler, metaclass=Singleton):
         # a delete event is for a folder. Since the RemoteDelete operation works identically
         # for files and folders we can get away with this here.
         context = OperationContext(local=Path(event.src_path), check_is_folder=False)
+        context.db  # noqa
 
         return self.put_event(operations.RemoteDelete(context))
 
@@ -126,10 +127,10 @@ class LocalSyncWorker(ConsolidatedEventHandler, metaclass=Singleton):
 
         # If the file does not exist in the database, this may be a create
         if not utils.local_to_db(path, node):
-            for e in self._create_cache:
-                if e.src_path == event.src_path:
-                    logging.warning('Found a duplicate create event {}. Ignoring...'.format(event))
-                    return
+            # for e in self._create_cache:
+            #     if e.src_path == event.src_path:
+            #         logging.warning('Found a duplicate create event {}. Ignoring...'.format(event))
+            #         return
             return self.on_created(event)
 
         context = OperationContext(local=Path(event.src_path))
