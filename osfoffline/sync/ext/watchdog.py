@@ -1,22 +1,8 @@
-from collections import OrderedDict
-import itertools
 import logging
-import os
 from pathlib import Path
 import threading
 
-from watchdog.events import (
-    EVENT_TYPE_MOVED,
-    EVENT_TYPE_DELETED,
-    EVENT_TYPE_CREATED,
-    EVENT_TYPE_MODIFIED,
-    DirModifiedEvent,
-    FileModifiedEvent,
-    DirMovedEvent,
-    FileMovedEvent,
-    PatternMatchingEventHandler,
-    FileSystemEventHandler
-)
+from watchdog.events import EVENT_TYPE_CREATED, FileSystemEventHandler
 
 from osfoffline import settings, utils
 from osfoffline.exceptions import NodeNotFound
@@ -49,8 +35,9 @@ def sha256_from_event(event):
         return db_file.sha256
 
 
-class ConsolidatedEventHandler(FileSystemEventHandler):
 # class ConsolidatedEventHandler(PatternMatchingEventHandler):
+class ConsolidatedEventHandler(FileSystemEventHandler):
+
     def __init__(self):
         # super().__init__(ignore_patterns=settings.IGNORED_PATTERNS)
         self._event_cache = EventConsolidator()
@@ -61,7 +48,7 @@ class ConsolidatedEventHandler(FileSystemEventHandler):
     def dispatch(self, event):
         with self.lock:
             logger.debug('Watchdog event fired: {}'.format(event))
-            self._event_cache.insert(event)
+            self._event_cache.push(event)
 
             # try:
             #     # Stash the sha256, basename, and parts. This allows us to do consolidation
