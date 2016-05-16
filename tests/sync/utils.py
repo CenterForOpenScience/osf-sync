@@ -3,6 +3,7 @@ import time
 
 from watchdog.observers import Observer
 
+from osfoffline.sync.local import LocalSyncWorker
 from osfoffline.sync.ext.watchdog import ConsolidatedEventHandler
 
 
@@ -40,3 +41,17 @@ class TestSyncWorker(ConsolidatedEventHandler):
             self.flushed.set()
             self.done.wait()
             self._event_cache.clear()
+
+
+class TestSyncObserver(LocalSyncWorker):
+
+    def __init__(self, path):
+        super(LocalSyncWorker, self).__init__()
+        self._events = []
+        self.folder = path
+        self.observer = Observer()
+        self.ignore = threading.Event()
+        self.observer.schedule(self, self.folder, recursive=True)
+
+    def put_event(self, event):
+        self._events.append(event)

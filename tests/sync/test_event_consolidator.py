@@ -1,9 +1,17 @@
 import pytest
 
+import os
+import time
+import threading
+
 from watchdog import events
 
+from osfoffline.tasks import operations
 from osfoffline.utils.log import start_logging
 from osfoffline.sync.utils import EventConsolidator
+
+from tests.sync.utils import TestSyncObserver
+
 
 start_logging()
 
@@ -279,6 +287,16 @@ CASES = [{
 
 }]
 
+CONTEXT_EVENT_MAP = {
+    events.FileCreatedEvent: operations.RemoteCreateFile,
+    events.FileDeletedEvent: operations.RemoteDeleteFile,
+    events.FileModifiedEvent: operations.RemoteUpdateFile,
+    events.FileMovedEvent: operations.RemoteMoveFile,
+    events.DirCreatedEvent: operations.RemoteCreateFolder,
+    events.DirDeletedEvent: operations.RemoteDeleteFolder,
+    events.DirMovedEvent: operations.RemoteMoveFolder,
+}
+
 
 class TestEventConsolidator:
 
@@ -288,3 +306,67 @@ class TestEventConsolidator:
         for event in input:
             consolidator.push(event)
         assert list(consolidator.events) == list(expected)
+
+
+class TestObserver:
+
+    def perform(self, tmpdir, event):
+        if isinstance(event, events.FileModifiedEvent):
+            with tmpdir.join(event.src_path).open('ab') as fobj:
+                fobj.write(os.urandom(50))
+        elif isinstance(event, events.FileCreatedEvent):
+            with tmpdir.join(event.src_path).open('wb+') as fobj:
+                fobj.write(os.urandom(50))
+        elif isinstance(event, events.DirModifiedEvent):
+            return
+        elif isinstance(event, (events.FileMovedEvent, events.DirMovedEvent)):
+            tmpdir.join(event.src_path).move(tmpdir.join(event.dest_path))
+        elif isinstance(event, (events.DirDeletedEvent, events.FileDeletedEvent)):
+            tmpdir.join(event.src_path).remove()
+        elif isinstance(event, events.DirCreatedEvent):
+            tmpdir.ensure(event.src_path, dir=True)
+        else:
+            raise Exception(event)
+
+    @pytest.mark.parametrize('input, expected', [(case['input'], case['output']) for case in CASES])
+    def test_event_observer(self, monkeypatch, tmpdir, input, expected):
+        # No need for database access
+        monkeypatch.setattr('osfoffline.sync.local.utils.extract_node', lambda *args, **kwargs: None)
+        monkeypatch.setattr('osfoffline.sync.local.utils.local_to_db', lambda *args, **kwargs: None)
+
+        # De dup input events
+        for event in tuple(input):
+            for evt in tuple(input):
+                if event is not evt and not isinstance(event, events.DirModifiedEvent) and event.event_type != events.EVENT_TYPE_CREATED and evt.event_type == event.event_type and getattr(evt, 'dest_path', evt.src_path).startswith(getattr(event, 'dest_path', event.src_path)):
+                    input.remove(evt)
+
+        for event in reversed(input):
+            path = tmpdir.ensure(event.src_path, dir=event.is_directory)
+
+            if isinstance(event, (events.FileMovedEvent, events.DirMovedEvent)):
+                tmpdir.ensure(event.dest_path, dir=event.is_directory).remove()
+
+            if isinstance(event, (events.FileCreatedEvent, events.DirCreatedEvent)):
+                path.remove()
+
+        observer = TestSyncObserver(tmpdir.strpath)
+        threading.Thread(target=observer.start).start()
+
+        time.sleep(1)
+
+        for event in input:
+            self.perform(tmpdir, event)
+
+        time.sleep(1)
+
+        observer.stop()
+        observer.flush()
+
+        assert len(expected) == len(observer._events)
+
+        for event, context in zip(expected, observer._events):
+            assert CONTEXT_EVENT_MAP[type(event)] == type(context)
+            assert str(tmpdir.join(event.src_path)) == str(context.local)
+
+        # Clear cached instance of Observer
+        del type(TestSyncObserver)._instances[TestSyncObserver]
