@@ -32,7 +32,7 @@ def Event(type_, *src):
     assert len(src) < 3
     if len(src) > 1:
         assert src[0].endswith('/') == src[1].endswith('/')
-    return _map[(type_, src[0].endswith('/'))](*(x.rstrip('/') for x in src))
+    return _map[(type_, src[0].endswith('/'))](*(x.rstrip('/').replace('/', os.path.sep) for x in src))
 
 
 CASES = [{
@@ -366,11 +366,24 @@ class TestObserver:
         observer = TestSyncObserver(tmpdir.strpath, 1)
         threading.Thread(target=observer.start).start()
 
-        while True:
-            tmpdir.ensure('plsto/notuse', dir=True).remove()
-            if observer.done.wait(1):
-                break
+        # Wait until watchdog is actually reporting events
+        path = tmpdir.ensure('plstonotuse')
+        with path.open('w') as fobj:
+            while True:
+                fobj.write('Testing...\n')
+                fobj.flush()
+                if observer.done.wait(3):
+                    break
 
+        observer.flush()
+        observer.expected = 1
+        observer._events = []
+        observer.done.clear()
+
+        path.remove()
+        observer.done.wait()
+
+        # Reset the observer to its inital state
         observer.flush()
         observer.expected = len(expected)
         observer._events = []
