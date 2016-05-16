@@ -330,9 +330,22 @@ class TestObserver:
 
     @pytest.mark.parametrize('input, expected', [(case['input'], case['output']) for case in CASES])
     def test_event_observer(self, monkeypatch, tmpdir, input, expected):
+        og_input = tuple(input)
+        def local_to_db(local, node, *, is_folder=False, check_is_folder=True):
+            found = False
+            for event in reversed(og_input):
+                if str(tmpdir.join(getattr(event, 'dest_path', ''))) == str(local):
+                    return local_to_db(tmpdir.join(event.src_path), None)
+
+                if str(tmpdir.join(event.src_path)) == str(local):
+                    found = True
+                    if event.event_type == events.EVENT_TYPE_CREATED:
+                        return False
+            return found
+
         # No need for database access
         monkeypatch.setattr('osfoffline.sync.local.utils.extract_node', lambda *args, **kwargs: None)
-        monkeypatch.setattr('osfoffline.sync.local.utils.local_to_db', lambda *args, **kwargs: None)
+        monkeypatch.setattr('osfoffline.sync.local.utils.local_to_db', local_to_db)
 
         # De dup input events
         for event in tuple(input):
@@ -362,11 +375,12 @@ class TestObserver:
         observer.stop()
         observer.flush()
 
+        # Clear cached instance of Observer
+        del type(TestSyncObserver)._instances[TestSyncObserver]
+
         assert len(expected) == len(observer._events)
 
         for event, context in zip(expected, observer._events):
             assert CONTEXT_EVENT_MAP[type(event)] == type(context)
             assert str(tmpdir.join(event.src_path)) == str(context.local)
 
-        # Clear cached instance of Observer
-        del type(TestSyncObserver)._instances[TestSyncObserver]

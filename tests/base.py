@@ -147,5 +147,5 @@ class OSFOTestBase(unittest.TestCase):
                     self._ensure_project_structure(child, project_components_dir)
         tmpdir.chdir()
         def clean():
-            shutil.rmtree(str(tmpdir))
+            tmpdir.remove()
         request.addfinalizer(clean)
