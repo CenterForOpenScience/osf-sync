@@ -365,12 +365,12 @@ class TestObserver:
         observer = TestSyncObserver(tmpdir.strpath)
         threading.Thread(target=observer.start).start()
 
-        time.sleep(1)
+        time.sleep(2)
 
         for event in input:
             self.perform(tmpdir, event)
 
-        time.sleep(1)
+        time.sleep(2)
 
         observer.stop()
         observer.flush()
