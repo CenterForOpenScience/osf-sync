@@ -89,8 +89,6 @@ class EventConsolidator:
                     return False
             return True
 
-        # import ipdb; ipdb.set_trace()
-        # return list(sorted(filter(check, evts), key=lambda x: x.is_directory, reverse=True))
         return list(filter(check, evts))
 
     def __init__(self):
