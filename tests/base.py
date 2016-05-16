@@ -146,6 +146,3 @@ class OSFOTestBase(unittest.TestCase):
                 for child in project['children']:
                     self._ensure_project_structure(child, project_components_dir)
         tmpdir.chdir()
-        def clean():
-            tmpdir.remove()
-        request.addfinalizer(clean)
