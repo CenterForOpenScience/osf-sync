@@ -25,9 +25,9 @@ class EventConsolidator:
 
     @property
     def events(self):
-        i_pool = {v:k for k,v in self._pool.items()}
-        i_final = {v: k for k,v in self._final.items()}
-        i_initial = {v: k for k,v in self._initial.items()}
+        i_pool = {v: k for k, v in self._pool.items()}
+        i_final = {v: k for k, v in self._final.items()}
+        i_initial = {v: k for k, v in self._initial.items()}
 
         moved = set()
         created = set(self._final.keys()) - set(self._initial.keys())
