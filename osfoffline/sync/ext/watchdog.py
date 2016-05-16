@@ -41,7 +41,7 @@ class ConsolidatedEventHandler(FileSystemEventHandler):
     def __init__(self):
         # super().__init__(ignore_patterns=settings.IGNORED_PATTERNS)
         self._event_cache = EventConsolidator()
-        self.timer = threading.Timer(5, self.flush)
+        self.timer = threading.Timer(settings.EVENT_DEBOUNCE, self.flush)
         self.timer.start()
         self.lock = threading.RLock()
 
