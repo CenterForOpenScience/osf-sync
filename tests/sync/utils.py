@@ -3,10 +3,8 @@ import time
 
 from watchdog.observers import Observer
 
-from osfoffline.sync.ext.watchdog import (
-    ConsolidatedEventHandler,
-    TreeDict
-)
+from osfoffline.sync.ext.watchdog import ConsolidatedEventHandler
+
 
 class TestObserver(Observer):
 
@@ -41,5 +39,4 @@ class TestSyncWorker(ConsolidatedEventHandler):
         with self.lock:
             self.flushed.set()
             self.done.wait()
-            self._create_cache = []
-            self._event_cache = TreeDict()
+            self._event_cache.clear()

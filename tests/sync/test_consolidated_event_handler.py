@@ -55,13 +55,8 @@ class TestConsolidatedEventHandler(OSFOTestBase):
             fp.write('The meaning of life is 42')
 
         self.sync_worker.flushed.wait()
-        assert len(self.sync_worker._create_cache) == 1, \
-            "exactly one event captured"
-        assert isinstance(
-            self.sync_worker._create_cache[0],
-            FileCreatedEvent
-        ) is True, \
-            "the one captured event is a FileCreatedEvent"
+        assert len(self.sync_worker._event_cache.events) == 1, 'exactly one event captured'
+        assert isinstance(self.sync_worker._event_cache.events[0], FileCreatedEvent) is True, 'the one captured event is a FileCreatedEvent'
 
     def test_update_file(self):
         project = self.PROJECT_STRUCTURE[0]
@@ -71,13 +66,8 @@ class TestConsolidatedEventHandler(OSFOTestBase):
         with open(str(file_path), 'w') as fp:
             fp.write('Hello world')
         self.sync_worker.flushed.wait()
-        assert len(self.sync_worker._event_cache.children()) == 1, \
-            "exactly one event captured"
-        assert isinstance(
-            self.sync_worker._event_cache.children()[0],
-            FileModifiedEvent
-        ) is True, \
-            "the one captured event is a FileModifiedEvent"
+        assert len(self.sync_worker._event_cache.events) == 1, 'exactly one event captured'
+        assert isinstance(self.sync_worker._event_cache.events[0], FileModifiedEvent) is True, 'the one captured event is a FileModifiedEvent'
 
     def test_rename_file(self):
         project = self.PROJECT_STRUCTURE[0]
@@ -86,13 +76,8 @@ class TestConsolidatedEventHandler(OSFOTestBase):
         )
         os.rename(str(file_path), 'foobar.baz')
         self.sync_worker.flushed.wait()
-        assert len(self.sync_worker._event_cache.children()) == 1, \
-            "exactly one event captured"
-        assert isinstance(
-            self.sync_worker._event_cache.children()[0],
-            FileMovedEvent
-        ) is True, \
-            "the one captured event is a FileMovedEvent"
+        assert len(self.sync_worker._event_cache.events) == 1, 'exactly one event captured'
+        assert isinstance(self.sync_worker._event_cache.events[0], FileMovedEvent) is True, 'the one captured event is a FileMovedEvent'
 
     def test_move_file(self):
         project = self.PROJECT_STRUCTURE[0]
@@ -102,13 +87,8 @@ class TestConsolidatedEventHandler(OSFOTestBase):
         new_path = str(file_path).replace(file_path.basename, 'foo.bar')
         shutil.move(str(file_path), new_path)
         self.sync_worker.flushed.wait()
-        assert len(self.sync_worker._event_cache.children()) == 1, \
-            "exactly one event captured"
-        assert isinstance(
-            self.sync_worker._event_cache.children()[0],
-            FileMovedEvent
-        ) is True, \
-            "the one captured event is a FileMovedEvent"
+        assert len(self.sync_worker._event_cache.events) == 1, 'exactly one event captured'
+        assert isinstance(self.sync_worker._event_cache.events[0], FileMovedEvent) is True, 'the one captured event is a FileMovedEvent'
 
     def test_delete_file(self):
         project = self.PROJECT_STRUCTURE[0]
@@ -117,13 +97,8 @@ class TestConsolidatedEventHandler(OSFOTestBase):
         )
         os.remove(str(file_path))
         self.sync_worker.flushed.wait()
-        assert len(self.sync_worker._event_cache.children()) == 1, \
-            "exactly one event captured"
-        assert isinstance(
-            self.sync_worker._event_cache.children()[0],
-            FileDeletedEvent
-        ) is True, \
-            "the one captured event is a FileDeletedEvent"
+        assert len(self.sync_worker._event_cache.events) == 1, 'exactly one event captured'
+        assert isinstance(self.sync_worker._event_cache.events[0], FileDeletedEvent) is True, 'the one captured event is a FileDeletedEvent'
 
     def test_create_folder(self):
         project = self.PROJECT_STRUCTURE[0]
@@ -136,13 +111,8 @@ class TestConsolidatedEventHandler(OSFOTestBase):
         )
         os.mkdir(dir_path)
         self.sync_worker.flushed.wait()
-        assert len(self.sync_worker._create_cache) == 1, \
-            "exactly one event captured"
-        assert isinstance(
-            self.sync_worker._create_cache[0],
-            DirCreatedEvent
-        ) is True, \
-            "the one captured event is a DirCreatedEvent"
+        assert len(self.sync_worker._event_cache.events) == 1, 'exactly one event captured'
+        assert isinstance(self.sync_worker._event_cache.events[0], DirCreatedEvent) is True, 'the one captured event is a DirCreatedEvent'
 
     def test_create_folder_with_contents(self):
         project = self.PROJECT_STRUCTURE[0]
@@ -158,19 +128,10 @@ class TestConsolidatedEventHandler(OSFOTestBase):
 
         shutil.move(str(ext_folder), str(parent_dir_path) + os.path.sep)
         self.sync_worker.flushed.wait()
-        assert len(self.sync_worker._create_cache) == 2, \
-            "exactly two events captured"
-        create_cache = self.sync_worker._sorted_create_cache()
-        assert isinstance(
-            create_cache[0],
-            DirCreatedEvent
-        ) is True, \
-            "the first event is a DirCreatedEvent"
-        assert isinstance(
-            create_cache[1],
-            FileCreatedEvent
-        ) is True, \
-            "the s event is a DirCreatedEvent"
+        assert len(self.sync_worker._event_cache.events) == 2, 'exactly two events captured'
+        create_cache = self.sync_worker._event_cache.events
+        assert isinstance(create_cache[0], DirCreatedEvent) is True, 'the first event is a DirCreatedEvent'
+        assert isinstance(create_cache[1], FileCreatedEvent) is True, 'the s event is a DirCreatedEvent'
 
     def test_rename_folder(self):
         project = self.PROJECT_STRUCTURE[0]
@@ -180,13 +141,8 @@ class TestConsolidatedEventHandler(OSFOTestBase):
         new_dir_path = str(dir_path).replace(dir_path.basename, 'newdir')
         os.rename(str(dir_path), new_dir_path)
         self.sync_worker.flushed.wait()
-        assert len(self.sync_worker._event_cache.children()) == 1, \
-            "exactly one event captured"
-        assert isinstance(
-            self.sync_worker._event_cache.children()[0],
-            DirMovedEvent
-        ) is True, \
-            "the one captured event is a DirMovedEvent"
+        assert len(self.sync_worker._event_cache.events) == 1, 'exactly one event captured'
+        assert isinstance(self.sync_worker._event_cache.events[0], DirMovedEvent) is True, 'the one captured event is a DirMovedEvent'
 
     def test_move_folder(self):
         project = self.PROJECT_STRUCTURE[0]
@@ -196,13 +152,8 @@ class TestConsolidatedEventHandler(OSFOTestBase):
         new_dir_path = str(dir_path).replace(dir_path.basename, 'newdir')
         shutil.move(str(dir_path), new_dir_path)
         self.sync_worker.flushed.wait()
-        assert len(self.sync_worker._event_cache.children()) == 1, \
-            "exactly one event captured"
-        assert isinstance(
-            self.sync_worker._event_cache.children()[0],
-            DirMovedEvent
-        ) is True, \
-            "the one captured event is a DirMovedEvent"
+        assert len(self.sync_worker._event_cache.events) == 1, 'exactly one event captured'
+        assert isinstance(self.sync_worker._event_cache.events[0], DirMovedEvent) is True, 'the one captured event is a DirMovedEvent'
 
     def test_delete_folder(self):
         project = self.PROJECT_STRUCTURE[0]
@@ -211,13 +162,8 @@ class TestConsolidatedEventHandler(OSFOTestBase):
         )
         shutil.rmtree(str(dir_path))
         self.sync_worker.flushed.wait()
-        assert len(self.sync_worker._event_cache.children()) == 1, \
-            "exactly one event captured"
-        assert isinstance(
-            self.sync_worker._event_cache.children()[0],
-            DirDeletedEvent
-        ) is True, \
-            "the one captured event is a DirDeletedEvent"
+        assert len(self.sync_worker._event_cache.events) == 1, 'exactly one event captured'
+        assert isinstance(self.sync_worker._event_cache.events[0], DirDeletedEvent) is True, 'the one captured event is a DirDeletedEvent'
 
     def test_delete_folder_with_children(self):
         project = self.PROJECT_STRUCTURE[0]
@@ -226,10 +172,5 @@ class TestConsolidatedEventHandler(OSFOTestBase):
         )
         shutil.rmtree(str(dir_path))
         self.sync_worker.flushed.wait()
-        assert len(self.sync_worker._event_cache.children()) == 1, \
-            "exactly one event captured"
-        assert isinstance(
-            self.sync_worker._event_cache.children()[0],
-            DirDeletedEvent
-        ) is True, \
-            "the one captured event is a DirDeletedEvent"
+        assert len(self.sync_worker._event_cache.events) == 1, 'exactly one event captured'
+        assert isinstance(self.sync_worker._event_cache.events[0], DirDeletedEvent) is True, 'the one captured event is a DirDeletedEvent'
