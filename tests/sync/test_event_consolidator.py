@@ -346,6 +346,7 @@ class TestObserver:
         # No need for database access
         monkeypatch.setattr('osfoffline.sync.local.utils.extract_node', lambda *args, **kwargs: None)
         monkeypatch.setattr('osfoffline.sync.local.utils.local_to_db', local_to_db)
+        monkeypatch.setattr('osfoffline.sync.ext.watchdog.settings.EVENT_DEBOUNCE', 1)
 
         # De dup input events
         for event in tuple(input):
@@ -362,16 +363,23 @@ class TestObserver:
             if isinstance(event, (events.FileCreatedEvent, events.DirCreatedEvent)):
                 path.remove()
 
-        observer = TestSyncObserver(tmpdir.strpath)
+        observer = TestSyncObserver(tmpdir.strpath, 1)
         threading.Thread(target=observer.start).start()
 
-        time.sleep(2)
+        while True:
+            tmpdir.ensure('plsto/notuse', dir=True).remove()
+            if observer.done.wait(1):
+                break
+
+        observer.flush()
+        observer.expected = len(expected)
+        observer._events = []
+        observer.done.clear()
 
         for event in input:
             self.perform(tmpdir, event)
 
-        time.sleep(2)
-
+        broke = observer.done.wait(3)
         observer.stop()
         observer.flush()
 
