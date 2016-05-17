@@ -17,6 +17,7 @@ logger = logging.getLogger(__name__)
 class Item:
 
     def __init__(self, is_folder, modified=False):
+        self.events = []
         self.modified = False
         self.is_folder = is_folder
 
@@ -111,8 +112,8 @@ class EventConsolidator:
             self._push(event.dest_path, event, self._pool[event.src_path])
 
     def _push(self, path, event, item=None):
-        created = path not in self._pool
         item = self._pool.setdefault(path, item or Item(event.is_directory))
+        item.events.append(event)
 
         if event.event_type == EVENT_TYPE_MODIFIED:
             item.modified = True
@@ -125,12 +126,12 @@ class EventConsolidator:
                 if key.startswith(path):
                     self._final.pop(key)
 
-        if created and event.event_type != EVENT_TYPE_CREATED and (event.event_type != EVENT_TYPE_MOVED or path == event.src_path):
+        if event.event_type != EVENT_TYPE_CREATED and (event.event_type != EVENT_TYPE_MOVED or path == event.src_path):
+            if item.events[0].event_type == EVENT_TYPE_CREATED or (item.events[0].event_type == EVENT_TYPE_MOVED and item.events[0].dest_path == path):
+                return  # If this file was created by an event dont create an initial place holder for it.
             self._initial[path] = item
-        elif not (event.event_type == EVENT_TYPE_MOVED and event.src_path == path):
+        else:
             self._initial.pop(path, None)
             for key in list(self._initial.keys()):
                 if key.startswith(path):
                     self._initial.pop(key)
-
-    insert = push
