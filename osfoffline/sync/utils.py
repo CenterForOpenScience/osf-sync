@@ -11,6 +11,7 @@ from watchdog.events import (
     EVENT_TYPE_MODIFIED,
 )
 
+from osfoffline import utils
 
 logger = logging.getLogger(__name__)
 
@@ -98,12 +99,14 @@ class EventConsolidator:
         self._pool = OrderedDict()
         self._final = OrderedDict()
         self._initial = OrderedDict()
+        self._hash_pool = OrderedDict()
 
     def clear(self):
         self._events = []
         self._pool.clear()
         self._final.clear()
         self._initial.clear()
+        self._hash_pool.clear()
 
     def push(self, event):
         self._events.append(event)
@@ -114,6 +117,8 @@ class EventConsolidator:
 
     def _push(self, path, event, item=None):
         item = self._pool.setdefault(path, item or Item(event.is_directory))
+        if event.sha256:
+            item = self._hash_pool.setdefault(event.sha256, item)
         item.events.append(event)
 
         if event.event_type == EVENT_TYPE_MODIFIED and not (sys.platform == 'win32' and len(item.events) > 1 and item.events[-2].event_type == EVENT_TYPE_MOVED):
