@@ -145,6 +145,14 @@ CASES = [{
     ]
 }, {
     'input': [
+        Event('modify', '/file.txt'),
+        Event('delete', '/file.txt'),
+    ],
+    'output': [
+        Event('delete', '/file.txt'),
+    ]
+}, {
+    'input': [
         Event('create', '/file.txt'),
         Event('delete', '/file.txt'),
     ],
