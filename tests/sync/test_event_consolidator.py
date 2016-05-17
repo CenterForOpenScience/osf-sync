@@ -280,10 +280,24 @@ CASES = [{
     'output': [Event('create', '/folder/donut/')],
 }, {
     'input': [
-        Event('delete', '/donut.txt', sha=b'123'),
         Event('create', '/bagel.txt', sha=b'123'),
+        Event('delete', '/donut.txt', sha=b'123'),
     ],
     'output': [Event('move', '/donut.txt', '/bagel.txt')]
+}, {
+    'input': [
+        Event('create', '/bagel.txt', sha=b'123'),
+        Event('delete', '/donut.txt', sha=b'123'),
+        Event('create', '/a/cake.txt', sha=b'456'),
+        Event('delete', '/a/cup.txt', sha=b'456'),
+        Event('create', '/a/b/shake.txt', sha=b'789'),
+        Event('delete', '/a/b/milk.txt', sha=b'789'),
+    ],
+    'output': [
+        Event('move', '/a/b/milk.txt', '/a/b/shake.txt'),
+        Event('move', '/a/cup.txt', '/a/cake.txt'),
+        Event('move', '/donut.txt', '/bagel.txt'),
+    ]
 # }, {
 #     'input': [
 #         Event('move', '/file1', '/file2')],
