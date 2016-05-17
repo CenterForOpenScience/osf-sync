@@ -116,9 +116,19 @@ class EventConsolidator:
             self._push(event.dest_path, event, self._pool[event.src_path])
 
     def _push(self, path, event, item=None):
+        copy_found = False
+        if event.event_type in (events.EVENT_TYPE_CREATED, events.EVENT_TYPE_DELETED) and event.sha256:
+            item = self._hash_pool.pop(event.sha256, None)
+            if item and set([event.event_type, item.events[-1].event_type]) != {events.EVENT_TYPE_CREATED, events.EVENT_TYPE_DELETED}:
+                item = None
+            elif item:
+                copy_found = True
+
         item = self._pool.setdefault(path, item or Item(event.is_directory))
-        if event.sha256:
-            item = self._hash_pool.setdefault(event.sha256, item)
+
+        if event.sha256 and not copy_found:
+            self._hash_pool.setdefault(event.sha256, item)
+
         item.events.append(event)
 
         if event.event_type == EVENT_TYPE_MODIFIED and not (sys.platform == 'win32' and len(item.events) > 1 and item.events[-2].event_type == EVENT_TYPE_MOVED):
@@ -134,7 +144,7 @@ class EventConsolidator:
                     self._final.pop(key)
 
         if event.event_type != EVENT_TYPE_CREATED and (event.event_type != EVENT_TYPE_MOVED or path == event.src_path):
-            if item.events[0].event_type == EVENT_TYPE_CREATED or (item.events[0].event_type == EVENT_TYPE_MOVED and item.events[0].dest_path == path):
+            if (item.events[0].event_type == EVENT_TYPE_CREATED and not copy_found) or (item.events[0].event_type == EVENT_TYPE_MOVED and item.events[0].dest_path == path):
                 return  # If this file was created by an event dont create an initial place holder for it.
             self._initial[path] = item
         else:
