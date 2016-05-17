@@ -1,4 +1,5 @@
 import os
+import sys
 import logging
 import itertools
 from collections import OrderedDict
@@ -115,7 +116,8 @@ class EventConsolidator:
         item = self._pool.setdefault(path, item or Item(event.is_directory))
         item.events.append(event)
 
-        if event.event_type == EVENT_TYPE_MODIFIED:
+        if event.event_type == EVENT_TYPE_MODIFIED and not (sys.platform == 'win32' and len(item.events) > 1 and item.events[-2].event_type == EVENT_TYPE_MOVED):
+            # Windows reports moved files as modified even if they are not, ignore these. Any changes will be picked up by the remote sync
             item.modified = True
 
         if event.event_type != EVENT_TYPE_DELETED and (event.event_type != EVENT_TYPE_MOVED or path == event.dest_path):
