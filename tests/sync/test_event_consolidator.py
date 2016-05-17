@@ -3,9 +3,11 @@ import pytest
 import os
 import time
 import threading
+from pathlib import Path
 
 from watchdog import events
 
+from osfoffline import utils
 from osfoffline.tasks import operations
 from osfoffline.utils.log import start_logging
 from osfoffline.sync.utils import EventConsolidator
@@ -28,11 +30,13 @@ _map = {
 }
 
 
-def Event(type_, *src):
+def Event(type_, *src, sha=None):
     assert len(src) < 3
     if len(src) > 1:
         assert src[0].endswith('/') == src[1].endswith('/')
-    return _map[(type_, src[0].endswith('/'))](*(x.rstrip('/').replace('/', os.path.sep) for x in src))
+    event = _map[(type_, src[0].endswith('/'))](*(x.rstrip('/').replace('/', os.path.sep) for x in src))
+    event.sha256 = sha
+    return event
 
 
 CASES = [{
@@ -225,6 +229,9 @@ CASES = [{
     # 'output': [Event('create', '/file.docx')],
 # }, {
     'input': [
+        # SHA required as the move is performed before the file can be hashed
+        # This should never actually happen
+        # Event('modify', '/folder/donut.txt', sha=b'12345'),
         Event('modify', '/folder/donut.txt'),
         Event('move', '/folder/donut.txt', '/test/donut.txt'),
         Event('move', '/folder/', '/test/'),
@@ -271,14 +278,12 @@ CASES = [{
 }, {
     'input': [Event('create', '/folder/donut/')],
     'output': [Event('create', '/folder/donut/')],
-
-# }, {
-#     'input': [
-#         Event('delete', '/donut.txt', sha=123)],
-#         Event('create', '/bagel.txt', sha=123)],
-#     ],
-#     'output': [Event('move', '/bagel.txt', sha=123)]
-
+}, {
+    'input': [
+        Event('delete', '/donut.txt', sha=b'123'),
+        Event('create', '/bagel.txt', sha=b'123'),
+    ],
+    'output': [Event('move', '/donut.txt', '/bagel.txt')]
 # }, {
 #     'input': [
 #         Event('move', '/file1', '/file2')],
@@ -321,10 +326,10 @@ class TestObserver:
     def perform(self, tmpdir, event):
         if isinstance(event, events.FileModifiedEvent):
             with tmpdir.join(event.src_path).open('ab') as fobj:
-                fobj.write(os.urandom(50))
+                fobj.write(event.sha256 or os.urandom(50))
         elif isinstance(event, events.FileCreatedEvent):
             with tmpdir.join(event.src_path).open('wb+') as fobj:
-                fobj.write(os.urandom(50))
+                fobj.write(event.sha256 or os.urandom(50))
         elif isinstance(event, events.DirModifiedEvent):
             return
         elif isinstance(event, (events.FileMovedEvent, events.DirMovedEvent)):
@@ -346,15 +351,30 @@ class TestObserver:
                     return local_to_db(tmpdir.join(event.src_path), None)
 
                 if str(tmpdir.join(event.src_path)) == str(local):
-                    found = True
+                    found = event
                     if event.event_type == events.EVENT_TYPE_CREATED:
                         return False
+
+            # Doesnt really matter, just needs to be truthy and have a sha256
             return found
 
-        # No need for database access
+        def sha256_from_event(event):
+            for evt in og_input:
+                if str(tmpdir.join(getattr(evt, 'dest_path', evt.src_path))) == str(event.src_path) and evt.sha256:
+                    return evt.sha256
+
+            if event.event_type == events.EVENT_TYPE_DELETED:
+                return None
+
+            try:
+                return utils.hash_file(Path(getattr(event, 'dest_path', event.src_path)))
+            except (IsADirectoryError, PermissionError):
+                return None
+
         monkeypatch.setattr('osfoffline.sync.local.utils.extract_node', lambda *args, **kwargs: None)
         monkeypatch.setattr('osfoffline.sync.local.utils.local_to_db', local_to_db)
         monkeypatch.setattr('osfoffline.sync.ext.watchdog.settings.EVENT_DEBOUNCE', 1)
+        monkeypatch.setattr('osfoffline.sync.ext.watchdog.sha256_from_event', sha256_from_event)
 
         # De dup input events
         for event in tuple(input):
@@ -364,6 +384,9 @@ class TestObserver:
 
         for event in reversed(input):
             path = tmpdir.ensure(event.src_path, dir=event.is_directory)
+            if not event.is_directory:
+                with path.open('wb+') as fobj:
+                    fobj.write(os.urandom(50))
 
             if isinstance(event, (events.FileMovedEvent, events.DirMovedEvent)):
                 tmpdir.ensure(event.dest_path, dir=event.is_directory).remove()
