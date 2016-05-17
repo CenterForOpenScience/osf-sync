@@ -36,7 +36,7 @@ refs = None
 # Logging configuration
 FILE_FORMATTER = '[%(levelname)s][%(asctime)s][%(threadName)s][%(name)s]: %(message)s'
 
-IGNORED_PATTERNS = [ '*' + os.path.sep + x for x in (
+IGNORED_PATTERNS = ['*' + os.path.sep + x for x in (
     '.DS_Store',
     'lost+found',
     'Desktop.ini',
