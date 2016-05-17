@@ -163,7 +163,7 @@ class TestConsolidatedEventHandler(OSFOTestBase):
         shutil.rmtree(str(dir_path))
         self.sync_worker.flushed.wait()
         assert len(self.sync_worker._event_cache.events) == 1, 'exactly one event captured'
-        assert isinstance(self.sync_worker._event_cache.events[0], DirDeletedEvent) or (isinstance(self.sync_worker._event_cache.events[0], FileDeletedEvent) and sys.platform == 'windows'), 'the one captured event is a DirDeletedEvent'
+        assert isinstance(self.sync_worker._event_cache.events[0], DirDeletedEvent) or (isinstance(self.sync_worker._event_cache.events[0], FileDeletedEvent) and sys.platform == 'win32'), 'the one captured event is a DirDeletedEvent'
 
     def test_delete_folder_with_children(self):
         project = self.PROJECT_STRUCTURE[0]
