@@ -371,8 +371,10 @@ class TestObserver:
 
         def sha256_from_event(event):
             for evt in og_input:
-                if str(event.src_path) in (str(tmpdir.join(evt.src_path)), str(tmpdir.join(getattr(evt, 'dest_path', evt.src_path)))) and evt.sha256:
-                    return evt.sha256
+                if str(event.src_path) in (str(tmpdir.join(evt.src_path)), str(tmpdir.join(getattr(evt, 'dest_path', evt.src_path)))):
+                    event.is_directory = evt.is_directory  # Hack to make tests pass on windows. Delete events are emitted as file deletes. Other code compensates for this
+                    if evt.sha256:
+                        return evt.sha256
 
             if event.event_type == events.EVENT_TYPE_DELETED:
                 return None
@@ -406,7 +408,11 @@ class TestObserver:
                 path.remove()
 
         observer = TestSyncObserver(tmpdir.strpath, 1)
-        threading.Thread(target=observer.start).start()
+        # Clear cached instance of Observer
+        del type(TestSyncObserver)._instances[TestSyncObserver]
+
+        observer.start()
+        assert observer.is_alive()
 
         # Wait until watchdog is actually reporting events
         retries = 0
@@ -441,9 +447,6 @@ class TestObserver:
         observer.done.wait(3)
         observer.stop()
         observer.flush()
-
-        # Clear cached instance of Observer
-        del type(TestSyncObserver)._instances[TestSyncObserver]
 
         assert len(expected) == len(observer._events)
 
