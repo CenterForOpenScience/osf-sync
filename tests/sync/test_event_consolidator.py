@@ -386,7 +386,7 @@ class TestObserver:
 
         monkeypatch.setattr('osfoffline.sync.local.utils.extract_node', lambda *args, **kwargs: None)
         monkeypatch.setattr('osfoffline.sync.local.utils.local_to_db', local_to_db)
-        monkeypatch.setattr('osfoffline.sync.ext.watchdog.settings.EVENT_DEBOUNCE', 1)
+        monkeypatch.setattr('osfoffline.sync.ext.watchdog.settings.EVENT_DEBOUNCE', 2)
         monkeypatch.setattr('osfoffline.sync.ext.watchdog.sha256_from_event', sha256_from_event)
 
         # De dup input events
