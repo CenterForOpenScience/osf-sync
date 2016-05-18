@@ -35,6 +35,8 @@ class EventConsolidator:
         deleted = set(self._initial.keys()) - set(self._final.keys())
         modified = set(i for i in self._pool.values() if i.modified and not i.is_folder)
 
+        # Probably don't need both loops here but better safe than sorry
+        # If an item has been created and deleted it is actuall a move
         for key in set(created):
             src = i_initial.get(self._final[key])
             if src:
@@ -47,6 +49,9 @@ class EventConsolidator:
                 deleted.remove(key)
                 moved.add((key, dest))
 
+        # Sort by place in the file hierarchy
+        # Children come before parents
+        # NOTE: Create events must be sorted THE OPPOSITE direction
         sorter = lambda x: x.count(os.path.sep)
 
         evts = list(itertools.chain(
@@ -77,12 +82,13 @@ class EventConsolidator:
 
         mapped = set([
             (getattr(event, 'dest_path', event.src_path), event.event_type)
-            # (event.src_path, event.event_type)
             for event in evts
             if event.is_directory
             and not event.event_type == EVENT_TYPE_CREATED
         ])
 
+        # Do our best to dedup all found events.
+        # If there is a matching event type at a parent path disregard the children
         def check(event):
             segments = getattr(event, 'dest_path', event.src_path).split(os.path.sep)
             for i in range(len(segments) - 1):
@@ -115,6 +121,9 @@ class EventConsolidator:
 
     def _push(self, path, event, item=None):
         copy_found = False
+        # For the case where windows decideds that moves should actually be creates and deletes
+        # If a delete or create event with a hash is seen check the hash pool for an matching hash
+        # If found ensure the found event is opposite of our current event and set item to it.
         if event.event_type in (events.EVENT_TYPE_CREATED, events.EVENT_TYPE_DELETED) and event.sha256:
             item = self._hash_pool.pop(event.sha256, None)
             if item and {event.event_type, item.events[0].event_type} != {events.EVENT_TYPE_CREATED, events.EVENT_TYPE_DELETED}:
@@ -127,10 +136,10 @@ class EventConsolidator:
         item = self._pool.setdefault(path, item or Item(event.is_directory))
 
         if sys.platform == 'win32' and event.event_type == EVENT_TYPE_MODIFIED and item.events and item.events[-1].event_type in (EVENT_TYPE_MOVED, EVENT_TYPE_CREATED):
-            # Windows really likes emmiting modfied events. If a modified is prefaced by a MOVE or CREATE it should/can be ignored
-            return
+            return  # Windows really likes emmiting modfied events. If a modified is prefaced by a MOVE or CREATE it should/can be ignored
 
         if event.sha256 and not copy_found:
+            # If this is an unmatched event with a hash add it to the pool
             self._hash_pool.setdefault(event.sha256, item)
 
         item.events.append(event)
@@ -139,8 +148,10 @@ class EventConsolidator:
             item.modified = True
 
         if event.event_type != EVENT_TYPE_DELETED and (event.event_type != EVENT_TYPE_MOVED or path == event.dest_path):
+            # If this event would result in the item in question existing in the final virtual state, add it.
             self._final[path] = item
         else:
+            # Otherwise ensure that item and it's children, if any, are not in the final virutal state.
             self._final.pop(path, None)
             for key in list(self._final.keys()):
                 if key.startswith(path):
@@ -148,9 +159,11 @@ class EventConsolidator:
 
         if event.event_type != EVENT_TYPE_CREATED and (event.event_type != EVENT_TYPE_MOVED or path == event.src_path):
             if (item.events[0].event_type == EVENT_TYPE_CREATED and not copy_found) or (item.events[0].event_type == EVENT_TYPE_MOVED and item.events[0].dest_path == path):
-                return  # If this file was created by an event dont create an initial place holder for it.
+                return  # If this file was created by an event, don't create an initial place holder for it.
+            # If this event indicates the item in question would have existed in the initial virtual state, add it.
             self._initial[path] = item
         else:
+            # Otherwise ensure that item and it's children, if any, are not in the inital virtual state.
             self._initial.pop(path, None)
             for key in list(self._initial.keys()):
                 if key.startswith(path):
