@@ -131,7 +131,7 @@ class EventConsolidator:
 
         item.events.append(event)
 
-        if event.event_type == EVENT_TYPE_MODIFIED and not (sys.platform == 'win32' and len(item.events) > 1 and item.events[-2].event_type == EVENT_TYPE_MOVED):
+        if event.event_type == EVENT_TYPE_MODIFIED and not (sys.platform == 'win32' and len(item.events) > 1 and item.events[-2].event_type in (EVENT_TYPE_MOVED, EVENT_TYPE_CREATED)):
             # Windows reports moved files as modified even if they are not, ignore these. Any changes will be picked up by the remote sync
             item.modified = True
 
