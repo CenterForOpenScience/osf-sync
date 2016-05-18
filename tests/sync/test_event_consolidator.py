@@ -423,7 +423,7 @@ class TestObserver:
         observer.done.clear()
 
         path.remove()
-        observer.done.wait()
+        observer.done.wait(5)
 
         # Reset the observer to its inital state
         observer.flush()
