@@ -331,6 +331,19 @@ class TestEventConsolidator:
             consolidator.push(event)
         assert list(consolidator.events) == list(expected)
 
+    def test_event_consolidator_windows_folder_delete(self):
+        input = [
+            Event('modify', 'parent'),
+            Event('delete', 'parent/child.txt'),
+            Event('delete', 'parent'),
+        ]
+        expected = [Event('delete', 'parent/')]
+
+        consolidator = EventConsolidator()
+        for event in input:
+            consolidator.push(event)
+        assert list(consolidator.events) == list(expected)
+
 
 class TestObserver:
 

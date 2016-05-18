@@ -54,6 +54,14 @@ class EventConsolidator:
         # NOTE: Create events must be sorted THE OPPOSITE direction
         sorter = lambda x: x.count(os.path.sep)
 
+        # Windows reports folder deletes are file deletes + modifies
+        # If a child exists for any file assume it is a directory
+        for delete in deleted:
+            for other in deleted:
+                if delete != other and other.startswith(delete):
+                    self._initial[delete].is_folder = True
+                    break
+
         evts = list(itertools.chain(
             (
                 events.DirMovedEvent(src, dest)
@@ -93,8 +101,6 @@ class EventConsolidator:
             segments = getattr(event, 'dest_path', event.src_path).split(os.path.sep)
             for i in range(len(segments) - 1):
                 if (os.path.sep.join(segments[:i + 1]), event.event_type) in mapped:
-                    if sys.platform == 'win32' and event.event_type == EVENT_TYPE_DELETED:
-                        self._initial[os.path.sep.join(segments[:i + 1])].is_directory = True
                     return False
             return True
 
