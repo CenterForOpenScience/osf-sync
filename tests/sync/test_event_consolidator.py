@@ -390,7 +390,7 @@ class TestObserver:
         # De dup input events
         for event in tuple(input):
             for evt in tuple(input):
-                if event is not evt and not isinstance(event, events.DirModifiedEvent) and event.event_type != events.EVENT_TYPE_CREATED and evt.event_type == event.event_type and getattr(evt, 'dest_path', evt.src_path).startswith(getattr(evt, 'dest_path', evt.src_path)):
+                if event is not evt and not isinstance(event, events.DirModifiedEvent) and event.event_type != events.EVENT_TYPE_CREATED and evt.event_type == event.event_type and getattr(evt, 'dest_path', evt.src_path).startswith(getattr(event, 'dest_path', event.src_path)):
                     input.remove(evt)
 
         for event in reversed(input):
@@ -434,7 +434,7 @@ class TestObserver:
         for event in input:
             self.perform(tmpdir, event)
 
-        broke = observer.done.wait(3)
+        observer.done.wait(3)
         observer.stop()
         observer.flush()
 
