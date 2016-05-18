@@ -119,10 +119,12 @@ class EventConsolidator:
         copy_found = False
         if event.event_type in (events.EVENT_TYPE_CREATED, events.EVENT_TYPE_DELETED) and event.sha256:
             item = self._hash_pool.pop(event.sha256, None)
-            if item and set([event.event_type, item.events[-1].event_type]) != {events.EVENT_TYPE_CREATED, events.EVENT_TYPE_DELETED}:
+            if item and {event.event_type, item.events[0].event_type} != {events.EVENT_TYPE_CREATED, events.EVENT_TYPE_DELETED}:
                 item = None
             elif item:
                 copy_found = True
+                item.modified = False
+                self._pool[path] = item
 
         item = self._pool.setdefault(path, item or Item(event.is_directory))
 

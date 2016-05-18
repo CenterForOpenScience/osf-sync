@@ -1,6 +1,7 @@
 import sys
 import os
 import shutil
+from unittest import mock
 
 import pytest
 
@@ -69,7 +70,9 @@ class TestConsolidatedEventHandler(OSFOTestBase):
         assert len(self.sync_worker._event_cache.events) == 1, 'exactly one event captured'
         assert isinstance(self.sync_worker._event_cache.events[0], FileModifiedEvent) is True, 'the one captured event is a FileModifiedEvent'
 
-    def test_rename_file(self):
+    @mock.patch('osfoffline.sync.ext.watchdog.sha256_from_event')
+    def test_rename_file(self, sha_mock):
+        sha_mock.return_value = '1234'
         project = self.PROJECT_STRUCTURE[0]
         file_path = self.root_dir.join(
             project['files'][0]['children'][0]['rel_path'].lstrip(os.path.sep)

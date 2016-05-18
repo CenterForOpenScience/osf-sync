@@ -109,9 +109,9 @@ CASES = [{
     ],
 }, {
     'input': [
-        Event('move', '/parent/file.txt', '/george/file.txt'),
-        Event('move', '/parent/child/file.txt', '/george/child/file.txt'),
-        Event('move', '/parent/child/grandchild/file.txt', '/george/child/grandchild/file.txt'),
+        Event('move', '/parent/file.txt', '/george/file.txt', sha=b'123'),
+        Event('move', '/parent/child/file.txt', '/george/child/file.txt', sha=b'456'),
+        Event('move', '/parent/child/grandchild/file.txt', '/george/child/grandchild/file.txt', sha=b'789'),
     ],
     'output': [
         Event('move', '/parent/child/grandchild/file.txt', '/george/child/grandchild/file.txt'),
@@ -205,8 +205,8 @@ CASES = [{
     'input': [
         Event('create', '/~WRL0001.tmp'),
         Event('modify', '/~WRL0001.tmp'),
-        Event('move', '/file.docx', '/~WRL0005.tmp'),
-        Event('move', '/~WRL0001.tmp', '/file.docx'),
+        Event('move', '/file.docx', '/~WRL0005.tmp', sha=b'123'),
+        Event('move', '/~WRL0001.tmp', '/file.docx', sha=b'456'),
         Event('delete', '/~WRL0005.tmp'),
     ],
     # 'output': [Event('modify', '/file.docx')],
@@ -229,9 +229,6 @@ CASES = [{
     # 'output': [Event('create', '/file.docx')],
 # }, {
     'input': [
-        # SHA required as the move is performed before the file can be hashed
-        # This should never actually happen
-        # Event('modify', '/folder/donut.txt', sha=b'12345'),
         Event('modify', '/folder/donut.txt'),
         Event('move', '/folder/donut.txt', '/test/donut.txt'),
         Event('move', '/folder/', '/test/'),
@@ -242,7 +239,7 @@ CASES = [{
     ],
 }, {
     'input': [
-        Event('move', '/folder/donut.txt', '/other_folder/bagel.txt'),
+        Event('move', '/folder/donut.txt', '/other_folder/bagel.txt', sha='1234'),
         Event('move', '/folder/', '/test/'),
     ],
     'output': [
@@ -374,7 +371,7 @@ class TestObserver:
 
         def sha256_from_event(event):
             for evt in og_input:
-                if str(tmpdir.join(getattr(evt, 'dest_path', evt.src_path))) == str(event.src_path) and evt.sha256:
+                if str(event.src_path) in (str(tmpdir.join(evt.src_path)), str(tmpdir.join(getattr(event, 'dest_path', event.src_path)))) and evt.sha256:
                     return evt.sha256
 
             if event.event_type == events.EVENT_TYPE_DELETED:
