@@ -15,7 +15,9 @@ logger = logging.getLogger(__name__)
 if sys.platform == 'win32':
     from watchdog.observers import winapi
     # Dont emit file modify events when a file's attributes are changed
+    winapi.WATCHDOG_FILE_NOTIFY_FLAGS ^= winapi.FILE_NOTIFY_CHANGE_SECURITY
     winapi.WATCHDOG_FILE_NOTIFY_FLAGS ^= winapi.FILE_NOTIFY_CHANGE_ATTRIBUTES
+    winapi.WATCHDOG_FILE_NOTIFY_FLAGS ^= winapi.FILE_NOTIFY_CHANGE_LAST_ACCESS
 
 
 def sha256_from_event(event):
