@@ -11,8 +11,6 @@ from watchdog.events import (
     EVENT_TYPE_MODIFIED,
 )
 
-from osfoffline import utils
-
 logger = logging.getLogger(__name__)
 
 
