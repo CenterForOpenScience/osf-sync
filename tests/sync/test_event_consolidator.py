@@ -371,7 +371,7 @@ class TestObserver:
 
         def sha256_from_event(event):
             for evt in og_input:
-                if str(event.src_path) in (str(tmpdir.join(evt.src_path)), str(tmpdir.join(getattr(event, 'dest_path', event.src_path)))) and evt.sha256:
+                if str(event.src_path) in (str(tmpdir.join(evt.src_path)), str(tmpdir.join(getattr(evt, 'dest_path', evt.src_path)))) and evt.sha256:
                     return evt.sha256
 
             if event.event_type == events.EVENT_TYPE_DELETED:
