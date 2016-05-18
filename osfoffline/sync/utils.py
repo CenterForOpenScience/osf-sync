@@ -126,13 +126,16 @@ class EventConsolidator:
 
         item = self._pool.setdefault(path, item or Item(event.is_directory))
 
+        if sys.platform == 'win32' and event.event_type == EVENT_TYPE_MODIFIED and item.events and item.events[-1].event_type in (EVENT_TYPE_MOVED, EVENT_TYPE_CREATED):
+            # Windows really likes emmiting modfied events. If a modified is prefaced by a MOVE or CREATE it should/can be ignored
+            return
+
         if event.sha256 and not copy_found:
             self._hash_pool.setdefault(event.sha256, item)
 
         item.events.append(event)
 
-        if event.event_type == EVENT_TYPE_MODIFIED and not (sys.platform == 'win32' and len(item.events) > 1 and item.events[-2].event_type in (EVENT_TYPE_MOVED, EVENT_TYPE_CREATED)):
-            # Windows reports moved files as modified even if they are not, ignore these. Any changes will be picked up by the remote sync
+        if event.event_type == EVENT_TYPE_MODIFIED:
             item.modified = True
 
         if event.event_type != EVENT_TYPE_DELETED and (event.event_type != EVENT_TYPE_MOVED or path == event.dest_path):
