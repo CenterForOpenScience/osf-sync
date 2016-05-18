@@ -409,6 +409,7 @@ class TestObserver:
         threading.Thread(target=observer.start).start()
 
         # Wait until watchdog is actually reporting events
+        retries = 0
         path = tmpdir.ensure('plstonotuse')
         with path.open('w') as fobj:
             while True:
@@ -416,6 +417,9 @@ class TestObserver:
                 fobj.flush()
                 if observer.done.wait(3):
                     break
+                retries += 1
+                if retries > 4:
+                    raise Exception('Could not start observer')
 
         observer.flush()
         observer.expected = 1
