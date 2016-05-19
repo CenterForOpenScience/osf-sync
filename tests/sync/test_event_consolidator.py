@@ -311,6 +311,22 @@ CASES = [{
 
 }]
 
+
+TMP_CASES = [{
+    'input': [Event('create', '/~$file.txt')],
+    'output': []
+}, {
+    'input': [Event('move', '/myfile.txt', '/~$file.txt')],
+    'output': [Event('delete', '/myfile.txt')]
+}, {
+    'input': [Event('delete', '/file.tmp')],
+    'output': []
+}, {
+    'input': [Event('modify', '/.DS_Store')],
+    'output': []
+}]
+
+
 CONTEXT_EVENT_MAP = {
     events.FileCreatedEvent: operations.RemoteCreateFile,
     events.FileDeletedEvent: operations.RemoteDeleteFile,
@@ -326,7 +342,7 @@ class TestEventConsolidator:
 
     @pytest.mark.parametrize('input, expected', [(case['input'], case['output']) for case in CASES])
     def test_event_consolidator(self, input, expected):
-        consolidator = EventConsolidator()
+        consolidator = EventConsolidator(ignore=False)
         for event in input:
             consolidator.push(event)
         assert list(consolidator.events) == list(expected)
@@ -339,6 +355,13 @@ class TestEventConsolidator:
         ]
         expected = [Event('delete', 'parent/')]
 
+        consolidator = EventConsolidator(ignore=False)
+        for event in input:
+            consolidator.push(event)
+        assert list(consolidator.events) == list(expected)
+
+    @pytest.mark.parametrize('input, expected', [(case['input'], case['output']) for case in TMP_CASES])
+    def test_event_consolidator_temp_files(self, input, expected):
         consolidator = EventConsolidator()
         for event in input:
             consolidator.push(event)

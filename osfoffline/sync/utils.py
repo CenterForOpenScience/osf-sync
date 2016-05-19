@@ -10,6 +10,8 @@ from watchdog.events import (
     EVENT_TYPE_CREATED,
     EVENT_TYPE_MODIFIED,
 )
+from osfoffline.utils import is_ignored
+
 
 logger = logging.getLogger(__name__)
 
@@ -26,6 +28,11 @@ class EventConsolidator:
 
     @property
     def events(self):
+        if self._ignore:
+            self._pool = {k: v for k, v in self._pool.items() if not is_ignored(k)}
+            self._final = {k: v for k, v in self._final.items() if not is_ignored(k)}
+            self._initial = {k: v for k, v in self._initial.items() if not is_ignored(k)}
+
         i_pool = {v: k for k, v in self._pool.items()}
         i_final = {v: k for k, v in self._final.items()}
         i_initial = {v: k for k, v in self._initial.items()}
@@ -106,8 +113,9 @@ class EventConsolidator:
 
         return list(filter(check, evts))
 
-    def __init__(self):
+    def __init__(self, ignore=True):
         self._events = []
+        self._ignore = ignore
         self._pool = OrderedDict()
         self._final = OrderedDict()
         self._initial = OrderedDict()
