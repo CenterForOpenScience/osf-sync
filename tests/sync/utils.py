@@ -3,10 +3,9 @@ import time
 
 from watchdog.observers import Observer
 
-from osfoffline.sync.ext.watchdog import (
-    ConsolidatedEventHandler,
-    TreeDict
-)
+from osfoffline.sync.local import LocalSyncWorker
+from osfoffline.sync.ext.watchdog import ConsolidatedEventHandler
+
 
 class TestObserver(Observer):
 
@@ -41,5 +40,22 @@ class TestSyncWorker(ConsolidatedEventHandler):
         with self.lock:
             self.flushed.set()
             self.done.wait()
-            self._create_cache = []
-            self._event_cache = TreeDict()
+            self._event_cache.clear()
+
+
+class TestSyncObserver(LocalSyncWorker):
+
+    def __init__(self, path, expected):
+        super(LocalSyncWorker, self).__init__()
+        self._events = []
+        self.folder = path
+        self.expected = expected
+        self.observer = Observer()
+        self.done = threading.Event()
+        self.ignore = threading.Event()
+        self.observer.schedule(self, self.folder, recursive=True)
+
+    def put_event(self, event):
+        self._events.append(event)
+        if len(self._events) >= self.expected:
+            self.done.set()

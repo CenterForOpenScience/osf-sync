@@ -1,5 +1,4 @@
 import os
-import shutil
 import itertools
 
 import pytest
@@ -146,6 +145,3 @@ class OSFOTestBase(unittest.TestCase):
                 for child in project['children']:
                     self._ensure_project_structure(child, project_components_dir)
         tmpdir.chdir()
-        def clean():
-            shutil.rmtree(str(tmpdir))
-        request.addfinalizer(clean)

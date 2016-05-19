@@ -11,7 +11,7 @@ from osfoffline.exceptions import NodeNotFound
 from osfoffline.sync.ext.watchdog import ConsolidatedEventHandler
 from osfoffline.tasks import operations
 from osfoffline.tasks.operations import OperationContext
-from osfoffline.utils import Singleton
+from osfoffline.utils import Singleton, is_ignored
 from osfoffline.tasks.queue import OperationWorker
 
 logger = logging.getLogger(__name__)
@@ -60,9 +60,13 @@ class LocalSyncWorker(ConsolidatedEventHandler, metaclass=Singleton):
         super().dispatch(event)
 
     def on_moved(self, event):
-        logger.info('Move event for {}: from {} to {}'.format('directory' if event.is_directory else 'file',
-                                                              event.src_path,
-                                                              event.dest_path))
+        logger.info('Move event for {}: from {} to {}'.format('directory' if event.is_directory else 'file', event.src_path, event.dest_path))
+
+        if is_ignored(event.dest_path):
+            logger.info('Removing {} {} from DB, it was moved to an ignored file'.format('directory' if event.is_directory else 'file', event.src_path, event.dest_path))
+            context = OperationContext(local=Path(event.src_path), check_is_folder=False)
+            return self.put_event(operations.DatabaseDelete(context))
+
         # Note: OperationContext should extrapolate all attributes from what it is given
         if event.is_directory:
             try:
@@ -90,8 +94,7 @@ class LocalSyncWorker(ConsolidatedEventHandler, metaclass=Singleton):
             ))
 
     def on_created(self, event):
-        logger.info('Creation event for {}: {}'.format('directory' if event.is_directory else 'file',
-                                                       event.src_path))
+        logger.info('Creation event for {}: {}'.format('directory' if event.is_directory else 'file', event.src_path))
         node = utils.extract_node(event.src_path)
         path = Path(event.src_path)
 
@@ -107,28 +110,27 @@ class LocalSyncWorker(ConsolidatedEventHandler, metaclass=Singleton):
         return self.put_event(operations.RemoteCreateFile(context))
 
     def on_deleted(self, event, *args, is_folder=False, **kwargs):
-        logger.info('Deletion event for {}: {}'.format('directory' if event.is_directory else 'file',
-                                                       event.src_path))
+        logger.info('Deletion event for {}: {}'.format('directory' if event.is_directory else 'file', event.src_path))
         # A hack: override checking if the passed path is a directory. Since Windows
         # emits folder deletion events as file deletes we need to ignore whether or not
         # a delete event is for a folder. Since the RemoteDelete operation works identically
         # for files and folders we can get away with this here.
         context = OperationContext(local=Path(event.src_path), check_is_folder=False)
+        context.db  # noqa
 
         return self.put_event(operations.RemoteDelete(context))
 
     def on_modified(self, event):
-        logger.info('Modification event  for {}: {}'.format('directory' if event.is_directory else 'file',
-                                                            event.src_path))
+        logger.info('Modification event  for {}: {}'.format('directory' if event.is_directory else 'file', event.src_path))
         node = utils.extract_node(event.src_path)
         path = Path(event.src_path)
 
         # If the file does not exist in the database, this may be a create
         if not utils.local_to_db(path, node):
-            for e in self._create_cache:
-                if e.src_path == event.src_path:
-                    logging.warning('Found a duplicate create event {}. Ignoring...'.format(event))
-                    return
+            # for e in self._create_cache:
+            #     if e.src_path == event.src_path:
+            #         logging.warning('Found a duplicate create event {}. Ignoring...'.format(event))
+            #         return
             return self.on_created(event)
 
         context = OperationContext(local=Path(event.src_path))
