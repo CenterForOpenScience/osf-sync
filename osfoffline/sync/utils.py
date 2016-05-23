@@ -29,9 +29,9 @@ class EventConsolidator:
     @property
     def events(self):
         if self._ignore:
-            self._pool = {k: v for k, v in self._pool.items() if not is_ignored(k)}
-            self._final = {k: v for k, v in self._final.items() if not is_ignored(k)}
-            self._initial = {k: v for k, v in self._initial.items() if not is_ignored(k)}
+            self._pool = OrderedDict([(k, v) for k, v in self._pool.items() if not is_ignored(k)])
+            self._final = OrderedDict([(k, v) for k, v in self._final.items() if not is_ignored(k)])
+            self._initial = OrderedDict([(k, v) for k, v in self._initial.items() if not is_ignored(k)])
 
         i_pool = {v: k for k, v in self._pool.items()}
         i_final = {v: k for k, v in self._final.items()}

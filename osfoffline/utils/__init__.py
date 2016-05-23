@@ -1,3 +1,4 @@
+import re
 import hashlib
 import os
 from fnmatch import fnmatch
@@ -9,6 +10,9 @@ from osfoffline.database import Session
 from osfoffline.database import models
 from osfoffline.exceptions import NodeNotFound
 from osfoffline.utils.authentication import get_current_user
+
+
+IGNORE_RE = re.compile(r'.*{}({})'.format(os.path.sep, '|'.join(settings.IGNORED_PATTERNS)))
 
 
 class Singleton(type):
@@ -90,12 +94,4 @@ def _remote_root(db):
     )
 
 def is_ignored(name):
-    return match_patterns(name, settings.IGNORED_PATTERNS)
-
-# https://github.com/gorakhargosh/watchdog/blob/d7ceb7ddd48037f6d04ab37297a63116655926d9/tools/nosy.py#L33
-def match_patterns(pathname, patterns):
-    """Returns ``True`` if the pathname matches any of the given patterns."""
-    for pattern in patterns:
-        if fnmatch(pathname, pattern):
-            return True
-    return False
+    return IGNORE_RE.match(name) is not None

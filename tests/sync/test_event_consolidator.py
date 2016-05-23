@@ -489,4 +489,3 @@ class TestObserver:
         for event, context in zip(expected, observer._events):
             assert CONTEXT_EVENT_MAP[type(event)] == type(context)
             assert str(tmpdir.join(event.src_path)) == str(context.local)
-
