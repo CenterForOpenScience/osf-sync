@@ -11,7 +11,7 @@ from osfoffline.exceptions import NodeNotFound
 from osfoffline.utils.authentication import get_current_user
 
 
-IGNORE_RE = re.compile(r'.*{}({})'.format(os.path.sep, '|'.join(settings.IGNORED_PATTERNS)))
+IGNORE_RE = re.compile(r'.*{}({})'.format(re.escape(os.path.sep), '|'.join(settings.IGNORED_PATTERNS)))
 
 
 class Singleton(type):
