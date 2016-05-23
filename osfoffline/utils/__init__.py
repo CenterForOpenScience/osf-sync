@@ -1,7 +1,6 @@
 import re
 import hashlib
 import os
-from fnmatch import fnmatch
 
 from sqlalchemy.orm.exc import NoResultFound
 
