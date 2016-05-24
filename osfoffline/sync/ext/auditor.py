@@ -88,11 +88,14 @@ NULL_AUDIT = Audit(None, None, None)
 
 class Auditor:
     def __init__(self):
+        self._unreachable = []
         self.user_folder = get_current_user().folder + os.path.sep
 
     def audit(self):
-        db_map = self.collect_all_db()
         remote_map = self.collect_all_remote()
+        # NOTE: Remote map must be collected first.
+        # Nodes that could not be fetched will be skipped over for this sync iteration
+        db_map = self.collect_all_db()
         local_map = self.collect_all_local(db_map)
 
         def context_for(paths):
@@ -141,10 +144,12 @@ class Auditor:
         return modifications[Location.LOCAL], modifications[Location.REMOTE]
 
     def collect_all_db(self):
+        if self._unreachable:
+            logger.warning('Not collecting database structure for unreachable nodes {}'.format(self._unreachable))
         with Session() as session:
             return {
                 entry.rel_path: Audit(entry.id, entry.sha256, entry)
-                for entry in session.query(File)
+                for entry in session.query(File).filter(~File.node_id.in_(self._unreachable))
             }
 
     def collect_all_remote(self):
@@ -160,7 +165,8 @@ class Auditor:
                     # If the node can't be reached, skip auditing of this project and go on to the next node
                     # TODO: The client should be made smart enough to check return code before parsing and yield a custom exception
                     # TODO: The user should be notified about projects that failed to sync, and given a way to deselect them
-                    logger.exception(e)
+                    self._unreachable.append(node.id)
+                    logger.exception('Could not fetch Remote node {!r}. Marking as unreachable.'.format(node))
                     continue
                 remote_files = remote_node.get_storage(id='osfstorage')
                 rel_path = os.path.join(node.rel_path, settings.OSF_STORAGE_FOLDER)
@@ -177,7 +183,8 @@ class Auditor:
                     # If the node can't be reached, skip auditing of this project and go on to the next node
                     # TODO: The client should be made smart enough to check return code before parsing and yield a custom exception
                     # TODO: The user should be notified about projects that failed to sync, and given a way to deselect them
-                    logger.exception(e)
+                    self._unreachable.append(node.id)
+                    logger.exception('Could not fetch Remote node {!r}\'s children. Marking as unreachable.'.format(node))
                     continue
                 while len(stack):
                     remote_child = stack.pop(0)
@@ -236,6 +243,9 @@ class Auditor:
         with Session() as session:
             nodes = session.query(Node).filter(Node.sync)
         for node in nodes:
+            if node.id in self._unreachable:
+                logger.warning('Node {!r} is marked as unreachable. Not collection local structure.'.format(node))
+                continue
             node_path = Path(os.path.join(node.path, settings.OSF_STORAGE_FOLDER))
             self._collect_node_local(node_path, ret, db_map)
 
