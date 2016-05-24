@@ -1,0 +1,9 @@
+{
+  "title": "OSF Sync Beta Installer",
+  "icon": "./images/cos_logo.icns",
+  "background": "./images/OSF-Offline-background.png",
+  "contents": [
+    { "x": 370, "y": 205, "type": "link", "path": "/Applications" },
+    { "x": 140, "y": 205, "type": "file", "path": "../dist/OSF Sync.app", "name": "OSF Sync Beta.app"}
+  ]
+}
