@@ -151,7 +151,7 @@ class LocalCreateFile(BaseOperation):
             OperationContext(remote=self.remote, node=self.node)
         ).run()
 
-        Notification().info('Downloaded File: {}'.format(self.remote.name))
+        Notification().info('Downloaded File {} in {}'.format(self.db.pretty_path, self.node.title))
 
 
 class LocalCreateFolder(BaseOperation):
@@ -165,7 +165,7 @@ class LocalCreateFolder(BaseOperation):
         DatabaseCreateFolder(
             OperationContext(remote=self.remote, node=self.node)
         ).run()
-        Notification().info('Downloaded Folder: {}'.format(self.remote.name))
+        Notification().info('Downloaded Folder: {}'.format(self.db.pretty_path))
 
 
 # Download File
@@ -188,7 +188,7 @@ class LocalUpdateFile(BaseOperation):
         DatabaseUpdateFile(
             OperationContext(db=db_file, remote=self.remote, node=db_file.node)
         ).run()
-        Notification().info('Updated File: {}'.format(self.remote.name))
+        Notification().info('Uploaded File {} to {}'.format(db_file.pretty_path, self.node.title))
 
 
 class LocalDeleteFile(BaseOperation):
@@ -237,7 +237,7 @@ class RemoteCreateFile(BaseOperation):
             DatabaseCreateFile(
                 OperationContext(remote=remote, node=self.node)
             ).run()
-            Notification().info('Create Remote File: {}'.format(self.local))
+            Notification().info('Uploaded New File: {} in {}'.format(self.db.pretty_path, self.node.title))
 
 
 class RemoteCreateFolder(BaseOperation):
@@ -262,7 +262,7 @@ class RemoteCreateFolder(BaseOperation):
             DatabaseCreateFolder(
                 OperationContext(remote=remote, node=self.node)
             ).run()
-            Notification().info('Create Remote Folder: {}'.format(self.local))
+            Notification().info('Created Folder {} in {}'.format(self.db.pretty_path, self.node.title))
 
 
 class RemoteUpdateFile(BaseOperation):
@@ -290,7 +290,7 @@ class RemoteUpdateFile(BaseOperation):
             DatabaseUpdateFile(
                 OperationContext(remote=remote, db=self.db, node=self.node)
             ).run()
-            Notification().info('Update Remote File: {}'.format(self.local))
+            Notification().info('Updated File {} in {}'.format(self.db.pretty_path, self.node.title))
 
 
 class RemoteDelete(BaseOperation):
@@ -304,7 +304,7 @@ class RemoteDelete(BaseOperation):
             permission_error_notification(db_model.kind.lower(), self.remote.name, self.node.title)
         else:
             assert resp.status_code == http.client.NO_CONTENT, resp
-            Notification().info('Remote delete {}: {}'.format(db_model.kind.lower(), self.remote.name))
+            Notification().info('Deleted {}: {} in {}'.format(db_model.kind.capitalize(), db_model.pretty_path, self.node.title))
         # Always delete the database record. There are two cases:
         # 1. User can write, and the remote file is deleted
         # 2. User can not write, but has deleted a local file. Forgetting the database record means that file

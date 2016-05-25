@@ -192,6 +192,12 @@ class File(Base):
         else:
             return os.path.join(self.node.rel_path, settings.OSF_STORAGE_FOLDER) + (os.path.sep if self.is_folder else '')
 
+    @property
+    def pretty_path(self):
+        if not self.parent:
+            return ''
+        return os.path.join(self.parent.pretty_path, self.name) + (os.path.sep if self.is_folder else '')
+
     def locally_create_children(self):
         self.locally_created = True
         if self.is_folder:

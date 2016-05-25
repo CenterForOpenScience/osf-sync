@@ -20,12 +20,8 @@ logger = logging.getLogger(__name__)
 
 @contextlib.contextmanager
 def Session():
-
-    logger.debug('locking session - {} : {}'.format(threading.current_thread().ident, threading.current_thread().getName()))
     with _session_rlock:
-        logger.debug('locking session [acquired] - {} : {}'.format(threading.current_thread().ident, threading.current_thread().getName()))
         yield _session
-    logger.debug('release session - {} : {}'.format(threading.current_thread().ident, threading.current_thread().getName()))
 
 
 def drop_db():
