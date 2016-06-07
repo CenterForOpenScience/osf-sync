@@ -114,9 +114,9 @@ CASES = [{
         Event('move', '/parent/child/grandchild/file.txt', '/george/child/grandchild/file.txt', sha=b'789'),
     ],
     'output': [
+        Event('move', '/parent/file.txt', '/george/file.txt'),
         Event('move', '/parent/child/grandchild/file.txt', '/george/child/grandchild/file.txt'),
         Event('move', '/parent/child/file.txt', '/george/child/file.txt'),
-        Event('move', '/parent/file.txt', '/george/file.txt'),
     ]
 }, {
     'input': [
@@ -125,9 +125,9 @@ CASES = [{
         Event('delete', '/parent/child/grandchild/file.txt')
     ],
     'output': [
+        Event('delete', '/parent/file.txt'),
         Event('delete', '/parent/child/grandchild/file.txt'),
         Event('delete', '/parent/child/file.txt'),
-        Event('delete', '/parent/file.txt'),
     ],
 }, {
 
@@ -218,16 +218,6 @@ CASES = [{
     ],
     'output': [Event('create', '/osfoffline.py')],
 }, {
-    # 'input': [
-    #     Event('move', '/file.docx', '/~WRL0005.tmp'),
-    # ],
-    # 'output': [Event('modify', '/file.docx')],
-# }, {
-    # 'input': [
-    #     Event('move', '/~WRL0005.tmp', '/file.docx'),
-    # ],
-    # 'output': [Event('create', '/file.docx')],
-# }, {
     'input': [
         Event('modify', '/folder/donut.txt'),
         Event('move', '/folder/donut.txt', '/test/donut.txt'),
@@ -291,9 +281,69 @@ CASES = [{
         Event('delete', '/a/b/milk.txt', sha=b'789'),
     ],
     'output': [
-        Event('move', '/a/b/milk.txt', '/a/b/shake.txt'),
-        Event('move', '/a/cup.txt', '/a/cake.txt'),
         Event('move', '/donut.txt', '/bagel.txt'),
+        Event('move', '/a/cup.txt', '/a/cake.txt'),
+        Event('move', '/a/b/milk.txt', '/a/b/shake.txt'),
+    ]
+}, {
+    'input': [
+        Event('create', '/untitled/'),
+        Event('move', '/untitled/', '/newfolder/'),
+        Event('move', '/donut.txt', '/newfolder/donut.txt'),
+        Event('move', '/bagel.txt', '/newfolder/bagel.txt'),
+    ],
+    'output': [
+        Event('create', '/newfolder/'),
+        Event('move', '/donut.txt', '/newfolder/donut.txt'),
+        Event('move', '/bagel.txt', '/newfolder/bagel.txt'),
+    ]
+}, {
+    'input': [
+        Event('create', '/untitled/'),
+        Event('move', '/untitled/', '/newfolder/'),
+        Event('move', '/child/', '/newfolder/child/'),
+    ],
+    'output': [
+        Event('create', '/newfolder/'),
+        Event('move', '/child/', '/newfolder/child/'),
+    ]
+}, {
+    'input': [
+        Event('create', '/parent/untitled/'),
+        Event('move', '/parent/untitled/', '/parent/newfolder/'),
+        Event('move', '/child/', '/parent/newfolder/child/'),
+    ],
+    'output': [
+        Event('create', '/parent/newfolder/'),
+        Event('move', '/child/', '/parent/newfolder/child/'),
+    ]
+}, {
+    'input': [
+        Event('move', '/untitled/', '/newfolder/'),
+        Event('move', '/donut.txt', '/newfolder/donut.txt'),
+        Event('move', '/bagel.txt', '/newfolder/bagel.txt'),
+    ],
+    'output': [
+        Event('move', '/untitled/', '/newfolder/'),
+        Event('move', '/donut.txt', '/newfolder/donut.txt'),
+        Event('move', '/bagel.txt', '/newfolder/bagel.txt'),
+    ]
+}, {
+    'input': [
+        Event('move', '/untitled/', '/newfolder/'),
+        Event('delete', '/newfolder/')
+    ],
+    'output': [
+        Event('delete', '/untitled/'),
+    ]
+}, {
+    'input': [
+        Event('move', '/untitled/', '/newfolder/'),
+        Event('move', '/newfolder/otherfolder/', '/otherfolder/'),
+    ],
+    'output': [
+        Event('move', '/untitled/', '/newfolder/'),
+        Event('move', '/newfolder/otherfolder/', '/otherfolder/'),
     ]
 # }, {
 #     'input': [

@@ -2,6 +2,7 @@ import os
 import sys
 import logging
 import itertools
+from collections import deque
 from collections import OrderedDict
 from watchdog import events
 from watchdog.events import (
@@ -69,31 +70,31 @@ class EventConsolidator:
                     self._initial[delete].is_folder = True
                     break
 
-        evts = list(itertools.chain(
+        evts = list(sorted(itertools.chain(
             (
                 events.DirMovedEvent(src, dest)
                 if self._final[dest].is_folder else
                 events.FileMovedEvent(src, dest)
-                for src, dest in sorted(moved, key=lambda x: x[0].count(os.path.sep), reverse=True)
+                for src, dest in sorted(moved, key=lambda x: x[0])
             ),
             (
                 events.DirDeletedEvent(x)
                 if self._initial[x].is_folder else
                 events.FileDeletedEvent(x)
-                for x in sorted(deleted, key=sorter, reverse=True)
+                for x in sorted(deleted)
             ),
             (
                 events.DirCreatedEvent(x)
                 if self._final[x].is_folder else
                 events.FileCreatedEvent(x)
-                for x in sorted(created, key=sorter)
+                for x in sorted(created)
             ),
             (
                 events.FileModifiedEvent(i_pool[x])
                 for x in modified
                 if x in i_final and not i_pool[x] in created
             ),
-        ))
+        ), key=lambda x: x.src_path))
 
         mapped = set([
             (getattr(event, 'dest_path', event.src_path), event.event_type)
@@ -108,10 +109,10 @@ class EventConsolidator:
             segments = getattr(event, 'dest_path', event.src_path).split(os.path.sep)
             for i in range(len(segments) - 1):
                 if (os.path.sep.join(segments[:i + 1]), event.event_type) in mapped:
-                    return False
+                    return not (event.event_type != EVENT_TYPE_MOVED or event.src_path.startswith(next(x[0] for x in moved if x[1] == os.path.sep.join(segments[:i + 1]))))
             return True
 
-        return list(filter(check, evts))
+        return list(self.resolve_dependancies(filter(check, evts)))
 
     def __init__(self, ignore=True):
         self._events = []
@@ -127,6 +128,41 @@ class EventConsolidator:
         self._final.clear()
         self._initial.clear()
         self._hash_pool.clear()
+
+    def resolve_dependancies(self, events):
+        # Implementation of a topological sort to resolve dependancies for
+        # file system operations.
+        # See Kahn's algorithm and https://en.wikipedia.org/wiki/Topological_sorting
+        resolved = deque()
+        by_path = {}
+        references = OrderedDict()
+
+        # Transform the list of events into a psuedo adjency list graph structure
+        for event in events:
+            if event.event_type == EVENT_TYPE_MOVED:
+                segments = tuple(event.dest_path.strip(os.path.sep).split(os.path.sep))
+            else:
+                segments = tuple(event.src_path.strip(os.path.sep).split(os.path.sep))
+
+            by_path.setdefault(segments, []).append(event)
+            for i in range(1, len(segments) + 1):
+                references.setdefault(segments[:i], set())
+                for j in range(1, len(segments[i:]) + 1):
+                    references[segments[:i]].add(segments[:i + j])
+
+        # Resolve dependancies by finding all operations that have no dependancies
+        # appending them to the resolved list and removing them as a dependancies from
+        # all other operations. Continue until all dependancies have been resolved
+        while references:
+            for segments, refs in tuple(references.items()):
+                if refs:
+                    continue
+                for i in range(len(segments)):
+                    references[segments[:i + 1]].discard(segments)
+                resolved.extendleft(by_path.pop(segments, []))
+                del references[segments]
+
+        return resolved
 
     def push(self, event):
         self._events.append(event)
