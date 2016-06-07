@@ -57,11 +57,6 @@ class EventConsolidator:
                 deleted.remove(key)
                 moved.add((key, dest))
 
-        # Sort by place in the file hierarchy
-        # Children come before parents
-        # NOTE: Create events must be sorted THE OPPOSITE direction
-        sorter = lambda x: x.count(os.path.sep)
-
         # Windows reports folder deletes are file deletes + modifies
         # If a child exists for any file assume it is a directory
         for delete in deleted:
