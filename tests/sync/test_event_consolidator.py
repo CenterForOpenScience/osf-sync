@@ -1,8 +1,6 @@
 import pytest
 
 import os
-import time
-import threading
 from pathlib import Path
 
 from watchdog import events
@@ -336,30 +334,19 @@ CASES = [{
     'output': [
         Event('delete', '/untitled/'),
     ]
-}, {
+}]
+
+
+# List of tests that can't be easily parsed by the integration tester
+UNIT_ONLY = [{
     'input': [
-        Event('create', '/untitled/otherfolder/'),
         Event('move', '/untitled/', '/newfolder/'),
         Event('move', '/newfolder/otherfolder/', '/otherfolder/'),
     ],
     'output': [
         Event('move', '/untitled/', '/newfolder/'),
-        Event('create', '/otherfolder/'),
+        Event('move', '/newfolder/otherfolder/', '/otherfolder/'),
     ]
-# }, {
-#     'input': [
-#         Event('move', '/file1', '/file2')],
-#         Event('delete', '/file1')],
-#     ],
-    # 'output': [Event('move', '/file1', '/file2')],
-# }, {
-#     'input': [
-#         Event('delete', '/file2')],
-#         Event('move', '/file1', '/file2')],
-#     ],
-    # 'output': [Event('modify', '/file2')],
-# }, {
-
 }]
 
 
@@ -391,7 +378,7 @@ CONTEXT_EVENT_MAP = {
 
 class TestEventConsolidator:
 
-    @pytest.mark.parametrize('input, expected', [(case['input'], case['output']) for case in CASES])
+    @pytest.mark.parametrize('input, expected', [(case['input'], case['output']) for case in CASES + UNIT_ONLY])
     def test_event_consolidator(self, input, expected):
         consolidator = EventConsolidator(ignore=False)
         for event in input:
