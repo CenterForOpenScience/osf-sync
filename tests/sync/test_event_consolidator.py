@@ -338,12 +338,13 @@ CASES = [{
     ]
 }, {
     'input': [
+        Event('create', '/untitled/otherfolder/'),
         Event('move', '/untitled/', '/newfolder/'),
         Event('move', '/newfolder/otherfolder/', '/otherfolder/'),
     ],
     'output': [
         Event('move', '/untitled/', '/newfolder/'),
-        Event('move', '/newfolder/otherfolder/', '/otherfolder/'),
+        Event('create', '/otherfolder/'),
     ]
 # }, {
 #     'input': [
@@ -478,7 +479,7 @@ class TestObserver:
         # De dup input events
         for event in tuple(input):
             for evt in tuple(input):
-                if event is not evt and not isinstance(event, events.DirModifiedEvent) and event.event_type != events.EVENT_TYPE_CREATED and evt.event_type == event.event_type and getattr(evt, 'dest_path', evt.src_path).startswith(getattr(event, 'dest_path', event.src_path)):
+                if event is not evt and not isinstance(event, events.DirModifiedEvent) and event.event_type != events.EVENT_TYPE_CREATED and evt.event_type == event.event_type and evt.src_path.startswith(event.src_path) and (event.event_type != events.EVENT_TYPE_MOVED or evt.dest_path.startswith(event.dest_path)):
                     input.remove(evt)
 
         for event in reversed(input):
