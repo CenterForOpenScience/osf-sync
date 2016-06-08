@@ -1,6 +1,7 @@
 import pytest
 
 import os
+import time
 from pathlib import Path
 
 from watchdog import events
@@ -28,11 +29,12 @@ _map = {
 }
 
 
-def Event(type_, *src, sha=None):
+def Event(type_, *src, wait=None, sha=None):
     assert len(src) < 3
     if len(src) > 1:
         assert src[0].endswith('/') == src[1].endswith('/')
     event = _map[(type_, src[0].endswith('/'))](*(x.rstrip('/').replace('/', os.path.sep) for x in src))
+    event.wait = wait
     event.sha256 = sha
     return event
 
@@ -317,7 +319,7 @@ CASES = [{
     ]
 }, {
     'input': [
-        Event('move', '/untitled/', '/newfolder/'),
+        Event('move', '/untitled/', '/newfolder/', wait=.1),
         Event('move', '/donut.txt', '/newfolder/donut.txt'),
         Event('move', '/bagel.txt', '/newfolder/bagel.txt'),
     ],
@@ -517,6 +519,8 @@ class TestObserver:
 
         for event in input:
             self.perform(tmpdir, event)
+            if event.wait:
+                time.sleep(event.wait)
 
         observer.done.wait(3)
         observer.stop()
