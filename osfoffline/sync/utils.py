@@ -173,7 +173,7 @@ class EventConsolidator:
         # If found ensure the found event is opposite of our current event and set item to it.
         if event.event_type in (events.EVENT_TYPE_CREATED, events.EVENT_TYPE_DELETED) and event.sha256:
             item = self._hash_pool.pop(event.sha256, None)
-            if item and {event.event_type, item.events[0].event_type} != {events.EVENT_TYPE_CREATED, events.EVENT_TYPE_DELETED}:
+            if item and {event.event_type, item.events[0].event_type} not in ({events.EVENT_TYPE_DELETED, events.EVENT_TYPE_MOVED}, {events.EVENT_TYPE_CREATED, events.EVENT_TYPE_DELETED}):
                 item = None
             elif item:
                 copy_found = True
@@ -181,6 +181,17 @@ class EventConsolidator:
                 self._pool[path] = item
 
         item = self._pool.setdefault(path, item or Item(event.is_directory))
+
+        if copy_found and event.event_type == events.EVENT_TYPE_DELETED and item.events[-1].event_type == EVENT_TYPE_MOVED and path not in {item.events[-1].src_path, item.events[-1].dest_path}:
+            # Handles the lovely case of:
+            #   Create a folder
+            #   Rename folder
+            #   Move a file into that folder
+            # Due to limitations in inotify and the windows API, this chain of events
+            # emits a move as if the file was in the folder before it was renamed
+            # If destination path has not been "seen" before discard the move event and
+            # replace it with a create. The logic for pair creates and deletes will handle the rest
+            self._initial.pop(item.events[-1].src_path)
 
         if sys.platform == 'win32' and event.event_type == EVENT_TYPE_MODIFIED and item.events and item.events[-1].event_type in (EVENT_TYPE_MOVED, EVENT_TYPE_CREATED):
             return  # Windows really likes emmiting modfied events. If a modified is prefaced by a MOVE or CREATE it should/can be ignored

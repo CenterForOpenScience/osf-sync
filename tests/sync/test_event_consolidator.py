@@ -1,7 +1,6 @@
 import pytest
 
 import os
-import time
 from pathlib import Path
 
 from watchdog import events
@@ -29,12 +28,11 @@ _map = {
 }
 
 
-def Event(type_, *src, wait=None, sha=None):
+def Event(type_, *src, sha=None):
     assert len(src) < 3
     if len(src) > 1:
         assert src[0].endswith('/') == src[1].endswith('/')
     event = _map[(type_, src[0].endswith('/'))](*(x.rstrip('/').replace('/', os.path.sep) for x in src))
-    event.wait = wait
     event.sha256 = sha
     return event
 
@@ -319,7 +317,7 @@ CASES = [{
     ]
 }, {
     'input': [
-        Event('move', '/untitled/', '/newfolder/', wait=.1),
+        Event('move', '/untitled/', '/newfolder/'),
         Event('move', '/donut.txt', '/newfolder/donut.txt'),
         Event('move', '/bagel.txt', '/newfolder/bagel.txt'),
     ],
@@ -348,6 +346,17 @@ UNIT_ONLY = [{
     'output': [
         Event('move', '/untitled/', '/newfolder/'),
         Event('move', '/newfolder/otherfolder/', '/otherfolder/'),
+    ]
+}, {
+    'input': [
+        Event('create', '/untitled/'),
+        Event('move', '/untitled/', '/newfolder/'),
+        Event('move', '/untitled/file.txt', '/newfolder/file.txt', sha=b'123'),
+        Event('delete', '/file.txt', sha=b'123'),
+    ],
+    'output': [
+        Event('create', '/newfolder/'),
+        Event('move', '/file.txt', '/newfolder/file.txt'),
     ]
 }]
 
@@ -519,8 +528,6 @@ class TestObserver:
 
         for event in input:
             self.perform(tmpdir, event)
-            if event.wait:
-                time.sleep(event.wait)
 
         observer.done.wait(3)
         observer.stop()
