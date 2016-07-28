@@ -199,6 +199,17 @@ CASES = [{
     'output': [Event('create', '/test.txt')]
 }, {
 
+######## Test for directory with the same prefix as #######
+    'input': [
+        Event('delete', '/qwer'),
+        Event('delete', '/qwerdir/'),
+    ],
+    'output': [
+        Event('delete', '/qwer'),
+        Event('delete', '/qwerdir/'),
+    ]
+}, {
+
 ######## Weird cases Word/Vim/Tempfiles ############################
     'input': [
         Event('create', '/~WRL0001.tmp'),
