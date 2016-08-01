@@ -66,7 +66,11 @@ class BaseResource(abc.ABC):
 
     @classmethod
     def load(cls, request_session, *args, **kwargs):
-        resp = request_session.get(cls.get_url(*args, **kwargs), params={'page[size]': 250})
+        resp = request_session.get(
+            cls.get_url(*args, **kwargs),
+            params={'page[size]': 250},
+            timeout=(settings.CONNECT_TIMEOUT, settings.READ_TIMEOUT),
+        )
         if resp.status_code >= 500:
             raise ClientLoadError(
                 resource=cls.RESOURCE,
@@ -85,7 +89,11 @@ class BaseResource(abc.ABC):
         if isinstance(data['data'], list):
             l = data['data']
             while data['links'].get('next'):
-                resp = request_session.get(data['links']['next'], params={'page[size]': 250})
+                resp = request_session.get(
+                    data['links']['next'],
+                    params={'page[size]': 250},
+                    timeout=(settings.CONNECT_TIMEOUT, settings.READ_TIMEOUT),
+                )
                 data = resp.json()
                 l.extend(data['data'])
             return [cls.from_data(request_session, item) for item in l]
@@ -112,7 +120,8 @@ class BaseResource(abc.ABC):
         params.update(query or {})
         resp = self.request_session.get(
             url,
-            params=params
+            params=params,
+            timeout=(settings.CONNECT_TIMEOUT, settings.READ_TIMEOUT),
         )
         data = resp.json()
         items = data['data']
@@ -196,7 +205,11 @@ class StorageObject(BaseResource):
 
     @classmethod
     def load(cls, request_session, *args):
-        resp = request_session.get(cls.get_url(*args), params={'page[size]': 250})
+        resp = request_session.get(
+            cls.get_url(*args),
+            params={'page[size]': 250},
+            timeout=(settings.CONNECT_TIMEOUT, settings.READ_TIMEOUT),
+        )
         data = resp.json()
 
         if 'errors' in data:
