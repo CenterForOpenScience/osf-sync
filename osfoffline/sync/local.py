@@ -23,6 +23,10 @@ class LocalSyncWorker(ConsolidatedEventHandler, metaclass=Singleton):
 
         self.ignore = threading.Event()
 
+        self.observer = Observer()
+        self._watch_folder(unschedule=False)
+
+    def _watch_folder(self, unschedule=True):
         try:
             user = get_current_user()
         except NoResultFound:
@@ -33,8 +37,9 @@ class LocalSyncWorker(ConsolidatedEventHandler, metaclass=Singleton):
             # it from happening.
             raise
         self.folder = user.folder
-
-        self.observer = Observer()
+        if unschedule:
+            self.observer.unschedule_all()
+        logger.debug('Setting observed path to {}'.format(self.folder))
         self.observer.schedule(self, self.folder, recursive=True)
 
     def start(self):
