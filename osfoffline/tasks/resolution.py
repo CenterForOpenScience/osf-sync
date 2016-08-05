@@ -2,9 +2,9 @@ import os
 
 from osfoffline.tasks import operations
 from osfoffline.database import Session
-from osfoffline.sync.ext.auditor import EventType
 from osfoffline.tasks import interventions
 from osfoffline.tasks.interventions import Intervention
+from osfoffline.utils import EventType
 from osfoffline.utils import hash_file
 
 

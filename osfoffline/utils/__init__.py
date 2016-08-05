@@ -2,6 +2,7 @@ import re
 import hashlib
 import os
 
+from enum import Enum
 from sqlalchemy.orm.exc import NoResultFound
 
 from osfoffline import settings
@@ -12,6 +13,13 @@ from osfoffline.utils.authentication import get_current_user
 
 
 IGNORE_RE = re.compile(r'.*{}({})'.format(re.escape(os.path.sep), '|'.join(settings.IGNORED_PATTERNS)))
+
+
+class EventType(Enum):
+    CREATE = 0
+    DELETE = 1
+    MOVE = 2
+    UPDATE = 3
 
 
 class Singleton(type):

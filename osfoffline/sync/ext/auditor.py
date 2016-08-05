@@ -10,6 +10,7 @@ from osfoffline.database import Session
 from osfoffline.database.models import Node, File
 from osfoffline.tasks import operations
 from osfoffline.tasks.operations import OperationContext
+from osfoffline.utils import EventType
 from osfoffline.utils import hash_file
 from osfoffline.utils import is_ignored
 from osfoffline.utils.authentication import get_current_user
@@ -20,13 +21,6 @@ logger = logging.getLogger(__name__)
 class Location(Enum):
     LOCAL = 0
     REMOTE = 1
-
-
-class EventType(Enum):
-    CREATE = 0
-    DELETE = 1
-    MOVE = 2
-    UPDATE = 3
 
 
 # Meant to emulate the watchdog FileSystemEvent
