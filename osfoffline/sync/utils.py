@@ -182,16 +182,33 @@ class EventConsolidator:
 
         item = self._pool.setdefault(path, item or Item(event.is_directory))
 
-        if copy_found and event.event_type == events.EVENT_TYPE_DELETED and item.events[-1].event_type == EVENT_TYPE_MOVED and path not in {item.events[-1].src_path, item.events[-1].dest_path}:
-            # Handles the lovely case of:
-            #   Create a folder
-            #   Rename folder
-            #   Move a file into that folder
-            # Due to limitations in inotify and the windows API, this chain of events
-            # emits a move as if the file was in the folder before it was renamed
-            # If destination path has not been "seen" before discard the move event and
-            # replace it with a create. The logic for pair creates and deletes will handle the rest
-            self._initial.pop(item.events[-1].src_path)
+        if event.event_type == EVENT_TYPE_CREATED:
+            for evt in self._events:
+                if evt.is_synthetic and evt.event_type == events.EVENT_TYPE_MOVED:
+                    # on some platforms, a move results in:
+                    #   * a create event with the correct dest_path
+                    #   * a delete event with the correct src_path
+                    #   * a synthesized move event with the incorrect src_path and correct dest_path
+                    # Here, we toss out the synthesized move, then do our best to find the corresponding
+                    # delete event and associate it with the same item as the create event. That should
+                    # allow the logic in EventConsolidator.events to tunr them into a move event with
+                    # correct source and destination.
+                    if event.src_path == evt.dest_path:
+                        # throw out the synthetic move event
+                        self._initial.pop(evt.src_path)
+                        # look for the delete event with the correct src_path
+                        del_events = [e for e in self._events if e.event_type == events.EVENT_TYPE_DELETED]
+                        if len(del_events) == 1:
+                            src_path = del_events[0].src_path
+                            self._initial[src_path] = item
+                        else:
+                            # look for a matching event using basename
+                            basename = os.path.basename(event.src_path)
+                            for del_evt in del_events:
+                                if basename == os.path.basename(del_evt.src_path):
+                                    src_path = del_evt.src_path
+                                    self._initial[src_path] = item
+                                    break
 
         if sys.platform == 'win32' and event.event_type == EVENT_TYPE_MODIFIED and item.events and item.events[-1].event_type in (EVENT_TYPE_MOVED, EVENT_TYPE_CREATED):
             return  # Windows really likes emmiting modfied events. If a modified is prefaced by a MOVE or CREATE it should/can be ignored
