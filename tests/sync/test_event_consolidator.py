@@ -205,8 +205,8 @@ CASES = [{
         Event('delete', '/qwerdir/'),
     ],
     'output': [
-        Event('delete', '/qwer'),
         Event('delete', '/qwerdir/'),
+        Event('delete', '/qwer'),
     ]
 }, {
 
