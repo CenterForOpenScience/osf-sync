@@ -334,6 +334,17 @@ CASES = [{
     'output': [
         Event('delete', '/untitled/'),
     ]
+}, {
+    'input': [
+        Event('move', '/olddir/', '/newdir/'),
+        Event('move', '/donut003.txt', '/newdir/donut003.txt'),
+        Event('move', '/donut004.txt', '/newdir/donut004.txt'),
+    ],
+    'output': [
+        Event('move', '/olddir/', '/newdir/'),
+        Event('move', '/donut004.txt', '/newdir/donut004.txt'),
+        Event('move', '/donut003.txt', '/newdir/donut003.txt'),
+    ]
 }]
 
 
