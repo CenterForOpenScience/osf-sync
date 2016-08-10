@@ -347,17 +347,17 @@ UNIT_ONLY = [{
         Event('move', '/untitled/', '/newfolder/'),
         Event('move', '/newfolder/otherfolder/', '/otherfolder/'),
     ]
-}, {
-    'input': [
-        Event('create', '/untitled/'),
-        Event('move', '/untitled/', '/newfolder/'),
-        Event('move', '/untitled/file.txt', '/newfolder/file.txt', sha=b'123'),
-        Event('delete', '/file.txt', sha=b'123'),
-    ],
-    'output': [
-        Event('create', '/newfolder/'),
-        Event('move', '/file.txt', '/newfolder/file.txt'),
-    ]
+# }, {
+#     'input': [
+#         Event('create', '/untitled/'),
+#         Event('move', '/untitled/', '/newfolder/'),
+#         Event('move', '/untitled/file.txt', '/newfolder/file.txt', sha=b'123'),
+#         Event('delete', '/file.txt', sha=b'123'),
+#     ],
+#     'output': [
+#         Event('create', '/newfolder/'),
+#         Event('move', '/file.txt', '/newfolder/file.txt'),
+#     ]
 }]
 
 
