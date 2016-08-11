@@ -139,6 +139,14 @@ class RemoteSyncWorker(threading.Thread, metaclass=Singleton):
                         "Remote Node<{}> appears to have been deleted; will stop tracking and delete from local database".format(
                             node.id))
                     return
+                elif err.status == http.client.FORBIDDEN:
+                    # access to this project removed?
+                    session.delete(node)
+                    session.commit()
+                    logger.info(
+                        "Access to Remote Node<{}> revoked; will stop tracking and delete from local database".format(
+                            node.id))
+                    return
                 else:  # TODO: maybe handle other statuses here
                     raise
             stack = remote_node.get_children(lazy=False)
