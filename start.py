@@ -50,7 +50,7 @@ def start():
     min_version = None
     # Then, if the current version is too old, close the program
     try:
-        r = requests.get(settings.MIN_VERSION_URL, timeout=10)
+        r = requests.get(settings.MIN_VERSION_URL, timeout=settings.READ_TIMEOUT)
     except requests.exceptions.ConnectionError:
         logger.warning('Check for minimum version requirements for OSF-Sync failed '
                        'because you have no Internet connection')
