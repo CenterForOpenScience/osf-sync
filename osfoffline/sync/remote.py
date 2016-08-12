@@ -19,13 +19,13 @@ from osfoffline.sync.local import LocalSyncWorker
 from osfoffline.sync.exceptions import FolderNotInFileSystem
 from osfoffline.sync.ext.auditor import (
     Auditor,
-    EventType
 )
 
 from osfoffline.tasks.notifications import Notification
 from osfoffline.tasks.resolution import RESOLUTION_MAP
 from osfoffline.tasks.queue import OperationWorker
 
+from osfoffline.utils import EventType
 from osfoffline.utils import Singleton
 from osfoffline.utils.authentication import get_current_user
 
