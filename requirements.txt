@@ -14,4 +14,4 @@ requests==2.8.1
 SQLAlchemy==1.0.9
 # watchdog==0.8.3
 # Fixes for odd windows and linux cases seee https://github.com/sixfeetup/watchdog/commit/0a4b21ebaf126e418e508c839cd80d1d72b259c9
-git+git://github.com/sixfeetup/watchdog.git@synthetic
+git+git://github.com/CenterForOpenScience/watchdog.git@synthetic
