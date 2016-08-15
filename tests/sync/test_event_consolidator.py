@@ -1,6 +1,7 @@
 import pytest
 
 import os
+import sys
 import time
 from pathlib import Path
 
@@ -296,7 +297,7 @@ CASES = [{
         Event('move', '/a/b/milk.txt', '/a/b/shake.txt'),
     ]
 }, {
-    'delay': 0.75,
+    'delay': None if sys.platform == 'win32' else 0.75,
     'input': [
         Event('create', '/untitled/'),
         Event('move', '/untitled/', '/newfolder/'),
@@ -309,7 +310,7 @@ CASES = [{
         Event('move', '/bagel.txt', '/newfolder/bagel.txt'),
     ]
 }, {
-    'delay': 0.75,
+    'delay': None if sys.platform == 'win32' else 0.75,
     'input': [
         Event('create', '/untitled/'),
         Event('move', '/untitled/', '/newfolder/'),
@@ -320,7 +321,7 @@ CASES = [{
         Event('move', '/child/', '/newfolder/child/'),
     ]
 }, {
-    'delay': 0.75,
+    'delay': None if sys.platform == 'win32' else 0.75,
     'input': [
         Event('create', '/parent/untitled/'),
         Event('move', '/parent/untitled/', '/parent/newfolder/'),
@@ -331,7 +332,7 @@ CASES = [{
         Event('move', '/child/', '/parent/newfolder/child/'),
     ]
 }, {
-    'delay': 0.75,
+    'delay': None if sys.platform == 'win32' else 0.75,
     'input': [
         Event('move', '/untitled/', '/newfolder/'),
         Event('move', '/donut.txt', '/newfolder/donut.txt'),
@@ -351,7 +352,7 @@ CASES = [{
         Event('delete', '/untitled/'),
     ]
 }, {
-    'delay': 0.75,
+    'delay': None if sys.platform == 'win32' else 0.75,
     'input': [
         Event('move', '/olddir/', '/newdir/'),
         Event('move', '/donut003.txt', '/newdir/donut003.txt'),

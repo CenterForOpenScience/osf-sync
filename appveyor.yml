@@ -2,8 +2,8 @@
 
 environment:
   matrix:
-    - PYTHON: "C:\\Python34"
-      PYTHON_VERSION: "3.4.x" # currently 3.4.3
+    - PYTHON: "C:\\Python35"
+      PYTHON_VERSION: "3.5.2"
       PYTHON_ARCH: "32"
 
 build: off
