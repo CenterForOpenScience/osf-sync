@@ -199,6 +199,17 @@ CASES = [{
     'output': [Event('create', '/test.txt')]
 }, {
 
+######## Test for directory with the same prefix as #######
+    'input': [
+        Event('delete', '/qwer'),
+        Event('delete', '/qwerdir/'),
+    ],
+    'output': [
+        Event('delete', '/qwerdir/'),
+        Event('delete', '/qwer'),
+    ]
+}, {
+
 ######## Weird cases Word/Vim/Tempfiles ############################
     'input': [
         Event('create', '/~WRL0001.tmp'),
@@ -488,7 +499,7 @@ class TestObserver:
         # De dup input events
         for event in tuple(input):
             for evt in tuple(input):
-                if event is not evt and not isinstance(event, events.DirModifiedEvent) and event.event_type != events.EVENT_TYPE_CREATED and evt.event_type == event.event_type and evt.src_path.startswith(event.src_path) and (event.event_type != events.EVENT_TYPE_MOVED or evt.dest_path.startswith(event.dest_path)):
+                if event is not evt and not isinstance(event, events.DirModifiedEvent) and event.event_type != events.EVENT_TYPE_CREATED and evt.event_type == event.event_type and evt.src_path.startswith(os.path.join(event.src_path, '')) and (event.event_type != events.EVENT_TYPE_MOVED or evt.dest_path.startswith(os.path.join(event.dest_path, ''))):
                     input.remove(evt)
 
         for event in reversed(input):

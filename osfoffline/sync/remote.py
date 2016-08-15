@@ -19,13 +19,13 @@ from osfoffline.sync.local import LocalSyncWorker
 from osfoffline.sync.exceptions import FolderNotInFileSystem
 from osfoffline.sync.ext.auditor import (
     Auditor,
-    EventType
 )
 
 from osfoffline.tasks.notifications import Notification
 from osfoffline.tasks.resolution import RESOLUTION_MAP
 from osfoffline.tasks.queue import OperationWorker
 
+from osfoffline.utils import EventType
 from osfoffline.utils import Singleton
 from osfoffline.utils.authentication import get_current_user
 
@@ -137,6 +137,14 @@ class RemoteSyncWorker(threading.Thread, metaclass=Singleton):
                     session.commit()
                     logger.info(
                         "Remote Node<{}> appears to have been deleted; will stop tracking and delete from local database".format(
+                            node.id))
+                    return
+                elif err.status == http.client.FORBIDDEN:
+                    # access to this project removed?
+                    session.delete(node)
+                    session.commit()
+                    logger.info(
+                        "Access to Remote Node<{}> revoked; will stop tracking and delete from local database".format(
                             node.id))
                     return
                 else:  # TODO: maybe handle other statuses here

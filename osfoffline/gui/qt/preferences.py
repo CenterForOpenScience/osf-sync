@@ -168,6 +168,7 @@ class Preferences(QDialog, Ui_Settings):
                 session.add(user)
                 session.commit()
             self.update_sync_nodes()
+            BackgroundHandler().refresh()
 
     def update_sync_nodes(self):
         self.selected_nodes = []

@@ -64,3 +64,8 @@ class BackgroundHandler(metaclass=Singleton):
         del type(OperationWorker)._instances[OperationWorker]
         del type(RemoteSyncWorker)._instances[RemoteSyncWorker]
         del type(LocalSyncWorker)._instances[LocalSyncWorker]
+
+    def refresh(self):
+        logger.debug('Refreshing workers')
+        if LocalSyncWorker().is_alive():
+            LocalSyncWorker()._watch_folder()

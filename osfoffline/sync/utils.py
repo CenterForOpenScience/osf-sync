@@ -61,7 +61,7 @@ class EventConsolidator:
         # If a child exists for any file assume it is a directory
         for delete in deleted:
             for other in deleted:
-                if delete != other and other.startswith(delete):
+                if delete != other and other.startswith(os.path.join(delete, '')):
                     self._initial[delete].is_folder = True
                     break
 
@@ -229,7 +229,7 @@ class EventConsolidator:
             # Otherwise ensure that item and it's children, if any, are not in the final virutal state.
             self._final.pop(path, None)
             for key in list(self._final.keys()):
-                if key.startswith(path):
+                if key.startswith(os.path.join(path, '')):
                     self._final.pop(key)
 
         if event.event_type != EVENT_TYPE_CREATED and (event.event_type != EVENT_TYPE_MOVED or path == event.src_path):
@@ -241,5 +241,5 @@ class EventConsolidator:
             # Otherwise ensure that item and it's children, if any, are not in the inital virtual state.
             self._initial.pop(path, None)
             for key in list(self._initial.keys()):
-                if key.startswith(path):
+                if key.startswith(os.path.join(path, '')):
                     self._initial.pop(key)

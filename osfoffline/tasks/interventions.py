@@ -4,8 +4,8 @@ import logging
 import threading
 
 from osfoffline.tasks import operations
+from osfoffline.utils import EventType
 from osfoffline.utils import Singleton
-from osfoffline.sync.ext.auditor import EventType
 
 logger = logging.getLogger(__name__)
 
