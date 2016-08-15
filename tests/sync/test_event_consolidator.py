@@ -1,6 +1,7 @@
 import pytest
 
 import os
+import time
 from pathlib import Path
 
 from watchdog import events
@@ -295,6 +296,7 @@ CASES = [{
         Event('move', '/a/b/milk.txt', '/a/b/shake.txt'),
     ]
 }, {
+    'delay': 0.75,
     'input': [
         Event('create', '/untitled/'),
         Event('move', '/untitled/', '/newfolder/'),
@@ -307,6 +309,7 @@ CASES = [{
         Event('move', '/bagel.txt', '/newfolder/bagel.txt'),
     ]
 }, {
+    'delay': 0.75,
     'input': [
         Event('create', '/untitled/'),
         Event('move', '/untitled/', '/newfolder/'),
@@ -317,6 +320,7 @@ CASES = [{
         Event('move', '/child/', '/newfolder/child/'),
     ]
 }, {
+    'delay': 0.75,
     'input': [
         Event('create', '/parent/untitled/'),
         Event('move', '/parent/untitled/', '/parent/newfolder/'),
@@ -327,6 +331,7 @@ CASES = [{
         Event('move', '/child/', '/parent/newfolder/child/'),
     ]
 }, {
+    'delay': 0.75,
     'input': [
         Event('move', '/untitled/', '/newfolder/'),
         Event('move', '/donut.txt', '/newfolder/donut.txt'),
@@ -346,6 +351,7 @@ CASES = [{
         Event('delete', '/untitled/'),
     ]
 }, {
+    'delay': 0.75,
     'input': [
         Event('move', '/olddir/', '/newdir/'),
         Event('move', '/donut003.txt', '/newdir/donut003.txt'),
@@ -459,8 +465,8 @@ class TestObserver:
         else:
             raise Exception(event)
 
-    @pytest.mark.parametrize('input, expected', [(case['input'], case['output']) for case in CASES])
-    def test_event_observer(self, monkeypatch, tmpdir, input, expected):
+    @pytest.mark.parametrize('input, expected, delay', [(case['input'], case['output'], case.get('delay')) for case in CASES])
+    def test_event_observer(self, monkeypatch, tmpdir, input, expected, delay):
         og_input = tuple(input)
         def local_to_db(local, node, *, is_folder=False, check_is_folder=True):
             found = False
@@ -550,6 +556,8 @@ class TestObserver:
 
         for event in input:
             self.perform(tmpdir, event)
+            if delay:
+                time.sleep(delay)
 
         observer.done.wait(3)
         observer.stop()
