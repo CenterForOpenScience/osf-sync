@@ -3,8 +3,8 @@ import time
 
 from watchdog.observers import Observer
 
-from osfoffline.sync.local import LocalSyncWorker
-from osfoffline.sync.ext.watchdog import ConsolidatedEventHandler
+from osfsync.sync.local import LocalSyncWorker
+from osfsync.sync.ext.watchdog import ConsolidatedEventHandler
 
 
 class TestObserver(Observer):

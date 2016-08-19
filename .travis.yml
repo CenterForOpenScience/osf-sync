@@ -29,7 +29,7 @@ install:
   - travis_retry pip install -r requirements.txt
 
 script:
-  - flake8 osfoffline
+  - flake8 osfsync
   - py.test -v -s tests
 
 notifications:

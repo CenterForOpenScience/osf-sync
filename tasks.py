@@ -3,7 +3,7 @@ import shutil
 
 from invoke import task, run
 
-from osfoffline import settings
+from osfsync import settings
 
 
 def drop_db():
@@ -17,20 +17,20 @@ def drop_log():
 
 
 @task(aliases=['flake8'])
-def flake():
-    run('flake8 osfoffline/', echo=True)
+def flake(ctx):
+    run('flake8 osfsync/', echo=True)
 
 
 @task
-def start():
+def start(ctx):
     from start import start
     start()
 
 
 @task
-def start_for_tests(dropdb=True, droplog=False, dropdir=False):
+def start_for_tests(ctx, dropdb=True, droplog=False, dropdir=False):
     """
-    Start the OSF offline client in a clean configuration suitable for testing
+    Start the OSF Sync client in a clean configuration suitable for testing
 
     :param bool dropdb: Whether to delete the database. Defaults to True
     :param bool droplog: Whether to delete pre-existing shared error log. Defaults to False.
@@ -49,14 +49,14 @@ def start_for_tests(dropdb=True, droplog=False, dropdir=False):
 
 
 @task
-def qt_gen():
-    run('pyuic5 ./osfoffline/gui/qt/static/login.ui -o ./osfoffline/gui/qt/generated/login.py')
-    run('pyuic5 ./osfoffline/gui/qt/static/preferences.ui -o ./osfoffline/gui/qt/generated/preferences.py')
-    run('pyrcc5 ./osfoffline/gui/qt/static/resources.qrc -o ./osfoffline/gui/qt/generated/resources.py')
+def qt_gen(ctx):
+    run('pyuic5 ./osfsync/gui/qt/static/login.ui -o ./osfsync/gui/qt/generated/login.py')
+    run('pyuic5 ./osfsync/gui/qt/static/preferences.ui -o ./osfsync/gui/qt/generated/preferences.py')
+    run('pyrcc5 ./osfsync/gui/qt/static/resources.qrc -o ./osfsync/gui/qt/generated/resources.py')
 
 
 @task
-def wipe(hard=True):
+def wipe(ctx, hard=True):
     if hard:
         drop_db()
         drop_log()

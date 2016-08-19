@@ -37,7 +37,7 @@ compiling binaries on Windows.
 
 
 ## Preparing your build environment
-Navigate to the cloned OSF offline source code directory and install all requirements. If you use a
+Navigate to the cloned OSF Sync source code directory and install all requirements. If you use a
 virtual environment, make sure that PyQT is installed to that venv.
   - `pip install -r requirements.txt`
 
@@ -51,7 +51,7 @@ On Mac OS:
 
 ### Create an installer
 #### Windows
-Open InnoSetup, and select the `osfoffline-setup.iss` script. In the editor, change all lines referencing `IEUser`
+Open InnoSetup, and select the `osfsync-setup.iss` script. In the editor, change all lines referencing `IEUser`
 to point to your project directory.
 
 Save the file. From the *Build* menu, select *Compile*. An installer will be deposited in the specified output folder.
@@ -68,7 +68,7 @@ To customize the DMG file, right-click inside the disk image and choose "show vi
 Select the following settings:
 - Always open in icon view
 - Icon size 128x128
-- Background (drag picture to box): `OSF-Offline/deploy/images/OSF-Offline-background.png`
+- Background (drag picture to box): `OSF-Sync/deploy/images/OSF-Sync-background.png`
 
 Drag the bundled `OSF-Sync.app` into the disk image on the left side. Using finder, create an alias
 to `Macintosh HD/Applications`, and drag the alias into the disk image on the right side.

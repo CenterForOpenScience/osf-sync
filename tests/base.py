@@ -4,9 +4,9 @@ import itertools
 import pytest
 import unittest
 
-from osfoffline import settings
-from osfoffline.database import models
-from osfoffline.database import drop_db, Session
+from osfsync import settings
+from osfsync.database import models
+from osfsync.database import drop_db, Session
 
 from tests.utils import (
     unique_file_name,

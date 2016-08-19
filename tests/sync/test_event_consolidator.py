@@ -7,10 +7,10 @@ from pathlib import Path
 
 from watchdog import events
 
-from osfoffline import utils
-from osfoffline.tasks import operations
-from osfoffline.utils.log import start_logging
-from osfoffline.sync.utils import EventConsolidator
+from osfsync import utils
+from osfsync.tasks import operations
+from osfsync.utils.log import start_logging
+from osfsync.sync.utils import EventConsolidator
 
 from tests.sync.utils import TestSyncObserver
 
@@ -224,10 +224,10 @@ CASES = [{
     'output': [Event('create', '/file.docx')],
 }, {
     'input': [
-        Event('create', '/osfoffline.py'),
-        Event('modify', '/osfoffline.py'),
+        Event('create', '/osfsync.py'),
+        Event('modify', '/osfsync.py'),
     ],
-    'output': [Event('create', '/osfoffline.py')],
+    'output': [Event('create', '/osfsync.py')],
 }, {
     'input': [
         Event('modify', '/folder/donut.txt'),
@@ -498,10 +498,10 @@ class TestObserver:
             except (IsADirectoryError, PermissionError):
                 return None
 
-        monkeypatch.setattr('osfoffline.sync.local.utils.extract_node', lambda *args, **kwargs: None)
-        monkeypatch.setattr('osfoffline.sync.local.utils.local_to_db', local_to_db)
-        monkeypatch.setattr('osfoffline.sync.ext.watchdog.settings.EVENT_DEBOUNCE', 2)
-        monkeypatch.setattr('osfoffline.sync.ext.watchdog.sha256_from_event', sha256_from_event)
+        monkeypatch.setattr('osfsync.sync.local.utils.extract_node', lambda *args, **kwargs: None)
+        monkeypatch.setattr('osfsync.sync.local.utils.local_to_db', local_to_db)
+        monkeypatch.setattr('osfsync.sync.ext.watchdog.settings.EVENT_DEBOUNCE', 2)
+        monkeypatch.setattr('osfsync.sync.ext.watchdog.sha256_from_event', sha256_from_event)
 
         # De dup input events
         for event in tuple(input):

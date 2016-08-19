@@ -1,8 +1,8 @@
 from pathlib import Path
 
-from osfoffline.sync.ext.auditor import Audit
-from osfoffline.sync.ext.auditor import Auditor
-from osfoffline.utils import EventType
+from osfsync.sync.ext.auditor import Audit
+from osfsync.sync.ext.auditor import Auditor
+from osfsync.utils import EventType
 
 from tests.base import OSFOTestBase
 

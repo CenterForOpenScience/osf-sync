@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 import logging
+from json import JSONDecodeError
+
 import requests
 import signal
 import sys
@@ -9,12 +11,12 @@ from PyQt5.QtWidgets import QApplication
 from PyQt5.QtWidgets import QMessageBox
 from PyQt5.QtWidgets import QSystemTrayIcon
 
-from osfoffline.database import drop_db
-from osfoffline.gui.qt import OSFOfflineQT
-from osfoffline.utils.log import start_logging
-from osfoffline.utils.singleton import SingleInstance
-from osfoffline.application.background import BackgroundHandler
-from osfoffline import settings
+from osfsync.database import drop_db
+from osfsync.gui.qt import OSFSyncQT
+from osfsync.utils.log import start_logging
+from osfsync.utils.singleton import SingleInstance
+from osfsync.application.background import BackgroundHandler
+from osfsync import settings
 
 logger = logging.getLogger(__name__)
 
@@ -57,7 +59,7 @@ def start():
     else:
         try:
             min_version = r.json()['min-version']
-        except KeyError as e:
+        except (KeyError, JSONDecodeError,) as e:
             logger.exception(e)
 
     if min_version:
@@ -65,7 +67,7 @@ def start():
             # User error message
             running_warning(message='You must update to a newer version. '
                                     'You can find newest version at {}'
-                            .format(settings.OFFLINE_PROJECT_ON_OSF),
+                            .format(settings.PROJECT_ON_OSF),
                             critical=True)
             sys.exit(1)
 
@@ -84,7 +86,7 @@ def start():
 
     QApplication.setQuitOnLastWindowClosed(False)
 
-    if not OSFOfflineQT(app).start():
+    if not OSFSyncQT(app).start():
         return sys.exit(1)
     return sys.exit(app.exec_())
 

@@ -16,7 +16,7 @@ from watchdog.events import (  # noqa
     DirMovedEvent
 )
 
-from osfoffline import settings
+from osfsync import settings
 
 from tests.base import OSFOTestBase
 from tests.utils import unique_file_name, unique_folder_name
@@ -70,7 +70,7 @@ class TestConsolidatedEventHandler(OSFOTestBase):
         assert len(self.sync_worker._event_cache.events) == 1, 'exactly one event captured'
         assert isinstance(self.sync_worker._event_cache.events[0], FileModifiedEvent) is True, 'the one captured event is a FileModifiedEvent'
 
-    @mock.patch('osfoffline.sync.ext.watchdog.sha256_from_event')
+    @mock.patch('osfsync.sync.ext.watchdog.sha256_from_event')
     def test_rename_file(self, sha_mock):
         sha_mock.return_value = '1234'
         project = self.PROJECT_STRUCTURE[0]

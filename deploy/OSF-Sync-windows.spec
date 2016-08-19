@@ -3,7 +3,7 @@
 block_cipher = None
 
 a = Analysis(['../start.py'],
-             pathex=['D:\\Users\\cosadmin\\Documents\\GitHub\\OSF-Offline'],
+             pathex=['D:\\Users\\cosadmin\\Documents\\GitHub\\OSF-Sync'],
              binaries=[
                 ('/Users/cosadmin/AppData/Local/Programs/Python/Python35/Lib/site-packages/PyQt5/Qt/bin/Qt5Core.dll', ''),
                 ('/Users/cosadmin/AppData/Local/Programs/Python/Python35/Lib/site-packages/PyQt5/Qt/bin/Qt5Gui.dll', ''),
