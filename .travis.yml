@@ -26,7 +26,7 @@ before_install:
     fi
 
 install:
-  - traivs_retry pip install -U pip
+  - travis_retry pip install -U pip
   - travis_retry pip install -r requirements.txt
 
 script:
