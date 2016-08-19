@@ -2,7 +2,7 @@
 ; SEE THE DOCUMENTATION FOR DETAILS ON CREATING INNO SETUP SCRIPT FILES!
 
 #define MyAppName "OSF Sync"
-#define MyAppVersion "0.4.4"
+#define MyAppVersion "0.5.0"
 #define MyAppPublisher "Center for Open Science"
 #define MyAppURL "http://osf.io/"
 #define MyAppExeName "OSF Sync.exe"

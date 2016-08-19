@@ -1,7 +1,5 @@
 LOG_LEVEL = 'DEBUG'
 
-MIN_VERSION_URL = None
-
 SENTRY_DSN = None
 
 ## Base URL for API server; used to fetch data

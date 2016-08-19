@@ -63,7 +63,7 @@ EVENT_DEBOUNCE = 3
 
 # updater
 REPO = 'CenterForOpenScience/OSF-Sync'
-VERSION = '0.4.4'
+VERSION = '0.5.0'
 NAME = 'OSF-Sync'
 MIN_VERSION_URL = 'https://raw.githubusercontent.com/CenterForOpenScience/OSF-Sync/develop/deploy/version.json'
 PROJECT_ON_OSF = 'https://osf.io/v2y6z/files/'

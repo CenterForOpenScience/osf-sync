@@ -8,10 +8,15 @@ compiling binaries on Windows.
 
 ### Mac OS-specific instructions
 
-- Install python 3.5.2:
+- Install brew requirements (minimum of python 3.5.2):
     ```
-    brew update ; brew doctor
+    brew update; brew doctor
     brew install python3
+    ```
+
+- Install node requirements
+    ```
+    npm install -g appdmg
     ```
 
 - Create a virtual env (based on python3!!), and activate said virtualenv
