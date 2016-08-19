@@ -20,13 +20,13 @@ before_install:
       pyenv global 3.5.2
       pyenv rehash
 
-      python -m pip install -U pip
       python -m pip install --user virtualenv
       python -m virtualenv ~/.venv
       source ~/.venv/bin/activate
     fi
 
 install:
+  - traivs_retry pip install -U pip
   - travis_retry pip install -r requirements.txt
 
 script:
