@@ -5,10 +5,9 @@ pep8==1.6
 furl==0.4.8
 invoke==0.11.1
 iso8601==0.1.11
-# Dev branch bugfix to PyInstaller; corresponds to PR 1630
-git+git://github.com/pyinstaller/pyinstaller.git@073cb6780d80a81f8f1bac7a8bda6d24d9156043
 pyqt5==5.7
-pyqt5-installer==5.5.0.post1
+# PyInstaller 3.3 - https://github.com/pyinstaller/pyinstaller/issues/2022
+git+git://github.com/pyinstaller/pyinstaller.git@develop
 pytest==2.8.5
 raven==5.10.2
 requests==2.8.1

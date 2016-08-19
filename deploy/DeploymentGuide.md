@@ -6,63 +6,19 @@ and to create packaged, installable executables for distribution to others.
 In general, the version requirements are stricter on Windows than on Mac OS, due to the difficulty of
 compiling binaries on Windows.
 
-Separate MacOS setup instructions are available and will be added here at a later date.
-
-
-- `Python` >= 3.4
-  - The program will run on Python 3.5+, but [3.4.x](https://www.python.org/downloads/release/python-343/) is
-  recommended for Windows operating systems, for best compatibility with precompiled Windows PyQT binaries.
-  - On Windows, be sure to select a custom install, and choose the option to add Python (and script folders)
-  to the system PATH automatically.
-  - make sure your python ssl version is no less than 1.0.2. You can check your ssl version by 
-    'python -c 'import ssl; print(ssl.OPENSSL_VERSION)''
-- `pip`
-  - Should already come with python. Make sure it can be run via the command line.
-- `git`
-  - On Windows, the [GitHub desktop client](https://desktop.github.com/) provides a viable installation. (default
-  data folder is `My Documents\GitHub`)
-- [qt5.5](http://www.qt.io/download-open-source/)
-  - Can de-select QT 5.4 from the installer to save disk space; only need 5.5. Other options left as-is.
-- [pyqt5](https://riverbankcomputing.com/software/pyqt/download5)
-    - Used PyQt5-5.5.1-gpl-Py3.4-Qt5.5.1-x32.exe (PyQT version should be built to match Python version, eg 3.4)
-
 ### Mac OS-specific instructions
 
-- Make sure homebrew is up to date and has no problems:
-  ```
-  brew update ; brew doctor
-  brew install python3
-  brew install qt5
-  ```
+- Install python 3.5.2:
+    ```
+    brew update ; brew doctor
+    brew install python3
+    ```
 
 - Create a virtual env (based on python3!!), and activate said virtualenv
-  `mkvirtualenv osf-offline -p /usr/local/bin/python3.4`
+  `mkvirtualenv osf-sync -p \`which python 3\``
 
 - Install requirements
   `pip install -r requirements.txt`
-
-- To install PyQT5, the above requirements should have made the following script available (run as is):
-  `install_pyqt5.py`
-  (usage: https://pypi.python.org/pypi/pyqt5-installer )
-
-  - You will need to specify the QMAKE path. If you installed with homebrew the path is
-    `/usr/local/Cellar/qt5/5.5.1/bin/qmake`
-
-- If that doesn't work, then you may need to do things the long way. In order to compile from source:
-  - Download PyQt: https://riverbankcomputing.com/software/pyqt/download5
-
-    ```
-    brew install sip
-    cd /var/tmp
-    cp /Users/YOU/Downloads/PyQt-gpl-5.5.1.tar.gz .
-    tar xzf PyQt-gpl-5.5.1.tar.gz
-    cd PyQt-gpl-5.5.1/
-    python3 configure.py --destdir ~/PATH_TO_YOUR_VENV/lib/python3.4/site-packages --qmake /usr/local/Cellar/qt5/5.5.1/bin/qmake --disable=QtPositioning
-    make
-    sudo make install
-    sudo make clean
-    ```
-  - More information can be found here: http://pyqt.sourceforge.net/Docs/PyQt5/installation.html
 
 - If everything works, you will be able to run the GUI tool from the repo using:
   `inv start`
@@ -88,12 +44,10 @@ virtual environment, make sure that PyQT is installed to that venv.
 ## Building for deployment
 ### Create the binary
 On Windows:
-  `pyinstaller --onedir --onefile --name='OSF Sync' --icon=deploy\\images\\cos_logo.ico --windowed start.py`
+  `pyinstaller deploy/OSF-Sync-windows.spec --clean`
 
 On Mac OS:
-  `pyinstaller --onedir --onefile --name='OSF Sync' --icon=deploy/images/cos_logo.icns --windowed start.py`
-
-After the first run, PyInstaller will create a .spec file that can be used for future builds on your machine.
+  `pyinstaller deploy/OSF-Sync-mac.spec --clean`
 
 ### Create an installer
 #### Windows
@@ -123,21 +77,5 @@ When done, close the window. Return to disk utility and right-click on the image
 
 Then click the disk image file. Choose "convert" to create a compressed, uneditable image for distribution.
 
-## Troubleshooting
-
-PyInstaller needs to be modified with a fix for a windows bug. Version 3.0 (on PyPi) does not contain the fix, but
-it is available in the PyInstaller github repo (development version); the bugfix version has been added to
-`requirements.txt`. A symptom of this error is a message that "tuple object has no attribute 'replace'".
-
-Sometimes pyinstaller will raise an exception due to problems importing `cy***.util`. If that happens,
-it can be resolved by manually editing the PyInstaller source code to add an import statement in the location
-indicated by the traceback.
-
-##File usage
-OSF-Offline-mac.spec is the pyinstaller scipt file for mac
-OSF-Offline-windows.spec is the pyinstaller scipt file for windows,
-which needs some change in your local pyinstaller 3.0 to make it work
-osfofflne-setup.iss is the inno-setup script to setup the windows installer for osf-offline.exe
-
-#To sign the Mac version
+# To sign the Mac version
     `codesign --verbose --force --deep --sign "Certificate Name" "OSF Sync.app"`
