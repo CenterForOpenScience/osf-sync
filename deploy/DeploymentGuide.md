@@ -6,6 +6,10 @@ and to create packaged, installable executables for distribution to others.
 In general, the version requirements are stricter on Windows than on Mac OS, due to the difficulty of
 compiling binaries on Windows.
 
+### Windows OS-specific instructions
+
+- 32-bit [Visual C++ Redistributable for Visual Studio 2015](https://www.microsoft.com/en-us/download/details.aspx?id=48145)
+
 ### Mac OS-specific instructions
 
 - Install brew requirements (minimum of python 3.5.2):
