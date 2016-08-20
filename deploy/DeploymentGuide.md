@@ -10,6 +10,9 @@ compiling binaries on Windows.
 
 - 32-bit [Visual C++ Redistributable for Visual Studio 2015](https://www.microsoft.com/en-us/download/details.aspx?id=48145)
 
+- [InnoSetup](http://www.jrsoftware.org/isdl.php)
+  - Tested with v5.5.6
+
 ### Mac OS-specific instructions
 
 - Install brew requirements (minimum of python 3.5.2):
@@ -33,17 +36,6 @@ compiling binaries on Windows.
   `inv start`
 
 - After you log in, you will need to click the OSF icon in the system tray and select folders to sync under "Preferences".
-
-### Additional Windows requirements
-
-- [InnoSetup](http://www.jrsoftware.org/isdl.php)
-  - Tested with v5.5.6
-- MS Visual Studio (Windows-only)
-    - Not required to build and run the application, but some extensions (such as SQLAlchemy) offer better performance
-    via C extensions.
-    - Ideally use the same version of Visual Studio used to compiled your version of Python. The current build
-    machine works with VS 2015.
-
 
 ## Preparing your build environment
 Navigate to the cloned OSF Sync source code directory and install all requirements. If you use a
