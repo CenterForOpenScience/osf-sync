@@ -23,10 +23,10 @@ DefaultDirName={pf}\{#MyAppName}
 DefaultGroupName={#MyAppName}
 DisableProgramGroupPage=true
 DisableStartupPrompt=true
-LicenseFile=C:\Users\IEUser\Documents\GitHub\OSF-Sync\LICENSE
-OutputDir=C:\Users\IEUser\Desktop
+LicenseFile=D:\Users\cosadmin\Documents\GitHub\OSF-Sync\LICENSE
+OutputDir=D:\Users\cosadmin\Desktop
 OutputBaseFilename="OSF Sync Installer"
-SetupIconFile=C:\Users\IEUser\Documents\GitHub\OSF-Sync\deploy\images\cos_logo.ico
+SetupIconFile=D:\Users\cosadmin\Documents\GitHub\OSF-Sync\deploy\images\cos_logo.ico
 Compression=lzma
 SolidCompression=yes
 
@@ -39,12 +39,12 @@ Name: "quicklaunchicon"; Description: "{cm:CreateQuickLaunchIcon}"; GroupDescrip
 
 [Files]
 ; DLL used to check if the target program is running at install time
-Source: "C:\Users\IEUser\Documents\GitHub\OSF-Sync\deploy\psvince.dll"; flags: dontcopy
+Source: "D:\Users\cosadmin\Documents\GitHub\OSF-Sync\deploy\psvince.dll"; flags: dontcopy
 ; psvince is installed in {app} folder, so it will be loaded at 
 ; uninstall time to check if the target program is running
-Source: "C:\Users\IEUser\Documents\GitHub\OSF-Sync\deploy\psvince.dll"; DestDir: {app}
+Source: "D:\Users\cosadmin\Documents\GitHub\OSF-Sync\deploy\psvince.dll"; DestDir: {app}
 
-Source: "C:\Users\IEUser\Documents\GitHub\OSF-Sync\dist\OSF Sync.exe"; DestDir: "{app}";
+Source: "D:\Users\cosadmin\Documents\GitHub\OSF-Sync\dist\OSF Sync.exe"; DestDir: "{app}";
 ; NOTE: Don't use "Flags: ignoreversion" on any shared system files
 
 [Icons]
